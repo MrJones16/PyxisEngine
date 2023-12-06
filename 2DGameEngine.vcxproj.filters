@@ -32,22 +32,25 @@
     <None Include="Light.h">
       <Filter>Header Files</Filter>
     </None>
-    <None Include="Fragment_source.glsl">
+    <None Include="Shaders\Fragment.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="Vertex.glsl">
+    <None Include="Shaders\Fragment_source.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="Vertex_source.glsl">
+    <None Include="Shaders\FragmentSingleColor.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="Fragment.glsl">
+    <None Include="Shaders\Vertex.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="SingleColorFragment.glsl">
+    <None Include="Shaders\Vertex_Outline.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="Vertex_Outline.glsl">
+    <None Include="Shaders\Vertex_source.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="Shaders\SingleColorFragment.glsl">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>

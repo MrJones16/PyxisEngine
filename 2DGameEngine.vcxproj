@@ -137,13 +137,14 @@
     <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Fragment.glsl" />
-    <None Include="Fragment_source.glsl" />
     <None Include="Light.h" />
-    <None Include="SingleColorFragment.glsl" />
-    <None Include="Vertex.glsl" />
-    <None Include="Vertex_Outline.glsl" />
-    <None Include="Vertex_source.glsl" />
+    <None Include="Shaders\Fragment.glsl" />
+    <None Include="Shaders\FragmentSingleColor.glsl" />
+    <None Include="Shaders\Fragment_source.glsl" />
+    <None Include="Shaders\SingleColorFragment.glsl" />
+    <None Include="Shaders\Vertex.glsl" />
+    <None Include="Shaders\Vertex_Outline.glsl" />
+    <None Include="Shaders\Vertex_source.glsl" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />

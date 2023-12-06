@@ -86,9 +86,9 @@ int main()
 
 
     //---------- Begin Creating Shaders and Programs ----------//
-    Shader lightingShader = Shader("Vertex.glsl", "Fragment.glsl");
-    Shader lightCubeShader = Shader("Vertex_source.glsl", "Fragment_source.glsl");
-    Shader OutlineShader = Shader("Vertex_Outline.glsl", "SingleColorFragment.glsl");
+    Shader lightingShader = Shader("Shaders/Vertex.glsl", "Shaders/Fragment.glsl");
+    Shader lightCubeShader = Shader("Shaders/Vertex_source.glsl", "Shaders/Fragment_source.glsl");
+    Shader OutlineShader = Shader("Shaders/Vertex_Outline.glsl", "Shaders/SingleColorFragment.glsl");
 
     //---------- Finished Creating Shaders ----------//
 
@@ -211,8 +211,8 @@ int main()
     // 
     //---------- Created VAO's and VBO's for a cube, maybe more ----------//
     stbi_set_flip_vertically_on_load(true);
-    unsigned int diffuseMap = loadTexture("container2.png");
-    unsigned int specularMap = loadTexture("container2_specular.png");
+    unsigned int diffuseMap = loadTexture("assets/container2.png");
+    unsigned int specularMap = loadTexture("assets/container2_specular.png");
 
     Model backpack = Model("assets/backpack/backpack.obj");
 
