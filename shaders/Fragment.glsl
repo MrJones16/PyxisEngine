@@ -84,6 +84,7 @@ void main()
     }
     // Spotlight Lighting
     //result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
+    if (result.a < 0.5f) discard;
 
     FragColor = result;
     

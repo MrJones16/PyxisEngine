@@ -94,51 +94,66 @@ int main()
 
     //---------- Define Vertices data  ----------//
 
-    float vertices[] = {
+    float cubeVertices[] = {
     //   Position       |     Normal         |    UV    |
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,//back
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
     -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+    
 
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,//front
      0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
     -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
     -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 
-    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,//left
     -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
     -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
     -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
     -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
     -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
-     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,//right
+     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
      0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
      0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
      0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+     
 
-    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,//bottom
      0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
      0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
      0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
     -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
     -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,//top
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
      0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
     -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
+    
     };
-    float indices[] = {
+
+    float planeVertices[] = {
+        //   Position     |     Normal        |    UV    |
+        -0.5f, -0.5f,  0,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,//bottom left
+         0.5f, -0.5f,  0,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,//bottom right
+        -0.5f,  0.5f,  0,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,//top left
+         
+        -0.5f,  0.5f,  0,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,//top left
+         0.5f, -0.5f,  0,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,//bottom right
+         0.5f,  0.5f,  0,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,//top right
+         
+    };
+    unsigned int indices[] = {
         0,1,2,//front
         2,1,3,
         4,5,0,//top
@@ -165,7 +180,7 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
     //glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // position attribute
@@ -180,13 +195,6 @@ int main()
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glEnableVertexAttribArray(2);
 
-    //settings for textures
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
     //---------- Plane VAO & VBO ---------//
 
     unsigned int planeVAO, planeVBO;
@@ -196,6 +204,20 @@ int main()
 
     glBindVertexArray(planeVAO);
     glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    //Normal Attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    // texture attribute
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     //---------- Light Object ----------//
     unsigned int lightCubeVAO;
@@ -211,8 +233,8 @@ int main()
     // 
     //---------- Created VAO's and VBO's for a cube, maybe more ----------//
     stbi_set_flip_vertically_on_load(true);
-    unsigned int diffuseMap = loadTexture("assets/container2.png");
-    unsigned int specularMap = loadTexture("assets/container2_specular.png");
+    unsigned int diffuseMap = loadTexture("assets/container/container2.png");
+    unsigned int specularMap = loadTexture("assets/container/container2_specular.png");
 
     Model backpack = Model("assets/backpack/backpack.obj");
 
@@ -221,27 +243,8 @@ int main()
     // tell opengl for each sampler to which texture unit it belongs to (only has to be done once)
     // -------------------------------------------------------------------------------------------
     lightingShader.use(); // don't forget to activate/use the lightingShader before setting uniforms!
-    // either set it manually like so:
-    glUniform1i(glGetUniformLocation(lightingShader.ID, "material"), 0);
-    // or set it via the texture class
-    lightingShader.setInt("secondTexture", 1);
 
     //---------- Creating Different SpaceMatrices ----------//
-
-    //changes object vertices to world vertices
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-    //changes world vertices to view vertices
-    glm::mat4 view = glm::mat4(1.0f);
-    // note that we're translating the scene in the reverse direction of where we want to move
-    //moving the scene around the camera instead of moving the camera
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
-    //Orthographic Projection Matrix
-    glm::mat4 ortho = glm::ortho(-2.5f, 2.5f, -2.5f, 2.5f, 0.1f, 10.0f);
-
-    
 
     glm::vec3 cubePositions[] = {
     glm::vec3(0.0f,  0.0f,  0.0f),
@@ -268,6 +271,14 @@ int main()
     glm::vec3(0.8f, 0.8f, 0.8f),
     glm::vec3(0.8f, 0.8f, 0.8f)
     };
+
+    vector<glm::vec3> vegetation;
+    vegetation.push_back(glm::vec3(-1.5f, 0.0f, -0.48f));
+    vegetation.push_back(glm::vec3(1.5f, 0.0f, 0.51f));
+    vegetation.push_back(glm::vec3(0.0f, 0.0f, 0.7f));
+    vegetation.push_back(glm::vec3(-0.3f, 0.0f, -2.3f));
+    vegetation.push_back(glm::vec3(0.5f, 0.0f, -0.6f));
+    unsigned int grassTexture = loadTexture("assets/grass.png");
     
     
 
@@ -278,11 +289,18 @@ int main()
 
     // configure global opengl state
     // -----------------------------
+    //depth
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
+    //stencils
     glEnable(GL_STENCIL_TEST);
     glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
     glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    //blending / transparency
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //culling
+    glEnable(GL_CULL_FACE);
 
 
     //---------- Render Loop ----------//
@@ -307,8 +325,8 @@ int main()
         glEnable(GL_DEPTH_TEST);
         //glDepthMask(GL_FALSE);
         glDepthFunc(GL_LESS);
-
         glEnable(GL_STENCIL_TEST);
+        glStencilMask(0x00); // make sure we don't update the stencil buffer while drawing normal things
 
         // be sure to activate shader when setting uniforms/drawing objects
         lightingShader.use();
@@ -371,8 +389,6 @@ int main()
         lightingShader.setMat4("projection", projection);
         lightingShader.setMat4("view", view);
         
-        
-
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
         lightingShader.setMat4("model", model);
@@ -380,14 +396,6 @@ int main()
         OutlineShader.use();
         OutlineShader.setMat4("projection", projection);
         OutlineShader.setMat4("view", view);
-
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_STENCIL_TEST);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-        glStencilMask(0x00); // make sure we don't update the stencil buffer while drawing normal things
 
         lightingShader.use();
         model = glm::mat4(1.0f);
@@ -398,8 +406,20 @@ int main()
 
         backpack.Draw(lightingShader);
 
-        model = glm::mat4(1.0f);
-        //backpack.Draw(lightingShader);
+        // bind diffuse map
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, grassTexture);
+        // bind specular map
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, grassTexture);
+        glBindVertexArray(planeVAO);
+        for (unsigned int i = 0; i < vegetation.size(); i++) {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, vegetation[i]);
+            lightingShader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            //glDrawElements(GL_TRIANGLES, 4, GL_UNSIGNED_INT, planeIndices);
+        }
 
         //draw the lamp object(s)
         lightCubeShader.use();
@@ -458,52 +478,6 @@ int main()
         glStencilMask(0xFF);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
         glEnable(GL_DEPTH_TEST);
-
-
-
-        ////outlining with stencil
-        //// update stencil if stencil and depth pass
-        //glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-        //glStencilFunc(GL_ALWAYS, 1, 0xFF); // all fragments should pass the stencil test
-        //glStencilMask(0xFF); // enable writing to the stencil buffer
-
-        //// render containers
-        //glBindVertexArray(cubeVAO);
-        //for (unsigned int i = 0; i < 10; i++)
-        //{
-        //    // calculate the model matrix for each object and pass it to shader before drawing
-        //    glm::mat4 model = glm::mat4(1.0f);
-        //    model = glm::translate(model, cubePositions[i]);
-        //    float angle = 20.0f * i;
-        //    model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-        //    lightingShader.setMat4("model", model);
-
-        //    glDrawArrays(GL_TRIANGLES, 0, 36);
-        //}
-
-        //glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-        //glStencilMask(0x00); // disable writing to the stencil buffer
-        //glDisable(GL_DEPTH_TEST);
-        //singleColorShader.use();
-
-        //for (unsigned int i = 0; i < 10; i++)
-        //{
-        //    // calculate the model matrix for each object and pass it to shader before drawing
-        //    glm::mat4 model = glm::mat4(1.0f);
-        //    model = glm::scale(model, glm::vec3(1.2f));
-        //    model = glm::translate(model, cubePositions[i]);
-        //    float angle = 20.0f * i;
-        //    model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-        //    singleColorShader.setMat4("model", model);
-        //    glDrawArrays(GL_TRIANGLES, 0, 36);
-        //}
-
-        //glStencilFunc(GL_ALWAYS, 1, 0xFF); // all fragments should pass the stencil test
-        //glEnable(GL_DEPTH_TEST);
-        // 
-        
-
-        
 
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
