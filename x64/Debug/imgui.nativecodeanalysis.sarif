@@ -1,0 +1,811 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C33011",
+          "message": {
+            "text": "Unchecked upper bound for enum key used as index.."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                },
+                "region": {
+                  "startLine": 8061,
+                  "startColumn": 29,
+                  "endLine": 8061,
+                  "endColumn": 50
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ImGui::GetKeyData",
+                  "decoratedName": "?GetKeyData@ImGui@@YAPEAUImGuiKeyData@@PEAUImGuiContext@@W4ImGuiKey@@@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8051,
+                            "startColumn": 22
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8053,
+                            "startColumn": 19
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8053,
+                            "startColumn": 24
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8056,
+                            "startColumn": 13
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition 'key & 63488'. 'false' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8060,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '0 <= key'. 'true' branch is taken\nEnum value 'key' is checked for lower bound."
+                        }
+                      },
+                      "kinds": [
+                        "Combination"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8060,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition 'key < 666'. 'false' branch is taken\nEnum value 'key' is checked for lower bound."
+                        }
+                      },
+                      "kinds": [
+                        "Combination"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8060,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8060,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '0'. 'false' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8060,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8060,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8061,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8061,
+                            "startColumn": 20
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition 'result.IsLegacyKey'. 'true' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 8061,
+                            "startColumn": 46
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C33010",
+          "message": {
+            "text": "Unchecked lower bound for enum source used as index.."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                },
+                "region": {
+                  "startLine": 9014,
+                  "startColumn": 5,
+                  "endLine": 9014,
+                  "endColumn": 37
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "GetInputSourceName",
+                  "decoratedName": "?GetInputSourceName@@YAPEBDW4ImGuiInputSource@@@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9010,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9012,
+                            "startColumn": 17
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9012,
+                            "startColumn": 40
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9013,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '1'. 'true' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9013,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '0 <= source'. 'false' branch is taken\nEnum value 'source' is checked for upper bound."
+                        }
+                      },
+                      "kinds": [
+                        "Combination"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9013,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9013,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '0'. 'false' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9013,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9013,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9014,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C33010",
+          "message": {
+            "text": "Unchecked lower bound for enum source used as index.."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                },
+                "region": {
+                  "startLine": 9020,
+                  "startColumn": 5,
+                  "endLine": 9020,
+                  "endColumn": 37
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "GetMouseSourceName",
+                  "decoratedName": "?GetMouseSourceName@@YAPEBDW4ImGuiMouseSource@@@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9016,
+                            "startColumn": 20
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9018,
+                            "startColumn": 17
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9018,
+                            "startColumn": 40
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9019,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '1'. 'true' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9019,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '0 <= source'. 'false' branch is taken\nEnum value 'source' is checked for upper bound."
+                        }
+                      },
+                      "kinds": [
+                        "Combination"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9019,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9019,
+                            "startColumn": 5
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition '0'. 'false' branch is taken"
+                        }
+                      },
+                      "kinds": [
+                        "Branch"
+                      ],
+                      "importance": "important"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9019,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9019,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 9020,
+                            "startColumn": 5
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C33010",
+          "message": {
+            "text": "Unchecked lower bound for enum key used as index.."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                },
+                "region": {
+                  "startLine": 14280,
+                  "startColumn": 95,
+                  "endLine": 14280,
+                  "endColumn": 119
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ImGui::ShowMetricsWindow::funcs::IsLegacyNativeDupe",
+                  "decoratedName": "?IsLegacyNativeDupe@funcs@?JE@??ShowMetricsWindow@ImGui@@YAXPEA_N@Z@SA_NW4ImGuiKey@@@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 14280,
+                            "startColumn": 40
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 14280,
+                            "startColumn": 86
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition 'key < 512'. 'true' branch is taken\nEnum value 'key' is checked for upper bound."
+                        }
+                      },
+                      "kinds": [
+                        "Combination"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 14280,
+                            "startColumn": 95
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+                          },
+                          "region": {
+                            "startLine": 14280,
+                            "startColumn": 115
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.35.32216.1",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui.cpp"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "3db90eef3243715a508be064f9a793d06062ee0234eecfe2706fc4aeb2418174"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui.h"
+          },
+          "hashes": {
+            "sha-256": "ce635f4c81cbfa19e6c575885e5dc825138e19ece4b954eb1a477ae1872b1d1e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imconfig.h"
+          },
+          "hashes": {
+            "sha-256": "07428116edfc8ac1a32ca64ab0f4c04ce831f4b4f7e4b95531d7306dcc4d2323"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui_internal.h"
+          },
+          "hashes": {
+            "sha-256": "998a27a20677d3408dee7e3b5f0fab13d85370f92914e041f582eda345f740bd"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imstb_textedit.h"
+          },
+          "hashes": {
+            "sha-256": "7ddff4ecb710e321b8f966417a6dc72f3e2242165f68cc78c5275b5653224bba"
+          }
+        }
+      ]
+    }
+  ]
+}

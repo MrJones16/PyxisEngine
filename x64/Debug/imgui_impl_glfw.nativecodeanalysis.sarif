@@ -1,0 +1,75 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.35.32216.1",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui_impl_glfw.cpp"
+          },
+          "roles": [
+            "analysisTarget"
+          ],
+          "hashes": {
+            "sha-256": "984bbf1292363a20939d5dba036033cb1740b952d0f48db3bd3e65d5fdde2e6c"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui.h"
+          },
+          "hashes": {
+            "sha-256": "ce635f4c81cbfa19e6c575885e5dc825138e19ece4b954eb1a477ae1872b1d1e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imconfig.h"
+          },
+          "hashes": {
+            "sha-256": "07428116edfc8ac1a32ca64ab0f4c04ce831f4b4f7e4b95531d7306dcc4d2323"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui_impl_glfw.h"
+          },
+          "hashes": {
+            "sha-256": "024a79604629a64d784bd07fad294323c38f1e5afae10a1248bc6a4229ca5631"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/glfw/glfw3.h"
+          },
+          "hashes": {
+            "sha-256": "0992a30f01ebaa41c32f3f0588e942961abb8a9a52ca8764bd32ee4d7d71a46d"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/glfw/glfw3native.h"
+          },
+          "hashes": {
+            "sha-256": "b05c9c04da3f534e848e21ae26cb94a7e506274b101c0aa711268f137b11c6cb"
+          }
+        }
+      ]
+    }
+  ]
+}

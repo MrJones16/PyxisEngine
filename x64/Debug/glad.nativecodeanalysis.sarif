@@ -1,0 +1,51 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.35.32216.1",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/glad.c"
+          },
+          "roles": [
+            "analysisTarget"
+          ],
+          "hashes": {
+            "sha-256": "8e71dae90cf414613abd286c90c8afbdc0227083103a9bc3af2176697b9f8b26"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/glad/glad.h"
+          },
+          "hashes": {
+            "sha-256": "20f2a532eccddb34c623a9f5346ef3f54340d0a56e05eca7f221a5c462304e84"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/khr/khrplatform.h"
+          },
+          "hashes": {
+            "sha-256": "7b1e01aaa7ad8f6fc34b5c7bdf79ebf5189bb09e2c4d2e79fc5d350623d11e83"
+          }
+        }
+      ]
+    }
+  ]
+}

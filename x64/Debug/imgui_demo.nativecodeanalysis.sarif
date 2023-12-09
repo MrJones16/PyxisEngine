@@ -1,0 +1,153 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C33010",
+          "message": {
+            "text": "Unchecked lower bound for enum key used as index.."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_demo.cpp"
+                },
+                "region": {
+                  "startLine": 6100,
+                  "startColumn": 102,
+                  "endLine": 6100,
+                  "endColumn": 126
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ShowDemoWindowInputs::funcs::IsLegacyNativeDupe",
+                  "decoratedName": "?IsLegacyNativeDupe@funcs@?BA@??ShowDemoWindowInputs@@YAXXZ@SA_NW4ImGuiKey@@@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_demo.cpp"
+                          },
+                          "region": {
+                            "startLine": 6100,
+                            "startColumn": 40
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_demo.cpp"
+                          },
+                          "region": {
+                            "startLine": 6100,
+                            "startColumn": 86
+                          }
+                        },
+                        "message": {
+                          "text": "Branching based on condition 'key < 512'. 'true' branch is taken\nEnum value 'key' is checked for upper bound."
+                        }
+                      },
+                      "kinds": [
+                        "Combination"
+                      ],
+                      "importance": "essential"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_demo.cpp"
+                          },
+                          "region": {
+                            "startLine": 6100,
+                            "startColumn": 102
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_demo.cpp"
+                          },
+                          "region": {
+                            "startLine": 6100,
+                            "startColumn": 122
+                          }
+                        }
+                      },
+                      "importance": "unimportant"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.35.32216.1",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_demo.cpp"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "a03956cedb51273c37299fb92a89108e1c4ec048fc7aa444cccbe4317d89cb42"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui.h"
+          },
+          "hashes": {
+            "sha-256": "ce635f4c81cbfa19e6c575885e5dc825138e19ece4b954eb1a477ae1872b1d1e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imconfig.h"
+          },
+          "hashes": {
+            "sha-256": "07428116edfc8ac1a32ca64ab0f4c04ce831f4b4f7e4b95531d7306dcc4d2323"
+          }
+        }
+      ]
+    }
+  ]
+}

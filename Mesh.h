@@ -29,12 +29,33 @@ struct Vertex {
     int m_BoneIDs[MAX_BONE_INFLUENCE];
     //weights from each bone
     float m_Weights[MAX_BONE_INFLUENCE];
+    Vertex() {};
+    Vertex(glm::vec3 position, glm::vec3 normal, glm::vec3 texCoords) {
+        Position = position;
+        Normal = normal;
+        TexCoords = texCoords;
+        Tangent = glm::vec3(0);
+        Bitangent = glm::vec3(0);
+    }
+    Vertex(float x, float y, float z, float nx, float ny, float nz, float u, float v) {
+        Position = glm::vec3(x, y, z);
+        Normal = glm::vec3(nx, ny, nz);
+        TexCoords = glm::vec2(u, v);
+        Tangent = glm::vec3(0);
+        Bitangent = glm::vec3(0);
+    }
 };
 
 struct Texture {
     unsigned int id;
     string type;
     string path;
+    Texture() {};
+    Texture(unsigned int ID, std::string TYPE, std::string PATH) {
+        id = ID;
+        type = TYPE;
+        path = PATH;
+    }
 };
 
 class Mesh {
@@ -80,7 +101,7 @@ public:
                 number = std::to_string(heightNr++); // transfer unsigned int to string
 
             // now set the sampler to the correct texture unit
-            glUniform1i(glGetUniformLocation(shader.ID, (name + number).c_str()), i);
+            glUniform1i(glGetUniformLocation(shader.ID, ("material." + name + number).c_str()), i);
             // and finally bind the texture
             glBindTexture(GL_TEXTURE_2D, textures[i].id);
         }
@@ -89,9 +110,20 @@ public:
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
+        for (unsigned int i = 0; i < textures.size(); i++)
+        {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
 
         // always good practice to set everything back to defaults once configured.
         glActiveTexture(GL_TEXTURE0);
+    }
+
+    void DeleteGLObjects() {
+        glDeleteVertexArrays(1, &VAO);
+        glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &EBO);
     }
 
 private:

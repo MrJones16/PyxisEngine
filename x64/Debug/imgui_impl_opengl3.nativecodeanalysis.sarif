@@ -1,0 +1,156 @@
+{
+  "version": "2.1.0",
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "ruleId": "C6031",
+          "message": {
+            "text": "Return value ignored: 'sscanf'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_impl_opengl3_loader.h"
+                },
+                "region": {
+                  "startLine": 701,
+                  "startColumn": 13,
+                  "endLine": 701,
+                  "endColumn": 65
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "parse_version",
+                  "decoratedName": "parse_version",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C6031",
+          "message": {
+            "text": "Return value ignored: 'sscanf'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_impl_opengl3.cpp"
+                },
+                "region": {
+                  "startLine": 303,
+                  "startColumn": 9,
+                  "endLine": 303,
+                  "endColumn": 46
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ImGui_ImplOpenGL3_Init",
+                  "decoratedName": "?ImGui_ImplOpenGL3_Init@@YA_NPEBD@Z",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "C6031",
+          "message": {
+            "text": "Return value ignored: 'sscanf'."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_impl_opengl3.cpp"
+                },
+                "region": {
+                  "startLine": 756,
+                  "startColumn": 5,
+                  "endLine": 756,
+                  "endColumn": 51
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ImGui_ImplOpenGL3_CreateDeviceObjects",
+                  "decoratedName": "?ImGui_ImplOpenGL3_CreateDeviceObjects@@YA_NXZ",
+                  "kind": "function"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "PREfast",
+          "fullName": "PREfast Code Analysis",
+          "version": "14.35.32216.1",
+          "informationUri": "https://aka.ms/cpp/ca"
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true
+        }
+      ],
+      "artifacts": [
+        {
+          "location": {
+            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_impl_opengl3_loader.h"
+          },
+          "roles": [
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "417e2202e98fc62d74591c117940955b7904e6ffd7eaa63076e3904b576037bb"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///C:/Users/Peyton/Documents/GitHub/2DGameEngine/include/imgui/imgui_impl_opengl3.cpp"
+          },
+          "roles": [
+            "analysisTarget",
+            "resultFile"
+          ],
+          "hashes": {
+            "sha-256": "fe7b4fc408991a288d4923d6e0557643bc61ccd8725c010ff641c840dd7ae57c"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui.h"
+          },
+          "hashes": {
+            "sha-256": "ce635f4c81cbfa19e6c575885e5dc825138e19ece4b954eb1a477ae1872b1d1e"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imconfig.h"
+          },
+          "hashes": {
+            "sha-256": "07428116edfc8ac1a32ca64ab0f4c04ce831f4b4f7e4b95531d7306dcc4d2323"
+          }
+        },
+        {
+          "location": {
+            "uri": "file:///c:/users/peyton/documents/github/2dgameengine/include/imgui/imgui_impl_opengl3.h"
+          },
+          "hashes": {
+            "sha-256": "964528edbf82164e44019e51dc4595f9f8326cdcb9f0e597cefa4e398c0941ec"
+          }
+        }
+      ]
+    }
+  ]
+}
