@@ -1,0 +1,3 @@
+[submodule "Pyxis/vendor/spdlog"]
+	path = Pyxis/vendor/spdlog
+	url = https://github.com/gabime/spdlog

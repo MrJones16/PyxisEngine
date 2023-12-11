@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Pyxis">
+      <UniqueIdentifier>{C20EEB0D-2E23-13BF-F7A4-B61E63780FF0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pyxis\Events">
+      <UniqueIdentifier>{664C8846-52AF-17EB-FB34-50A1E776E36D}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Pyxis.h" />
+    <ClInclude Include="src\Pyxis\Application.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\EntryPoint.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Events\ApplicationEvent.h">
+      <Filter>Pyxis\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Events\Event.h">
+      <Filter>Pyxis\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Events\KeyEvent.h">
+      <Filter>Pyxis\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Events\MouseEvent.h">
+      <Filter>Pyxis\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Log.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\pxpch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\Pyxis\Application.cpp">
+      <Filter>Pyxis</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Log.cpp">
+      <Filter>Pyxis</Filter>
+    </ClCompile>
+    <ClCompile Include="src\pxpch.cpp" />
+  </ItemGroup>
+</Project>
