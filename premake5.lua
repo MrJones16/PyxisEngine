@@ -10,14 +10,24 @@ workspace "Pyxis"
 
 outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
+IncludeDir = {}
+IncludeDir["GLFW"] = "Pyxis/vendor/GLFW/include"
+IncludeDir["GLAD"] = "Pyxis/vendor/GLAD/include"
+IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
+
+include "Pyxis/vendor/GLFW"
+include "Pyxis/vendor/GLAD"
+include "Pyxis/vendor/ImGui"
+
 project "Pyxis"
 	location "Pyxis"
 	kind "SharedLib"
 	language "C++"
+	staticruntime "off"
 
 
-	targetdir ("bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
-	objdir ("bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
+	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
+	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
 
 	pchheader "pxpch.h"
 	pchsource "Pyxis/src/pxpch.cpp"
@@ -32,18 +42,29 @@ project "Pyxis"
 	includedirs
 	{
 		"%{prj.name}/src",
-		"%{prj.name}/vendor/spdlog/include"
+		"%{prj.name}/vendor/spdlog/include",
+		"%{IncludeDir.GLFW}",
+		"%{IncludeDir.GLAD}",
+		"%{IncludeDir.ImGui}"
+	}
+
+	links
+	{
+		"GLFW",
+		"GLAD",
+		"ImGui",
+		"opengl32.lib"
 	}
 
 	filter "system:windows"
 		cppdialect "C++17"
-		staticruntime "On"
 		systemversion "latest"
 
 		defines
 		{
 			"PX_PLATFORM_WINDOWS",
-			"PX_BUILD_DLL"
+			"PX_BUILD_DLL",
+			"GLFW_INCLUDE_NONE"
 		}
 
 		postbuildcommands
@@ -53,14 +74,17 @@ project "Pyxis"
 
 	filter "configurations:Debug"
 		defines "PX_DEBUG"
+		runtime "Debug"
 		symbols "On"
 
 	filter "configurations:Release"
 		defines "PX_Release"
+		runtime "Release"
 		symbols "On"
 
 	filter "configurations:Dist"
 		defines "PX_Dist"
+		runtime "Release"
 		symbols "On"
 
 
@@ -68,6 +92,7 @@ project "Sandbox"
 	location "Sandbox"
 	kind "ConsoleApp"
 	language "C++"
+	staticruntime "off"
 
 	targetdir ("bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
 	objdir ("bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
@@ -92,7 +117,6 @@ project "Sandbox"
 
 	filter "system:windows"
 		cppdialect "C++17"
-		staticruntime "On"
 		systemversion "latest"
 
 		defines
@@ -103,12 +127,15 @@ project "Sandbox"
 
 	filter "configurations:Debug"
 		defines "PX_DEBUG"
+		runtime "Debug"
 		symbols "On"
 
 	filter "configurations:Release"
 		defines "PX_Release"
+		runtime "Release"
 		symbols "On"
 
 	filter "configurations:Dist"
 		defines "PX_Dist"
+		runtime "Release"
 		symbols "On"

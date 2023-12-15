@@ -1,14 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
+    <Filter Include="Platform">
+      <UniqueIdentifier>{2AC788B4-1694-E3BF-3FAD-D1672BD9184E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Platform\OpenGL">
+      <UniqueIdentifier>{1E7D2C1D-8A08-9AE1-9319-1DD6FF23F6E1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Platform\Windows">
+      <UniqueIdentifier>{64FBD71A-50F4-F66C-7926-DCF1657ED678}</UniqueIdentifier>
+    </Filter>
     <Filter Include="Pyxis">
       <UniqueIdentifier>{C20EEB0D-2E23-13BF-F7A4-B61E63780FF0}</UniqueIdentifier>
     </Filter>
     <Filter Include="Pyxis\Events">
       <UniqueIdentifier>{664C8846-52AF-17EB-FB34-50A1E776E36D}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pyxis\ImGui">
+      <UniqueIdentifier>{6C0D280A-D8C2-A0FF-61B7-9AD6CD6B9703}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Platform\OpenGL\ImGuiOpenGLRenderer.h">
+      <Filter>Platform\OpenGL</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Platform\Windows\WindowsWindow.h">
+      <Filter>Platform\Windows</Filter>
+    </ClInclude>
     <ClInclude Include="src\Pyxis.h" />
     <ClInclude Include="src\Pyxis\Application.h">
       <Filter>Pyxis</Filter>
@@ -31,13 +49,40 @@
     <ClInclude Include="src\Pyxis\Events\MouseEvent.h">
       <Filter>Pyxis\Events</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pyxis\ImGui\ImGuiLayer.h">
+      <Filter>Pyxis\ImGui</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Layer.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\LayerStack.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
     <ClInclude Include="src\Pyxis\Log.h">
+      <Filter>Pyxis</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Window.h">
       <Filter>Pyxis</Filter>
     </ClInclude>
     <ClInclude Include="src\pxpch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Platform\OpenGL\ImGuiOpenGLRenderer.cpp">
+      <Filter>Platform\OpenGL</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Platform\Windows\WindowsWindow.cpp">
+      <Filter>Platform\Windows</Filter>
+    </ClCompile>
     <ClCompile Include="src\Pyxis\Application.cpp">
+      <Filter>Pyxis</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\ImGui\ImGuiLayer.cpp">
+      <Filter>Pyxis\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Layer.cpp">
+      <Filter>Pyxis</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\LayerStack.cpp">
       <Filter>Pyxis</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Log.cpp">

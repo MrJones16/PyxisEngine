@@ -11,8 +11,8 @@ namespace Pyxis
 		MouseMovedEvent(float x, float y)
 			: m_MouseX(x), m_MouseY(y) {}
 
-		inline int GetX() const { return m_MouseX; }
-		inline int GetY() const { return m_MouseY; }
+		inline float GetX() const { return m_MouseX; }
+		inline float GetY() const { return m_MouseY; }
 
 		std::string ToString() const override
 		{
@@ -52,7 +52,7 @@ namespace Pyxis
 	class PYXIS_API MouseButtonEvent : public Event
 	{
 	public:
-		inline float GetButton() const { return m_Button; }
+		inline int GetMouseButton() const { return m_Button; }
 
 		EVENT_CLASS_CATEGORY(EventCategoryMouse | EventCategoryInput)
 	protected:

@@ -10,4 +10,18 @@
 	#error Pyxis only supprts Windows at the moment
 #endif // !PX_PLATFORM_WINDOWS
 
+#ifdef PX_DEBUG
+#define PX_ENABLE_ASSERTS
+#endif
+
+#ifdef PX_ENABLE_ASSERTS
+	#define PX_CORE_ASSERT(x, ...) {if(!(x)) {PX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+	#define PX_ASSERT(x, ...) {if(!(x)) {PX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+#else
+	#define PX_CORE_ASSERT(x,...)
+	#define PX_ASSERT(x,...)
+#endif
+
 #define BIT(x) (1 << x)
+
+#define BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)

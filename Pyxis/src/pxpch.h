@@ -12,6 +12,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "Pyxis/Log.h"
+
 //platform specifics
 #ifdef PX_PLATFORM_WINDOWS
 	#include <Windows.h>

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "pxpch.h"
 #include "Pyxis/Core.h"
 
 namespace Pyxis
@@ -10,7 +11,7 @@ namespace Pyxis
 		None = 0,
 		WindowClose, WindowResize, WindowFocus, WindowLostFocus, WindowMoved,
 		AppTick, AppUpdate, AppRender,
-		KeyPressed, KeyReleased,
+		KeyPressed, KeyReleased, KeyTyped,
 		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
 	};
 
@@ -32,7 +33,7 @@ namespace Pyxis
 
 	class PYXIS_API Event
 	{
-		//friend class EventDispatcher;
+		friend class EventDispatcher;
 	public:
 		virtual EventType GetEventType() const = 0;
 		virtual const char* GetName() const = 0;
@@ -44,8 +45,8 @@ namespace Pyxis
 			//and category with the flags
 			return GetCategoryFlags() & category;
 		}
-	protected:
-		bool m_Handled = false;
+
+		bool Handled;
 	};
 
 	class EventDispatcher
@@ -59,9 +60,9 @@ namespace Pyxis
 		template<typename T>
 		bool Dispatch(EventFn<T> func)
 		{
-			if (m_Event.GetEventType == = T::GetStaticType())
+			if (m_Event.GetEventType() == T::GetStaticType())
 			{
-				m_Event.m_Handled = func(*(T*)&m_Event);
+				m_Event.Handled = func(*(T*)&m_Event);
 				return true;
 			}
 			return false;

@@ -1,3 +1,10 @@
 [submodule "Pyxis/vendor/spdlog"]
 	path = Pyxis/vendor/spdlog
 	url = https://github.com/gabime/spdlog
+[submodule "Pyxis/vendor/GLFW"]
+	path = Pyxis/vendor/GLFW
+	url = https://github.com/glfw/glfw
+[submodule "Pyxis/vendor/ImGui"]
+	path = Pyxis/vendor/ImGui
+	url = https://github.com/ocornut/imgui
+	branch = docking
