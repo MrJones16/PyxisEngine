@@ -50,7 +50,6 @@ namespace Pyxis
 
 	protected:
 		std::string m_DebugName;
-
 	};
 }
 

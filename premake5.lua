@@ -8,16 +8,22 @@ workspace "Pyxis"
 		"Dist"
 	}
 
-outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
+	startproject "Sandbox"
 
-IncludeDir = {}
-IncludeDir["GLFW"] = "Pyxis/vendor/GLFW/include"
-IncludeDir["GLAD"] = "Pyxis/vendor/GLAD/include"
-IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
+	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
-include "Pyxis/vendor/GLFW"
-include "Pyxis/vendor/GLAD"
-include "Pyxis/vendor/ImGui"
+	IncludeDir = {}
+	IncludeDir["GLFW"] = "Pyxis/vendor/GLFW/include"
+	IncludeDir["GLAD"] = "Pyxis/vendor/GLAD/include"
+	IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
+
+	group "Dependencies"
+		include "Pyxis/vendor/GLFW"
+		include "Pyxis/vendor/GLAD"
+		include "Pyxis/vendor/ImGui"
+	group ""
+
+
 
 project "Pyxis"
 	location "Pyxis"

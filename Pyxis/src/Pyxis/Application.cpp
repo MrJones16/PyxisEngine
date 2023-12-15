@@ -3,6 +3,9 @@
 
 #include "glad/glad.h"
 
+#include "Input.h"
+#include <GLFW/glfw3.h>
+
 namespace Pyxis 
 {
 #define BIND_EVENT_FN(x) std::bind(&Application::x, this, std::placeholders::_1)
@@ -16,8 +19,6 @@ namespace Pyxis
 
 		m_Window = std::unique_ptr<Window>(Window::Create());
 		m_Window->SetEventCallBack(BIND_EVENT_FN(OnEvent));
-
-		
 	}
 
 	Application::~Application() {

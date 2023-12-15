@@ -8,6 +8,9 @@
 #include "Pyxis/Layer.h"
 #include "Pyxis/Log.h"
 
+#include "Pyxis/Input.h"
+#include "Pyxis/InputCodes.h"
+
 #include "Pyxis/ImGui/ImGuiLayer.h"
 
 //---------- Entry Point ----------//
