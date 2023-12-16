@@ -16,6 +16,8 @@ workspace "Pyxis"
 	IncludeDir["GLFW"] = "Pyxis/vendor/GLFW/include"
 	IncludeDir["GLAD"] = "Pyxis/vendor/GLAD/include"
 	IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
+	IncludeDir["glm"] = "Pyxis/vendor/glm/glm"
+
 
 	group "Dependencies"
 		include "Pyxis/vendor/GLFW"
@@ -24,7 +26,7 @@ workspace "Pyxis"
 	group ""
 
 
-
+	
 project "Pyxis"
 	location "Pyxis"
 	kind "SharedLib"
@@ -42,7 +44,11 @@ project "Pyxis"
 	{
 		"%{prj.name}/src/**.h",
 		"%{prj.name}/src/**.hpp",
-		"%{prj.name}/src/**.cpp"
+		"%{prj.name}/src/**.cpp",
+		"%{prj.name}/vendor/glm/glm/**.hpp",
+		"%{prj.name}/vendor/glm/glm/**.inl"
+
+
 	}
 
 	includedirs
@@ -51,7 +57,8 @@ project "Pyxis"
 		"%{prj.name}/vendor/spdlog/include",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.GLAD}",
-		"%{IncludeDir.ImGui}"
+		"%{IncludeDir.ImGui}",
+		"%{IncludeDir.glm}"
 	}
 
 	links
@@ -113,7 +120,8 @@ project "Sandbox"
 	includedirs
 	{
 		"Pyxis/vendor/spdlog/include",
-		"Pyxis/src"
+		"Pyxis/src",
+		"%{IncludeDir.glm}"
 	}
 
 	links
