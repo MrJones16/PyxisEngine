@@ -1,5 +1,7 @@
 #include <Pyxis.h>
 
+#include <ImGui/imgui.h>
+
 class ExampleLayer : public Pyxis::Layer
 {
 public:
@@ -11,6 +13,13 @@ public:
 	void OnUpdate() override
 	{
 		if (Pyxis::Input::IsKeyPressed(PX_KEY_TAB)) PX_TRACE("Tab is pressed");
+	}
+
+	void OnImGuiRender() override
+	{
+		ImGui::Begin("Example Layer Window");
+		ImGui::Text("Hello!");
+		ImGui::End();
 	}
 
 	void OnEvent(Pyxis::Event& event) override
@@ -25,7 +34,6 @@ public:
 	Sandbox()
 	{
 		PushLayer(new ExampleLayer());
-		PushOverlay(new Pyxis::ImGuiLayer());
 	}
 	~Sandbox()
 	{

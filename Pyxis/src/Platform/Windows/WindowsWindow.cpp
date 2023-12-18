@@ -5,7 +5,7 @@
 #include "Pyxis/Events/KeyEvent.h"	
 #include "Pyxis/Events/MouseEvent.h"
 
-#include <glad/glad.h>
+#include "Platform/OpenGL/OpenGLContext.h"
 
 namespace Pyxis
 {
@@ -35,11 +35,13 @@ namespace Pyxis
 		m_Data.Width = props.Width;
 		m_Data.Height = props.Height;
 
+		
+
 		PX_CORE_INFO("Creating window {0} ({1}, {2})", props.Title, props.Width, props.Height);
 
 		if (!s_GLFWInitialized)
 		{
-			int success = glfwInit();
+			int success = glfwInit(); 
 			PX_CORE_ASSERT(success, "Could not initialize GLFW");
 			glfwSetErrorCallback(GLFWErrorCallBack);
 			s_GLFWInitialized = true;
@@ -50,9 +52,10 @@ namespace Pyxis
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 		m_Window = glfwCreateWindow((int)props.Width, (int)props.Height, m_Data.Title.c_str(), nullptr, nullptr);
-		glfwMakeContextCurrent(m_Window);
-		int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-		PX_CORE_ASSERT(status, "Failed to load GLAD");
+		m_Context = new OpenGLContext(m_Window);
+		m_Context->Init();
+		
+
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		SetVSync(true);
 
@@ -172,8 +175,10 @@ namespace Pyxis
 	void WindowsWindow::OnUpdate()
 	{
 		glfwPollEvents();
-		glfwSwapBuffers(m_Window);
+		m_Context->SwapBuffers();
+		
 	}
+
 	void WindowsWindow::SetVSync(bool enabled)
 	{
 		if (enabled) {

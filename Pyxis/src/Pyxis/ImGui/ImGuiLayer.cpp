@@ -2,7 +2,8 @@
 #include "ImGuiLayer.h"
 
 #include "imgui.h"
-#include "Platform/OpenGL/ImGuiOpenGLRenderer.h"
+#include "backends/imgui_impl_opengl3.h"
+#include "backends/imgui_impl_glfw.h"
 
 #include "Pyxis/Application.h"
 
@@ -23,167 +24,142 @@ namespace Pyxis
 	{
 	}
 
-	void ImGuiLayer::SetClipboardText(void* user_data, const char* text)
-	{
-		glfwSetClipboardString((GLFWwindow*)user_data, text);
-	}
-
-	const char* ImGuiLayer::GetClipboardText(void* user_data)
-	{
-		return glfwGetClipboardString((GLFWwindow*)user_data);
-	}
-
 	void ImGuiLayer::OnAttach()
 	{
+		//setup context
+		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGui::StyleColorsDark();
 
-		ImGuiIO io = ImGui::GetIO();
-		io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
-		io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
-		io.BackendFlags |= ImGuiConfigFlags_NavEnableKeyboard | ImGuiConfigFlags_NavEnableGamepad;
-		io.BackendFlags |= ImGuiConfigFlags_DockingEnable;
+		PX_CORE_TRACE("Attached ImGui Window");
+		
+		//configure
+		ImGuiIO& io = ImGui::GetIO(); (void)io;//??
+		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad; // Enable Gamepad Controls
+		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
+		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport
 
-		io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
-		io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
-		io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
-		io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
-		io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
-		io.KeyMap[ImGuiKey_LeftShift] = GLFW_KEY_LEFT_SHIFT;
-		io.KeyMap[ImGuiKey_RightShift] = GLFW_KEY_LEFT_SHIFT;
-		io.KeyMap[ImGuiKey_LeftCtrl] = GLFW_KEY_LEFT_CONTROL;
-		io.KeyMap[ImGuiKey_RightCtrl] = GLFW_KEY_RIGHT_CONTROL;
-		io.KeyMap[ImGuiKey_W] = GLFW_KEY_W;
-		io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
-		io.KeyMap[ImGuiKey_S] = GLFW_KEY_S;
-		io.KeyMap[ImGuiKey_D] = GLFW_KEY_D;
-		io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+		//io.Fonts->AddFontFromFileTTF("pixeloidPixeloidSans-mLxMm.ttf", 16.0f);
+		//can't find file?
 
-		//io.SetClipboardTextFn = ImGuiLayer::SetClipboardText;
-		//io.GetClipboardTextFn = ImGuiLayer::GetClipboardText;
+		//style
+		//ImGui::StyleColorsDark();
+		ImVec4* colors = ImGui::GetStyle().Colors;
+		colors[ImGuiCol_Text] = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+		colors[ImGuiCol_TextDisabled] = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+		colors[ImGuiCol_WindowBg] = ImVec4(0.88f, 0.84f, 0.76f, 1.00f);
+		colors[ImGuiCol_ChildBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		colors[ImGuiCol_PopupBg] = ImVec4(0.88f, 0.84f, 0.76f, 1.00f);
+		colors[ImGuiCol_Border] = ImVec4(0.55f, 0.64f, 0.57f, 0.57f);
+		colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.39f);
+		colors[ImGuiCol_FrameBg] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+		colors[ImGuiCol_FrameBgHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+		colors[ImGuiCol_FrameBgActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+		colors[ImGuiCol_TitleBg] = ImVec4(0.55f, 0.64f, 0.57f, 1.00f);
+		colors[ImGuiCol_TitleBgActive] = ImVec4(0.55f, 0.64f, 0.57f, 1.00f);
+		colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.55f, 0.64f, 0.57f, 1.00f);
+		colors[ImGuiCol_MenuBarBg] = ImVec4(0.86f, 0.86f, 0.86f, 1.00f);
+		colors[ImGuiCol_ScrollbarBg] = ImVec4(0.98f, 0.98f, 0.98f, 0.53f);
+		colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.69f, 0.69f, 0.69f, 0.80f);
+		colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.49f, 0.49f, 0.49f, 0.80f);
+		colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
+		colors[ImGuiCol_CheckMark] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+		colors[ImGuiCol_SliderGrab] = ImVec4(0.55f, 0.64f, 0.57f, 1.00f);
+		colors[ImGuiCol_SliderGrabActive] = ImVec4(0.55f, 0.64f, 0.57f, 1.00f);
+		colors[ImGuiCol_Button] = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+		colors[ImGuiCol_ButtonHovered] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+		colors[ImGuiCol_ButtonActive] = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+		colors[ImGuiCol_Header] = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
+		colors[ImGuiCol_HeaderHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
+		colors[ImGuiCol_HeaderActive] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+		colors[ImGuiCol_Separator] = ImVec4(0.39f, 0.39f, 0.39f, 0.62f);
+		colors[ImGuiCol_SeparatorHovered] = ImVec4(0.14f, 0.44f, 0.80f, 0.78f);
+		colors[ImGuiCol_SeparatorActive] = ImVec4(0.14f, 0.44f, 0.80f, 1.00f);
+		colors[ImGuiCol_ResizeGrip] = ImVec4(0.35f, 0.35f, 0.35f, 0.17f);
+		colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+		colors[ImGuiCol_ResizeGripActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+		colors[ImGuiCol_Tab] = ImVec4(0.76f, 0.80f, 0.84f, 0.93f);
+		colors[ImGuiCol_TabHovered] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
+		colors[ImGuiCol_TabActive] = ImVec4(0.60f, 0.73f, 0.88f, 1.00f);
+		colors[ImGuiCol_TabUnfocused] = ImVec4(0.92f, 0.93f, 0.94f, 0.99f);
+		colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.74f, 0.82f, 0.91f, 1.00f);
+		colors[ImGuiCol_DockingPreview] = ImVec4(1.00f, 0.96f, 0.88f, 0.39f);
+		colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
+		colors[ImGuiCol_PlotLines] = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+		colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+		colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+		colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.45f, 0.00f, 1.00f);
+		colors[ImGuiCol_TableHeaderBg] = ImVec4(0.78f, 0.87f, 0.98f, 1.00f);
+		colors[ImGuiCol_TableBorderStrong] = ImVec4(0.57f, 0.57f, 0.64f, 1.00f);
+		colors[ImGuiCol_TableBorderLight] = ImVec4(0.68f, 0.68f, 0.74f, 1.00f);
+		colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+		colors[ImGuiCol_TableRowBgAlt] = ImVec4(0.30f, 0.30f, 0.30f, 0.09f);
+		colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
+		colors[ImGuiCol_DragDropTarget] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+		colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
+		colors[ImGuiCol_NavWindowingHighlight] = ImVec4(0.70f, 0.70f, 0.70f, 0.70f);
+		colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.20f);
+		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 
+
+		
+		ImGuiStyle& style = ImGui::GetStyle();
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			//style.WindowRounding = 0.0f;
+		}
+
+		Application& app = Application::Get();
+		GLFWwindow* window = static_cast<GLFWwindow*>(app.GetWindow().GetNativeWindow());
+
+		ImGui_ImplGlfw_InitForOpenGL(window, true);
 		ImGui_ImplOpenGL3_Init("#version 460");
 	}
 
 	void ImGuiLayer::OnDetach()
 	{
-
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext();
 	}
 
-	void ImGuiLayer::OnUpdate()
-	{
-
-		ImGuiIO& io = ImGui::GetIO();
-		Application& app = Application::Get();
-		io.DisplaySize = ImVec2(app.GetWindow().GetWidth(), app.GetWindow().GetHeight());
-
-		float time = (float)glfwGetTime();
-		io.DeltaTime = m_Time > 0.0f ? (time - m_Time) : (1.0f / 60.0f);
-		m_Time = time;
-
+	void ImGuiLayer::Begin()
+	{ 
 		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
+		ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
+		//ImGuiViewport* viewport = ImGui::GetWindowViewport();
+		ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		//ImGui::SetNextWindowBgAlpha(0.0f);
+	}
+
+	void ImGuiLayer::OnImGuiRender()
+	{
 		static bool show = true;
-		//ImGui::DockSpaceOverViewport();
 		ImGui::ShowDemoWindow(&show);
-		ImGui::Begin("Hello!");
-		ImGui::Text("yo");
-		ImGui::End();
+		ImGui::ShowStyleEditor();
+	}
+
+	void ImGuiLayer::End()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		Application& app = Application::Get();
+		io.DisplaySize = ImVec2(static_cast<float>(app.GetWindow().GetWidth()), static_cast<float>(app.GetWindow().GetHeight()));
 
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-	}
 
-	void ImGuiLayer::OnEvent(Event& event)
-	{
-		EventDispatcher dispatcher(event);
+		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+		{
+			GLFWwindow* backup_current_context = glfwGetCurrentContext();
 
-		dispatcher.Dispatch<MouseButtonPressedEvent>  (BIND_EVENT_FN(ImGuiLayer::OnMouseButtonPressedEvent));
-		dispatcher.Dispatch<MouseButtonReleasedEvent> (BIND_EVENT_FN(ImGuiLayer::OnMouseButtonReleasedEvent));
-		dispatcher.Dispatch<MouseMovedEvent>          (BIND_EVENT_FN(ImGuiLayer::OnMouseMovedEvent));
-		dispatcher.Dispatch<MouseScrolledEvent>       (BIND_EVENT_FN(ImGuiLayer::OnMouseScrolledEvent));
-		dispatcher.Dispatch<KeyPressedEvent>          (BIND_EVENT_FN(ImGuiLayer::OnKeyPressedEvent));
-		dispatcher.Dispatch<KeyReleasedEvent>         (BIND_EVENT_FN(ImGuiLayer::OnKeyReleasedEvent));
-		dispatcher.Dispatch<KeyTypedEvent>            (BIND_EVENT_FN(ImGuiLayer::OnKeyTypedEvent));
-		//dispatcher.Dispatch<WindowCloseEvent>        (BIND_EVENT_FN(ImGuiLayer::OnWindowCloseEvent));
-		dispatcher.Dispatch<WindowResizeEvent>        (BIND_EVENT_FN(ImGuiLayer::OnWindowResizeEvent));
-		//dispatcher.Dispatch<WindowFocusEvent>        (BIND_EVENT_FN(ImGuiLayer::OnWindowFocusEvent));
-		//dispatcher.Dispatch<WindowMoveEvent>         (BIND_EVENT_FN(ImGuiLayer::OnWindowMoveEvent));
-		//dispatcher.Dispatch<AppTickEvent>            (BIND_EVENT_FN(ImGuiLayer::OnAppTickEvent));
-		//dispatcher.Dispatch<AppUpdateEvent>          (BIND_EVENT_FN(ImGuiLayer::OnAppUpdateEvent));
-		//dispatcher.Dispatch<AppRenderEvent>          (BIND_EVENT_FN(ImGuiLayer::OnAppRenderEvent));
-	}
+			ImGui::UpdatePlatformWindows();
+			ImGui::RenderPlatformWindowsDefault();
 
-	bool ImGuiLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.MouseDown[e.GetMouseButton()] = true;
-
-		return false;
-	}
-
-	bool ImGuiLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.MouseDown[e.GetMouseButton()] = false;
-		return false;
-	}
-
-	bool ImGuiLayer::OnMouseMovedEvent(MouseMovedEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.MousePos = ImVec2(e.GetX(), e.GetY());
-
-		return false;
-	}
-
-	bool ImGuiLayer::OnMouseScrolledEvent(MouseScrolledEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.MouseWheelH = e.GetXOffset();
-		io.MouseWheel = e.GetYOffset();
-
-		return false;
-	}
-
-	bool ImGuiLayer::OnKeyPressedEvent(KeyPressedEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.KeysDown[e.GetKeyCode()] = true;
-
-		io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
-		io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
-		io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
-		io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
-		return false;
-	}
-
-	bool ImGuiLayer::OnKeyReleasedEvent(KeyReleasedEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.KeysDown[e.GetKeyCode()] = false;
-		return false;
-	}
-
-	bool ImGuiLayer::OnKeyTypedEvent(KeyTypedEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		int keycode = e.GetKeyCode();
-		if (keycode > 0 && keycode < 0x10000)
-			io.AddInputCharacter((unsigned short)keycode);
-
-		return false;
-	}
-
-	bool ImGuiLayer::OnWindowResizeEvent(WindowResizeEvent& e)
-	{
-		ImGuiIO& io = ImGui::GetIO();
-		io.DisplaySize = ImVec2(e.GetWidth(), e.GetHeight());
-		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-		glViewport(0, 0, e.GetWidth(), e.GetHeight());
-
-		return false;
+			glfwMakeContextCurrent(backup_current_context);
+		}
 	}
 
 }

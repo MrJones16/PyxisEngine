@@ -16,7 +16,7 @@ workspace "Pyxis"
 	IncludeDir["GLFW"] = "Pyxis/vendor/GLFW/include"
 	IncludeDir["GLAD"] = "Pyxis/vendor/GLAD/include"
 	IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
-	IncludeDir["glm"] = "Pyxis/vendor/glm/glm"
+	IncludeDir["glm"] = "Pyxis/vendor/glm"
 
 
 	group "Dependencies"
@@ -29,9 +29,10 @@ workspace "Pyxis"
 	
 project "Pyxis"
 	location "Pyxis"
-	kind "SharedLib"
+	kind "StaticLib"
 	language "C++"
-	staticruntime "off"
+	cppdialect "C++17"
+	staticruntime "on"
 
 
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
@@ -47,8 +48,11 @@ project "Pyxis"
 		"%{prj.name}/src/**.cpp",
 		"%{prj.name}/vendor/glm/glm/**.hpp",
 		"%{prj.name}/vendor/glm/glm/**.inl"
+	}
 
-
+	defines
+	{
+		"_CRT_SECURE_NO_WARNINGS"
 	}
 
 	includedirs
@@ -70,7 +74,6 @@ project "Pyxis"
 	}
 
 	filter "system:windows"
-		cppdialect "C++17"
 		systemversion "latest"
 
 		defines
@@ -80,32 +83,28 @@ project "Pyxis"
 			"GLFW_INCLUDE_NONE"
 		}
 
-		postbuildcommands
-		{
-			("{COPY} %{cfg.buildtarget.relpath} ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/Sandbox");
-		}
-
 	filter "configurations:Debug"
 		defines "PX_DEBUG"
 		runtime "Debug"
-		symbols "On"
+		symbols "on"
 
 	filter "configurations:Release"
 		defines "PX_Release"
 		runtime "Release"
-		symbols "On"
+		optimize "on"
 
 	filter "configurations:Dist"
 		defines "PX_Dist"
 		runtime "Release"
-		symbols "On"
+		optimize "on"
 
 
 project "Sandbox"
 	location "Sandbox"
 	kind "ConsoleApp"
 	language "C++"
-	staticruntime "off"
+	cppdialect "C++17"
+	staticruntime "on"
 
 	targetdir ("bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
 	objdir ("bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
@@ -121,6 +120,7 @@ project "Sandbox"
 	{
 		"Pyxis/vendor/spdlog/include",
 		"Pyxis/src",
+		"Pyxis/vendor",
 		"%{IncludeDir.glm}"
 	}
 
@@ -130,7 +130,6 @@ project "Sandbox"
 	}
 
 	filter "system:windows"
-		cppdialect "C++17"
 		systemversion "latest"
 
 		defines
@@ -142,14 +141,14 @@ project "Sandbox"
 	filter "configurations:Debug"
 		defines "PX_DEBUG"
 		runtime "Debug"
-		symbols "On"
+		symbols "on"
 
 	filter "configurations:Release"
 		defines "PX_Release"
 		runtime "Release"
-		symbols "On"
+		optimize "on"
 
 	filter "configurations:Dist"
 		defines "PX_Dist"
 		runtime "Release"
-		symbols "On"
+		optimize "on"

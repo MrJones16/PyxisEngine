@@ -7,6 +7,8 @@
 #include "Pyxis/Events/Event.h"
 #include "Pyxis/Events/ApplicationEvent.h"
 
+#include "Pyxis/ImGui/ImGuiLayer.h"
+
 
 namespace Pyxis
 {
@@ -30,6 +32,7 @@ namespace Pyxis
 		bool OnWindowClose(WindowCloseEvent &e);
 
 		std::unique_ptr<Window> m_Window;
+		ImGuiLayer* m_ImGuiLayer;
 		bool m_Running = true;
 		LayerStack m_LayerStack;
 	private:

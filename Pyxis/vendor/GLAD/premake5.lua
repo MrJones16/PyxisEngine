@@ -2,6 +2,7 @@ project "GLAD"
 	kind "StaticLib"
 	language "C"
 	architecture "x86_64"
+	staticruntime "On"
 
 	targetdir ("bin/" .. outputdir .. "/%{prj.name}")
 	objdir ("bin-int/" .. outputdir .. "/%{prj.name}")
@@ -12,9 +13,7 @@ project "GLAD"
     
 	filter "system:linux"
 		pic "On"
-
 		systemversion "latest"
-		staticruntime "On"
 
 		defines
 		{
@@ -23,7 +22,6 @@ project "GLAD"
 
 	filter "system:windows"
 		systemversion "latest"
-		staticruntime "On"
 
 		defines 
 		{ 

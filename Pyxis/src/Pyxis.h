@@ -11,7 +11,5 @@
 #include "Pyxis/Input.h"
 #include "Pyxis/InputCodes.h"
 
-#include "Pyxis/ImGui/ImGuiLayer.h"
-
 //---------- Entry Point ----------//
 #include "Pyxis/EntryPoint.h"
