@@ -11,6 +11,7 @@
 
 #include "Pyxis/Renderer/Shader.h"
 #include "Pyxis/Renderer/Buffer.h"
+#include "Pyxis/Renderer/VertexArray.h"
 
 namespace Pyxis
 {
@@ -38,10 +39,11 @@ namespace Pyxis
 		bool m_Running = true;
 		LayerStack m_LayerStack;
 
-		unsigned int m_VertexArray, m_VertexBufferTest, mIndexBufferTest;
-		std::unique_ptr<Shader> m_Shader;
-		std::unique_ptr<VertexBuffer> m_VertexBuffer;
-		std::unique_ptr<IndexBuffer> m_IndexBuffer;
+		std::shared_ptr<Shader> m_Shader;
+		std::shared_ptr<VertexArray> m_VertexArray;
+
+		std::shared_ptr<Shader> m_OrangeShader;
+		std::shared_ptr<VertexArray> m_SquareVA;
 	private:
 		static Application* s_Instance;
 	};

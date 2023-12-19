@@ -1347,6 +1347,16 @@
     <ClInclude Include="vendor\glm\glm\vector_relational.hpp">
       <Filter>vendor\glm\glm</Filter>
     </ClInclude>
+    <ClInclude Include="src\Platform\OpenGL\OpenGLBuffer.h" />
+    <ClInclude Include="src\Platform\OpenGL\OpenGLContext.h" />
+    <ClInclude Include="src\Platform\OpenGL\OpenGLShader.h" />
+    <ClInclude Include="src\Pyxis\Renderer\Buffer.h" />
+    <ClInclude Include="src\Pyxis\Renderer\GraphicsContext.h" />
+    <ClInclude Include="src\Pyxis\Renderer\Renderer.h" />
+    <ClInclude Include="src\Pyxis\Renderer\Shader.h" />
+    <ClInclude Include="src\Pyxis\Renderer\Texture.h" />
+    <ClInclude Include="src\Pyxis\Renderer\VertexArray.h" />
+    <ClInclude Include="src\Platform\OpenGL\OpenGLVertexArray.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Platform\Windows\WindowsInput.cpp">
@@ -1376,5 +1386,20 @@
     <ClCompile Include="src\pxpch.cpp">
       <Filter>src</Filter>
     </ClCompile>
+    <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp" />
+    <ClCompile Include="src\Platform\OpenGL\OpenGLContext.cpp" />
+    <ClCompile Include="src\Platform\OpenGL\OpenGLShader.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\Buffer.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\Shader.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\VertexArray.cpp" />
+    <ClCompile Include="src\Platform\OpenGL\OpenGLVertexArray.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="src\Pyxis\ImGui\PixeloidSans-mLxMm.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\Platform\OpenGL\Shaders\FragmentSingleColor.glsl" />
+    <None Include="src\Platform\OpenGL\Shaders\Vertex.glsl" />
   </ItemGroup>
 </Project>
