@@ -16,6 +16,11 @@ namespace Pyxis
 		glfwMakeContextCurrent(m_WindowHandle);
 		int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
 		PX_CORE_ASSERT(status, "Failed to load GLAD");
+
+		PX_CORE_INFO("OpenGL:");
+		PX_CORE_INFO(" -> Vendor: {0}", (const char*)glGetString(GL_VENDOR));
+		PX_CORE_INFO(" -> Renderer: {0}", (const char*)glGetString(GL_RENDERER));
+		PX_CORE_INFO(" -> Version: {0}", (const char*)glGetString(GL_VERSION));
 	}
 	void OpenGLContext::SwapBuffers()
 	{

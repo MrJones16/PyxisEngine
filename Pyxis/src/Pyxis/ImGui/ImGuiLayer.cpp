@@ -130,9 +130,9 @@ namespace Pyxis
 		ImGui::NewFrame();
 
 		ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
-		//ImGuiViewport* viewport = ImGui::GetWindowViewport();
+		ImGuiViewport* viewport = ImGui::GetWindowViewport();
 		ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-		//ImGui::SetNextWindowBgAlpha(0.0f);
+		ImGui::SetNextWindowBgAlpha(0.0f);
 	}
 
 	void ImGuiLayer::OnImGuiRender()
