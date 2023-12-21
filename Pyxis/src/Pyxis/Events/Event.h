@@ -35,6 +35,8 @@ namespace Pyxis
 	{
 		friend class EventDispatcher;
 	public:
+		bool Handled = false;
+
 		virtual EventType GetEventType() const = 0;
 		virtual const char* GetName() const = 0;
 		virtual int GetCategoryFlags() const = 0;
@@ -46,7 +48,7 @@ namespace Pyxis
 			return GetCategoryFlags() & category;
 		}
 
-		bool Handled;
+		
 	};
 
 	class EventDispatcher

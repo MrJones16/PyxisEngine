@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClInclude Include="src\Platform\OpenGL\OpenGLBuffer.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLContext.h" />
+    <ClInclude Include="src\Platform\OpenGL\OpenGLRendererAPI.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLShader.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLVertexArray.h" />
     <ClInclude Include="src\Platform\Windows\WindowsInput.h" />
@@ -152,6 +153,7 @@
     <ClInclude Include="src\Pyxis.h" />
     <ClInclude Include="src\Pyxis\Application.h" />
     <ClInclude Include="src\Pyxis\Core.h" />
+    <ClInclude Include="src\Pyxis\Core\Timestep.h" />
     <ClInclude Include="src\Pyxis\EntryPoint.h" />
     <ClInclude Include="src\Pyxis\Events\ApplicationEvent.h" />
     <ClInclude Include="src\Pyxis\Events\Event.h" />
@@ -165,8 +167,11 @@
     <ClInclude Include="src\Pyxis\Log.h" />
     <ClInclude Include="src\Pyxis\MathLog.h" />
     <ClInclude Include="src\Pyxis\Renderer\Buffer.h" />
+    <ClInclude Include="src\Pyxis\Renderer\Camera.h" />
     <ClInclude Include="src\Pyxis\Renderer\GraphicsContext.h" />
+    <ClInclude Include="src\Pyxis\Renderer\RenderCommand.h" />
     <ClInclude Include="src\Pyxis\Renderer\Renderer.h" />
+    <ClInclude Include="src\Pyxis\Renderer\RendererAPI.h" />
     <ClInclude Include="src\Pyxis\Renderer\Shader.h" />
     <ClInclude Include="src\Pyxis\Renderer\Texture.h" />
     <ClInclude Include="src\Pyxis\Renderer\VertexArray.h" />
@@ -592,6 +597,7 @@
   <ItemGroup>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp" />
     <ClCompile Include="src\Platform\OpenGL\OpenGLContext.cpp" />
+    <ClCompile Include="src\Platform\OpenGL\OpenGLRendererAPI.cpp" />
     <ClCompile Include="src\Platform\OpenGL\OpenGLShader.cpp" />
     <ClCompile Include="src\Platform\OpenGL\OpenGLVertexArray.cpp" />
     <ClCompile Include="src\Platform\Windows\WindowsInput.cpp" />
@@ -606,7 +612,10 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Buffer.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\Camera.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\RenderCommand.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Renderer.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\RendererAPI.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Shader.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\VertexArray.cpp" />
   </ItemGroup>

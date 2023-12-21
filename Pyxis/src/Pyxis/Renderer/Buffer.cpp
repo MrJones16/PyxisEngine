@@ -11,8 +11,8 @@ namespace Pyxis
 	{
 		switch (Renderer::GetAPI())
 		{
-			case RendererAPI::None:     PX_CORE_ASSERT(false, "RenererAPI::None is currently not supported!"); return nullptr;
-			case RendererAPI::OpenGL:   return new OpenGLVertexBuffer(vertices, size);
+			case RendererAPI::API::None:     PX_CORE_ASSERT(false, "RenererAPI::None is currently not supported!"); return nullptr;
+			case RendererAPI::API::OpenGL:   return new OpenGLVertexBuffer(vertices, size);
 		}
 
 		PX_CORE_ASSERT(false, "Unknown RendererAPI!");
@@ -23,8 +23,8 @@ namespace Pyxis
 	{
 		switch (Renderer::GetAPI())
 		{
-			case RendererAPI::None:     PX_CORE_ASSERT(false, "RenererAPI::None is currently not supported!"); return nullptr;
-			case RendererAPI::OpenGL:   return new OpenGLIndexBuffer(indices, count);
+			case RendererAPI::API::None:     PX_CORE_ASSERT(false, "RenererAPI::None is currently not supported!"); return nullptr;
+			case RendererAPI::API::OpenGL:   return new OpenGLIndexBuffer(indices, count);
 		}
 
 		PX_CORE_ASSERT(false, "Unknown RendererAPI!");

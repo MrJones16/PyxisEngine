@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Pyxis/Core.h"
-
+#include "Pyxis/Core/Timestep.h"
+#include "Pyxis/Events/Event.h"
 #include "Pyxis/Events/KeyEvent.h"
 #include "Pyxis/Events/MouseEvent.h"
 #include "Pyxis/Events/ApplicationEvent.h"
@@ -18,7 +19,7 @@ namespace Pyxis
 
 		virtual void OnAttach() {}
 		virtual void OnDetach() {}
-		virtual void OnUpdate() {}
+		virtual void OnUpdate(Timestep ts) {}
 		virtual void OnImGuiRender() {}
 		virtual void OnEvent(Event& event);
 
