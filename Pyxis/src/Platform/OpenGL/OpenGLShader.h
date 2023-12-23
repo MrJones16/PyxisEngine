@@ -1,11 +1,18 @@
 #pragma once
 
+#include "Pyxis/Renderer/Shader.h"
+#include <glm/glm.hpp>
+
+// TODO: Remove
+typedef unsigned int GLenum;
+
 namespace Pyxis
 {
 	class OpenGLShader : public Shader
 	{
 	public:
-		OpenGLShader(const std::string& vertexPath, const std::string& fragmentPath);
+		OpenGLShader(const std::string& filePath);
+		OpenGLShader(const std::string& vertexSource, const std::string& fragmentSource);
 		~OpenGLShader();
 
 		virtual void Bind() const override;
@@ -14,21 +21,25 @@ namespace Pyxis
 		//virtual void UploadUniformMat4(const std::string& name, const glm::mat4& matrix) override;
 		//virtual void UploadUniformFloat4(const std::string& name, const glm::vec4& float4) override;
 
-		virtual void UploadUniformMat4(const std::string& name, const glm::mat4& matrix) override;
-		virtual void UploadUniformMat3(const std::string& name, const glm::mat3& matrix) override;
-		virtual void UploadUniformMat2(const std::string& name, const glm::mat2& matrix) override;
+		void UploadUniformMat4(const std::string& name, const glm::mat4& matrix);
+		void UploadUniformMat3(const std::string& name, const glm::mat3& matrix);
+		void UploadUniformMat2(const std::string& name, const glm::mat2& matrix);
 
-		virtual void UploadUniformFloat(const std::string& name, const float float1) override;
-		virtual void UploadUniformFloat2(const std::string& name, const glm::vec2& float2) override;
-		virtual void UploadUniformFloat3(const std::string& name, const glm::vec3& float3) override;
-		virtual void UploadUniformFloat4(const std::string& name, const glm::vec4& float4) override;
+		void UploadUniformFloat(const std::string& name, const float float1);
+		void UploadUniformFloat2(const std::string& name, const glm::vec2& float2);
+		void UploadUniformFloat3(const std::string& name, const glm::vec3& float3);
+		void UploadUniformFloat4(const std::string& name, const glm::vec4& float4);
 
-		virtual void UploadUniformInt(const std::string& name, const int int1) override;
-		virtual void UploadUniformInt2(const std::string& name, const glm::ivec2& int2) override;
-		virtual void UploadUniformInt3(const std::string& name, const glm::ivec3& int3) override;
-		virtual void UploadUniformInt4(const std::string& name, const glm::ivec4& int4) override;
+		void UploadUniformInt(const std::string& name, const int int1);
+		void UploadUniformInt2(const std::string& name, const glm::ivec2& int2);
+		void UploadUniformInt3(const std::string& name, const glm::ivec3& int3);
+		void UploadUniformInt4(const std::string& name, const glm::ivec4& int4);
 
-		virtual void UploadUniformBool(const std::string& name, const int val) override;
+		void UploadUniformBool(const std::string& name, const int val);
+	private:
+		std::string ReadFile(const std::string& filePath);
+		std::unordered_map<GLenum, std::string> PreProcess(const std::string& source);
+		void Compile(const std::unordered_map<GLenum, std::string>& shaderSources);
 	private:
 		uint32_t m_RendererID;
 	};

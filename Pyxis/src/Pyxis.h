@@ -22,6 +22,7 @@
 #include "Pyxis/Renderer/VertexArray.h"
 #include "Pyxis/Renderer/Buffer.h"
 #include "Pyxis/Renderer/Shader.h"
+#include "Pyxis/Renderer/Texture.h"
 
 #include "Pyxis/Renderer/Camera.h"
 

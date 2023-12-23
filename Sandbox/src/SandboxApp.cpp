@@ -4,15 +4,17 @@
 #include "Pyxis/Renderer/Camera.h"
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Platform/OpenGL/OpenGLShader.h"
+
 class ExampleLayer : public Pyxis::Layer
 {
 private:
-	std::shared_ptr<Pyxis::Shader> m_SingleColorShader;
-	std::shared_ptr<Pyxis::Shader> m_Shader;
+	Pyxis::Ref<Pyxis::Shader> m_SingleColorShader;
+	Pyxis::Ref<Pyxis::Shader> m_Shader;
 
-	std::shared_ptr<Pyxis::VertexArray> m_VertexArray;
-	std::shared_ptr<Pyxis::VertexArray> m_SquareVertexArray;
+	Pyxis::Ref<Pyxis::VertexArray> m_VertexArray;
 	Pyxis::OrthographicCamera m_Camera;
+	//Pyxis::Material material;
 
 	glm::vec3 m_CameraPosition;
 	float m_CameraRotation;
@@ -24,120 +26,79 @@ private:
 	float m_SquareRotation = 0.0f;
 	glm::vec3 m_SquareScale = glm::vec3(1.0f);
 
+	Pyxis::Ref<Pyxis::Texture2D> m_Texture, m_MushroomTexture;
+
 public:
 	ExampleLayer() : Layer("Example"), m_Camera(3.2f, 1.8f, -1.0f, 1.0f)
 	{
 		m_CameraPosition = glm::vec3(0.0f);
 		m_CameraRotation = 0.0f;
-		std::string vertexSource = R"(
-			#version 460
+
+		const std::string flatcolorVertexSource = R"(
+		#version 460
 			
-			layout (location = 0) in vec3 a_Position;
-			layout (location = 1) in vec4 a_Color;
+		layout (location = 0) in vec3 a_Position;
+		layout (location = 1) in vec2 a_TexCoord;
 
-			out vec4 v_Color;
+		uniform mat4 u_ViewProjection;
+		uniform mat4 u_Transform;
 
-			uniform mat4 u_ViewProjection;
-			uniform mat4 u_Transform;
-
-			void main()
-			{
-				gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0f);
-				v_Color = a_Color;
-			}
-		)";
-		std::string positionvertexSource = R"(
-			#version 460
-			
-			layout (location = 0) in vec3 a_Position;
-
-			uniform mat4 u_ViewProjection;
-			uniform mat4 u_Transform;
-
-			void main()
-			{
-				gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0f);
-			}
-		)";
-		std::string fragmentSource = R"(
-			#version 460
-			
-			layout (location = 0) out vec4 color;
-			in vec4 v_Color;
-
-			void main()
-			{
-				color = v_Color;
-			}
-		)";
-
-		std::string singlecolorfragmentSource = R"(
-			#version 460
-			
-			layout (location = 0) out vec4 color;
-
-			uniform vec4 u_Color;
-
-			void main()
-			{
-				color = u_Color;
-			}
-		)";
-		m_SingleColorShader.reset(Pyxis::Shader::Create(positionvertexSource, singlecolorfragmentSource));
-		m_Shader.reset(Pyxis::Shader::Create(vertexSource, fragmentSource));
-
-		m_VertexArray.reset(Pyxis::VertexArray::Create());
-
-		float vertices[] =
+		void main()
 		{
-			-0.5f, -0.5f,  0.0f, 1.0f, 1.0f, 1.0f, 1.0f,
-			 0.5f, -0.5f,  0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-			 0.0f,  0.5f,  0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-		};
-		std::shared_ptr<Pyxis::VertexBuffer> vertexBuffer;
-		vertexBuffer.reset(Pyxis::VertexBuffer::Create(vertices, sizeof(vertices)));
-		Pyxis::BufferLayout layout = {
-			{Pyxis::ShaderDataType::Float3, "a_Position"},
-			{Pyxis::ShaderDataType::Float4, "a_Color"},
-		};
-		vertexBuffer->SetLayout(layout);
-		m_VertexArray->AddVertexBuffer(vertexBuffer);
+			gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0f);
+		}
+		)";
 
-		//create indices and gen/bind element(index) buffer
-		uint32_t indices[3] =
+		const std::string flatcolorFragmentSource = R"(
+		#version 460
+		
+		layout (location = 0) out vec4 color;
+
+		uniform vec4 u_Color;
+
+		void main()
 		{
-			0,1,2
-		};
-		std::shared_ptr<Pyxis::IndexBuffer> indexBuffer;
-		indexBuffer.reset(Pyxis::IndexBuffer::Create(indices, sizeof(indices) / sizeof(uint32_t)));
-		m_VertexArray->SetIndexBuffer(indexBuffer);
+			color = u_Color;
+		}
+		)";
 
-		//making a square
+		m_SingleColorShader = Pyxis::Shader::Create(flatcolorVertexSource, flatcolorFragmentSource);
+
+		m_Shader = Pyxis::Shader::Create("assets/shaders/Texture.glsl");
+
+		m_VertexArray = Pyxis::VertexArray::Create();
+
 		float squareVertices[] =
 		{
-			-0.75f, -0.75f,  0.0f,
-			 0.75f, -0.75f,  0.0f,
-			 0.75f,  0.75f,  0.0f,
-			-0.75f,  0.75f,  0.0f
+			-0.75f, -0.75f,  0.0f,  0.0f,  0.0f, 
+			 0.75f, -0.75f,  0.0f,  1.0f,  0.0f,
+			 0.75f,  0.75f,  0.0f,  1.0f,  1.0f,
+			-0.75f,  0.75f,  0.0f,  0.0f,  1.0f
 		};
+
 		uint32_t squareIndices[] =
 		{
 			0,1,2,
 			0,2,3
 		};
 
-		m_SquareVertexArray.reset(Pyxis::VertexArray::Create());
-		std::shared_ptr<Pyxis::VertexBuffer> squareVB;
-		squareVB.reset(Pyxis::VertexBuffer::Create(squareVertices, sizeof(squareVertices)));
-		Pyxis::BufferLayout squareLayout = {
-			{Pyxis::ShaderDataType::Float3, "a_Position"}
+		Pyxis::Ref<Pyxis::VertexBuffer> SquareVBO;
+		SquareVBO = Pyxis::VertexBuffer::Create(squareVertices, sizeof(squareVertices));
+		Pyxis::BufferLayout layout = {
+			{Pyxis::ShaderDataType::Float3, "a_Position"},
+			{Pyxis::ShaderDataType::Float2, "a_TexCoord"},
 		};
-		squareVB->SetLayout(squareLayout);
-		m_SquareVertexArray->AddVertexBuffer(squareVB);
+		SquareVBO->SetLayout(layout);
+		m_VertexArray->AddVertexBuffer(SquareVBO);
 
-		std::shared_ptr<Pyxis::IndexBuffer> squareIB;
-		squareIB.reset(Pyxis::IndexBuffer::Create(squareIndices, 6));
-		m_SquareVertexArray->SetIndexBuffer(squareIB);
+		Pyxis::Ref<Pyxis::IndexBuffer> indexBuffer;
+		indexBuffer = Pyxis::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t));
+		m_VertexArray->SetIndexBuffer(indexBuffer);
+
+		m_Texture = Pyxis::Texture2D::Create("assets/textures/container/container.jpg");
+		m_MushroomTexture = Pyxis::Texture2D::Create("assets/textures/bluemush.png");
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_Shader)->Bind();
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_Shader)->UploadUniformInt("u_TextureDiffuse", 0);
 	}
 
 	void OnUpdate(Pyxis::Timestep ts) override
@@ -174,15 +135,21 @@ public:
 		m_Camera.SetRotation(m_CameraRotation);
 		Pyxis::Renderer::BeginScene(m_Camera);
 
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_SingleColorShader)->Bind();
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
+
+		Pyxis::Renderer::Submit(m_SingleColorShader, m_VertexArray, glm::translate(glm::mat4(1.0f), {-1, 0,0}));
+
 		glm::mat4 transform = glm::mat4(1.0f);
 		transform = glm::translate(transform, m_SquarePosition);
 		transform = glm::rotate(transform, glm::radians(-m_SquareRotation), {0,0,1});
 		transform = glm::scale(transform, m_SquareScale);
-		m_SingleColorShader->Bind();
-		m_SingleColorShader->UploadUniformFloat4("u_Color", m_SquareColor);
-		Pyxis::Renderer::Submit(m_SingleColorShader, m_SquareVertexArray, transform);
 
+		m_Texture->Bind();
 		Pyxis::Renderer::Submit(m_Shader, m_VertexArray);
+
+		m_MushroomTexture->Bind();
+		Pyxis::Renderer::Submit(m_Shader, m_VertexArray, transform);
 
 		Pyxis::Renderer::EndScene();
 
@@ -238,7 +205,7 @@ public:
 				m_CameraSpeed *= 1.1f;
 				PX_CORE_INFO("Wider Cam");
 				float width = m_Camera.GetWidth();
-				width *= 1.1;
+				width *= 1.1f;
 				m_Camera.SetWidth(width);
 				m_Camera.SetHeight(width * 9 / 16);
 			}
@@ -256,7 +223,7 @@ public:
 				if (m_CameraSpeed < 2.5f) m_CameraSpeed = 2.5f;
 				PX_CORE_INFO("Smaller Cam");
 				float width = m_Camera.GetWidth();
-				width *= 0.9;
+				width *= 0.9f;
 				if (width < 3.2f) width = 3.2f;
 				m_Camera.SetWidth(width);
 				m_Camera.SetHeight(width * 9 / 16);
