@@ -9,10 +9,12 @@ namespace Pyxis
 	{
 	public:
 		OpenGLTexture2D(const std::string& path);
+		OpenGLTexture2D(uint32_t width, uint32_t height);
 		virtual ~OpenGLTexture2D();
 
 		virtual uint32_t GetWidth() const override { return m_Width; }
 		virtual uint32_t GetHeight() const override { return m_Height; }
+		virtual uint32_t GetID() const override { return m_RendererID; }
 
 		virtual void Bind(uint32_t slot = 0) const override;
 	private:

@@ -3,6 +3,7 @@
 #include "RenderCommand.h"
 #include "Camera.h"
 #include "Shader.h"
+#include "FrameBuffer.h"
 
 namespace Pyxis
 {
@@ -16,6 +17,7 @@ namespace Pyxis
 		static void BeginScene(Camera& camera); // TODO: lights, environment, etc
 		static void EndScene();
 
+		static void AddFrameBuffer(Ref<FrameBuffer> frameBuffer);
 		static void Submit(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform = glm::mat4(1.0f));
 
 		inline static RendererAPI::API GetAPI() { return RendererAPI::GetAPI(); }
@@ -23,6 +25,7 @@ namespace Pyxis
 		struct SceneData
 		{
 			glm::mat4 ViewProjectionMatrix;
+			std::vector<Ref<FrameBuffer>> FrameBuffers;
 		};
 		static SceneData* m_SceneData;
 	};

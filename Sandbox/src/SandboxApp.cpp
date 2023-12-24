@@ -10,7 +10,7 @@ class ExampleLayer : public Pyxis::Layer
 {
 private:
 	Pyxis::ShaderLibrary m_ShaderLibrary;
-
+	Pyxis::Ref<Pyxis::FrameBuffer> m_FrameBuffer;
 	Pyxis::Ref<Pyxis::VertexArray> m_VertexArray;
 	Pyxis::PerspectiveCamera m_Camera;
 	//Pyxis::Material material;
@@ -32,7 +32,7 @@ public:
 	{
 		m_CameraPosition = glm::vec3(0.0f, 0.0f, 5.0f);
 		//m_CameraRotation = 0.0f;
-
+		
 		auto textureShader = m_ShaderLibrary.Load("Texture", "assets/shaders/Texture.glsl");
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->Bind();
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->UploadUniformInt("u_TextureDiffuse", 0);
@@ -70,7 +70,7 @@ public:
 		m_Texture = Pyxis::Texture2D::Create("assets/textures/Wall.png");
 		m_MushroomTexture = Pyxis::Texture2D::Create("assets/textures/bluemush.png");
 
-		
+		m_FrameBuffer = Pyxis::FrameBuffer::Create(1280, 720);
 	}
 
 	void OnUpdate(Pyxis::Timestep ts) override
@@ -107,6 +107,10 @@ public:
 		//m_Camera.SetRotation(m_CameraRotation);
 		Pyxis::Renderer::BeginScene(m_Camera);
 
+		m_FrameBuffer->Bind();
+
+		Pyxis::RenderCommand::Clear();
+
 		auto SingleColorShader = m_ShaderLibrary.Get("SingleColorShader");
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->Bind();
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
@@ -123,6 +127,13 @@ public:
 
 		m_MushroomTexture->Bind();
 		Pyxis::Renderer::Submit(textureShader, m_VertexArray, glm::translate(glm::mat4(1.0f), {1.0f,0.0f,-1.0f}));
+
+
+		
+		Pyxis::RenderCommand::SetClearColor({ 0.2f, 0.2f, 0.2f, 1 });
+		Pyxis::RenderCommand::Clear();
+		Pyxis::Renderer::Submit(textureShader, m_VertexArray, glm::translate(glm::mat4(1.0f), { 1.0f,0.0f,-1.0f }));
+		m_FrameBuffer->Unbind();
 
 		Pyxis::Renderer::EndScene();
 
@@ -145,7 +156,19 @@ public:
 			ImGui::SliderFloat("SquareRotation", &m_SquareRotation, -180, 180, "%.1f");
 			ImGui::InputFloat3("SquareScale", glm::value_ptr(m_SquareScale), "%.1f");
 		}
+		ImGui::End();
 
+		ImGui::Begin("Scene");
+		{
+			ImGui::BeginChild("GameRender");
+			ImGui::Image(
+				(ImTextureID)m_FrameBuffer->GetFrameBufferTexture()->GetID(),
+				ImGui::GetContentRegionAvail(),
+				ImVec2(0, 1),
+				ImVec2(1, 0)
+			);
+		}
+		ImGui::EndChild();
 		ImGui::End();
 	}
 
