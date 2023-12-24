@@ -60,6 +60,9 @@
     <ClInclude Include="src\Platform\OpenGL\OpenGLContext.h">
       <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
+    <ClInclude Include="src\Platform\OpenGL\OpenGLFrameBuffer.h">
+      <Filter>src\Platform\OpenGL</Filter>
+    </ClInclude>
     <ClInclude Include="src\Platform\OpenGL\OpenGLRendererAPI.h">
       <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
@@ -81,17 +84,38 @@
     <ClInclude Include="src\Pyxis.h">
       <Filter>src</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\Application.h">
-      <Filter>src\Pyxis</Filter>
+    <ClInclude Include="src\Pyxis\Core\Application.h">
+      <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\Core.h">
-      <Filter>src\Pyxis</Filter>
+    <ClInclude Include="src\Pyxis\Core\Core.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\EntryPoint.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\Input.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\InputCodes.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\Layer.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\LayerStack.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\Log.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\MathLog.h">
+      <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Core\Timestep.h">
       <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\EntryPoint.h">
-      <Filter>src\Pyxis</Filter>
+    <ClInclude Include="src\Pyxis\Core\Window.h">
+      <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Events\ApplicationEvent.h">
       <Filter>src\Pyxis\Events</Filter>
@@ -108,28 +132,13 @@
     <ClInclude Include="src\Pyxis\ImGui\ImGuiLayer.h">
       <Filter>src\Pyxis\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\Input.h">
-      <Filter>src\Pyxis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pyxis\InputCodes.h">
-      <Filter>src\Pyxis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pyxis\Layer.h">
-      <Filter>src\Pyxis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pyxis\LayerStack.h">
-      <Filter>src\Pyxis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pyxis\Log.h">
-      <Filter>src\Pyxis</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pyxis\MathLog.h">
-      <Filter>src\Pyxis</Filter>
-    </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\Buffer.h">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\Camera.h">
+      <Filter>src\Pyxis\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Renderer\FrameBuffer.h">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\GraphicsContext.h">
@@ -155,9 +164,6 @@
     </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\VertexArray.h">
       <Filter>src\Pyxis\Renderer</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Pyxis\Window.h">
-      <Filter>src\Pyxis</Filter>
     </ClInclude>
     <ClInclude Include="src\pxpch.h">
       <Filter>src</Filter>
@@ -1421,6 +1427,9 @@
     <ClCompile Include="src\Platform\OpenGL\OpenGLContext.cpp">
       <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
+    <ClCompile Include="src\Platform\OpenGL\OpenGLFrameBuffer.cpp">
+      <Filter>src\Platform\OpenGL</Filter>
+    </ClCompile>
     <ClCompile Include="src\Platform\OpenGL\OpenGLRendererAPI.cpp">
       <Filter>src\Platform\OpenGL</Filter>
     </ClCompile>
@@ -1439,8 +1448,17 @@
     <ClCompile Include="src\Platform\Windows\WindowsWindow.cpp">
       <Filter>src\Platform\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="src\Pyxis\Application.cpp">
-      <Filter>src\Pyxis</Filter>
+    <ClCompile Include="src\Pyxis\Core\Application.cpp">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Core\Layer.cpp">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Core\LayerStack.cpp">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Core\Log.cpp">
+      <Filter>src\Pyxis\Core</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\ImGui\ImGuiBuild.cpp">
       <Filter>src\Pyxis\ImGui</Filter>
@@ -1448,19 +1466,13 @@
     <ClCompile Include="src\Pyxis\ImGui\ImGuiLayer.cpp">
       <Filter>src\Pyxis\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="src\Pyxis\Layer.cpp">
-      <Filter>src\Pyxis</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Pyxis\LayerStack.cpp">
-      <Filter>src\Pyxis</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Pyxis\Log.cpp">
-      <Filter>src\Pyxis</Filter>
-    </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Buffer.cpp">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Camera.cpp">
+      <Filter>src\Pyxis\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Renderer\FrameBuffer.cpp">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\RenderCommand.cpp">

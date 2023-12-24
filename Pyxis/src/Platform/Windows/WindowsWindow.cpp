@@ -6,6 +6,7 @@
 #include "Pyxis/Events/MouseEvent.h"
 
 #include "Platform/OpenGL/OpenGLContext.h"
+#include <glad/glad.h>
 
 namespace Pyxis
 {

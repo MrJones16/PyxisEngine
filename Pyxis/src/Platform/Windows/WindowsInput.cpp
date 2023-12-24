@@ -1,7 +1,7 @@
 #include "pxpch.h"
 #include "WindowsInput.h"
 
-#include "Pyxis/Application.h"
+#include "Pyxis/Core/Application.h"
 #include <GLFW/glfw3.h>
 
 namespace Pyxis

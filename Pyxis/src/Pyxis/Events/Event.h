@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pxpch.h"
-#include "Pyxis/Core.h"
+#include "Pyxis/Core/Core.h"
 
 namespace Pyxis
 {

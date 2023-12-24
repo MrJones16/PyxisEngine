@@ -8,12 +8,13 @@
 
 #include <string>
 #include <sstream>
+#include <array>
 #include <fstream>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
 
-#include "Pyxis/Log.h"
+#include "Pyxis/Core/Log.h"
 
 //platform specifics
 #ifdef PX_PLATFORM_WINDOWS

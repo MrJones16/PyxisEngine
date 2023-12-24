@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Pyxis/Input.h"
+#include "Pyxis/Core/Input.h"
 
 namespace Pyxis
 {

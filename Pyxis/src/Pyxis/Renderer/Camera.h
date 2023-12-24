@@ -4,7 +4,64 @@
 
 namespace Pyxis
 {
-	class OrthographicCamera
+	class Camera
+	{
+	public:
+		virtual const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
+		virtual const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
+		virtual const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
+	private:
+		glm::mat4 m_ProjectionMatrix;
+		glm::mat4 m_ViewMatrix;
+		glm::mat4 m_ViewProjectionMatrix;
+	};
+
+	class PerspectiveCamera : public Camera
+	{
+	public:
+		PerspectiveCamera(float aspect, float FOV, float nearClip, float farClip);
+
+		const glm::vec3& GetPosition() const { return m_Position; }
+		void SetPosition(const glm::vec3& position) { m_Position = position; RecalculateViewMatrix(); }
+
+		//const float GetRotation() const { return m_Rotation; }
+		//void SetRotation(float rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
+
+		const float GetFOV() const { return m_FOV; }
+		void SetFOV(float fov) { m_FOV = fov; RecalculateProjectionMatrix(); }
+
+		const float GetAspect() const { return m_Aspect; }
+		void SetAspect(float aspect) { m_Aspect = aspect; RecalculateProjectionMatrix(); }
+
+		const float GetNear() const { return m_Near; }
+		void SetNear(float nearClip) { m_Near = nearClip; RecalculateProjectionMatrix(); }
+
+		const float GetFar() const { return m_Far; }
+		void SetFar(float farClip) { m_Far = farClip; RecalculateProjectionMatrix(); }
+
+
+		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
+		virtual const glm::mat4& GetViewMatrix() const override { return m_ViewMatrix; }
+		virtual const glm::mat4& GetViewProjectionMatrix() const override { return m_ViewProjectionMatrix; }
+
+	private:
+		void RecalculateProjectionMatrix();
+		void RecalculateViewMatrix();
+	private:
+		glm::mat4 m_ProjectionMatrix;
+		glm::mat4 m_ViewMatrix;
+		glm::mat4 m_ViewProjectionMatrix;
+
+		glm::vec3 m_Position;
+		//float m_Rotation = 0.0f;
+
+		float m_FOV;
+		float m_Aspect;
+		float m_Near = -100.0f;
+		float m_Far = 100.0f;
+	};
+
+	class OrthographicCamera : public Camera
 	{
 	public:
 		OrthographicCamera(float width, float height, float nearClip, float farClip);
@@ -29,9 +86,9 @@ namespace Pyxis
 		void SetFar(float farClip) { m_Far = farClip; RecalculateProjectionMatrix(); }
 
 
-		const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
-		const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
-		const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
+		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
+		virtual const glm::mat4& GetViewMatrix() const override  { return m_ViewMatrix; }
+		virtual const glm::mat4& GetViewProjectionMatrix() const override  { return m_ViewProjectionMatrix; }
 
 	private:
 		void RecalculateProjectionMatrix();

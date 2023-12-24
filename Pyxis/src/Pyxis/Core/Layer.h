@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Pyxis/Core.h"
+#include "Pyxis/Core/Core.h"
 #include "Pyxis/Core/Timestep.h"
 #include "Pyxis/Events/Event.h"
 #include "Pyxis/Events/KeyEvent.h"

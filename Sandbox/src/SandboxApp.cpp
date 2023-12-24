@@ -9,11 +9,10 @@
 class ExampleLayer : public Pyxis::Layer
 {
 private:
-	Pyxis::Ref<Pyxis::Shader> m_SingleColorShader;
-	Pyxis::Ref<Pyxis::Shader> m_Shader;
+	Pyxis::ShaderLibrary m_ShaderLibrary;
 
 	Pyxis::Ref<Pyxis::VertexArray> m_VertexArray;
-	Pyxis::OrthographicCamera m_Camera;
+	Pyxis::PerspectiveCamera m_Camera;
 	//Pyxis::Material material;
 
 	glm::vec3 m_CameraPosition;
@@ -29,42 +28,15 @@ private:
 	Pyxis::Ref<Pyxis::Texture2D> m_Texture, m_MushroomTexture;
 
 public:
-	ExampleLayer() : Layer("Example"), m_Camera(3.2f, 1.8f, -1.0f, 1.0f)
+	ExampleLayer() : Layer("Example"), m_Camera(1280 / 720, 75.0f, 0.1f, 100.0f)
 	{
-		m_CameraPosition = glm::vec3(0.0f);
-		m_CameraRotation = 0.0f;
+		m_CameraPosition = glm::vec3(0.0f, 0.0f, 5.0f);
+		//m_CameraRotation = 0.0f;
 
-		const std::string flatcolorVertexSource = R"(
-		#version 460
-			
-		layout (location = 0) in vec3 a_Position;
-		layout (location = 1) in vec2 a_TexCoord;
-
-		uniform mat4 u_ViewProjection;
-		uniform mat4 u_Transform;
-
-		void main()
-		{
-			gl_Position = u_ViewProjection * u_Transform * vec4(a_Position, 1.0f);
-		}
-		)";
-
-		const std::string flatcolorFragmentSource = R"(
-		#version 460
-		
-		layout (location = 0) out vec4 color;
-
-		uniform vec4 u_Color;
-
-		void main()
-		{
-			color = u_Color;
-		}
-		)";
-
-		m_SingleColorShader = Pyxis::Shader::Create(flatcolorVertexSource, flatcolorFragmentSource);
-
-		m_Shader = Pyxis::Shader::Create("assets/shaders/Texture.glsl");
+		auto textureShader = m_ShaderLibrary.Load("Texture", "assets/shaders/Texture.glsl");
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->Bind();
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->UploadUniformInt("u_TextureDiffuse", 0);
+		auto SingleColorShader = m_ShaderLibrary.Load("SingleColorShader", "assets/shaders/SingleColorShader.glsl");
 
 		m_VertexArray = Pyxis::VertexArray::Create();
 
@@ -95,10 +67,10 @@ public:
 		indexBuffer = Pyxis::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t));
 		m_VertexArray->SetIndexBuffer(indexBuffer);
 
-		m_Texture = Pyxis::Texture2D::Create("assets/textures/container/container.jpg");
+		m_Texture = Pyxis::Texture2D::Create("assets/textures/Wall.png");
 		m_MushroomTexture = Pyxis::Texture2D::Create("assets/textures/bluemush.png");
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_Shader)->Bind();
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_Shader)->UploadUniformInt("u_TextureDiffuse", 0);
+
+		
 	}
 
 	void OnUpdate(Pyxis::Timestep ts) override
@@ -132,24 +104,25 @@ public:
 			direction = glm::normalize(direction);
 		m_CameraPosition += direction * m_CameraSpeed * ts.GetSeconds();
 		m_Camera.SetPosition(m_CameraPosition);
-		m_Camera.SetRotation(m_CameraRotation);
+		//m_Camera.SetRotation(m_CameraRotation);
 		Pyxis::Renderer::BeginScene(m_Camera);
 
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_SingleColorShader)->Bind();
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(m_SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
-
-		Pyxis::Renderer::Submit(m_SingleColorShader, m_VertexArray, glm::translate(glm::mat4(1.0f), {-1, 0,0}));
+		auto SingleColorShader = m_ShaderLibrary.Get("SingleColorShader");
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->Bind();
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
 
 		glm::mat4 transform = glm::mat4(1.0f);
 		transform = glm::translate(transform, m_SquarePosition);
-		transform = glm::rotate(transform, glm::radians(-m_SquareRotation), {0,0,1});
+		transform = glm::rotate(transform, glm::radians(-m_SquareRotation), { 0,0,1 });
 		transform = glm::scale(transform, m_SquareScale);
+		Pyxis::Renderer::Submit(SingleColorShader, m_VertexArray, transform);
 
+		auto textureShader = m_ShaderLibrary.Get("Texture");
 		m_Texture->Bind();
-		Pyxis::Renderer::Submit(m_Shader, m_VertexArray);
+		Pyxis::Renderer::Submit(textureShader, m_VertexArray);
 
 		m_MushroomTexture->Bind();
-		Pyxis::Renderer::Submit(m_Shader, m_VertexArray, transform);
+		Pyxis::Renderer::Submit(textureShader, m_VertexArray, glm::translate(glm::mat4(1.0f), {1.0f,0.0f,-1.0f}));
 
 		Pyxis::Renderer::EndScene();
 
@@ -204,10 +177,12 @@ public:
 				PX_CORE_INFO("FasterCameraSpeed");
 				m_CameraSpeed *= 1.1f;
 				PX_CORE_INFO("Wider Cam");
-				float width = m_Camera.GetWidth();
+				//float width = m_Camera.GetWidth();
+				float width = m_Camera.GetFOV();
 				width *= 1.1f;
-				m_Camera.SetWidth(width);
-				m_Camera.SetHeight(width * 9 / 16);
+				//m_Camera.SetWidth(width);
+				//m_Camera.SetHeight(width * 9 / 16);
+				m_Camera.SetFOV(width);
 			}
 		}
 		else
@@ -222,11 +197,14 @@ public:
 				m_CameraSpeed *= 0.9f;
 				if (m_CameraSpeed < 2.5f) m_CameraSpeed = 2.5f;
 				PX_CORE_INFO("Smaller Cam");
-				float width = m_Camera.GetWidth();
+				//float width = m_Camera.GetWidth();
+				float width = m_Camera.GetFOV();
 				width *= 0.9f;
 				if (width < 3.2f) width = 3.2f;
-				m_Camera.SetWidth(width);
-				m_Camera.SetHeight(width * 9 / 16);
+				//m_Camera.SetWidth(width);
+				//m_Camera.SetHeight(width * 9 / 16);
+				m_Camera.SetFOV(width);
+				
 			}
 			
 		}

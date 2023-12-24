@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Pyxis/Window.h"
+#include "Pyxis/Core/Window.h"
 #include "Pyxis/Renderer/GraphicsContext.h"
 
 #include <GLFW/glfw3.h>

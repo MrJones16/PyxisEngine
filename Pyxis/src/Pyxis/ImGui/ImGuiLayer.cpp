@@ -5,7 +5,7 @@
 #include "backends/imgui_impl_opengl3.h"
 #include "backends/imgui_impl_glfw.h"
 
-#include "Pyxis/Application.h"
+#include "Pyxis/Core/Application.h"
 
 //TEMPORARY  shouldnt do this? 
 #include <GLFW/glfw3.h>

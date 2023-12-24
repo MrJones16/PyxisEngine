@@ -22,8 +22,16 @@ namespace Pyxis
         std::string source = ReadFile(filePath);
         auto shaderSources = PreProcess(source);
         Compile(shaderSources);
+
+        // Extract name from filepath
+        auto lastSlash = filePath.find_last_of("/\\");
+        lastSlash = lastSlash == std::string::npos ? 0 : lastSlash + 1;
+        auto lastDot = filePath.rfind(".");
+        auto count = lastDot == std::string::npos ? filePath.size() - lastSlash : lastDot - lastSlash;
+        m_Name = filePath.substr(lastSlash, count);
+
     }
-    OpenGLShader::OpenGLShader(const std::string& vertexSource, const std::string& fragmentSource)
+    OpenGLShader::OpenGLShader(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource)
     {
         std::unordered_map<GLenum, std::string> shaderSources;
         shaderSources[GL_VERTEX_SHADER] = vertexSource;
@@ -34,7 +42,7 @@ namespace Pyxis
     std::string OpenGLShader::ReadFile(const std::string& filePath)
     {
         std::string result;
-        std::ifstream inFile(filePath, std::ios::in | std::ios::binary); // FIXTHIS
+        std::ifstream inFile(filePath, std::ios::in | std::ios::binary);
         if (inFile)
         {
             inFile.seekg(0, std::ios::end);
@@ -77,8 +85,10 @@ namespace Pyxis
     void OpenGLShader::Compile(const std::unordered_map<GLenum, std::string>& shaderSources)
     {
         GLuint program = glCreateProgram();
-        std::vector<GLenum> glShaderIDs(shaderSources.size());
-        for(auto & kv : shaderSources)
+        PX_CORE_ASSERT(shaderSources.size() <= 2, "Too many shader sources");
+        std::array<GLenum, 2> glShaderIDs;
+        int GlShaderIDIndex = 0;
+        for (auto & kv : shaderSources)
         {
             GLenum type = kv.first;
             const std::string& source = kv.second;
@@ -107,8 +117,9 @@ namespace Pyxis
                 PX_CORE_ASSERT(false, "Shader Compilation Failure!");
                 break;
             }
+
             glAttachShader(program, shader);
-            glShaderIDs.push_back(shader);
+            glShaderIDs[GlShaderIDIndex++] = shader;
         }
 
         

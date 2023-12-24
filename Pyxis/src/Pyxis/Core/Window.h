@@ -2,7 +2,7 @@
 
 #include "pxpch.h"
 
-#include "Pyxis/Core.h"
+#include "Pyxis/Core/Core.h"
 #include "Pyxis/Events/Event.h"
 
 namespace Pyxis

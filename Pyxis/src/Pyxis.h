@@ -4,14 +4,14 @@
 
 #include <stdio.h>
 
-#include "Pyxis/Application.h"
-#include "Pyxis/Layer.h"
-#include "Pyxis/Log.h"
-
+#include "Pyxis/Core/Application.h"
+#include "Pyxis/Core/Layer.h"
+#include "Pyxis/Core/Log.h"
+				
 #include "Pyxis/Core/Timestep.h"
-
-#include "Pyxis/Input.h"
-#include "Pyxis/InputCodes.h"
+				
+#include "Pyxis/Core/Input.h"
+#include "Pyxis/Core/InputCodes.h"
 
 #include "Pyxis/ImGui/ImGuiLayer.h"
 
@@ -27,4 +27,4 @@
 #include "Pyxis/Renderer/Camera.h"
 
 //---------- Entry Point ----------//
-#include "Pyxis/EntryPoint.h"
+#include "Pyxis/Core/EntryPoint.h"
