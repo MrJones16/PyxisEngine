@@ -26,4 +26,15 @@ namespace Pyxis
 	private:
 
 	};
+
+	class Texture3D : public Texture
+	{
+	public:
+		static Ref<Texture3D> Create(const std::string& path);
+		static Ref<Texture3D> Create(uint32_t width, uint32_t height, uint32_t length);
+		virtual uint32_t GetLength() const = 0;
+	private:
+
+	};
+
 }

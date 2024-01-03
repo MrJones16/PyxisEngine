@@ -10,6 +10,11 @@ namespace Pyxis
 		virtual const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
 		virtual const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
 		virtual const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
+
+		virtual const glm::vec3& GetPosition() const = 0;
+		virtual const glm::vec3& GetRotation() const = 0;
+		virtual const glm::mat3& GetRotationMatrix() const = 0;
+		virtual const float GetFOV() const = 0;
 	private:
 		glm::mat4 m_ProjectionMatrix;
 		glm::mat4 m_ViewMatrix;
@@ -21,13 +26,13 @@ namespace Pyxis
 	public:
 		PerspectiveCamera(float aspect, float FOV, float nearClip, float farClip);
 
-		const glm::vec3& GetPosition() const { return m_Position; }
+		virtual const glm::vec3& GetPosition() const override { return m_Position; }
 		void SetPosition(const glm::vec3& position) { m_Position = position; RecalculateViewMatrix(); }
 
-		//const float GetRotation() const { return m_Rotation; }
-		//void SetRotation(float rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
+		virtual const glm::vec3& GetRotation() const override{ return m_Rotation; }
+		void SetRotation(glm::vec3 rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
 
-		const float GetFOV() const { return m_FOV; }
+		const float GetFOV() const override { return m_FOV; }
 		void SetFOV(float fov) { m_FOV = fov; RecalculateProjectionMatrix(); }
 
 		const float GetAspect() const { return m_Aspect; }
@@ -43,6 +48,7 @@ namespace Pyxis
 		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
 		virtual const glm::mat4& GetViewMatrix() const override { return m_ViewMatrix; }
 		virtual const glm::mat4& GetViewProjectionMatrix() const override { return m_ViewProjectionMatrix; }
+		virtual const glm::mat3& GetRotationMatrix() const override { return m_RotationMatrix; }
 
 	private:
 		void RecalculateProjectionMatrix();
@@ -51,9 +57,11 @@ namespace Pyxis
 		glm::mat4 m_ProjectionMatrix;
 		glm::mat4 m_ViewMatrix;
 		glm::mat4 m_ViewProjectionMatrix;
+		glm::mat3 m_RotationMatrix;
 
 		glm::vec3 m_Position;
-		//float m_Rotation = 0.0f;
+		glm::vec3 m_Rotation;
+		
 
 		float m_FOV;
 		float m_Aspect;
@@ -67,11 +75,11 @@ namespace Pyxis
 		OrthographicCamera(float width, float height, float nearClip, float farClip);
 		//OrthographicCamera(float left, float right, float top, float bottom);
 
-		const glm::vec3& GetPosition() const { return m_Position; }
+		virtual const glm::vec3& GetPosition() const override { return m_Position; }
 		void SetPosition(const glm::vec3& position) { m_Position = position; RecalculateViewMatrix(); }
 
-		const float GetRotation() const { return m_Rotation; }
-		void SetRotation(float rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
+		virtual const glm::vec3& GetRotation() const override { return m_Rotation; }
+		void SetRotation(glm::vec3 rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
 
 		const float GetWidth() const { return m_Width; }
 		void SetWidth(float width) { m_Width = width; RecalculateProjectionMatrix(); }
@@ -99,7 +107,7 @@ namespace Pyxis
 		glm::mat4 m_ViewProjectionMatrix;
 
 		glm::vec3 m_Position;
-		float m_Rotation = 0.0f;
+		glm::vec3 m_Rotation;
 
 		float m_Width;
 		float m_Height;

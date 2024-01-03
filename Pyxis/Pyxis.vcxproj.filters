@@ -111,6 +111,9 @@
     <ClInclude Include="src\Pyxis\Core\MathLog.h">
       <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\PerspectiveCameraController.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
     <ClInclude Include="src\Pyxis\Core\Timestep.h">
       <Filter>src\Pyxis\Core</Filter>
     </ClInclude>

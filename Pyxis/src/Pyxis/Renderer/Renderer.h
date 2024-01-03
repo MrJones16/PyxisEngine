@@ -11,7 +11,7 @@ namespace Pyxis
 	class Renderer
 	{
 	public:
-		static void Init();
+		static void Init(uint32_t width, uint32_t height);
 		static void OnWindowResize(uint32_t width, uint32_t height);
 
 		static void BeginScene(Camera& camera); // TODO: lights, environment, etc
@@ -25,6 +25,11 @@ namespace Pyxis
 		struct SceneData
 		{
 			glm::mat4 ViewProjectionMatrix;
+			glm::mat4 RotationMatrix;
+			glm::vec3 CameraRotation;
+			glm::vec3 CameraPosition;
+			float FOV;
+			glm::vec2 Resolution;
 			std::vector<Ref<FrameBuffer>> FrameBuffers;
 		};
 		static SceneData* m_SceneData;

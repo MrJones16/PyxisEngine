@@ -2,6 +2,7 @@
 
 #include <ImGui/imgui.h>
 #include "Pyxis/Renderer/Camera.h"
+#include "Pyxis/Core/PerspectiveCameraController.h"
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Platform/OpenGL/OpenGLShader.h"
@@ -11,7 +12,9 @@ class ExampleLayer : public Pyxis::Layer
 private:
 	Pyxis::ShaderLibrary m_ShaderLibrary;
 	Pyxis::Ref<Pyxis::FrameBuffer> m_FrameBuffer;
-	Pyxis::Ref<Pyxis::VertexArray> m_VertexArray;
+	Pyxis::Ref<Pyxis::VertexArray> m_VertexArray, m_VertexArrayCube;
+	Pyxis::Ref<Pyxis::VertexArray> m_ScreenVAO;
+	Pyxis::PerspectiveCameraController m_PerspectiveCameraController;
 	Pyxis::PerspectiveCamera m_Camera;
 	//Pyxis::Material material;
 
@@ -26,9 +29,10 @@ private:
 	glm::vec3 m_SquareScale = glm::vec3(1.0f);
 
 	Pyxis::Ref<Pyxis::Texture2D> m_Texture, m_MushroomTexture;
+	Pyxis::Ref<Pyxis::Texture3D> m_Texture3D;
 
 public:
-	ExampleLayer() : Layer("Example"), m_Camera(1280 / 720, 75.0f, 0.1f, 100.0f)
+	ExampleLayer() : Layer("Example"), m_PerspectiveCameraController(1920 / 1080, 75.0f, 0.1f, 100.0f), m_Camera(1920 / 1080, 75.0f, 0.1f, 100.0f)
 	{
 		m_CameraPosition = glm::vec3(0.0f, 0.0f, 5.0f);
 		//m_CameraRotation = 0.0f;
@@ -36,9 +40,20 @@ public:
 		auto textureShader = m_ShaderLibrary.Load("Texture", "assets/shaders/Texture.glsl");
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->Bind();
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->UploadUniformInt("u_TextureDiffuse", 0);
+
 		auto SingleColorShader = m_ShaderLibrary.Load("SingleColorShader", "assets/shaders/SingleColorShader.glsl");
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->Bind();
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
+
+		auto RayMarchShader = m_ShaderLibrary.Load("RayMarch", "assets/shaders/RayMarch.glsl");
+		auto Voxel = m_ShaderLibrary.Load("Voxel", "assets/shaders/Voxel.glsl");
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(Voxel)->UploadUniformInt("u_ColorTexture", 0);
+		//RayMarchShader->Bind();
+		//std::dynamic_pointer_cast<Pyxis::OpenGLShader>(RayMarchShader)->UploadUniformFloat2("u_Resolution", glm::vec2(1280, 720));
 
 		m_VertexArray = Pyxis::VertexArray::Create();
+		m_VertexArrayCube = Pyxis::VertexArray::Create();
+		m_ScreenVAO = Pyxis::VertexArray::Create();
 
 		float squareVertices[] =
 		{
@@ -48,11 +63,89 @@ public:
 			-0.75f,  0.75f,  0.0f,  0.0f,  1.0f
 		};
 
+		float cubeVertices[] =
+		{
+			-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+			 0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+			 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+			 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+			-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+			-0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+			-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+			 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+			 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+			 0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+			-0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+			-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+			-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+			-0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+			-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+			-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+			-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+			-0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+			 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+			 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+			 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+			 0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+			 0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+			 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+			-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+			 0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+			 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+			 0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+			-0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+			-0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+			-0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+			 0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+			 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+			 0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+			-0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+			-0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+		};
+
+		uint32_t cubeIndices[] =
+		{
+			0,1,2,
+			3,4,5,
+
+			6,7,8,
+			9,10,11,
+
+			12,13,14,
+			15,16,17,
+
+			18,19,20,
+			21,22,23,
+
+			24,25,26,
+			27,28,29,
+
+			30,31,32,
+			33,34,35
+		};
+
+		float screenVertices[] =
+		{
+			-1, -1,  0,
+			 1, -1,  0,
+			 1,  1,  0,
+			-1,  1,  0
+		};
+
 		uint32_t squareIndices[] =
 		{
 			0,1,2,
 			0,2,3
 		};
+
+		/////////////////////
+		// square
+		/////////////////////
 
 		Pyxis::Ref<Pyxis::VertexBuffer> SquareVBO;
 		SquareVBO = Pyxis::VertexBuffer::Create(squareVertices, sizeof(squareVertices));
@@ -67,10 +160,40 @@ public:
 		indexBuffer = Pyxis::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t));
 		m_VertexArray->SetIndexBuffer(indexBuffer);
 
+
+		/////////////////////
+		// cube
+		/////////////////////
+		Pyxis::Ref<Pyxis::VertexBuffer> cubeVBO;
+		cubeVBO = Pyxis::VertexBuffer::Create(cubeVertices, sizeof(cubeVertices));
+		cubeVBO->SetLayout(layout);
+		m_VertexArrayCube->AddVertexBuffer(cubeVBO);
+
+		Pyxis::Ref<Pyxis::IndexBuffer> cubeIndexBuffer;
+		cubeIndexBuffer = Pyxis::IndexBuffer::Create(cubeIndices, sizeof(cubeIndices) / sizeof(uint32_t));
+		m_VertexArrayCube->SetIndexBuffer(cubeIndexBuffer);
+
+		/////////////////////
+		// screen quad
+		/////////////////////
+		Pyxis::Ref<Pyxis::VertexBuffer> ScreenVBO;
+		ScreenVBO = Pyxis::VertexBuffer::Create(screenVertices, sizeof(screenVertices));
+		Pyxis::BufferLayout positionLayout = {
+			{Pyxis::ShaderDataType::Float3, "a_Position"}
+		};
+		ScreenVBO->SetLayout(positionLayout);
+		m_ScreenVAO->AddVertexBuffer(ScreenVBO);
+
+		Pyxis::Ref<Pyxis::IndexBuffer> screenIndexBuffer;
+		screenIndexBuffer = Pyxis::IndexBuffer::Create(squareIndices, sizeof(squareIndices) / sizeof(uint32_t));
+		m_ScreenVAO->SetIndexBuffer(screenIndexBuffer);
+
 		m_Texture = Pyxis::Texture2D::Create("assets/textures/Wall.png");
 		m_MushroomTexture = Pyxis::Texture2D::Create("assets/textures/bluemush.png");
 
-		m_FrameBuffer = Pyxis::FrameBuffer::Create(1280, 720);
+		m_FrameBuffer = Pyxis::FrameBuffer::Create(1920, 1080);
+		Pyxis::Renderer::AddFrameBuffer(m_FrameBuffer);
+		m_PerspectiveCameraController.SetPosition({ 0,0, 2 });
 	}
 
 	void OnUpdate(Pyxis::Timestep ts) override
@@ -78,36 +201,27 @@ public:
 		Pyxis::RenderCommand::SetClearColor({ 0.2f, 0.2f, 0.2f, 1 });
 		Pyxis::RenderCommand::Clear();
 
-		glm::vec3 direction = glm::vec3(0.0f, 0.0f, 0.0f);
 		
-		if (Pyxis::Input::IsKeyPressed(PX_KEY_W)) {
-			direction.y += 1;
-		}
-		if (Pyxis::Input::IsKeyPressed(PX_KEY_A)) {
-			direction.x -= 1;
-		}
-		if (Pyxis::Input::IsKeyPressed(PX_KEY_S)) {
-			direction.y -= 1;
-		}
-		if (Pyxis::Input::IsKeyPressed(PX_KEY_D)) {
-			direction.x += 1;
-		}
-		if (Pyxis::Input::IsKeyPressed(PX_KEY_Q)) {
-			m_CameraRotation -= m_cameraRotationSpeed * ts;
-		}
-		if (Pyxis::Input::IsKeyPressed(PX_KEY_E)) {
-			m_CameraRotation += m_cameraRotationSpeed * ts;
-		}
-
-
-		if (direction.x != 0 && direction.y != 0)
-			direction = glm::normalize(direction);
-		m_CameraPosition += direction * m_CameraSpeed * ts.GetSeconds();
-		m_Camera.SetPosition(m_CameraPosition);
 		//m_Camera.SetRotation(m_CameraRotation);
-		Pyxis::Renderer::BeginScene(m_Camera);
+		//Pyxis::Renderer::BeginScene(m_Camera);
+		m_PerspectiveCameraController.OnUpdate(ts);
+		
+		Pyxis::Renderer::BeginScene(m_PerspectiveCameraController.GetCamera());
 
+		//auto textureShader = m_ShaderLibrary.Get("Texture");
+		//m_Texture->Bind();
+		//Pyxis::Renderer::Submit(textureShader, m_VertexArray);
+
+		auto RayMarchShader = m_ShaderLibrary.Get("RayMarch");
+		auto VoxelShader = m_ShaderLibrary.Get("Voxel");
+		//auto SingleColorShader = m_ShaderLibrary.Get("SingleColorShader");
 		m_FrameBuffer->Bind();
+		Pyxis::RenderCommand::Clear();
+		Pyxis::Renderer::Submit(RayMarchShader, m_VertexArrayCube, glm::mat4(1.0f));
+		//Pyxis::Renderer::Submit(RayMarchShader, m_ScreenVAO);
+		m_FrameBuffer->Unbind();
+
+		/*m_FrameBuffer->Bind();
 
 		Pyxis::RenderCommand::Clear();
 
@@ -133,7 +247,7 @@ public:
 		Pyxis::RenderCommand::SetClearColor({ 0.2f, 0.2f, 0.2f, 1 });
 		Pyxis::RenderCommand::Clear();
 		Pyxis::Renderer::Submit(textureShader, m_VertexArray, glm::translate(glm::mat4(1.0f), { 1.0f,0.0f,-1.0f }));
-		m_FrameBuffer->Unbind();
+		m_FrameBuffer->Unbind();*/
 
 		Pyxis::Renderer::EndScene();
 
@@ -160,12 +274,19 @@ public:
 
 		ImGui::Begin("Scene");
 		{
+			
+			//ImGui::GetForegroundDrawList()->AddRect(ImVec2(0, 0), windowSize, ImU32(0xFFFFFFFF));
 			ImGui::BeginChild("GameRender");
+			ImVec2 windowSize = ImGui::GetContentRegionMax();
+			PX_CORE_INFO("{0}, {1}", windowSize.x, windowSize.y);
+			Pyxis::Renderer::OnWindowResize(windowSize.x, windowSize.y);
 			ImGui::Image(
 				(ImTextureID)m_FrameBuffer->GetFrameBufferTexture()->GetID(),
 				ImGui::GetContentRegionAvail(),
 				ImVec2(0, 1),
-				ImVec2(1, 0)
+				ImVec2(1, 0),
+				ImVec4(1, 1, 1, 1),
+				ImVec4(1, 1, 1, 1)
 			);
 		}
 		ImGui::EndChild();
@@ -177,6 +298,7 @@ public:
 		Pyxis::EventDispatcher dispatcher(event);
 		dispatcher.Dispatch<Pyxis::KeyPressedEvent>(PX_BIND_EVENT_FN(ExampleLayer::OnKeyPressedEvent));
 		dispatcher.Dispatch<Pyxis::MouseScrolledEvent>(PX_BIND_EVENT_FN(ExampleLayer::OnMouseScrolledEvent));
+		dispatcher.Dispatch<Pyxis::WindowResizeEvent>(PX_BIND_EVENT_FN(ExampleLayer::OnWindowResizeEvent));
 		//PX_TRACE("{0}", event);
 	}
 
@@ -186,51 +308,12 @@ public:
 	}
 
 	bool OnMouseScrolledEvent(Pyxis::MouseScrolledEvent& event) {
-		if (event.GetYOffset() < 0)
-		{
-			if (Pyxis::Input::IsKeyPressed(PX_KEY_LEFT_SHIFT))
-			{
-				PX_CORE_INFO("SlowerCameraSpeed");
-				m_CameraSpeed *= 0.9f;
-				if (m_CameraSpeed < 2.5f) m_CameraSpeed = 2.5f;
-				
-			}
-			else
-			{
-				PX_CORE_INFO("FasterCameraSpeed");
-				m_CameraSpeed *= 1.1f;
-				PX_CORE_INFO("Wider Cam");
-				//float width = m_Camera.GetWidth();
-				float width = m_Camera.GetFOV();
-				width *= 1.1f;
-				//m_Camera.SetWidth(width);
-				//m_Camera.SetHeight(width * 9 / 16);
-				m_Camera.SetFOV(width);
-			}
-		}
-		else
-		{
-			if (Pyxis::Input::IsKeyPressed(PX_KEY_LEFT_SHIFT))
-			{
-				PX_CORE_INFO("FasterCameraSpeed");
-				m_CameraSpeed *= 1.1f;
-			}
-			else {
-				PX_CORE_INFO("SlowerCameraSpeed");
-				m_CameraSpeed *= 0.9f;
-				if (m_CameraSpeed < 2.5f) m_CameraSpeed = 2.5f;
-				PX_CORE_INFO("Smaller Cam");
-				//float width = m_Camera.GetWidth();
-				float width = m_Camera.GetFOV();
-				width *= 0.9f;
-				if (width < 3.2f) width = 3.2f;
-				//m_Camera.SetWidth(width);
-				//m_Camera.SetHeight(width * 9 / 16);
-				m_Camera.SetFOV(width);
-				
-			}
-			
-		}
+		m_PerspectiveCameraController.OnMouseScrolledEvent(event);
+		return false;
+	}
+
+	bool OnWindowResizeEvent(Pyxis::WindowResizeEvent& event) {
+		//Pyxis::Renderer::OnWindowResize(event.GetWidth(), event.GetHeight());
 		return false;
 	}
 

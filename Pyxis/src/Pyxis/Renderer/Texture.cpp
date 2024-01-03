@@ -29,4 +29,28 @@ namespace Pyxis
 		PX_CORE_ASSERT(false, "Unknown RendererAPI!");
 		return nullptr;
 	}
+
+	Ref<Texture3D> Texture3D::Create(const std::string& path)
+	{
+		switch (Renderer::GetAPI())
+		{
+		case RendererAPI::API::None:     PX_CORE_ASSERT(false, "RendererAPI::None is currently not supported!"); return nullptr;
+		case RendererAPI::API::OpenGL:   return std::make_shared<OpenGLTexture3D>(path);
+		}
+
+		PX_CORE_ASSERT(false, "Unknown RendererAPI!");
+		return nullptr;
+	}
+
+	Ref<Texture3D> Texture3D::Create(uint32_t width, uint32_t height, uint32_t length)
+	{
+		switch (Renderer::GetAPI())
+		{
+		case RendererAPI::API::None:     PX_CORE_ASSERT(false, "RendererAPI::None is currently not supported!"); return nullptr;
+		case RendererAPI::API::OpenGL:   return std::make_shared<OpenGLTexture3D>(width, height, length);
+		}
+
+		PX_CORE_ASSERT(false, "Unknown RendererAPI!");
+		return nullptr;
+	}
 }

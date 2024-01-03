@@ -21,7 +21,7 @@ namespace Pyxis
 		m_Window->SetEventCallBack(PX_BIND_EVENT_FN(Application::OnEvent));
 		m_Window->SetVSync(true);
 
-		Renderer::Init();
+		Renderer::Init(m_Window->GetWidth(), m_Window->GetHeight());
 
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
@@ -93,7 +93,7 @@ namespace Pyxis
 		}
 
 		m_Minimized = false;
-		Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
+		//Renderer::OnWindowResize(e.GetWidth(), e.GetHeight());
 
 		return false;
 	}

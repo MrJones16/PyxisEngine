@@ -7,7 +7,7 @@ namespace Pyxis
 {
 	PerspectiveCamera::PerspectiveCamera(float aspect, float FOV, float nearClip, float farClip)
 		: m_ProjectionMatrix(glm::perspective(glm::radians(FOV), aspect, nearClip, farClip)),
-		m_Position(0.0f),
+		m_Position(0.0f, 0.0f, 0.0f), m_Rotation(0.0f, 0.0f, 0.0f),
 		m_Aspect(aspect), m_FOV(FOV), m_Near(nearClip), m_Far(farClip)
 	{
 		glm::mat4 transform = glm::mat4(1.0f);
@@ -16,7 +16,17 @@ namespace Pyxis
 		//scale
 
 		m_ViewMatrix = glm::inverse(transform);
+		//m_ViewMatrix = transform;
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
+
+		
+
+		m_RotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.x), glm::vec3(0.0f, 1.0f, 0.0f)) *
+						   glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.y), glm::vec3(1.0f, 0.0f, 0.0f)) *
+						   glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		//m_RotationMatrix = glm::rotate(m_RotationMatrix, glm::radians(m_Rotation.x), { 1,0,0 });
+		//m_RotationMatrix = glm::rotate(m_RotationMatrix, glm::radians(m_Rotation.y), { 0,1,0 });
+		//m_RotationMatrix = glm::rotate(m_RotationMatrix, glm::radians(m_Rotation.z), { 0,0,1 });
 	}
 
 	void PerspectiveCamera::RecalculateProjectionMatrix()
@@ -29,17 +39,38 @@ namespace Pyxis
 	{
 		glm::mat4 transform = glm::mat4(1.0f);
 		transform = glm::translate(transform, m_Position);
-		//transform = glm::rotate(transform, glm::radians(-m_Rotation), glm::vec3(0, 0, 1.0f));
+		//transform = glm::rotate(transform, glm::radians(m_Rotation.x), glm::vec3(0, 1, 0));;
+		//transform = glm::rotate(transform, glm::radians(m_Rotation.y), glm::vec3(0, 1, 0));;
+		//transform = glm::rotate(transform, glm::radians(m_Rotation.z), glm::vec3(0, 1, 0));;
 		//scale
 
+		glm::mat4 rotMat = glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.x), glm::vec3(0.0f, 1.0f, 0.0f)) *
+						   glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.y), glm::vec3(1.0f, 0.0f, 0.0f)) *
+						   glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+
+		m_RotationMatrix = rotMat;
+
+		transform = transform * rotMat;
+
+		glm::vec3 CameraDirection = glm::vec3();
+		CameraDirection.x = cos(glm::radians(m_Rotation.x)) * cos(glm::radians(m_Rotation.y));
+		CameraDirection.y = sin(glm::radians(m_Rotation.y));
+		CameraDirection.z = sin(glm::radians(m_Rotation.x)) * cos(glm::radians(m_Rotation.y));
+		CameraDirection = glm::normalize(CameraDirection);
+		
+		//CameraDirection = m_RotationMatrix * glm::vec3(0, 0, 1);
+		
 		m_ViewMatrix = glm::inverse(transform);
+		//m_ViewMatrix = glm::lookAt(m_Position, m_Position + CameraDirection, glm::vec3(0, 1, 0));
+		//m_ViewMatrix = transform;
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
+
 	}
 
 
 	OrthographicCamera::OrthographicCamera(float width = 2, float height = 2, float nearClip = -100.0f, float farClip = 100.0f)
 		: m_ProjectionMatrix(glm::ortho(-width / 2, width / 2, -height / 2, height / 2, nearClip, farClip)),
-		m_ViewMatrix(1.0f), m_Position(0.0f),
+		m_ViewMatrix(1.0f), m_Position(0.0f), m_Rotation(0.0f),
 		m_Width(width), m_Height(height), m_Near(nearClip), m_Far(farClip)
 	{
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
@@ -55,7 +86,7 @@ namespace Pyxis
 	{
 		glm::mat4 transform = glm::mat4(1.0f);
 		transform = glm::translate(transform, m_Position);
-		transform = glm::rotate(transform, glm::radians(-m_Rotation), glm::vec3(0,0,1.0f));
+		transform = glm::rotate(transform, glm::radians(-m_Rotation.z), glm::vec3(0,0,1.0f));
 		//scale
 
 		m_ViewMatrix = glm::inverse(transform);
