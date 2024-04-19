@@ -20,6 +20,8 @@ namespace Pyxis
 
 		inline virtual const std::string& GetName() const override { return m_Name; }
 
+		virtual void SetMat4(const std::string& name, const glm::mat4& matrix) const override;
+		virtual void SetFloat4(const std::string& name, const glm::vec4& float4) const override;
 		//virtual void UploadUniformMat4(const std::string& name, const glm::mat4& matrix) override;
 		//virtual void UploadUniformFloat4(const std::string& name, const glm::vec4& float4) override;
 

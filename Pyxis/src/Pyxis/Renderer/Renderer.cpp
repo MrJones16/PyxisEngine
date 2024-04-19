@@ -1,5 +1,6 @@
 #include "pxpch.h"
 #include "Renderer.h"
+#include "Renderer2D.h"
 
 #include "Platform/OpenGL/OpenGLShader.h"
 
@@ -11,12 +12,13 @@ namespace Pyxis
     {
         m_SceneData->Resolution = { width, height };
         RenderCommand::Init();
+        Renderer2D::Init();
     }
 
     void Renderer::OnWindowResize(uint32_t width, uint32_t height)
     {
         RenderCommand::SetViewport(0, 0, width, height);
-        PX_CORE_INFO("Set viewport to: {0}, {1}", width, height);
+        //PX_CORE_INFO("Set viewport to: {0}, {1}", width, height);
 
         m_SceneData->Resolution = { width, height };
 
@@ -49,6 +51,7 @@ namespace Pyxis
     {
         shader->Bind();
         std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
         std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
         std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraPosition", m_SceneData->CameraPosition);
         std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraRotation", m_SceneData->CameraRotation);
@@ -56,8 +59,43 @@ namespace Pyxis
         std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat2("u_Resolution", m_SceneData->Resolution);
         std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat("u_FOV", m_SceneData->FOV);
 
-
         vertexArray->Bind();
         RenderCommand::DrawIndexed(vertexArray);
     }
+
+    void Renderer::SubmitLine(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
+    {
+        shader->Bind();
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraPosition", m_SceneData->CameraPosition);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraRotation", m_SceneData->CameraRotation);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_Transform", transform);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat2("u_Resolution", m_SceneData->Resolution);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat("u_FOV", m_SceneData->FOV);
+
+        vertexArray->Bind();
+        RenderCommand::DrawLines(vertexArray, 2);
+    }
+
+    void Renderer::PreBatch(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray)
+    {
+        shader->Bind();
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraPosition", m_SceneData->CameraPosition);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraRotation", m_SceneData->CameraRotation);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat2("u_Resolution", m_SceneData->Resolution);
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat("u_FOV", m_SceneData->FOV);
+        vertexArray->Bind();
+    }
+
+    void Renderer::SubmitBatch(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
+    {
+        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_Transform", transform);
+        RenderCommand::DrawIndexed(vertexArray);
+    }
+
 }

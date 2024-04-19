@@ -72,7 +72,7 @@ namespace Pyxis
 	class OrthographicCamera : public Camera
 	{
 	public:
-		OrthographicCamera(float width, float height, float nearClip, float farClip);
+		OrthographicCamera(float width, float aspect, float nearClip, float farClip);
 		//OrthographicCamera(float left, float right, float top, float bottom);
 
 		virtual const glm::vec3& GetPosition() const override { return m_Position; }
@@ -93,10 +93,17 @@ namespace Pyxis
 		const float GetFar() const { return m_Far; }
 		void SetFar(float farClip) { m_Far = farClip; RecalculateProjectionMatrix(); }
 
+		///not applicable
+		const float GetFOV() const override { return 1; }
+
+		const float GetAspect() const { return m_Aspect; }
+		void SetAspect(float aspect) { m_Aspect = aspect; m_Height = m_Width * m_Aspect; RecalculateProjectionMatrix(); }
 
 		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
 		virtual const glm::mat4& GetViewMatrix() const override  { return m_ViewMatrix; }
 		virtual const glm::mat4& GetViewProjectionMatrix() const override  { return m_ViewProjectionMatrix; }
+		virtual const glm::mat3& GetRotationMatrix() const override { return m_RotationMatrix; }
+
 
 	private:
 		void RecalculateProjectionMatrix();
@@ -105,12 +112,15 @@ namespace Pyxis
 		glm::mat4 m_ProjectionMatrix;
 		glm::mat4 m_ViewMatrix;
 		glm::mat4 m_ViewProjectionMatrix;
+		glm::mat3 m_RotationMatrix;
 
 		glm::vec3 m_Position;
 		glm::vec3 m_Rotation;
 
 		float m_Width;
 		float m_Height;
+
+		float m_Aspect = 9/16;
 		float m_Near = -100.0f;
 		float m_Far = 100.0f;
 	};

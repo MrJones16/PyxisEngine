@@ -11,6 +11,7 @@ namespace Pyxis
 		virtual ~OpenGLVertexBuffer() override;
 
 		virtual void Bind() const override;
+		virtual void BindBufferData(float* vertices, uint32_t size) const;
 		virtual void Unbind() const override;
 
 		inline virtual const BufferLayout& GetLayout() const override { return m_Layout; }

@@ -17,6 +17,7 @@
 
 //---------- Rendering ----------//
 #include "Pyxis/Renderer/Renderer.h"
+#include "Pyxis/Renderer/Renderer2D.h"
 #include "Pyxis/Renderer/RenderCommand.h"
 
 #include "Pyxis/Renderer/VertexArray.h"
@@ -27,5 +28,3 @@
 
 #include "Pyxis/Renderer/Camera.h"
 
-//---------- Entry Point ----------//
-#include "Pyxis/Core/EntryPoint.h"

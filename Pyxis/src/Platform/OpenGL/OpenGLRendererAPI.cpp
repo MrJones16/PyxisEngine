@@ -29,4 +29,11 @@ namespace Pyxis
 	{
 		glDrawElements(GL_TRIANGLES, VertexArray->GetIndexBuffer()->GetCount(), GL_UNSIGNED_INT, nullptr);
 	}
+
+	void OpenGLRendererAPI::DrawLines(const Ref<VertexArray>& VertexArray, uint32_t VertexCount)
+	{
+		VertexArray->Bind();
+		glDrawArrays(GL_LINES, 0, VertexCount);
+	}
+
 }

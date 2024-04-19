@@ -44,13 +44,12 @@ namespace Pyxis
 		//transform = glm::rotate(transform, glm::radians(m_Rotation.z), glm::vec3(0, 1, 0));;
 		//scale
 
-		glm::mat4 rotMat = glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.x), glm::vec3(0.0f, 1.0f, 0.0f)) *
+		m_RotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.x), glm::vec3(0.0f, 1.0f, 0.0f)) *
 						   glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.y), glm::vec3(1.0f, 0.0f, 0.0f)) *
 						   glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
 
-		m_RotationMatrix = rotMat;
-
-		transform = transform * rotMat;
+		//transform = transform * m_RotationMatrix;
+		//m_ViewMatrix = glm::inverse(transform);
 
 		glm::vec3 CameraDirection = glm::vec3();
 		CameraDirection.x = cos(glm::radians(m_Rotation.x)) * cos(glm::radians(m_Rotation.y));
@@ -58,21 +57,20 @@ namespace Pyxis
 		CameraDirection.z = sin(glm::radians(m_Rotation.x)) * cos(glm::radians(m_Rotation.y));
 		CameraDirection = glm::normalize(CameraDirection);
 		
-		//CameraDirection = m_RotationMatrix * glm::vec3(0, 0, 1);
+		CameraDirection = m_RotationMatrix * glm::vec3(0, 0, 1);
 		
-		m_ViewMatrix = glm::inverse(transform);
-		//m_ViewMatrix = glm::lookAt(m_Position, m_Position + CameraDirection, glm::vec3(0, 1, 0));
-		//m_ViewMatrix = transform;
+		m_ViewMatrix = glm::lookAt(m_Position, m_Position + CameraDirection, glm::vec3(0, 1, 0));
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
 
 	}
 
 
-	OrthographicCamera::OrthographicCamera(float width = 2, float height = 2, float nearClip = -100.0f, float farClip = 100.0f)
-		: m_ProjectionMatrix(glm::ortho(-width / 2, width / 2, -height / 2, height / 2, nearClip, farClip)),
-		m_ViewMatrix(1.0f), m_Position(0.0f), m_Rotation(0.0f),
-		m_Width(width), m_Height(height), m_Near(nearClip), m_Far(farClip)
+	OrthographicCamera::OrthographicCamera(float width = 2, float aspect = 9.0f / 16.0f, float nearClip = -100.0f, float farClip = 100.0f)
+		: m_ProjectionMatrix(glm::ortho(-width / 2, width / 2, -(width * aspect) / 2, (width* aspect) / 2, nearClip, farClip)),
+		m_ViewMatrix(1.0f), m_Position(0.0f), m_Rotation(0.0f), m_Aspect(aspect),
+		m_Width(width), m_Height(width* aspect), m_Near(nearClip), m_Far(farClip)
 	{
+		m_RotationMatrix = glm::rotate(glm::mat4(1), glm::radians(-m_Rotation.z), glm::vec3(0, 0, 1.0f));
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
 	}
 
@@ -88,6 +86,8 @@ namespace Pyxis
 		transform = glm::translate(transform, m_Position);
 		transform = glm::rotate(transform, glm::radians(-m_Rotation.z), glm::vec3(0,0,1.0f));
 		//scale
+
+		m_RotationMatrix = glm::rotate(glm::mat4(1), glm::radians(-m_Rotation.z), glm::vec3(0, 0, 1.0f));
 
 		m_ViewMatrix = glm::inverse(transform);
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;

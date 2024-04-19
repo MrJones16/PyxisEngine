@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string>
+#include <glm/glm.hpp>
+
 
 namespace Pyxis
 {
@@ -14,8 +16,11 @@ namespace Pyxis
 
 		virtual const std::string& GetName() const = 0;
 
-		virtual void Bind() const = 0;
+		virtual void Bind()   const = 0;
 		virtual void Unbind() const = 0;
+
+		virtual void SetMat4   (const std::string& name, const glm::mat4& matrix) const = 0;
+		virtual void SetFloat4 (const std::string& name, const glm::vec4& float4) const = 0;
 	};
 
 	class ShaderLibrary

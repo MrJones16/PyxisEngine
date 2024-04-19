@@ -34,6 +34,11 @@ namespace Pyxis
 			s_RendererAPI->DrawIndexed(vertexArray);
 		}
 
+		inline static void DrawLines(const Ref<VertexArray>& vertexArray, uint32_t vertexCount)
+		{
+			s_RendererAPI->DrawLines(vertexArray, vertexCount);
+		}
+
 	private:
 		static RendererAPI* s_RendererAPI;
 	};

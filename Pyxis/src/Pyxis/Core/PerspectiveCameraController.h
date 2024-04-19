@@ -52,10 +52,10 @@ namespace Pyxis
 				m_CameraDirection.y = sin(glm::radians(m_Pitch));
 				m_CameraDirection.z = sin(glm::radians(m_Yaw)) * cos(glm::radians(m_Pitch));
 				m_CameraDirection = glm::normalize(m_CameraDirection);
-				m_Camera.SetRotation(glm::vec3(m_Yaw, m_Pitch, m_Roll));
+				m_Camera.SetRotation(glm::vec3(-m_Yaw, m_Pitch, m_Roll));
 			}
 
-			glm::mat3 RotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(m_Yaw), glm::vec3(0.0f, 1.0f, 0.0f)) *
+			glm::mat3 RotationMatrix = glm::rotate(glm::mat4(1.0f), glm::radians(-m_Yaw), glm::vec3(0.0f, 1.0f, 0.0f)) *
 									   glm::rotate(glm::mat4(1.0f), glm::radians(m_Pitch), glm::vec3(1.0f, 0.0f, 0.0f)) *
 									   glm::rotate(glm::mat4(1.0f), glm::radians(m_Roll), glm::vec3(0.0f, 0.0f, 1.0f));
 			//movement
@@ -65,13 +65,13 @@ namespace Pyxis
 				direction += RotationMatrix * glm::vec3(0, 0, 1);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_A)) {
-				direction -= RotationMatrix * glm::vec3(1, 0, 0);
+				direction += RotationMatrix * glm::vec3(1, 0, 0);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_S)) {
 				direction -= RotationMatrix * glm::vec3(0, 0, 1);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_D)) {
-				direction += RotationMatrix * glm::vec3(1, 0, 0);
+				direction -= RotationMatrix * glm::vec3(1, 0, 0);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_SPACE)) {
 				direction += RotationMatrix * glm::vec3(0, 1, 0);
@@ -108,6 +108,10 @@ namespace Pyxis
 			//return glm::vec3(m_Camera.GetRotationMatrix() * glm::vec4(0,0,1,1));
 		}
 
+		bool OnImGuiRender()
+		{
+
+		}
 
 		void OnMouseScrolledEvent(MouseScrolledEvent& event)
 		{

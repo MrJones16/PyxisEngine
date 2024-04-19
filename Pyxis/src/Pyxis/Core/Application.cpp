@@ -17,7 +17,8 @@ namespace Pyxis
 		PX_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		m_Window = std::unique_ptr<Window>(Window::Create());
+		Pyxis::WindowProps props = WindowProps("Pyxis", 1920 / 2, 1080 / 2);
+		m_Window = std::unique_ptr<Window>(Window::Create(props));
 		m_Window->SetEventCallBack(PX_BIND_EVENT_FN(Application::OnEvent));
 		m_Window->SetVSync(true);
 

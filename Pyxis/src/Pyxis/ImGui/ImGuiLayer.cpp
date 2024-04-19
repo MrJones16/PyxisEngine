@@ -139,9 +139,9 @@ namespace Pyxis
 
 	void ImGuiLayer::OnImGuiRender()
 	{
-		static bool show = true;
-		ImGui::ShowDemoWindow(&show);
-		ImGui::ShowStyleEditor();
+		//static bool show = true;
+		//ImGui::ShowDemoWindow(&show);
+		//ImGui::ShowStyleEditor();
 	}
 
 	void ImGuiLayer::End()
