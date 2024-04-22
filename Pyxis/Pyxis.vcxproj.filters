@@ -1424,6 +1424,7 @@
     </ClInclude>
     <ClInclude Include="src\Pyxis\Core\OrthographicCameraController.h" />
     <ClInclude Include="src\Pyxis\Renderer\Renderer2D.h" />
+    <ClInclude Include="src\Pyxis\Renderer\SubTexture2D.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp">
@@ -1505,5 +1506,6 @@
       <Filter>vendor\stb_image</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Renderer2D.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\SubTexture2D.cpp" />
   </ItemGroup>
 </Project>

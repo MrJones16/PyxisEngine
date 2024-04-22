@@ -21,25 +21,15 @@ namespace Pyxis
 		inline virtual const std::string& GetName() const override { return m_Name; }
 
 		virtual void SetMat4(const std::string& name, const glm::mat4& matrix) const override;
+
 		virtual void SetFloat4(const std::string& name, const glm::vec4& float4) const override;
-		//virtual void UploadUniformMat4(const std::string& name, const glm::mat4& matrix) override;
-		//virtual void UploadUniformFloat4(const std::string& name, const glm::vec4& float4) override;
+		virtual void SetFloat3(const std::string& name, const glm::vec3& float3) const override;
+		virtual void SetFloat2(const std::string& name, const glm::vec2& float2) const override;
+		virtual void SetFloat(const std::string& name, const float& float1) const override;
 
-		void UploadUniformMat4(const std::string& name, const glm::mat4& matrix);
-		void UploadUniformMat3(const std::string& name, const glm::mat3& matrix);
-		void UploadUniformMat2(const std::string& name, const glm::mat2& matrix);
+		virtual void SetInt(const std::string& name, int int1) const override;
+		virtual void SetIntArray(const std::string& name, int* values, uint32_t count) const override;
 
-		void UploadUniformFloat(const std::string& name, const float float1);
-		void UploadUniformFloat2(const std::string& name, const glm::vec2& float2);
-		void UploadUniformFloat3(const std::string& name, const glm::vec3& float3);
-		void UploadUniformFloat4(const std::string& name, const glm::vec4& float4);
-
-		void UploadUniformInt(const std::string& name, const int int1);
-		void UploadUniformInt2(const std::string& name, const glm::ivec2& int2);
-		void UploadUniformInt3(const std::string& name, const glm::ivec3& int3);
-		void UploadUniformInt4(const std::string& name, const glm::ivec4& int4);
-
-		void UploadUniformBool(const std::string& name, const int val);
 	private:
 		std::string ReadFile(const std::string& filePath);
 		std::unordered_map<GLenum, std::string> PreProcess(const std::string& source);

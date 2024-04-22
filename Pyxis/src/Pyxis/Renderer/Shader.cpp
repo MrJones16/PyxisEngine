@@ -11,7 +11,7 @@ namespace Pyxis
 		switch (Renderer::GetAPI())
 		{
 		case RendererAPI::API::None:     PX_CORE_ASSERT(false, "RenererAPI::None is currently not supported!"); return nullptr;
-		case RendererAPI::API::OpenGL:   return std::make_shared<OpenGLShader>(filePath);
+		case RendererAPI::API::OpenGL:   return CreateRef<OpenGLShader>(filePath);
 		}
 
 		PX_CORE_ASSERT(false, "Unknown RendererAPI!");
@@ -23,7 +23,7 @@ namespace Pyxis
 		switch (Renderer::GetAPI())
 		{
 			case RendererAPI::API::None:     PX_CORE_ASSERT(false, "RenererAPI::None is currently not supported!"); return nullptr;
-			case RendererAPI::API::OpenGL:   return std::make_shared<OpenGLShader>(name, vertexPath, fragmentPath);
+			case RendererAPI::API::OpenGL:   return CreateRef<OpenGLShader>(name, vertexPath, fragmentPath);
 		}
 
 		PX_CORE_ASSERT(false, "Unknown RendererAPI!");

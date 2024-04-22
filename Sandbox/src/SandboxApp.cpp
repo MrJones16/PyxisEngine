@@ -67,15 +67,15 @@ public:
 		
 		auto textureShader = m_ShaderLibrary.Load("Texture", "assets/shaders/Texture.glsl");
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->Bind();
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->UploadUniformInt("u_TextureDiffuse", 0);
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(textureShader)->SetInt("u_TextureDiffuse", 0);
 
 		auto SingleColorShader = m_ShaderLibrary.Load("SingleColorShader", "assets/shaders/SingleColorShader.glsl");
 		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->Bind();
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->SetFloat4("u_Color", m_SquareColor);
 
 		auto RayMarchShader = m_ShaderLibrary.Load("RayMarch", "assets/shaders/RayMarch.glsl");
 		auto Voxel = m_ShaderLibrary.Load("Voxel", "assets/shaders/Voxel.glsl");
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(Voxel)->UploadUniformInt("u_ColorTexture", 0);
+		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(Voxel)->SetInt("u_ColorTexture", 0);
 		//RayMarchShader->Bind();
 		//std::dynamic_pointer_cast<Pyxis::OpenGLShader>(RayMarchShader)->UploadUniformFloat2("u_Resolution", glm::vec2(1280, 720));
 
@@ -293,8 +293,8 @@ public:
 
 		Pyxis::RenderCommand::Clear();
 
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->Bind();
-		std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", m_SquareColor);
+		SingleColorShader->Bind();
+		SingleColorShader->SetFloat4("u_Color", m_SquareColor);
 
 		glm::mat4 transform = glm::mat4(1.0f);
 		transform = glm::translate(transform, m_SquarePosition);
@@ -358,7 +358,7 @@ public:
 			//draw lines to anchors
 			//draw line
 			SingleColorShader->Bind();
-			std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", glm::vec4(0, 0, 1, 1));
+			SingleColorShader->SetFloat4("u_Color", glm::vec4(0, 0, 1, 1));
 			
 			for each (auto var in m_VertexArrayLine->GetVertexBuffers())
 			{
@@ -370,7 +370,7 @@ public:
 				lineVertices[3] = 0;
 				//y2
 				lineVertices[4] = 0;
-				var->BindBufferData(lineVertices, sizeof(lineVertices));
+				var->SetData(lineVertices, sizeof(lineVertices));
 				Pyxis::Renderer::SubmitLine(SingleColorShader, m_VertexArrayLine);
 
 				//x1
@@ -381,7 +381,7 @@ public:
 				lineVertices[3] = anchorPos.x;
 				//y2
 				lineVertices[4] = anchorPos.y;
-				var->BindBufferData(lineVertices, sizeof(lineVertices));
+				var->SetData(lineVertices, sizeof(lineVertices));
 				Pyxis::Renderer::SubmitLine(SingleColorShader, m_VertexArrayLine);
 			}
 			
@@ -397,7 +397,7 @@ public:
 		{
 			particleTransform = glm::translate(glm::mat4(1), glm::vec3(p.Position.x, p.Position.y, 0));
 			particleTransform = glm::scale(particleTransform, glm::vec3(0.1f, 0.1f, 0.1f));
-			std::dynamic_pointer_cast<Pyxis::OpenGLShader>(SingleColorShader)->UploadUniformFloat4("u_Color", p.Color);
+			SingleColorShader->SetFloat4("u_Color", p.Color);
 			Pyxis::Renderer::Submit(SingleColorShader, m_VertexArray, particleTransform);
 		}
 

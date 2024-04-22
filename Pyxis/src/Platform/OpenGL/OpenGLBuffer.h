@@ -7,12 +7,14 @@ namespace Pyxis
 	class OpenGLVertexBuffer : public VertexBuffer
 	{
 	public:
+		OpenGLVertexBuffer(uint32_t size);
 		OpenGLVertexBuffer(float* vertices, uint32_t size);
 		virtual ~OpenGLVertexBuffer() override;
 
 		virtual void Bind() const override;
-		virtual void BindBufferData(float* vertices, uint32_t size) const;
 		virtual void Unbind() const override;
+
+		virtual void SetData(const void* data, uint32_t size) const override;
 
 		inline virtual const BufferLayout& GetLayout() const override { return m_Layout; }
 		inline virtual void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }

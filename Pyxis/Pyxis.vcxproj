@@ -181,6 +181,7 @@
     <ClInclude Include="src\Pyxis\Renderer\Renderer2D.h" />
     <ClInclude Include="src\Pyxis\Renderer\RendererAPI.h" />
     <ClInclude Include="src\Pyxis\Renderer\Shader.h" />
+    <ClInclude Include="src\Pyxis\Renderer\SubTexture2D.h" />
     <ClInclude Include="src\Pyxis\Renderer\Texture.h" />
     <ClInclude Include="src\Pyxis\Renderer\VertexArray.h" />
     <ClInclude Include="src\pxpch.h" />
@@ -626,6 +627,7 @@
     <ClCompile Include="src\Pyxis\Renderer\Renderer2D.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\RendererAPI.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Shader.cpp" />
+    <ClCompile Include="src\Pyxis\Renderer\SubTexture2D.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Texture.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\VertexArray.cpp" />
     <ClCompile Include="src\pxpch.cpp">

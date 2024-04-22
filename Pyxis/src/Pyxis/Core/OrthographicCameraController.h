@@ -122,6 +122,7 @@ namespace Pyxis
 			if (event.GetEventType() == EventType::MouseScrolled)
 			{
 				OnMouseScrolledEvent((MouseScrolledEvent&)event);
+
 			}
 		}
 

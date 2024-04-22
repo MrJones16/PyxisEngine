@@ -50,14 +50,14 @@ namespace Pyxis
     void Renderer::Submit(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
     {
         shader->Bind();
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraPosition", m_SceneData->CameraPosition);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraRotation", m_SceneData->CameraRotation);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_Transform", transform);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat2("u_Resolution", m_SceneData->Resolution);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat("u_FOV", m_SceneData->FOV);
+        shader->SetMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
+        shader->SetMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
+        shader->SetMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
+        shader->SetFloat3("u_CameraPosition", m_SceneData->CameraPosition);
+        shader->SetFloat3("u_CameraRotation", m_SceneData->CameraRotation);
+        shader->SetMat4("u_Transform", transform);
+        shader->SetFloat2("u_Resolution", m_SceneData->Resolution);
+        shader->SetFloat("u_FOV", m_SceneData->FOV);
 
         vertexArray->Bind();
         RenderCommand::DrawIndexed(vertexArray);
@@ -66,14 +66,14 @@ namespace Pyxis
     void Renderer::SubmitLine(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
     {
         shader->Bind();
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraPosition", m_SceneData->CameraPosition);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraRotation", m_SceneData->CameraRotation);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_Transform", transform);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat2("u_Resolution", m_SceneData->Resolution);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat("u_FOV", m_SceneData->FOV);
+        shader->SetMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
+        shader->SetMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
+        shader->SetMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
+        shader->SetFloat3("u_CameraPosition", m_SceneData->CameraPosition);
+        shader->SetFloat3("u_CameraRotation", m_SceneData->CameraRotation);
+        shader->SetMat4("u_Transform", transform);
+        shader->SetFloat2("u_Resolution", m_SceneData->Resolution);
+        shader->SetFloat("u_FOV", m_SceneData->FOV);
 
         vertexArray->Bind();
         RenderCommand::DrawLines(vertexArray, 2);
@@ -82,19 +82,19 @@ namespace Pyxis
     void Renderer::PreBatch(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray)
     {
         shader->Bind();
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraPosition", m_SceneData->CameraPosition);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat3("u_CameraRotation", m_SceneData->CameraRotation);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat2("u_Resolution", m_SceneData->Resolution);
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformFloat("u_FOV", m_SceneData->FOV);
+        shader->SetMat4("u_ViewProjection", m_SceneData->ViewProjectionMatrix);
+        shader->SetMat4("u_InverseViewProjection", glm::inverse(m_SceneData->ViewProjectionMatrix));
+        shader->SetMat4("u_RotationMatrix", m_SceneData->RotationMatrix);
+        shader->SetFloat3("u_CameraPosition", m_SceneData->CameraPosition);
+        shader->SetFloat3("u_CameraRotation", m_SceneData->CameraRotation);
+        shader->SetFloat2("u_Resolution", m_SceneData->Resolution);
+        shader->SetFloat("u_FOV", m_SceneData->FOV);
         vertexArray->Bind();
     }
 
     void Renderer::SubmitBatch(const Ref<Shader>& shader, const Ref<VertexArray>& vertexArray, const glm::mat4& transform)
     {
-        std::dynamic_pointer_cast<OpenGLShader>(shader)->UploadUniformMat4("u_Transform", transform);
+        shader->SetMat4("u_Transform", transform);
         RenderCommand::DrawIndexed(vertexArray);
     }
 

@@ -181,78 +181,34 @@ namespace Pyxis
         glUniform4f(location, float4.x, float4.y, float4.z, float4.w);
     }
 
-    void OpenGLShader::UploadUniformMat4(const std::string& name, const glm::mat4& matrix)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
-    }
-
-    void OpenGLShader::UploadUniformMat3(const std::string& name, const glm::mat3& matrix)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniformMatrix3fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
-    }
-
-    void OpenGLShader::UploadUniformMat2(const std::string& name, const glm::mat2& matrix)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniformMatrix2fv(location, 1, GL_FALSE, glm::value_ptr(matrix));
-    }
-
-    void OpenGLShader::UploadUniformFloat(const std::string& name, const float float1)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform1f(location, float1);
-    }
-
-    void OpenGLShader::UploadUniformFloat2(const std::string& name, const glm::vec2& float2)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform2f(location, float2.x, float2.y);
-    }
-
-    void OpenGLShader::UploadUniformFloat3(const std::string& name, const glm::vec3& float3)
+    void OpenGLShader::SetFloat3(const std::string& name, const glm::vec3& float3) const
     {
         GLint location = glGetUniformLocation(m_RendererID, name.c_str());
         glUniform3f(location, float3.x, float3.y, float3.z);
     }
 
-    void OpenGLShader::UploadUniformFloat4(const std::string& name, const glm::vec4& float4)
+    void OpenGLShader::SetFloat2(const std::string& name, const glm::vec2& float2) const
     {
         GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform4f(location, float4.x, float4.y, float4.z, float4.w);
+        glUniform2f(location, float2.x, float2.y);
     }
 
-    void OpenGLShader::UploadUniformInt(const std::string& name, const int int1)
+    void OpenGLShader::SetFloat(const std::string& name, const float& float1) const
+    {
+        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        glUniform1f(location, float1);
+    }
+
+    void OpenGLShader::SetInt(const std::string& name, int int1) const
     {
         GLint location = glGetUniformLocation(m_RendererID, name.c_str());
         glUniform1i(location, int1);
     }
 
-    void OpenGLShader::UploadUniformInt2(const std::string& name, const glm::ivec2& int2)
+    void OpenGLShader::SetIntArray(const std::string& name, int* values, uint32_t count) const
     {
         GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform2i(location, int2.x, int2.y);
+        glUniform1iv(location, count, values);
     }
-
-    void OpenGLShader::UploadUniformInt3(const std::string& name, const glm::ivec3& int3)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform3i(location, int3.x, int3.y, int3.z);
-    }
-
-    void OpenGLShader::UploadUniformInt4(const std::string& name, const glm::ivec4& int4)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform4i(location, int4.x, int4.y, int4.z, int4.w);
-    }
-
-    void OpenGLShader::UploadUniformBool(const std::string& name, const int val)
-    {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
-        glUniform1i(location, val);
-    }
-
-    
 
 }
