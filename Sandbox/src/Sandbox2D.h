@@ -30,7 +30,7 @@ private:
 	std::vector<float> m_ProfileAverageValueStorage;
 	int m_ProfileAverageCount = 100;
 
-	//Pyxis::Ref<Pyxis::FrameBuffer> m_FrameBuffer;
+	Pyxis::Ref<Pyxis::FrameBuffer> m_SceneFrameBuffer;
 	Pyxis::Ref<Pyxis::Texture2D> m_TestTexture;
 	Pyxis::Ref<Pyxis::Texture2D> m_SpritesheetTexture;
 	Pyxis::Ref<Pyxis::SubTexture2D> m_SubTextureTest;

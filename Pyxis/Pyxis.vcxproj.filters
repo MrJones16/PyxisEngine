@@ -75,9 +75,6 @@
     <ClInclude Include="src\Platform\OpenGL\OpenGLVertexArray.h">
       <Filter>src\Platform\OpenGL</Filter>
     </ClInclude>
-    <ClInclude Include="src\Platform\Windows\WindowsInput.h">
-      <Filter>src\Platform\Windows</Filter>
-    </ClInclude>
     <ClInclude Include="src\Platform\Windows\WindowsWindow.h">
       <Filter>src\Platform\Windows</Filter>
     </ClInclude>
@@ -109,6 +106,9 @@
       <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Core\MathLog.h">
+      <Filter>src\Pyxis\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\OrthographicCameraController.h">
       <Filter>src\Pyxis\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Core\PerspectiveCameraController.h">
@@ -156,10 +156,16 @@
     <ClInclude Include="src\Pyxis\Renderer\Renderer.h">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pyxis\Renderer\Renderer2D.h">
+      <Filter>src\Pyxis\Renderer</Filter>
+    </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\RendererAPI.h">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\Shader.h">
+      <Filter>src\Pyxis\Renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Renderer\SubTexture2D.h">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Renderer\Texture.h">
@@ -1422,9 +1428,8 @@
     <ClInclude Include="vendor\stb_image\stb_image.h">
       <Filter>vendor\stb_image</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\Core\OrthographicCameraController.h" />
-    <ClInclude Include="src\Pyxis\Renderer\Renderer2D.h" />
-    <ClInclude Include="src\Pyxis\Renderer\SubTexture2D.h" />
+    <ClInclude Include="src\Pyxis\Game\Scene.h" />
+    <ClInclude Include="src\Pyxis\Game\Entity.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp">
@@ -1487,10 +1492,16 @@
     <ClCompile Include="src\Pyxis\Renderer\Renderer.cpp">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClCompile>
+    <ClCompile Include="src\Pyxis\Renderer\Renderer2D.cpp">
+      <Filter>src\Pyxis\Renderer</Filter>
+    </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\RendererAPI.cpp">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Shader.cpp">
+      <Filter>src\Pyxis\Renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Renderer\SubTexture2D.cpp">
       <Filter>src\Pyxis\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Texture.cpp">
@@ -1505,7 +1516,7 @@
     <ClCompile Include="vendor\stb_image\stb_image.cpp">
       <Filter>vendor\stb_image</Filter>
     </ClCompile>
-    <ClCompile Include="src\Pyxis\Renderer\Renderer2D.cpp" />
-    <ClCompile Include="src\Pyxis\Renderer\SubTexture2D.cpp" />
+    <ClCompile Include="src\Pyxis\Game\Scene.cpp" />
+    <ClCompile Include="src\Pyxis\Game\Entity.cpp" />
   </ItemGroup>
 </Project>

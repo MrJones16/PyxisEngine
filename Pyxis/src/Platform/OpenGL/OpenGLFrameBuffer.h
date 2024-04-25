@@ -6,18 +6,24 @@ namespace Pyxis
 	class OpenGLFrameBuffer : public FrameBuffer
 	{
 	public:
-		OpenGLFrameBuffer(uint32_t width, uint32_t height);
+		OpenGLFrameBuffer(const FrameBufferSpecification& spec);
 		virtual ~OpenGLFrameBuffer() override;
+
+		virtual void Invalidate() override;
 
 		virtual void Bind() const override;
 		virtual void Unbind() const override;
 
-		inline virtual Ref<Texture2D> GetFrameBufferTexture() const override { return m_texture; }
-		virtual void RescaleFrameBuffer(uint32_t width, uint32_t height) const override;
+		inline virtual uint32_t GetColorAttatchmentRendererID() const override { return m_ColorAttatchment; }
+		virtual void Resize(uint32_t width, uint32_t height) override;
+
+		virtual const FrameBufferSpecification& GetSpecification() const { return m_Specification; }
 
 	private:
-		uint32_t m_RendererID;
-		Ref<Texture2D> m_texture;
-		uint32_t m_RenderBufferID;
+		FrameBufferSpecification m_Specification;
+
+		uint32_t m_RendererID = (uint32_t)0;
+		uint32_t m_ColorAttatchment = 0;
+		uint32_t m_DepthStencilAttatchment = 0;
 	};
 }

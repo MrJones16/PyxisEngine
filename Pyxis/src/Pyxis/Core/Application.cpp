@@ -12,12 +12,12 @@ namespace Pyxis
 
 	Application* Application::s_Instance = nullptr;
 
-	Application::Application() {
+	Application::Application(const std::string& name) {
 
 		PX_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		Pyxis::WindowProps props = WindowProps("Pyxis", 1920 / 2, 1080 / 2);
+		Pyxis::WindowProps props = WindowProps(name, 1280, 720);
 		m_Window = std::unique_ptr<Window>(Window::Create(props));
 		m_Window->SetEventCallBack(PX_BIND_EVENT_FN(Application::OnEvent));
 		m_Window->SetVSync(true);
@@ -30,7 +30,16 @@ namespace Pyxis
 
 	Application::~Application() {
 		
-	};
+	}
+
+	void Application::Close()
+	{
+		m_Running = false;
+		while (m_LayerStack.begin() != m_LayerStack.end())
+		{
+			m_LayerStack.PopLayer(*(m_LayerStack.end() - 1));
+		}
+	}
 
 	void Application::OnEvent(Event& e)
 	{
@@ -39,10 +48,11 @@ namespace Pyxis
 		dispatcher.Dispatch<WindowCloseEvent>(PX_BIND_EVENT_FN(Application::OnWindowClose));
 		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(Application::OnWindowResize));
 
-		for (auto it = m_LayerStack.end(); it != m_LayerStack.begin();)
+		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
 		{
-			(*--it)->OnEvent(e);
-			if (e.Handled) break; 
+			if (e.Handled) 
+				break;
+			(*it)->OnEvent(e);
 		}
 
 	}

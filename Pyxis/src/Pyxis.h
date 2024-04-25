@@ -29,3 +29,6 @@
 
 #include "Pyxis/Renderer/Camera.h"
 
+
+//---------- Game ----------//
+#include "Pyxis/Game/Scene.h"

@@ -99,6 +99,9 @@ namespace Pyxis
 		const float GetAspect() const { return m_Aspect; }
 		void SetAspect(float aspect) { m_Aspect = aspect; m_Height = m_Width * m_Aspect; RecalculateProjectionMatrix(); }
 
+
+		//void SetProjectionMatrix(float width, float height, ) const override { return m_ProjectionMatrix; }
+
 		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
 		virtual const glm::mat4& GetViewMatrix() const override  { return m_ViewMatrix; }
 		virtual const glm::mat4& GetViewProjectionMatrix() const override  { return m_ViewProjectionMatrix; }

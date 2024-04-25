@@ -131,10 +131,10 @@ namespace Pyxis
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
 
-		ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
-		ImGuiViewport* viewport = ImGui::GetWindowViewport();
-		ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-		ImGui::SetNextWindowBgAlpha(0.0f);
+		//ImGuiID dockspace_id = ImGui::GetID("MainDockspace");
+		//ImGuiViewport* viewport = ImGui::GetWindowViewport();
+		//ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		//ImGui::SetNextWindowBgAlpha(0.0f);
 	}
 
 	void ImGuiLayer::OnImGuiRender()
@@ -142,6 +142,16 @@ namespace Pyxis
 		//static bool show = true;
 		//ImGui::ShowDemoWindow(&show);
 		//ImGui::ShowStyleEditor();
+	}
+
+	void ImGuiLayer::OnEvent(Event& event)
+	{
+		if (m_BlockEvents)
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			event.Handled |= event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
+			event.Handled |= event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
+		}
 	}
 
 	void ImGuiLayer::End()

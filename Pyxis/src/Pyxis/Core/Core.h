@@ -32,9 +32,9 @@
 
 #define PX_BIND_EVENT_FN(x) std::bind(&x, this, std::placeholders::_1)
 
-#define STATISTICS 1
+#define STATISTICS 0
 
-#define PROFILING 1
+#define PROFILING 0
 
 namespace Pyxis
 {

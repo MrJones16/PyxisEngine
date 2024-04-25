@@ -11,12 +11,12 @@ namespace Pyxis
 	struct WindowProps
 	{
 		std::string Title;
-		unsigned int Width;
-		unsigned int Height;
+		uint32_t Width;
+		uint32_t Height;
 
 		WindowProps(const std::string& title = "Pyxis Engine",
-			unsigned int width = 1920,
-			unsigned int height = 1080)
+			uint32_t width = 1920,
+			uint32_t height = 1080)
 			: Title(title), Width(width), Height(height) {}
 
 	};

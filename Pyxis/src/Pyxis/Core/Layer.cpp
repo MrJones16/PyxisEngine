@@ -16,7 +16,7 @@ namespace Pyxis
 
 	}
 
-	void Layer::OnEvent(Event& event)
+	void Layer::OnEvent(Event& e)
 	{
 		//EventDispatcher dispatcher(event);
 

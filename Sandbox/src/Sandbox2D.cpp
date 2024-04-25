@@ -60,7 +60,8 @@ void Sandbox2D::OnAttach()
 	Pyxis::Renderer2D::Init();
 	m_TestTexture = Pyxis::Texture2D::Create("assets/textures/bluemush.png");
 	m_SpritesheetTexture = Pyxis::Texture2D::Create("assets/textures/ForestTileSet.png");
-	m_SubTextureTest = Pyxis::SubTexture2D::CreateFromCoords(m_SpritesheetTexture, { 0,0 }, { 16,16 });
+	m_SubTextureTest = Pyxis::SubTexture2D::CreateFromCoords(m_SpritesheetTexture, { 2 ,0 }, { 16,16 });
+	//m_SceneFrameBuffer = Pyxis::FrameBuffer::Create(1280, 720);
 }
 
 void Sandbox2D::OnDetatch()
@@ -80,6 +81,7 @@ void Sandbox2D::OnUpdate(Pyxis::Timestep ts)
 	
 	{
 		PROFILE_SCOPE("Renderer Prep");
+		m_SceneFrameBuffer->Bind();
 		Pyxis::RenderCommand::SetClearColor({ 0.2f, 0.2f, 0.2f, 1 });
 		Pyxis::RenderCommand::Clear();
 		Pyxis::Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
@@ -103,10 +105,42 @@ void Sandbox2D::OnUpdate(Pyxis::Timestep ts)
 
 	//m_FrameBuffer->Unbind()
 	Pyxis::Renderer2D::EndScene();
+	m_SceneFrameBuffer->Unbind();
 }
 
 void Sandbox2D::OnImGuiRender()
 {
+	if (ImGui::BeginMainMenuBar())
+	{
+		ImGui::DockSpaceOverViewport();
+		ImGui::EndMainMenuBar();
+	}
+
+	//if (ImGui::Begin("Scene"))
+	//{
+
+	//	//ImGui::GetForegroundDrawList()->AddRect(ImVec2(0, 0), windowSize, ImU32(0xFFFFFFFF));
+	//	ImGui::BeginChild("GameRender");
+	//	ImVec2 windowSize = ImGui::GetContentRegionMax();
+
+	//	m_OrthographicCameraController.SetAspect(windowSize.y / windowSize.x);
+	//	//m_OrthographicCameraController.SetWidth(windowSize.x);
+	//	//m_OrthographicCameraController.UpdateHeight();
+	//	//PX_CORE_INFO("{0}, {1}", windowSize.x, windowSize.y);
+	//	Pyxis::Renderer::OnWindowResize(windowSize.x, windowSize.y);
+	//	ImGui::Image(
+	//		(ImTextureID)m_SceneFrameBuffer->GetFrameBufferTexture()->GetID(),
+	//		ImGui::GetContentRegionAvail(),
+	//		ImVec2(0, 1),
+	//		ImVec2(1, 0),
+	//		ImVec4(1, 1, 1, 1)
+	//		//ImVec4(1, 1, 1, 1) border color
+	//	);
+	//	ImGui::EndChild();
+	//	ImGui::End();
+	//}
+	
+
 	ImGui::Begin("Testing");
 
 	ImGui::ColorEdit4("SquareColor", glm::value_ptr(m_TestColor), 0.1f);

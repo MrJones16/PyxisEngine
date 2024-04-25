@@ -21,8 +21,10 @@ namespace Pyxis
 	class PYXIS_API Application
 	{
 	public:
-		Application();
+		Application(const std::string& name = "Pyxis-Engine");
 		virtual ~Application();
+
+		void Close();
 
 		void Run();
 
@@ -31,8 +33,11 @@ namespace Pyxis
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
-		inline static Application& Get() { return *s_Instance; }
 		inline Window& GetWindow() { return *m_Window; }
+
+		inline ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
+
+		inline static Application& Get() { return *s_Instance; }
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		bool OnWindowResize(WindowResizeEvent &e);

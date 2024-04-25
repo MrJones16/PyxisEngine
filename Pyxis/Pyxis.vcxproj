@@ -150,11 +150,11 @@
     <ClInclude Include="src\Platform\OpenGL\OpenGLShader.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLTexture.h" />
     <ClInclude Include="src\Platform\OpenGL\OpenGLVertexArray.h" />
-    <ClInclude Include="src\Platform\Windows\WindowsInput.h" />
     <ClInclude Include="src\Platform\Windows\WindowsWindow.h" />
     <ClInclude Include="src\Pyxis.h" />
     <ClInclude Include="src\Pyxis\Core\Application.h" />
     <ClInclude Include="src\Pyxis\Core\Core.h" />
+    <ClInclude Include="src\Pyxis\Game\Entity.h" />
     <ClInclude Include="src\Pyxis\Core\EntryPoint.h" />
     <ClInclude Include="src\Pyxis\Core\Input.h" />
     <ClInclude Include="src\Pyxis\Core\InputCodes.h" />
@@ -164,6 +164,7 @@
     <ClInclude Include="src\Pyxis\Core\MathLog.h" />
     <ClInclude Include="src\Pyxis\Core\OrthographicCameraController.h" />
     <ClInclude Include="src\Pyxis\Core\PerspectiveCameraController.h" />
+    <ClInclude Include="src\Pyxis\Game\Scene.h" />
     <ClInclude Include="src\Pyxis\Core\Timestep.h" />
     <ClInclude Include="src\Pyxis\Core\Window.h" />
     <ClInclude Include="src\Pyxis\Events\ApplicationEvent.h" />
@@ -617,6 +618,8 @@
     <ClCompile Include="src\Pyxis\Core\Layer.cpp" />
     <ClCompile Include="src\Pyxis\Core\LayerStack.cpp" />
     <ClCompile Include="src\Pyxis\Core\Log.cpp" />
+    <ClCompile Include="src\Pyxis\Game\Entity.cpp" />
+    <ClCompile Include="src\Pyxis\Game\Scene.cpp" />
     <ClCompile Include="src\Pyxis\ImGui\ImGuiBuild.cpp" />
     <ClCompile Include="src\Pyxis\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Buffer.cpp" />

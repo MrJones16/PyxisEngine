@@ -19,8 +19,8 @@ namespace Pyxis
 			m_Camera.SetRotation({ 0,0,0 });
 			m_Camera.SetWidth(width);
 			m_Camera.SetHeight(width * aspect);
-			m_Right = { 1,0,0 };
-			m_Up = { 0,1,0 };
+			m_Size = { width, width * aspect };
+			m_ZoomLevel = 1;
 			m_CameraDirection = m_Camera.GetRotationMatrix() * glm::vec3(0, 0, 1);
 		}
 
@@ -70,6 +70,25 @@ namespace Pyxis
 			m_Camera.SetPosition(m_Camera.GetPosition() + direction * m_CameraSpeed * ts.GetSeconds());
 		}
 
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="aspectRatio">height / width!</param>
+		void SetAspect(float aspectRatio)
+		{
+			m_Camera.SetAspect(aspectRatio);
+		}
+
+		void OnResize(float width, float height)
+		{
+			PX_CORE_INFO("resizing camera");
+			m_Size = { width, height };
+			m_Camera.SetWidth(width * m_ZoomLevel);
+			m_Camera.SetAspect(height / width);
+			//m_Camera.SetHeight(height);
+		}
+
 		void SetPosition(glm::vec3 position)
 		{
 			m_Camera.SetPosition(position);
@@ -82,11 +101,6 @@ namespace Pyxis
 		void SetRotation(glm::vec3 rotation)
 		{
 			m_Camera.SetRotation(rotation);
-		}
-
-		void SetAspect(float aspect)
-		{
-			m_Camera.SetAspect(aspect);
 		}
 
 		glm::mat4 GetViewProjectionMatrix()
@@ -112,10 +126,6 @@ namespace Pyxis
 			//return glm::vec3(m_Camera.GetRotationMatrix() * glm::vec4(0,0,1,1));
 		}
 
-		bool OnImGuiRender()
-		{
-
-		}
 
 		void OnEvent(Event& event)
 		{
@@ -144,10 +154,10 @@ namespace Pyxis
 					//PX_CORE_INFO("Wider Cam");
 
 					//camera size
-					float width = m_Camera.GetWidth();
-					width *= 1.1f;
-					m_Camera.SetWidth(width);
-					m_Camera.SetHeight(width * m_Camera.GetAspect());
+					//float width = m_Camera.GetWidth();
+					m_ZoomLevel *= 1.1f;
+					m_Camera.SetWidth(m_Size.x * m_ZoomLevel);
+					m_Camera.SetHeight((m_Size.x * m_ZoomLevel) * m_Camera.GetAspect());
 				}
 			}
 			else
@@ -164,21 +174,21 @@ namespace Pyxis
 					//PX_CORE_INFO("Smaller Cam");
 
 					//camera size
-					float width = m_Camera.GetWidth();
-					width *= 0.9f;
-					m_Camera.SetWidth(width);
-					m_Camera.SetHeight(width * m_Camera.GetAspect());
+					m_ZoomLevel *= 0.9f;
+					m_Camera.SetWidth(m_Size.x * m_ZoomLevel);
+					m_Camera.SetHeight((m_Size.x * m_ZoomLevel) * m_Camera.GetAspect());
 				}
 			}
 		}
 
 	private:
 		OrthographicCamera m_Camera;
-		glm::vec3 m_Right;
-		glm::vec3 m_Up;
 
 		glm::vec3 m_CameraDirection;
 
+		glm::vec2 m_Size;
+
+		float m_ZoomLevel = 1;
 		float m_CameraSpeed = 1;
 		float m_Sensitivity = 0.5f;
 	};

@@ -160,6 +160,137 @@ namespace Pyxis
 #endif
 	}
 
+	/// <summary>
+	/// Submit a transform and color to be drawn
+	/// </summary>
+	void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4& color, float tilingFactor)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+
+		//texture
+		float TexIndex = 0.0f; // white texture
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = color;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	/// <summary>
+	/// Submit a transform and texture to be drawn
+	/// </summary>
+	void Renderer2D::DrawQuad(glm::mat4 transform, const Ref<Texture2D>& texture, float tilingFactor, const glm::vec4& tintColor)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.TextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+	}
+		if (TexIndex == 0.0f)
+		{
+			TexIndex = (float)s_Data.TextureSlotsIndex;
+			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
+			s_Data.TextureSlotsIndex++;
+		}
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = tintColor;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	/// <summary>
+	/// Submit a transform and sub-texture to be drawn
+	/// </summary>
+	void Renderer2D::DrawQuad(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, float tilingFactor, const glm::vec4& tintColor)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2* textureCoords = subTexture->GetTexCoords();
+		const Ref<Texture2D> texture = subTexture->GetTexture();
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.TextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+		}
+		if (TexIndex == 0.0f)
+		{
+			TexIndex = (float)s_Data.TextureSlotsIndex;
+			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
+			s_Data.TextureSlotsIndex++;
+		}
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = tintColor;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+
 	void Renderer2D::DrawQuad(const glm::vec2 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor)
 	{
 		DrawQuad({ position.x, position.y, 0 }, size, color, tilingFactor);

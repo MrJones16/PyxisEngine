@@ -23,7 +23,7 @@ namespace Pyxis
         m_SceneData->Resolution = { width, height };
 
         for (auto& framebuffer : m_SceneData->FrameBuffers) {
-            framebuffer->RescaleFrameBuffer(width, height);
+            framebuffer->Resize(width, height);
         }
 
     }
