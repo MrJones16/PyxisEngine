@@ -154,7 +154,6 @@
     <ClInclude Include="src\Pyxis.h" />
     <ClInclude Include="src\Pyxis\Core\Application.h" />
     <ClInclude Include="src\Pyxis\Core\Core.h" />
-    <ClInclude Include="src\Pyxis\Game\Entity.h" />
     <ClInclude Include="src\Pyxis\Core\EntryPoint.h" />
     <ClInclude Include="src\Pyxis\Core\Input.h" />
     <ClInclude Include="src\Pyxis\Core\InputCodes.h" />
@@ -164,13 +163,14 @@
     <ClInclude Include="src\Pyxis\Core\MathLog.h" />
     <ClInclude Include="src\Pyxis\Core\OrthographicCameraController.h" />
     <ClInclude Include="src\Pyxis\Core\PerspectiveCameraController.h" />
-    <ClInclude Include="src\Pyxis\Game\Scene.h" />
     <ClInclude Include="src\Pyxis\Core\Timestep.h" />
     <ClInclude Include="src\Pyxis\Core\Window.h" />
     <ClInclude Include="src\Pyxis\Events\ApplicationEvent.h" />
     <ClInclude Include="src\Pyxis\Events\Event.h" />
     <ClInclude Include="src\Pyxis\Events\KeyEvent.h" />
     <ClInclude Include="src\Pyxis\Events\MouseEvent.h" />
+    <ClInclude Include="src\Pyxis\Game\Entity.h" />
+    <ClInclude Include="src\Pyxis\Game\Scene.h" />
     <ClInclude Include="src\Pyxis\ImGui\ImGuiLayer.h" />
     <ClInclude Include="src\Pyxis\Renderer\Buffer.h" />
     <ClInclude Include="src\Pyxis\Renderer\Camera.h" />

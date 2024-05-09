@@ -213,3 +213,57 @@ project "Pyxis-Editor"
 		defines "PX_Dist"
 		runtime "Release"
 		optimize "on"
+
+project "Pixel-Game"
+	location "Pixel-Game"
+	kind "ConsoleApp"
+	language "C++"
+	cppdialect "C++17"
+	staticruntime "on"
+
+	targetdir ("bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
+	objdir ("bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
+
+	files 
+	{
+		"%{prj.name}/src/**.h",
+		"%{prj.name}/src/**.hpp",
+		"%{prj.name}/src/**.cpp"
+	}
+
+	includedirs
+	{
+		"Pyxis/vendor/spdlog/include",
+		"Pyxis/src",
+		"Pyxis/vendor",
+		"%{IncludeDir.glm}"
+	}
+
+	links
+	{
+		"Pyxis"
+	}
+
+	filter "system:windows"
+		systemversion "latest"
+
+		defines
+		{
+			"PX_PLATFORM_WINDOWS"
+		}
+
+
+	filter "configurations:Debug"
+		defines "PX_DEBUG"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Release"
+		defines "PX_Release"
+		runtime "Release"
+		optimize "on"
+
+	filter "configurations:Dist"
+		defines "PX_Dist"
+		runtime "Release"
+		optimize "on"

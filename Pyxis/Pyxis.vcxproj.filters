@@ -22,6 +22,9 @@
     <Filter Include="src\Pyxis\Events">
       <UniqueIdentifier>{DDF2A859-C9EB-C7AB-F21D-AD30DE75A7B7}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src\Pyxis\Game">
+      <UniqueIdentifier>{624E0E20-4E1C-0226-37B0-724C231DDE8A}</UniqueIdentifier>
+    </Filter>
     <Filter Include="src\Pyxis\ImGui">
       <UniqueIdentifier>{03410222-6FCC-6FE6-78DD-F2DAE4E7CBE6}</UniqueIdentifier>
     </Filter>
@@ -131,6 +134,12 @@
     </ClInclude>
     <ClInclude Include="src\Pyxis\Events\MouseEvent.h">
       <Filter>src\Pyxis\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Game\Entity.h">
+      <Filter>src\Pyxis\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Game\Scene.h">
+      <Filter>src\Pyxis\Game</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\ImGui\ImGuiLayer.h">
       <Filter>src\Pyxis\ImGui</Filter>
@@ -1428,8 +1437,6 @@
     <ClInclude Include="vendor\stb_image\stb_image.h">
       <Filter>vendor\stb_image</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\Game\Scene.h" />
-    <ClInclude Include="src\Pyxis\Game\Entity.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp">
@@ -1470,6 +1477,12 @@
     </ClCompile>
     <ClCompile Include="src\Pyxis\Core\Log.cpp">
       <Filter>src\Pyxis\Core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Game\Entity.cpp">
+      <Filter>src\Pyxis\Game</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Game\Scene.cpp">
+      <Filter>src\Pyxis\Game</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\ImGui\ImGuiBuild.cpp">
       <Filter>src\Pyxis\ImGui</Filter>
@@ -1516,7 +1529,5 @@
     <ClCompile Include="vendor\stb_image\stb_image.cpp">
       <Filter>vendor\stb_image</Filter>
     </ClCompile>
-    <ClCompile Include="src\Pyxis\Game\Scene.cpp" />
-    <ClCompile Include="src\Pyxis\Game\Entity.cpp" />
   </ItemGroup>
 </Project>

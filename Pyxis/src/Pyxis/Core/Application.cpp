@@ -12,15 +12,15 @@ namespace Pyxis
 
 	Application* Application::s_Instance = nullptr;
 
-	Application::Application(const std::string& name) {
+	Application::Application(const std::string& name, uint32_t width, uint32_t height) {
 
 		PX_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
 
-		Pyxis::WindowProps props = WindowProps(name, 1280, 720);
+		Pyxis::WindowProps props = WindowProps(name, width, height);
 		m_Window = std::unique_ptr<Window>(Window::Create(props));
 		m_Window->SetEventCallBack(PX_BIND_EVENT_FN(Application::OnEvent));
-		m_Window->SetVSync(true);
+		m_Window->SetVSync(false);
 
 		Renderer::Init(m_Window->GetWidth(), m_Window->GetHeight());
 

@@ -34,7 +34,7 @@
 
 #define STATISTICS 0
 
-#define PROFILING 0
+#define PROFILING 1
 
 namespace Pyxis
 {

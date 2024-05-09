@@ -21,7 +21,7 @@ namespace Pyxis
 	class PYXIS_API Application
 	{
 	public:
-		Application(const std::string& name = "Pyxis-Engine");
+		Application(const std::string& name = "Pyxis-Engine", uint32_t width = 1280, uint32_t height = 720);
 		virtual ~Application();
 
 		void Close();
