@@ -56,44 +56,62 @@ namespace Pyxis
 		: Layer("GameLayer"),
 		m_OrthographicCameraController(10, 1 / 1, -100, 100)
 	{
+		m_ElementsMap["Air"] = Element();
+		m_IndexToElement[0] = "Air";
 
+		Element stone = Element();
+		stone.m_Color = 0xFF888888;
+		stone.m_Type = ElementType::solid;
+		stone.m_SubType = ElementSubType::Static;
+		stone.m_ID == 1;
+		m_ElementsMap["Stone"] = stone;
+		m_IndexToElement[1] = "Stone";
+
+
+		Element sand = Element();
+		sand.m_ID = 2;
+		sand.m_Type = ElementType::solid;
+		sand.m_SubType = ElementSubType::None;
+		sand.m_Tags = 0;
+		sand.m_Color = 0xFF00FFFF;
+		m_ElementsMap["Sand"] = sand;
+		m_IndexToElement[2] = "Sand";
+
+		Element water = Element();
+		water.m_ID = 3;
+		water.m_Type = ElementType::liquid;
+		water.m_SubType = ElementSubType::None;
+		water.m_Tags = 0;
+		water.m_Color = 0xFFFF0000;
+		m_ElementsMap["Water"] = water;
+		m_IndexToElement[3] = "Water";
+		
 	}
 
 	void GameLayer::OnAttach()
 	{
+		//create the world
 		m_World = CreateRef<World>();
+		m_World->AddChunk(glm::ivec2(0, 0));
+
+		//create a border around first chunk
+		for (int i = 0; i < m_World->CHUNKSIZE; i++)
+		{
+			Element stone = m_ElementsMap["Stone"];
+			m_World->SetElement({ i, 0 }, stone);//bottom
+			m_World->SetElement({ i, CHUNKSIZE - 1 }, stone);//top
+			m_World->SetElement({ 0, i }, stone);//left
+			m_World->SetElement({ CHUNKSIZE - 1, i }, stone);//right
+		}
+
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
-		//m_ProfileResults = std::vector<ProfileResult>();
 		Renderer2D::Init();
-		m_TestTexture = Texture2D::Create("assets/textures/pixel-space.png");
-		//m_SpritesheetTexture = Texture2D::Create("assets/textures/ForestTileSet.png");
-		//m_SubTextureTest = SubTexture2D::CreateFromCoords(m_SpritesheetTexture, { 2 ,0 }, { 16,16 });
-		FrameBufferSpecification fbspec;
-		fbspec.Width = 1280;
-		fbspec.Height = 720;
-		m_SceneFrameBuffer = FrameBuffer::Create(fbspec);
 
 		m_ActiveScene = CreateRef<Scene>();
 
 		//Create panels to add
 		m_ProfilingPanel = CreateRef<ProfilingPanel>();
 		m_Panels.push_back(m_ProfilingPanel);
-		//auto hierarchyPanel = CreateRef<SceneHierarchyPanel>(m_ActiveScene);
-		//m_Panels.push_back(hierarchyPanel);
-		//auto inspectorPanel = CreateRef<InspectorPanel>(hierarchyPanel);
-		//m_Panels.push_back(inspectorPanel);
-
-		////Ref<Entity> entity = CreateRef<Entity>();
-		//auto entity = CreateRef<EntityWithSprite>("test entity 1");
-		//auto childEntity = CreateRef<EntityWithSprite>("test entity 1's Child");
-		//entity->AddChild(childEntity);
-
-		//m_ActiveScene->AddEntity(entity);
-		//m_ActiveScene->AddEntity(CreateRef<EntityWithSprite>("foo"));
-		//m_ActiveScene->AddEntity(CreateRef<EntityWithSprite>("bar"));
-
-
-		//m_Chunk->SetElement({ 100,100 }, "Sand");
 		
 	}
 
@@ -127,45 +145,20 @@ namespace Pyxis
 			PROFILE_SCOPE("Game Update");
 			if (Input::IsMouseButtonPressed(0))
 			{
-				Element* element = new Element();
-				element->m_ID = 1;
-				//element->m_Name = "Sand";
-				element->m_Type = ElementType::solid;
-				element->m_SubType = ElementSubType::None;
-				element->m_Tags = 0;
-				element->m_Color = 0xFF00FFFF;
-				element->m_Updated = !m_World->m_UpdateStatus;
-				auto [x, y] = Pyxis::Input::GetMousePosition();
-
-				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-				
-				m_World->SetElement(m_World->WorldToPixel(vec), element);
-
-				Ref<Chunk> chunk = m_World->GetChunk(m_World->WorldToChunk(vec));
-				if (chunk != nullptr)
-					chunk->UpdateTexture();
+				PaintElementAtCursor();
 			}
-			if (Input::IsMouseButtonPressed(1))
+			/*if (Input::IsMouseButtonPressed(1))
 			{
-				Element* element = new Element();
-				element->m_ID = 2;
-				//element->m_Name = "Sand";
-				element->m_Type = ElementType::liquid;
-				element->m_SubType = ElementSubType::None;
-				element->m_Tags = 0;
-				element->m_Color = 0xFFFF0000;
-				element->m_Updated = !m_World->m_UpdateStatus;
 				auto [x, y] = Pyxis::Input::GetMousePosition();
-
 				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
+				m_World->SetElement(pixelPos, m_ElementsMap["Stone"]);
+				Chunk* chunk = m_World->GetChunk(m_World->PixelToChunk(pixelPos));
+				glm::ivec2 index = m_World->PixelToIndex(pixelPos);
+				chunk->UpdateDirtyRect(index.x, index.y);
 
-				m_World->SetElement(m_World->WorldToPixel(vec), element);
-
-				Ref<Chunk> chunk = m_World->GetChunk(m_World->WorldToChunk(vec));
-				if (chunk != nullptr)
-					chunk->UpdateTexture();
-
-			}
+				chunk->UpdateTexture();
+			}*/
 
 			if (m_SimulationRunning)
 				m_World->UpdateWorld();
@@ -183,12 +176,63 @@ namespace Pyxis
 
 	void GameLayer::OnImGuiRender()
 	{
+		ImGui::ShowDemoWindow();
+
 		if (ImGui::BeginMainMenuBar())
 		{
 			//ImGui::DockSpaceOverViewport();
-			
+			if (ImGui::BeginMenu("File"))
+			{
+				ImGui::EndMenu();
+			}
 			ImGui::EndMainMenuBar();
 		}
+
+		if (ImGui::Begin("Brush Settings"))
+		{
+			if (ImGui::TreeNode("Bush Shape"))
+			{
+				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
+				{
+					m_BrushType = BrushType::circle;
+				}
+				if (ImGui::Selectable("Square", m_BrushType == BrushType::square))
+				{
+					m_BrushType = BrushType::square;
+				}
+				ImGui::TreePop();
+			}
+			
+
+			ImGui::DragFloat("Brush Size", &m_BrushSize, 1.0f, 1.0f, 10.0f);
+
+			if (ImGui::TreeNode("Element Type"))
+			{
+				for (int y = 0; y < 4; y++)
+					for (int x = 0; x < 4; x++)
+					{
+						if (x > 0)
+							ImGui::SameLine();
+						int index = y * 4 + x;
+						ImGui::PushID(index);
+						std::string name = (m_IndexToElement.find(index) != m_IndexToElement.end() ? m_IndexToElement[index] : "Air");
+						if (index < m_IndexToElement.size() && ImGui::Selectable(name.c_str(), m_SelectedElementIndex == index, 0, ImVec2(50, 25)))
+						{
+							// Toggle clicked cell + toggle neighbors
+							m_SelectedElementIndex = index;
+							if (m_SelectedElementIndex >= m_IndexToElement.size())
+							{
+								m_SelectedElementIndex = 0;
+							}
+							
+						}
+						ImGui::PopID();
+					}
+				ImGui::TreePop();
+			}
+			
+		}
+		ImGui::End();
 
 		for each (auto panel in m_Panels)
 		{
@@ -208,15 +252,16 @@ namespace Pyxis
 	}
 	void GameLayer::OnEvent(Event& e)
 	{
-		PX_CORE_INFO("event: {0}", e);
+		//PX_CORE_INFO("event: {0}", e);
 		m_OrthographicCameraController.OnEvent(e);
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(GameLayer::OnWindowResizeEvent));
 		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
+		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
 	}
 
 	bool GameLayer::OnWindowResizeEvent(WindowResizeEvent& event) {
-		//m_OrthographicCameraController.SetAspect((float)event.GetHeight() / (float)event.GetWidth());
+		m_OrthographicCameraController.SetAspect((float)event.GetHeight() / (float)event.GetWidth());
 		m_ViewportSize = { event.GetWidth() , event.GetHeight() };
 		Renderer::OnWindowResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
 		return false;
@@ -233,10 +278,90 @@ namespace Pyxis
 		}
 		if (event.GetKeyCode() == PX_KEY_C)
 		{
-			m_World->Clear();
+			///m_World->Clear();
 			//m_Chunk->Clear();
 		}
+		if (event.GetKeyCode() == PX_KEY_V)
+		{
+			Window& window = Application::Get().GetWindow();
+			window.SetVSync(!window.IsVSync());
+		}
+		//switching brushes
+		if (event.GetKeyCode() == PX_KEY_Z)
+		{
+			int type = ((int)m_BrushType) - 1;
+			if (type < 0) type = 0;
+			m_BrushType = (BrushType)type;
+		}
+		if (event.GetKeyCode() == PX_KEY_C)
+		{
+			int type = ((int)m_BrushType) + 1;
+			if (type >= (int)BrushType::end) type = (int)BrushType::end - 1;
+			m_BrushType = BrushType(type);
+		}
+
 		return false;
+	}
+
+	bool GameLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
+	{
+		//PX_TRACE(event.GetMouseButton());
+		if (event.GetMouseButton() == 4) // forward
+		{
+			m_BrushSize++;
+		}
+		if (event.GetMouseButton() == 3) // back
+		{
+			m_BrushSize--;
+			if (m_BrushSize <= 0) m_BrushSize == 1;
+		}
+
+		return false;
+	}
+
+	void GameLayer::PaintElementAtCursor()
+	{
+		std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
+
+		auto [x, y] = Pyxis::Input::GetMousePosition();
+		auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+		glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
+
+
+		glm::ivec2 newPos = pixelPos;
+		for (int x = -m_BrushSize; x <= m_BrushSize; x++)
+		{
+			for (int y = -m_BrushSize; y <= m_BrushSize; y++)
+			{
+				newPos = pixelPos + glm::ivec2(x,y);
+				Chunk* chunk;
+				glm::ivec2 index;
+				switch (m_BrushType)
+				{
+				case BrushType::circle:
+					if (std::sqrt((float)(x * x) + (float)(y * y)) >= m_BrushSize) continue;
+					m_World->SetElement(newPos, m_ElementsMap[m_IndexToElement[m_SelectedElementIndex]]);
+
+					chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
+					index = m_World->PixelToIndex(newPos);
+					chunk->UpdateDirtyRect(index.x, index.y);
+					map[chunk->m_ChunkPos] = chunk;
+					break;
+				case BrushType::square:
+					m_World->SetElement(newPos, m_ElementsMap[m_IndexToElement[m_SelectedElementIndex]]);
+
+					chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
+					index = m_World->PixelToIndex(newPos);
+					chunk->UpdateDirtyRect(index.x, index.y);
+					map[chunk->m_ChunkPos] = chunk;
+					break;
+				}
+			}
+		}
+		for each(auto& pair in map)
+		{
+			pair.second->UpdateTexture();
+		}
 	}
 
 }

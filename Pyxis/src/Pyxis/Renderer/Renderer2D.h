@@ -25,8 +25,10 @@ namespace Pyxis
 
 		static void DrawQuad(const glm::vec2 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor = 1);
 		static void DrawQuad(const glm::vec3 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor = 1);
-		static void DrawQuad(const glm::vec2 position, const glm::vec2& size, const Ref<Texture2D>& texture, float tilingFactor = 1, const glm::vec4& tintColor = {1,1,1,1});
-		static void DrawQuad(const glm::vec3 position, const glm::vec2& size, const Ref<Texture2D>& texture, float tilingFactor = 1, const glm::vec4& tintColor = {1,1,1,1});
+		static void DrawQuad(const glm::vec2 position, const glm::vec2& size, Texture2D* texture, float tilingFactor = 1, const glm::vec4& tintColor = {1,1,1,1});
+		static void DrawQuad(const glm::vec3 position, const glm::vec2& size, Texture2D* texture, float tilingFactor = 1, const glm::vec4& tintColor = {1,1,1,1});
+		static void DrawQuad(const glm::vec2 position, const glm::vec2& size, const Ref<Texture2D>& texture, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
+		static void DrawQuad(const glm::vec3 position, const glm::vec2& size, const Ref<Texture2D>& texture, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 		static void DrawQuad(const glm::vec2 position, const glm::vec2& size, const Ref<SubTexture2D>& subTexture, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 		static void DrawQuad(const glm::vec3 position, const glm::vec2& size, const Ref<SubTexture2D>& subTexture, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 

@@ -11,6 +11,8 @@
 
 namespace Pyxis
 {
+	
+
 	class GameLayer : public Layer
 	{
 	public:
@@ -25,9 +27,19 @@ namespace Pyxis
 		virtual void OnEvent(Event& e) override;
 		bool OnWindowResizeEvent(WindowResizeEvent& event);
 		bool OnKeyPressedEvent(KeyPressedEvent& event);
+		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
+
+		enum BrushType {
+			circle = 0, square = 1, end
+		};
+
 	private:
+
+		void PaintElementAtCursor();
 		//game things
 		Ref<World> m_World;
+		std::map<std::string, Element> m_ElementsMap;
+		std::map<int, std::string> m_IndexToElement;
 		//Ref<Chunk> m_Chunk;
 
 		//scene things
@@ -41,10 +53,10 @@ namespace Pyxis
 		std::vector<Ref<Panel>> m_Panels;
 		Ref<ProfilingPanel> m_ProfilingPanel;
 
-		Ref<FrameBuffer> m_SceneFrameBuffer;
-		Ref<Texture2D> m_TestTexture;
-		//Ref<Texture2D> m_SpritesheetTexture;
-		//Ref<SubTexture2D> m_SubTextureTest;
+		//player tools
+		int m_SelectedElementIndex = 1;
+		float m_BrushSize = 1;
+		int m_BrushType = BrushType::circle;
 
 		//testing / game
 		bool m_SimulationRunning = false;

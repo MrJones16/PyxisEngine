@@ -209,7 +209,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.TextureSlots[i].get() == *texture.get())
@@ -220,9 +220,13 @@ namespace Pyxis
 	}
 		if (TexIndex == 0.0f)
 		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
 			TexIndex = (float)s_Data.TextureSlotsIndex;
 			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
-			s_Data.TextureSlotsIndex++;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 
 		constexpr size_t quadVertexCount = 4;
@@ -258,7 +262,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.TextureSlots[i].get() == *texture.get())
@@ -269,9 +273,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
 			TexIndex = (float)s_Data.TextureSlotsIndex;
 			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
-			s_Data.TextureSlotsIndex++;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 
 		constexpr size_t quadVertexCount = 4;
@@ -299,7 +307,7 @@ namespace Pyxis
 	void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor)
 	{
 		//check if we need to flush
-		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
 		{
 			Flush();
 		}
@@ -350,7 +358,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.TextureSlots[i].get() == *texture.get())
@@ -361,9 +369,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
 			TexIndex = (float)s_Data.TextureSlotsIndex;
 			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
-			s_Data.TextureSlotsIndex++;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 		
 		//position
@@ -406,7 +418,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.TextureSlots[i].get() == *texture.get())
@@ -417,9 +429,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
 			TexIndex = (float)s_Data.TextureSlotsIndex;
 			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
-			s_Data.TextureSlotsIndex++;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 		
 
@@ -501,7 +517,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.TextureSlots[i].get() == *texture.get())
@@ -512,9 +528,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
 			TexIndex = (float)s_Data.TextureSlotsIndex;
 			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
-			s_Data.TextureSlotsIndex++;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 
 		//position
@@ -557,7 +577,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (int i = 1; i < s_Data.TextureSlotsIndex; i++)
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.TextureSlots[i].get() == *texture.get())
@@ -568,9 +588,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
 			TexIndex = (float)s_Data.TextureSlotsIndex;
 			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
-			s_Data.TextureSlotsIndex++;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 
 		//position

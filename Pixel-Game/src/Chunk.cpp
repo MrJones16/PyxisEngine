@@ -14,15 +14,15 @@ namespace Pyxis
 		}
 
 		//reset dirty rects
-		for (int bx = 0; bx < BUCKETS; bx++)
+		for (int bx = 0; bx < BUCKETSWIDTH; bx++)
 		{
-			for (int by = 0; by < BUCKETS; by++)
+			for (int by = 0; by < BUCKETSWIDTH; by++)
 			{
-				auto& minmax = m_DirtyRects[bx + by * BUCKETS];
-				minmax.first.x = bx * BUCKETSIZE;
-				minmax.first.y = by * BUCKETSIZE;
-				minmax.second.x = (bx * BUCKETSIZE) + BUCKETSIZE - 1;
-				minmax.second.y = (by * BUCKETSIZE) + BUCKETSIZE - 1;
+				auto& minmax = m_DirtyRects[bx + by * BUCKETSWIDTH];
+				minmax.second.x = bx * BUCKETSIZE;
+				minmax.second.y = by * BUCKETSIZE;
+				minmax.first.x = (bx * BUCKETSIZE) + BUCKETSIZE - 1;
+				minmax.first.y = (by * BUCKETSIZE) + BUCKETSIZE - 1;
 			}
 		}
 
@@ -31,6 +31,9 @@ namespace Pyxis
 		//set texture to fill color
 		std::fill(m_PixelBuffer, m_PixelBuffer + (CHUNKSIZE * CHUNKSIZE), 0xFF000000);
 		m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+
+		std::cout << "texture created and set the data!" << std::endl;
+
 	}
 
 
@@ -43,11 +46,11 @@ namespace Pyxis
 		}
 
 		//reset dirty rects
-		for (int bx = 0; bx < BUCKETS; bx++)
+		for (int bx = 0; bx < BUCKETSWIDTH; bx++)
 		{
-			for (int by = 0; by < BUCKETS; by++)
+			for (int by = 0; by < BUCKETSWIDTH; by++)
 			{
-				auto& minmax = m_DirtyRects[bx + by * BUCKETS];
+				auto& minmax = m_DirtyRects[bx + by * BUCKETSWIDTH];
 				minmax.first.x = bx * BUCKETSIZE;
 				minmax.first.y = by * BUCKETSIZE;
 				minmax.second.x = (bx * BUCKETSIZE) + BUCKETSIZE - 1;
@@ -56,6 +59,18 @@ namespace Pyxis
 		}
 		
 		UpdateTexture();
+		
+	}
+
+	Element Chunk::GetElement(int x, int y)
+	{
+		return m_Elements[x + y * CHUNKSIZE];
+	}
+
+	void Chunk::SetElement(int x, int y, const Element& element)
+	{
+		//PX_TRACE("Element Set!");
+		m_Elements[x + y * CHUNKSIZE] = element;
 	}
 
 	/// <summary>
@@ -65,100 +80,99 @@ namespace Pyxis
 	/// <param name="y"></param>
 	void Chunk::UpdateDirtyRect(int x, int y)
 	{
-		auto& minmax = m_DirtyRects[(x / BUCKETSIZE) + (y / BUCKETSIZE) * BUCKETS];
+		//this needs to update the surrounding buckets if the coord is on the corresponding edge
+		//ex: if on top edge, also update that bucket using this x/y. this is fine since it clamps to
+		//bucket size anyway
+		auto& minmax = m_DirtyRects[(x / BUCKETSIZE) + (y / BUCKETSIZE) * BUCKETSWIDTH];
 		//update minimums
-		if (x < minmax.first.x) minmax.first.x = x;
-		if (y < minmax.first.y) minmax.first.y = y;
+		if (x < minmax.first.x + m_DirtyRectBorderWidth) minmax.first.x = x - m_DirtyRectBorderWidth;
+		if (y < minmax.first.y + m_DirtyRectBorderWidth) minmax.first.y = y - m_DirtyRectBorderWidth;
 		//update maximums
-		if (x > minmax.second.x) minmax.second.x = x;
-		if (y > minmax.second.y) minmax.second.y = y;
+		if (x > minmax.second.x - m_DirtyRectBorderWidth) minmax.second.x = x + m_DirtyRectBorderWidth;
+		if (y > minmax.second.y - m_DirtyRectBorderWidth) minmax.second.y = y + m_DirtyRectBorderWidth;
+	}
 
+	void Chunk::ResetDirtyRects()
+	{
+		//reset dirty rects
+		for (int bx = 0; bx < BUCKETSWIDTH; bx++)
+		{
+			for (int by = 0; by < BUCKETSWIDTH; by++)
+			{
+				auto& minmax = m_DirtyRects[bx + by * BUCKETSWIDTH];
+				minmax.first.x = (bx + 1) * BUCKETSIZE;
+				minmax.first.y = (by + 1) * BUCKETSIZE;
+				minmax.second.x = (bx * BUCKETSIZE) - 1;
+				minmax.second.y = (by * BUCKETSIZE) - 1;
+			}
+		}
 	}
 
 
 	void Chunk::UpdateTexture()
 	{
-
-		//add border to dirty rect
-		//glm::ivec2 m_DirtyRectMinTemp = { std::max(0, m_DirtyRectMin.x - m_DirtyRectBorderWidth), std::max(0, m_DirtyRectMin.y - m_DirtyRectBorderWidth) };
-		//glm::ivec2 m_DirtyRectMaxTemp = { std::min(CHUNKSIZE - 1, m_DirtyRectMax.x + m_DirtyRectBorderWidth), std::min(CHUNKSIZE - 1, m_DirtyRectMax.y + m_DirtyRectBorderWidth) };
-
-
-		//dont clear image, just redraw updating section
-		//std::fill(m_PixelBuffer, m_PixelBuffer + (CHUNKSIZE * CHUNKSIZE), 0xFF000000);
-
-		bool dataChanged = false;
-
-		for (int bx = 0; bx < BUCKETS; bx++)
+		this;
+		bool debug = false;
+		if (debug)
 		{
-			for (int by = 0; by < BUCKETS; by++)
+			for (int x = 0; x < CHUNKSIZE; x++)
 			{
-				auto& minmax = m_DirtyRects[bx + by * BUCKETS];
-
-				//if min.x <= max.x
-				if (minmax.first.x <= minmax.second.x)
+				for (int y = 0; y < CHUNKSIZE; y++)
 				{
-					dataChanged = true;
-					for (int x = minmax.first.x; x < minmax.second.x; x++)
+					auto& minmax = m_DirtyRects[(x / BUCKETSIZE) + (y / BUCKETSIZE) * BUCKETSWIDTH];
+					if (x == minmax.first.x || x == minmax.second.x)
 					{
-						//loop from min x to max x
-						for (int y = minmax.first.y; y < minmax.second.y; y++)
-						{
+						if (y >= minmax.first.y && y <= minmax.second.y)
+							m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
+						else
 							m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+						//draw gray for border
+					}
+					else if (y == minmax.first.y || y == minmax.second.y)
+					{
+						if (x >= minmax.first.x && x <= minmax.second.x)
+							m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
+						else
+							m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+					}
+					else m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+				}
+			}
+			m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+		}
+		else
+		{
+			bool dataChanged = false;
+
+			for (int bx = 0; bx < BUCKETSWIDTH; bx++)
+			{
+				for (int by = 0; by < BUCKETSWIDTH; by++)
+				{
+					auto& minmax = m_DirtyRects[bx + by * BUCKETSWIDTH];
+
+					//if min.x <= max.x
+					if (minmax.first.x <= minmax.second.x)
+					{
+						dataChanged = true;
+						for (int x = std::max(minmax.first.x, bx * BUCKETSIZE); x <= std::min(minmax.second.x, ((bx + 1) * BUCKETSIZE) - 1); x++)
+						{
+							//loop from min x to max x
+							for (int y = std::max(minmax.first.y, by * BUCKETSIZE); y <= std::min(minmax.second.y, ((by + 1) * BUCKETSIZE) - 1); y++)
+							{
+								m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+							}
 						}
 					}
 				}
 			}
+			if (dataChanged)
+			{
+				//PX_TRACE("Uploading texture");
+				this;
+				m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+			}
 		}
 
-		if (dataChanged)
-		{
-			//PX_TRACE("Uploading texture");
-			m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
-		}
-
-		//bool debug = false;
-		//if (debug)
-		//{
-		//	for (int x = 0; x < CHUNKSIZE; x++)
-		//	{
-		//		for (int y = 0; y < CHUNKSIZE; y++)
-		//		{
-		//			if (m_Elements[x + y * CHUNKSIZE] != nullptr)
-		//			{
-		//				m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE]->m_Color;
-		//			}
-		//			else m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF000000;
-		//		}
-		//	}
-		//	//draw each edge
-		//	for (int x = m_DirtyRectMinTemp.x; x <= m_DirtyRectMaxTemp.x; x++)
-		//	{
-		//		//top and bottom
-		//		m_PixelBuffer[x + m_DirtyRectMinTemp.y * CHUNKSIZE] += 0x99222222;
-		//		m_PixelBuffer[x + m_DirtyRectMaxTemp.y * CHUNKSIZE] += 0x99222222;
-		//	}
-		//	for (int y = m_DirtyRectMinTemp.y; y <= m_DirtyRectMaxTemp.y; y++)
-		//	{
-		//		//left and right
-		//		m_PixelBuffer[m_DirtyRectMaxTemp.x + y * CHUNKSIZE] += 0x99222222;
-		//		m_PixelBuffer[m_DirtyRectMinTemp.x + y * CHUNKSIZE] += 0x99222222;
-		//	}
-		//}
-		//else
-		//{
-		//	for (int x = m_DirtyRectMinTemp.x; x <= m_DirtyRectMaxTemp.x; x++)
-		//	{
-		//		for (int y = m_DirtyRectMinTemp.y; y <= m_DirtyRectMaxTemp.y; y++)
-		//		{
-		//			if (m_Elements[x + y * CHUNKSIZE] != nullptr)
-		//			{
-		//				m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE]->m_Color;
-		//			}
-		//			else m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF000000;
-		//		}
-		//	}
-		//}
 		
 	}
 

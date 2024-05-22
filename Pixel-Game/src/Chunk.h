@@ -3,23 +3,27 @@
 #include <Pyxis.h>
 #include "Element.h"
 
-
+static const int CHUNKSIZE = 512;
+static const int BUCKETSIZE = 64;
+static const int BUCKETSWIDTH = CHUNKSIZE / BUCKETSIZE;
 
 namespace Pyxis
 {
 	class Chunk
 	{
 	public:
-		static const int CHUNKSIZE = 512;
-		static const int BUCKETSIZE = 64;
-		static const int BUCKETS = CHUNKSIZE / BUCKETSIZE;
+		
 
 		Chunk(glm::ivec2 chunkPos);
 		~Chunk() = default;
 
 		void Clear();
 
+		Element GetElement(int x, int y);
+		void SetElement(int x, int y, const Element& element);
+
 		void UpdateDirtyRect(int x, int y);
+		void ResetDirtyRects();
 
 		void UpdateTexture();
 		void RenderChunk();
@@ -34,7 +38,7 @@ namespace Pyxis
 
 		//buckets for dirty rects
 		int m_DirtyRectBorderWidth = 2;
-		std::pair<glm::ivec2, glm::ivec2> m_DirtyRects[BUCKETS * BUCKETS];
+		std::pair<glm::ivec2, glm::ivec2> m_DirtyRects[BUCKETSWIDTH * BUCKETSWIDTH];
 
 		bool m_PersistDirtyRect = false;
 

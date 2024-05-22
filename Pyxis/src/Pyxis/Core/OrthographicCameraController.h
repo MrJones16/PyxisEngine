@@ -182,11 +182,12 @@ namespace Pyxis
 				{
 					//PX_CORE_INFO("FasterCameraSpeed");
 					m_CameraSpeed *= 1.1f;
+					if (m_CameraSpeed > 2.0f) m_CameraSpeed = 2.0f;
 				}
 				else {
 					//PX_CORE_INFO("SlowerCameraSpeed");
 					m_CameraSpeed *= 0.9f;
-					if (m_CameraSpeed < 2.5f) m_CameraSpeed = 2.5f;
+					if (m_CameraSpeed < 0.1f) m_CameraSpeed = 0.1f;
 					//PX_CORE_INFO("Smaller Cam");
 
 					//camera size
