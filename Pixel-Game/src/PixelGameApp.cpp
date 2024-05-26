@@ -9,8 +9,9 @@
 /// Things to work on in order:
 /// 
 /// 
-/// Updating surrounding dirty rects if needed! falling sand won't tell others it moved, you know?
+/// [({! DONE !})] Updating surrounding dirty rects if needed! falling sand won't tell others it moved, you know?
 ///		will be a major help if done
+/// 
 /// 
 /// better drawing UI:
 ///		show what is about to be placed? might be tricky...

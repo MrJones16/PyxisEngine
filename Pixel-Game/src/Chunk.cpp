@@ -109,11 +109,10 @@ namespace Pyxis
 	}
 
 
-	void Chunk::UpdateTexture()
+	void Chunk::UpdateTexture(bool updateEntireTexture)
 	{
-		this;
 		bool debug = false;
-		if (debug)
+		if (updateEntireTexture)
 		{
 			for (int x = 0; x < CHUNKSIZE; x++)
 			{
@@ -122,16 +121,27 @@ namespace Pyxis
 					auto& minmax = m_DirtyRects[(x / BUCKETSIZE) + (y / BUCKETSIZE) * BUCKETSWIDTH];
 					if (x == minmax.first.x || x == minmax.second.x)
 					{
-						if (y >= minmax.first.y && y <= minmax.second.y)
-							m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
+						if (debug)
+						{
+							if (y >= minmax.first.y && y <= minmax.second.y)
+								m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
+							else
+								m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+						}
 						else
 							m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+						
 						//draw gray for border
 					}
 					else if (y == minmax.first.y || y == minmax.second.y)
 					{
-						if (x >= minmax.first.x && x <= minmax.second.x)
-							m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
+						if (debug)
+						{
+							if (y >= minmax.first.y && y <= minmax.second.y)
+								m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
+							else
+								m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+						}
 						else
 							m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
 					}
@@ -174,6 +184,21 @@ namespace Pyxis
 		}
 
 		
+	}
+
+	void Chunk::UpdateTextureForHologram()
+	{
+		//set data first, then update the pixels. this allows you to draw over the texture without interupting the actual
+		//elements in the map.
+		m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+		for (int x = 0; x < CHUNKSIZE; x++)
+		{
+			for (int y = 0; y < CHUNKSIZE; y++)
+			{
+				m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
+			}
+		}
+
 	}
 
 	void Chunk::RenderChunk()

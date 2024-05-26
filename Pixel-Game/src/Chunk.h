@@ -25,7 +25,8 @@ namespace Pyxis
 		void UpdateDirtyRect(int x, int y);
 		void ResetDirtyRects();
 
-		void UpdateTexture();
+		void UpdateTexture(bool updateEntireTexture = false);
+		void UpdateTextureForHologram();
 		void RenderChunk();
 
 

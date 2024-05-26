@@ -143,7 +143,7 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Game Update");
-			if (Input::IsMouseButtonPressed(0))
+			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
 			{
 				PaintElementAtCursor();
 			}
@@ -162,6 +162,8 @@ namespace Pyxis
 
 			if (m_SimulationRunning)
 				m_World->UpdateWorld();
+
+			PaintBrushHologram();
 		}
 
 		{
@@ -176,20 +178,29 @@ namespace Pyxis
 
 	void GameLayer::OnImGuiRender()
 	{
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
+		
+		ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+
+		m_Hovering = ImGui::IsWindowHovered();
+		
 
 		if (ImGui::BeginMainMenuBar())
 		{
 			//ImGui::DockSpaceOverViewport();
 			if (ImGui::BeginMenu("File"))
 			{
+				ImGui::Text("Welcome to the file menu.");
 				ImGui::EndMenu();
 			}
 			ImGui::EndMainMenuBar();
 		}
 
+		
 		if (ImGui::Begin("Brush Settings"))
 		{
+
+			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Bush Shape"))
 			{
 				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
@@ -206,6 +217,8 @@ namespace Pyxis
 
 			ImGui::DragFloat("Brush Size", &m_BrushSize, 1.0f, 1.0f, 10.0f);
 
+
+			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Element Type"))
 			{
 				for (int y = 0; y < 4; y++)
@@ -339,28 +352,91 @@ namespace Pyxis
 				switch (m_BrushType)
 				{
 				case BrushType::circle:
+					//limit brush to circle
 					if (std::sqrt((float)(x * x) + (float)(y * y)) >= m_BrushSize) continue;
-					m_World->SetElement(newPos, m_ElementsMap[m_IndexToElement[m_SelectedElementIndex]]);
-
-					chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
-					index = m_World->PixelToIndex(newPos);
-					chunk->UpdateDirtyRect(index.x, index.y);
-					map[chunk->m_ChunkPos] = chunk;
 					break;
 				case BrushType::square:
-					m_World->SetElement(newPos, m_ElementsMap[m_IndexToElement[m_SelectedElementIndex]]);
-
-					chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
-					index = m_World->PixelToIndex(newPos);
-					chunk->UpdateDirtyRect(index.x, index.y);
-					map[chunk->m_ChunkPos] = chunk;
 					break;
 				}
+				//get element / color
+				Element element = m_ElementsMap[m_IndexToElement[m_SelectedElementIndex]];
+				int r = element.m_Color & 0x000000FF;
+				int g = (element.m_Color & 0x0000FF00) >> 8;
+				int b = (element.m_Color & 0x00FF0000) >> 16;
+				int a = (element.m_Color & 0xFF000000) >> 24;
+				//randomize color
+				#define random ((std::rand() % 40) - 20) //-20 to 20
+				r = std::max(std::min(255, r + random), 0);
+				g = std::max(std::min(255, g + random), 0);
+				b = std::max(std::min(255, b + random), 0);
+				//a = std::max(std::min(255, a + random), 0);
+				
+				element.m_Color = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | ((uint32_t)r << 0);
+
+				//set element and add chunk to update map
+				m_World->SetElement(newPos, element);
+
+				chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
+				index = m_World->PixelToIndex(newPos);
+				chunk->UpdateDirtyRect(index.x, index.y);
+				map[chunk->m_ChunkPos] = chunk;
 			}
 		}
 		for each(auto& pair in map)
 		{
 			pair.second->UpdateTexture();
+		}
+	}
+
+	void GameLayer::PaintBrushHologram()
+	{
+		std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
+
+		auto [x, y] = Pyxis::Input::GetMousePosition();
+		auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+		glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
+
+
+		glm::ivec2 newPos = pixelPos;
+		for (int x = -m_BrushSize; x <= m_BrushSize; x++)
+		{
+			for (int y = -m_BrushSize; y <= m_BrushSize; y++)
+			{
+				newPos = pixelPos + glm::ivec2(x, y);
+				Chunk* chunk;
+				glm::ivec2 index;
+				switch (m_BrushType)
+				{
+				case BrushType::circle:
+					//limit to circle
+					if (std::sqrt((float)(x * x) + (float)(y * y)) >= m_BrushSize) continue;
+					break;
+				case BrushType::square:
+					//don't need to skip any
+					break;
+				}
+
+				//get chunk, and skip if doesn't exist yet
+				glm::ivec2 chunkPos = m_World->PixelToChunk(newPos);
+				auto it = m_World->m_Chunks.find(chunkPos);
+				if (it == m_World->m_Chunks.end())
+					continue;
+
+				//get chunk and index
+				chunk = m_World->GetChunk(chunkPos);
+				index = m_World->PixelToIndex(newPos);
+				//set color and add to list to update texture at end
+				uint32_t color = m_ElementsMap[m_IndexToElement[m_SelectedElementIndex]].m_Color;
+				color &= 0x00FFFFFF;
+				color += 0x88000000;
+				chunk->m_PixelBuffer[index.x + index.y * CHUNKSIZE] = color;
+				map[chunk->m_ChunkPos] = chunk;
+			}
+		}
+		for each (auto & pair in map)
+		{
+			//pair.second->m_Texture->SetData(pair.second->m_PixelBuffer, sizeof(pair.second->m_PixelBuffer));
+			pair.second->UpdateTextureForHologram();
 		}
 	}
 

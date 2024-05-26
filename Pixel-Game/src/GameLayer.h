@@ -36,6 +36,7 @@ namespace Pyxis
 	private:
 
 		void PaintElementAtCursor();
+		void PaintBrushHologram();
 		//game things
 		Ref<World> m_World;
 		std::map<std::string, Element> m_ElementsMap;
@@ -60,5 +61,6 @@ namespace Pyxis
 
 		//testing / game
 		bool m_SimulationRunning = false;
+		bool m_Hovering = false;
 	};
 }

@@ -212,12 +212,13 @@ namespace Pyxis
 	/// <param name="bucketY"></param>
 	void World::UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY)
 	{
+		//defines for easy to read code
+		#define SwapWithOther chunk->SetElement(xOther, yOther, currElement); chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
+		#define SwapWithOtherChunk otherChunk->m_Elements[indexOther] = currElement; chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
+
+
 		//copy the dirty rect
 		std::pair<glm::ivec2, glm::ivec2> minmax = chunk->m_DirtyRects[bucketX + bucketY * BUCKETSWIDTH];
-
-		//reset it
-		/*chunk->m_DirtyRects[bucketX + bucketY * BUCKETSWIDTH] = std::pair<glm::ivec2, glm::ivec2>
-			(glm::ivec2((bucketX + 1) * BUCKETSIZE, (bucketY + 1) * BUCKETSIZE), glm::ivec2((bucketX * BUCKETSIZE) - 1, (bucketY * BUCKETSIZE) - 1));*/
 
 		//instead of resetting completely, just shrink by 1. This allows elements that cross borders to update, since otherwise the dirty rect would
 		//forget about it instead of shrinking and still hitting it.
@@ -226,35 +227,19 @@ namespace Pyxis
 			minmax.second - 1 //max shrinks
 		);
 		 
-		/*std::vector<int> xIndices;
-		std::vector<int> yIndices;
-		for (int x = std::max(minmax.first.x, bucketX * BUCKETSIZE); x <= std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1); x++)
-		{
-			xIndices.push_back(x);
-		}
-		for (int y = std::max(minmax.first.y, bucketY * BUCKETSIZE); y <= std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1); y++)
-		{
-			yIndices.push_back(y);
-		}*/
-		//optimize
-		//maybe, i could just use a single randomized index? but iterating over it would be troublesome since
-		//the size varies that iterate through
-		//std::shuffle(xIndices.begin(), xIndices.end(), std::minstd_rand(1));
-		//std::shuffle(yIndices.begin(), yIndices.end(), std::minstd_rand(1 ));
-
 		//get the min and max
 		//loop from min to max in both "axies"?
-		int compNumber = m_UpdateBit ? std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1) + 1 : std::max(minmax.first.x, bucketX * BUCKETSIZE) - 1;
+		bool directionBit = false;
 
 		if (minmax.first.x <= minmax.second.x)
-			if (minmax.first.y <= minmax.second.y)
-				
-		for (int x = m_UpdateBit ? std::max(minmax.first.x, bucketX * BUCKETSIZE) : std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1);
-			x != compNumber;
-			m_UpdateBit ? x++ : x--)
+			if (minmax.first.y <= minmax.second.y)	
+		for (int y = std::max(minmax.first.y, bucketY * BUCKETSIZE); y <= std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1); y++) //going y then x so we do criss crossing 
 		{
+			directionBit = !directionBit;
+			int startNum = directionBit ? std::max(minmax.first.x, bucketX * BUCKETSIZE) : std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1);
+			int compNumber = directionBit ? std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1) + 1 : std::max(minmax.first.x, bucketX * BUCKETSIZE) - 1;
 			//PX_TRACE("x is: {0}", x);
-			for (int y = std::max(minmax.first.y, bucketY * BUCKETSIZE); y <= std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1); y++)
+			for (int x = startNum; x != compNumber; directionBit ? x++ : x--)
 			{
 				//we now have an x and y of the element in the array, so update it
 				Element& currElement = chunk->m_Elements[x + y * CHUNKSIZE];
@@ -283,12 +268,7 @@ namespace Pyxis
 							Element other = chunk->GetElement(xOther, yOther);
 							if (other.m_Type != ElementType::solid)
 							{
-								//other element is air so we move to it
-								chunk->SetElement(xOther, yOther, currElement);
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
-								//chunk->UpdateDirtyRect(x, y);
-								//chunk->UpdateDirtyRect(xOther, yOther);
+								SwapWithOther;
 								continue;
 							}
 						}
@@ -302,10 +282,7 @@ namespace Pyxis
 							if (other.m_Type != ElementType::solid)
 							{
 								//other element is air so we move to it
-								otherChunk->m_Elements[indexOther] = currElement;
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
-								//UpdateChunkDirtyRect((xOther + CHUNKSIZE) % CHUNKSIZE, (yOther + CHUNKSIZE) % CHUNKSIZE, otherChunk);
+								SwapWithOtherChunk;
 								continue;
 							}
 						}
@@ -319,12 +296,7 @@ namespace Pyxis
 							Element other = chunk->GetElement(xOther, yOther);
 							if (other.m_Type != ElementType::solid)
 							{
-								//other element is air so we move to it
-								chunk->SetElement(xOther, yOther, currElement);
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
-								//chunk->UpdateDirtyRect(x, y);
-								//chunk->UpdateDirtyRect(xOther, yOther);
+								SwapWithOther;
 								continue;
 							}
 						}
@@ -337,11 +309,7 @@ namespace Pyxis
 							Element other = otherChunk->m_Elements[indexOther];
 							if (other.m_Type != ElementType::solid)
 							{
-								//other element is air so we move to it
-								otherChunk->m_Elements[indexOther] = currElement;
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
-								//UpdateChunkDirtyRect((xOther + CHUNKSIZE) % CHUNKSIZE, (yOther + CHUNKSIZE) % CHUNKSIZE, otherChunk);
+								SwapWithOtherChunk;
 								continue;
 							}
 						}
@@ -355,10 +323,7 @@ namespace Pyxis
 							Element other = chunk->GetElement(xOther, yOther);
 							if (other.m_Type != ElementType::solid)
 							{
-								//other element is air so we move to it
-								chunk->SetElement(xOther, yOther, currElement);
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
+								SwapWithOther;
 								continue;
 							}
 						}
@@ -371,11 +336,7 @@ namespace Pyxis
 							Element other = otherChunk->m_Elements[indexOther];
 							if (other.m_Type != ElementType::solid)
 							{
-								//other element is air so we move to it
-								otherChunk->m_Elements[indexOther] = currElement;
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
-								//UpdateChunkDirtyRect((xOther + CHUNKSIZE) % CHUNKSIZE, (yOther + CHUNKSIZE) % CHUNKSIZE, otherChunk);
+								SwapWithOtherChunk;
 								continue;
 							}
 						}
@@ -394,19 +355,18 @@ namespace Pyxis
 					switch (currElement.m_SubType)
 					{
 					case ElementSubType::None:
+						Element other;
 						//check below, and move
 						xOther = x;
 						yOther = y - 1;
 						if (IsInBounds(xOther, yOther))
 						{
 							//operate within the chunk, since we are in bounds
-							Element& other = chunk->GetElement(xOther, yOther);
+							//Element& other = chunk->GetElement(xOther, yOther);
+							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
 							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
 							{
-								//other element is air so we move to it
-								chunk->SetElement(xOther, yOther, currElement);
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
+								SwapWithOther;
 								continue;
 							}
 						}
@@ -416,34 +376,28 @@ namespace Pyxis
 							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
 							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							Element other = otherChunk->m_Elements[indexOther];
+							other = otherChunk->m_Elements[indexOther];
 							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
 							{
-								//other element is air so we move to it
-								otherChunk->m_Elements[indexOther] = currElement;
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
+								SwapWithOtherChunk;
 								continue;
 							}
 						}
+						
+						int r = std::rand() & 1 ? 1 : -1;
+						//int r = (x ^ 98252 + (m_UpdateBit * y) ^ 6234561) ? 1 : -1;
 
-
-						if (std::rand() % 2 == 0)
-							//next check left and try to move
-							xOther = x - 1;
-						else
-							xOther = x + 1;
+						//try left/right then bottom left/right
+						xOther = x - r;
 						yOther = y;
 						if (IsInBounds(xOther, yOther))
 						{
 							//operate within the chunk, since we are in bounds
-							Element other = chunk->GetElement(xOther, yOther);
+							//Element& other = chunk->GetElement(xOther, yOther);
+							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
 							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
 							{
-								//other element is air so we move to it
-								chunk->SetElement(xOther, yOther, currElement);
-								chunk->SetElement(x, y, Element());
-								UpdateChunkDirtyRect(x, y, chunk);
+								SwapWithOther;
 								continue;
 							}
 						}
@@ -453,16 +407,142 @@ namespace Pyxis
 							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
 							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							Element other = otherChunk->m_Elements[indexOther];
+							other = otherChunk->m_Elements[indexOther];
 							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
 							{
-								//other element is air so we move to it
-								otherChunk->m_Elements[indexOther] = currElement;
-								chunk->SetElement(x, y, other);
-								UpdateChunkDirtyRect(x, y, chunk);
+								SwapWithOtherChunk;
 								continue;
 							}
 						}
+
+						xOther = x + r;
+						//yOther = y;
+						if (IsInBounds(xOther, yOther))
+						{
+							//operate within the chunk, since we are in bounds
+							//Element& other = chunk->GetElement(xOther, yOther);
+							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+							{
+								SwapWithOther;
+								continue;
+							}
+						}
+						else
+						{
+							//we need to get the element by finding the other chunk
+							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+							other = otherChunk->m_Elements[indexOther];
+							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+							{
+								SwapWithOtherChunk;
+								continue;
+							}
+						}
+
+						//bottom left/right
+						xOther = x - r;
+						yOther = y - 1;
+						if (IsInBounds(xOther, yOther))
+						{
+							//operate within the chunk, since we are in bounds
+							//Element& other = chunk->GetElement(xOther, yOther);
+							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+							{
+								SwapWithOther;
+								continue;
+							}
+						}
+						else
+						{
+							//we need to get the element by finding the other chunk
+							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+							other = otherChunk->m_Elements[indexOther];
+							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+							{
+								SwapWithOtherChunk;
+								continue;
+							}
+						}
+
+						xOther = x + r;
+						//yOther = y - 1;
+						if (IsInBounds(xOther, yOther))
+						{
+							//operate within the chunk, since we are in bounds
+							//Element& other = chunk->GetElement(xOther, yOther);
+							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+							{
+								SwapWithOther;
+								continue;
+							}
+						}
+						else
+						{
+							//we need to get the element by finding the other chunk
+							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+							other = otherChunk->m_Elements[indexOther];
+							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+							{
+								SwapWithOtherChunk;
+								continue;
+							}
+						}
+
+
+						////check if there is no momentum and add some if needed
+						//if (currElement.m_Vertical != 0 && currElement.m_Horizontal == 0) {
+						//	currElement.m_Horizontal = m_UpdateBit ? 1 : -1;
+						//	currElement.m_Vertical = 0;
+						//}
+						////skip if we are not needing to move
+						//if (currElement.m_Horizontal == 0) continue;
+						////try a side to move to based on horizontal
+						//if (currElement.m_Horizontal < 0)
+						//	//next check left and try to move
+						//	xOther = x - 1;
+						//else
+						//	xOther = x + 1;
+						//yOther = y;
+						//if (IsInBounds(xOther, yOther))
+						//{
+						//	//operate within the chunk, since we are in bounds
+						//	Element other = chunk->GetElement(xOther, yOther);
+						//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+						//	{
+						//		//other element is air so we move to it
+						//		chunk->SetElement(xOther, yOther, currElement);
+						//		chunk->SetElement(x, y, Element());
+						//		UpdateChunkDirtyRect(x, y, chunk);
+						//		continue;
+						//	}
+						//}
+						//else
+						//{
+						//	//we need to get the element by finding the other chunk
+						//	glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						//	Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						//	int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						//	Element other = otherChunk->m_Elements[indexOther];
+						//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+						//	{
+						//		//other element is air so we move to it
+						//		otherChunk->m_Elements[indexOther] = currElement;
+						//		chunk->SetElement(x, y, other);
+						//		UpdateChunkDirtyRect(x, y, chunk);
+						//		continue;
+						//	}
+						//}
+						////since the liquid didn't move, swap the horizontal
+						//currElement.m_Horizontal = -currElement.m_Horizontal;
 
 						
 					}
@@ -530,6 +610,7 @@ namespace Pyxis
 
 			break;
 		case 12: // top right
+			
 			//top
 			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
@@ -546,6 +627,7 @@ namespace Pyxis
 			}
 
 			//top right
+			currentChunk = chunk->m_ChunkPos;
 			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
 			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
@@ -562,6 +644,7 @@ namespace Pyxis
 			}
 
 			//right
+			currentChunk = chunk->m_ChunkPos;
 			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
 			xOther = ((x + 1) + CHUNKSIZE) % CHUNKSIZE;
@@ -612,6 +695,7 @@ namespace Pyxis
 			}
 
 			//br
+			currentChunk = chunk->m_ChunkPos;
 			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
 			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
@@ -629,9 +713,9 @@ namespace Pyxis
 
 			//bottom
 			currentChunk = chunk->m_ChunkPos;
+			currentChunk = chunk->m_ChunkPos;
 			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
 			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
 			yOther = ((y - 1) + CHUNKSIZE) % CHUNKSIZE;
 			{
@@ -684,6 +768,7 @@ namespace Pyxis
 			}
 
 			//bottom left
+			currentChunk = chunk->m_ChunkPos;
 			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
 			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
@@ -700,6 +785,7 @@ namespace Pyxis
 			}
 
 			//left
+			currentChunk = chunk->m_ChunkPos;
 			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
 
@@ -750,6 +836,7 @@ namespace Pyxis
 			}
 
 			//top left
+			currentChunk = chunk->m_ChunkPos;
 			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
 			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
@@ -767,6 +854,7 @@ namespace Pyxis
 			break;
 
 			//top
+			currentChunk = chunk->m_ChunkPos;
 			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
 			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
 			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
