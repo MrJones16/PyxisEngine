@@ -31,6 +31,8 @@ namespace Pyxis
 		static const int CHUNKSIZE = 512;
 
 		World();
+		bool LoadElementData();
+		void BuildReactionTable();
 		~World();
 
 		void AddChunk(const glm::ivec2& chunkPos);
@@ -44,7 +46,7 @@ namespace Pyxis
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 
 		void RenderWorld();
-		 
+
 
 
 		//helper functions
@@ -62,7 +64,16 @@ namespace Pyxis
 
 		std::vector<std::thread> m_Threads;
 
+		int m_TotalElements = 0;
+		std::vector<ElementData> m_ElementData;
+		std::unordered_map<std::string, uint32_t> m_ElementIDs;
+		std::vector<std::unordered_map<uint32_t, ReactionResult>> m_ReactionLookup;
+		 
+		
+		
+
 		bool m_UpdateBit = false;
+		bool m_Error = false;
 
 	};
 }

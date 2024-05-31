@@ -13,8 +13,8 @@
 ///		will be a major help if done
 /// 
 /// 
-/// better drawing UI:
-///		show what is about to be placed? might be tricky...
+/// [WIP] better drawing UI:
+///		[({! DONE !})]show what is about to be placed? might be tricky...
 ///		possibly add the element selection to a dock inside game
 /// 
 /// Adding more elements, properties, ect.
@@ -31,7 +31,11 @@
 ///		Wire ( or metals and have conductive / electric charge property)
 ///		magnet?
 ///		Uranium
+/// 
+/// doing these elements may require a reaction system, which is nearing completion
 ///		
+/// Making elements loaded from a xml / json file, serializing!
+///		Possibly making it possible to save and load the world
 /// 
 ///	Texture sampling for elements:
 ///		no texture: randomize slightly

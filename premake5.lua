@@ -18,6 +18,7 @@ workspace "Pyxis"
 	IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
 	IncludeDir["glm"] = "Pyxis/vendor/glm"
 	IncludeDir["stb_image"] = "Pyxis/vendor/stb_image"
+	IncludeDir["tinyxml2"] = "Pyxis/vendor/tinyxml2"
 
 
 	group "Dependencies"
@@ -50,7 +51,9 @@ project "Pyxis"
 		"%{prj.name}/vendor/stb_image/**.h",
 		"%{prj.name}/vendor/stb_image/**.cpp",
 		"%{prj.name}/vendor/glm/glm/**.hpp",
-		"%{prj.name}/vendor/glm/glm/**.inl"
+		"%{prj.name}/vendor/glm/glm/**.inl",
+		"%{prj.name}/vendor/tinyxml2/**.cpp",
+		"%{prj.name}/vendor/tinyxml2/**.h"
 	}
 
 	defines
@@ -66,7 +69,8 @@ project "Pyxis"
 		"%{IncludeDir.GLAD}",
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.stb_image}"
+		"%{IncludeDir.stb_image}",
+		"%{IncludeDir.tinyxml2}"
 
 	}
 

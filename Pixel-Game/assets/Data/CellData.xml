@@ -1,0 +1,14 @@
+<Materials>
+	<ElementData
+		name="stone"
+		cell_type="solid"
+		color="FF444444"
+		density="10"
+		>
+		<ElementTags>
+		</ElementTags>
+	</ElementData>
+	<Reaction>
+
+	</Reaction>
+</Materials>

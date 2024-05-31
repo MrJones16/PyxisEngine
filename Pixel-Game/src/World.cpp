@@ -4,10 +4,125 @@
 #include <thread>
 #include <mutex>
 
+#include <tinyxml2/tinyxml2.h>
+
 namespace Pyxis
 {
 	World::World()
 	{
+
+		if (!LoadElementData())
+		{
+			PX_ASSERT(false, "Failed to load element data, shutting down.");
+			m_Error = true;
+			Application::Get().Close();
+			return;
+		}
+
+		BuildReactionTable();
+
+		uint32_t id0 = 0;
+		uint32_t id1 = 15;
+		auto it = m_ReactionLookup[id0].find(id1);
+		if (it != m_ReactionLookup[id0].end())
+		{
+			//reaction found
+		}
+	}
+
+	bool World::LoadElementData()
+	{
+		//loading element data from xml
+		tinyxml2::XMLDocument doc;
+		doc.LoadFile("assets/Data/CellData.xml");
+		if (doc.ErrorID())
+		{
+			PX_ERROR("Error in loading xml data");
+			return false;
+		}
+		auto materials = doc.FirstChildElement();
+
+		//0
+		ElementData airData = ElementData();
+		airData.name = "air";
+		airData.cell_type = ElementType::gas;
+		airData.color = 0xFF000000;
+		m_ElementData.push_back(airData);
+		m_ElementIDs[airData.name] = m_TotalElements++;
+
+		//1
+		ElementData stoneData = ElementData();
+		stoneData.name = "stone";
+		stoneData.cell_type = ElementType::solid;
+		stoneData.color = 0xFF444444;
+		m_ElementData.push_back(stoneData);
+		m_ElementIDs[stoneData.name] = m_TotalElements++;
+
+		//2
+		ElementData sandData = ElementData();
+		sandData.name = "sand";
+		sandData.cell_type = ElementType::movableSolid;
+		sandData.color = 0xFF00FFFF;
+		sandData.friction = 10;
+		m_ElementData.push_back(sandData);
+		m_ElementIDs[sandData.name] = m_TotalElements++;
+
+		//3
+		ElementData waterData = ElementData();
+		waterData.name = "water";
+		waterData.cell_type = ElementType::liquid;
+		waterData.density = 5;
+		waterData.color = 0xFFFF0000;
+		m_ElementData.push_back(waterData);
+		m_ElementIDs[waterData.name] = m_TotalElements++;
+
+		//4
+		ElementData oilData = ElementData();
+		oilData.name = "oil";
+		oilData.cell_type = ElementType::liquid;
+		oilData.density = 1;
+		oilData.color = 0xFF222222;
+		m_ElementData.push_back(oilData);
+		m_ElementIDs[oilData.name] = m_TotalElements++;
+
+		//5
+		ElementData dampSand = ElementData();
+		dampSand.name = "dampSand";
+		dampSand.cell_type = ElementType::movableSolid;
+		dampSand.density = 2;
+		dampSand.color = 0xFF11AAAA;
+		dampSand.friction = 25;
+		m_ElementData.push_back(dampSand);
+		m_ElementIDs[dampSand.name] = m_TotalElements++;
+
+		//6
+		ElementData wetSand = ElementData();
+		wetSand.name = "wetSand";
+		wetSand.cell_type = ElementType::movableSolid;
+		wetSand.density = 3;
+		wetSand.color = 0xFF229999;
+		wetSand.friction = 40;
+		m_ElementData.push_back(wetSand);
+		m_ElementIDs[wetSand.name] = m_TotalElements++;
+
+
+
+		//when loading from xml, make a map of tags to elements, so
+		//the reaction table can use it
+		return true;
+	}
+
+	void World::BuildReactionTable()
+	{
+		m_ReactionLookup = std::vector<std::unordered_map<uint32_t, ReactionResult>>(m_TotalElements);
+		////sand to water becomes damp sand and air
+		//m_ReactionLookup[2][3] = ReactionResult(5, 0);
+
+		////damp sand and water becomes wet sand and air
+		//m_ReactionLookup[5][3] = ReactionResult(6, 0);
+
+		////wet sand and sand becomes two damp sand
+		//m_ReactionLookup[6][2] = ReactionResult(5, 5);
 
 	}
 
@@ -197,6 +312,143 @@ namespace Pyxis
 		m_UpdateBit = !m_UpdateBit;
 	}
 
+	//defines for easy to read code
+	#define SwapWithOther chunk->SetElement(xOther, yOther, currElement); chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
+	#define SwapWithOtherChunk otherChunk->m_Elements[indexOther] = currElement; chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
+
+	#define SolveReaction currElement.m_ID = it->second.cell0ID;\
+		m_ElementData[it->second.cell0ID].UpdateElementData(currElement);\
+		other.m_ID = it->second.cell1ID;\
+		m_ElementData[it->second.cell1ID].UpdateElementData(other);\
+		chunk->m_Elements[xOther + yOther * CHUNKSIZE] = other;
+
+	#define SolveReactionOtherChunk currElement.m_ID = it->second.cell0ID;\
+		m_ElementData[it->second.cell0ID].UpdateElementData(currElement);\
+		other.m_ID = it->second.cell1ID;\
+		m_ElementData[it->second.cell1ID].UpdateElementData(other);\
+		otherChunk->m_Elements[indexOther] = other;
+
+	#define CheckForReactions xOther = x - 1;\
+	yOther = y;\
+	if (IsInBounds(xOther, yOther))\
+	{\
+		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
+		ElementData& otherData = m_ElementData[other.m_ID];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReaction;\
+			UpdateChunkDirtyRect(x,y,chunk);\
+			continue;\
+		}\
+	}\
+	else\
+	{\
+		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
+		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
+		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
+		Element other = otherChunk->m_Elements[indexOther];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReactionOtherChunk;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}\
+	xOther = x;\
+	yOther = y + 1;\
+	if (IsInBounds(xOther, yOther))\
+	{\
+		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
+		ElementData& otherData = m_ElementData[other.m_ID];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReaction;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}\
+	else\
+	{\
+		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
+		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
+		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
+		Element other = otherChunk->m_Elements[indexOther];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReactionOtherChunk;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}\
+	xOther = x + 1;\
+	yOther = y;\
+	if (IsInBounds(xOther, yOther))\
+	{\
+		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
+		ElementData& otherData = m_ElementData[other.m_ID];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReaction;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}\
+	else\
+	{\
+		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
+		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
+		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
+		Element other = otherChunk->m_Elements[indexOther];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReactionOtherChunk;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}\
+	xOther = x;\
+	yOther = y - 1;\
+	if (IsInBounds(xOther, yOther))\
+	{\
+		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
+		ElementData& otherData = m_ElementData[other.m_ID];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReaction;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}\
+	else\
+	{\
+		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
+		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
+		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
+		Element other = otherChunk->m_Elements[indexOther];\
+		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
+		end = m_ReactionLookup[currElement.m_ID].end();\
+		if (it != end)\
+		{\
+			SolveReactionOtherChunk;\
+			UpdateChunkDirtyRect(x, y, chunk);\
+			continue;\
+		}\
+	}
+
 	/// <summary>
 	/// 
 	/// updating a chunk overview:
@@ -212,10 +464,6 @@ namespace Pyxis
 	/// <param name="bucketY"></param>
 	void World::UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY)
 	{
-		//defines for easy to read code
-		#define SwapWithOther chunk->SetElement(xOther, yOther, currElement); chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
-		#define SwapWithOtherChunk otherChunk->m_Elements[indexOther] = currElement; chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
-
 
 		//copy the dirty rect
 		std::pair<glm::ivec2, glm::ivec2> minmax = chunk->m_DirtyRects[bucketX + bucketY * BUCKETSWIDTH];
@@ -231,6 +479,9 @@ namespace Pyxis
 		//loop from min to max in both "axies"?
 		bool directionBit = false;
 
+		///////////////////////////////////////////////////////////////
+		/// Main Update Loop, bottom to top, left,right,left....
+		///////////////////////////////////////////////////////////////
 		if (minmax.first.x <= minmax.second.x)
 			if (minmax.first.y <= minmax.second.y)	
 		for (int y = std::max(minmax.first.y, bucketY * BUCKETSIZE); y <= std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1); y++) //going y then x so we do criss crossing 
@@ -243,6 +494,7 @@ namespace Pyxis
 			{
 				//we now have an x and y of the element in the array, so update it
 				Element& currElement = chunk->m_Elements[x + y * CHUNKSIZE];
+				ElementData& currElementData = m_ElementData[currElement.m_ID];
 
 				//skip if already updated
 				if (currElement.m_Updated == m_UpdateBit) continue;
@@ -252,302 +504,477 @@ namespace Pyxis
 				int xOther = x;
 				int yOther = y;
 
+				//iterators for reaction lookup
+				std::unordered_map<uint32_t, ReactionResult>::iterator it;
+				std::unordered_map<uint32_t, ReactionResult>::iterator end;
+
 				//switch the behavior based on element type
-				switch (currElement.m_Type)
+				switch (currElementData.cell_type)
 				{
 				case ElementType::solid:
-					switch (currElement.m_SubType)
+					//check for reactions, left,up,right,down
+					xOther = x - 1;
+					yOther = y;
+					if (IsInBounds(xOther, yOther))
 					{
-					case ElementSubType::None:
-						//check below, and move
-						xOther = x;
-						yOther = y - 1;
-						if (IsInBounds(xOther, yOther))
+						//operate within the chunk, since we are in bounds
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
 						{
-							//operate within the chunk, since we are in bounds
-							Element other = chunk->GetElement(xOther, yOther);
-							if (other.m_Type != ElementType::solid)
-							{
-								SwapWithOther;
-								continue;
-							}
+							SolveReaction;							
+							continue;
 						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							Element other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type != ElementType::solid)
-							{
-								//other element is air so we move to it
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-						//next check bottom left and try to move
-						xOther = x - 1;
-						yOther = y - 1;
-						if (IsInBounds(xOther, yOther))
-						{
-							//operate within the chunk, since we are in bounds
-							Element other = chunk->GetElement(xOther, yOther);
-							if (other.m_Type != ElementType::solid)
-							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							Element other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type != ElementType::solid)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-						//next check bottom right and try to move
-						xOther = x + 1;
-						yOther = y - 1;
-						if (IsInBounds(xOther, yOther))
-						{
-							//operate within the chunk, since we are in bounds
-							Element other = chunk->GetElement(xOther, yOther);
-							if (other.m_Type != ElementType::solid)
-							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							Element other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type != ElementType::solid)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-						break;
-					case ElementSubType::Static:
-						//like stone, do nothing
-						break;
-					default:
-						break;
 					}
-					
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReactionOtherChunk;
+							continue;
+						}
+					}
+
+					xOther = x;
+					yOther = y + 1;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReaction;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReactionOtherChunk;
+							continue;
+						}
+					}
+
+					xOther = x + 1;
+					yOther = y;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReaction;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReactionOtherChunk;
+							continue;
+						}
+					}
+
+					xOther = x;
+					yOther = y - 1;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReaction;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
+						end = m_ReactionLookup[currElement.m_ID].end();
+						if (it != end)
+						{
+							SolveReactionOtherChunk;
+							continue;
+						}
+					}
+					break;
+				case ElementType::movableSolid:
+					//check for reactions
+					CheckForReactions;
+
+					//check below, and move
+					xOther = x;
+					yOther = y - 1;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						{
+							currElement.m_Sliding = true;
+							SwapWithOther;
+							if (IsInBounds(x - 1, y))
+							{
+								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Sliding = true;
+								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].horizontal = 1;
+							}
+							else
+							{
+								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x - 1), y);
+								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+								int indexOther = (((x - 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+								otherChunk->m_Elements[indexOther].m_Sliding = true;
+								otherChunk->m_Elements[indexOther].horizontal = 1;
+							}
+							if (IsInBounds(x + 1, y))
+							{
+								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Sliding = true;
+								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].horizontal = -1;
+							}
+							else
+							{
+								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x + 1), y);
+								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+								int indexOther = (((x + 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+								otherChunk->m_Elements[indexOther].m_Sliding = true;
+								otherChunk->m_Elements[indexOther].horizontal = -1;
+							}
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						{
+							//other element is air so we move to it
+							currElement.m_Sliding = true;
+							SwapWithOtherChunk;
+							if (IsInBounds(x - 1, y))
+							{
+								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Sliding = true;
+								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].horizontal = 1;
+							}
+							else
+							{
+								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x - 1), y);
+								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+								int indexOther = (((x - 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+								otherChunk->m_Elements[indexOther].m_Sliding = true;
+								otherChunk->m_Elements[indexOther].horizontal = 1;
+							}
+							if (IsInBounds(x + 1, y))
+							{
+								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Sliding = true;
+								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].horizontal = -1;
+							}
+							else
+							{
+								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x + 1), y);
+								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+								int indexOther = (((x + 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+								otherChunk->m_Elements[indexOther].m_Sliding = true;
+								otherChunk->m_Elements[indexOther].horizontal = -1;
+							}
+							continue;
+						}
+					}
+
+					if (currElement.m_Sliding)
+					{
+						//chance to stop sliding
+						int rand = std::rand() % 101;
+						if (rand <= currElementData.friction)
+						{
+							currElement.m_Sliding = false;
+							currElement.horizontal = 0;
+							continue;
+						}
+						if (currElement.horizontal == 0)
+						{
+							currElement.horizontal = (std::rand() % 2 == 0) ? -1 : 1;
+						}
+					}
+					else
+					{
+						continue;
+					}
+
+					//try moving to the side
+					xOther = x + currElement.horizontal;
+					yOther = y;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
 
 					break;
 				case ElementType::liquid:
-					switch (currElement.m_SubType)
+					CheckForReactions;
+					//check below, and move
+					xOther = x;
+					yOther = y - 1;
+					if (IsInBounds(xOther, yOther))
 					{
-					case ElementSubType::None:
-						Element other;
-						//check below, and move
-						xOther = x;
-						yOther = y - 1;
-						if (IsInBounds(xOther, yOther))
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
 						{
-							//operate within the chunk, since we are in bounds
-							//Element& other = chunk->GetElement(xOther, yOther);
-							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOther;
-								continue;
-							}
+							SwapWithOther;
+							continue;
 						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-						
-						int r = std::rand() & 1 ? 1 : -1;
-						//int r = (x ^ 98252 + (m_UpdateBit * y) ^ 6234561) ? 1 : -1;
-
-						//try left/right then bottom left/right
-						xOther = x - r;
-						yOther = y;
-						if (IsInBounds(xOther, yOther))
-						{
-							//operate within the chunk, since we are in bounds
-							//Element& other = chunk->GetElement(xOther, yOther);
-							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-						xOther = x + r;
-						//yOther = y;
-						if (IsInBounds(xOther, yOther))
-						{
-							//operate within the chunk, since we are in bounds
-							//Element& other = chunk->GetElement(xOther, yOther);
-							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-						//bottom left/right
-						xOther = x - r;
-						yOther = y - 1;
-						if (IsInBounds(xOther, yOther))
-						{
-							//operate within the chunk, since we are in bounds
-							//Element& other = chunk->GetElement(xOther, yOther);
-							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-						xOther = x + r;
-						//yOther = y - 1;
-						if (IsInBounds(xOther, yOther))
-						{
-							//operate within the chunk, since we are in bounds
-							//Element& other = chunk->GetElement(xOther, yOther);
-							other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							other = otherChunk->m_Elements[indexOther];
-							if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-							{
-								SwapWithOtherChunk;
-								continue;
-							}
-						}
-
-
-						////check if there is no momentum and add some if needed
-						//if (currElement.m_Vertical != 0 && currElement.m_Horizontal == 0) {
-						//	currElement.m_Horizontal = m_UpdateBit ? 1 : -1;
-						//	currElement.m_Vertical = 0;
-						//}
-						////skip if we are not needing to move
-						//if (currElement.m_Horizontal == 0) continue;
-						////try a side to move to based on horizontal
-						//if (currElement.m_Horizontal < 0)
-						//	//next check left and try to move
-						//	xOther = x - 1;
-						//else
-						//	xOther = x + 1;
-						//yOther = y;
-						//if (IsInBounds(xOther, yOther))
-						//{
-						//	//operate within the chunk, since we are in bounds
-						//	Element other = chunk->GetElement(xOther, yOther);
-						//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-						//	{
-						//		//other element is air so we move to it
-						//		chunk->SetElement(xOther, yOther, currElement);
-						//		chunk->SetElement(x, y, Element());
-						//		UpdateChunkDirtyRect(x, y, chunk);
-						//		continue;
-						//	}
-						//}
-						//else
-						//{
-						//	//we need to get the element by finding the other chunk
-						//	glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						//	Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						//	int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						//	Element other = otherChunk->m_Elements[indexOther];
-						//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-						//	{
-						//		//other element is air so we move to it
-						//		otherChunk->m_Elements[indexOther] = currElement;
-						//		chunk->SetElement(x, y, other);
-						//		UpdateChunkDirtyRect(x, y, chunk);
-						//		continue;
-						//	}
-						//}
-						////since the liquid didn't move, swap the horizontal
-						//currElement.m_Horizontal = -currElement.m_Horizontal;
-
-						
 					}
-					break;
-				default:
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
+						
+					int r = std::rand() & 1 ? 1 : -1;
+					//int r = (x ^ 98252 + (m_UpdateBit * y) ^ 6234561) ? 1 : -1;
+
+					//try left/right then bottom left/right
+					xOther = x - r;
+					yOther = y;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
+
+					xOther = x + r;
+					//yOther = y;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
+
+					//bottom left/right
+					xOther = x - r;
+					yOther = y - 1;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
+
+					xOther = x + r;
+					//yOther = y - 1;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
+
+
+					////check if there is no momentum and add some if needed
+					//if (currElement.m_Vertical != 0 && currElement.m_Horizontal == 0) {
+					//	currElement.m_Horizontal = m_UpdateBit ? 1 : -1;
+					//	currElement.m_Vertical = 0;
+					//}
+					////skip if we are not needing to move
+					//if (currElement.m_Horizontal == 0) continue;
+					////try a side to move to based on horizontal
+					//if (currElement.m_Horizontal < 0)
+					//	//next check left and try to move
+					//	xOther = x - 1;
+					//else
+					//	xOther = x + 1;
+					//yOther = y;
+					//if (IsInBounds(xOther, yOther))
+					//{
+					//	//operate within the chunk, since we are in bounds
+					//	Element other = chunk->GetElement(xOther, yOther);
+					//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+					//	{
+					//		//other element is air so we move to it
+					//		chunk->SetElement(xOther, yOther, currElement);
+					//		chunk->SetElement(x, y, Element());
+					//		UpdateChunkDirtyRect(x, y, chunk);
+					//		continue;
+					//	}
+					//}
+					//else
+					//{
+					//	//we need to get the element by finding the other chunk
+					//	glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+					//	Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+					//	int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+					//	Element other = otherChunk->m_Elements[indexOther];
+					//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
+					//	{
+					//		//other element is air so we move to it
+					//		otherChunk->m_Elements[indexOther] = currElement;
+					//		chunk->SetElement(x, y, other);
+					//		UpdateChunkDirtyRect(x, y, chunk);
+					//		continue;
+					//	}
+					//}
+					////since the liquid didn't move, swap the horizontal
+					//currElement.m_Horizontal = -currElement.m_Horizontal;
+
 					break;
 				}
 
@@ -908,14 +1335,14 @@ namespace Pyxis
 					{
 						//we now have an x and y of the element in the array, so update it
 						currElement = chunk->m_Elements[x + y * CHUNKSIZE];
-
+						ElementData& currElementData = m_ElementData[currElement.m_ID];
 						//skip if already updated
 						if (currElement.m_Updated == m_UpdateBit) continue;
 						//flip the update bit so we know we updated this element
 						currElement.m_Updated = m_UpdateBit;
 
 						//switch the behavior based on element type
-						switch (currElement.m_Type)
+						switch (currElementData.cell_type)
 						{
 						case ElementType::solid:
 
@@ -939,8 +1366,6 @@ namespace Pyxis
 
 							}
 
-							break;
-						default:
 							break;
 						}
 

@@ -39,8 +39,6 @@ namespace Pyxis
 		void PaintBrushHologram();
 		//game things
 		Ref<World> m_World;
-		std::map<std::string, Element> m_ElementsMap;
-		std::map<int, std::string> m_IndexToElement;
 		//Ref<Chunk> m_Chunk;
 
 		//scene things
@@ -55,7 +53,7 @@ namespace Pyxis
 		Ref<ProfilingPanel> m_ProfilingPanel;
 
 		//player tools
-		int m_SelectedElementIndex = 1;
+		int m_SelectedElementIndex = 0;
 		float m_BrushSize = 1;
 		int m_BrushType = BrushType::circle;
 

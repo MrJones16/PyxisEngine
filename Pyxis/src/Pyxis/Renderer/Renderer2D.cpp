@@ -325,6 +325,7 @@ namespace Pyxis
 		constexpr size_t quadVertexCount = 4;
 		for (int i = 0; i < quadVertexCount; i++)
 		{
+			//heavy math so hurts on debug
 			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
 			s_Data.QuadVertexBufferPtr->Color = color;
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];

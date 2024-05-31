@@ -6,6 +6,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Chunk.h" />
+    <ClInclude Include="src\ChunkWorker.h" />
+    <ClInclude Include="src\Element.h" />
     <ClInclude Include="src\GameLayer.h" />
     <ClInclude Include="src\Panels\InspectorPanel.h">
       <Filter>Panels</Filter>
@@ -13,23 +16,19 @@
     <ClInclude Include="src\Panels\Panel.h">
       <Filter>Panels</Filter>
     </ClInclude>
+    <ClInclude Include="src\Panels\ProfilingPanel.h">
+      <Filter>Panels</Filter>
+    </ClInclude>
     <ClInclude Include="src\Panels\SceneHierarchyPanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
-    <ClInclude Include="src\Chunk.h" />
-    <ClInclude Include="src\Element.h" />
-    <ClInclude Include="src\Panels\ProfilingPanel.h" />
     <ClInclude Include="src\World.h" />
-    <ClInclude Include="src\ChunkWorker.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Chunk.cpp" />
+    <ClCompile Include="src\ChunkWorker.cpp" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
-    <ClCompile Include="src\Chunk.cpp" />
     <ClCompile Include="src\World.cpp" />
-    <ClCompile Include="src\ChunkWorker.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xsd Include="src\Data\ElementData.json" />
   </ItemGroup>
 </Project>
