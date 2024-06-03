@@ -20,14 +20,6 @@ namespace Pyxis
 		}
 
 		BuildReactionTable();
-
-		uint32_t id0 = 0;
-		uint32_t id1 = 15;
-		auto it = m_ReactionLookup[id0].find(id1);
-		if (it != m_ReactionLookup[id0].end())
-		{
-			//reaction found
-		}
 	}
 
 	bool World::LoadElementData()
@@ -40,72 +32,246 @@ namespace Pyxis
 			PX_ERROR("Error in loading xml data");
 			return false;
 		}
-		auto materials = doc.FirstChildElement();
+		auto materials = doc.FirstChild();
+		auto data = materials->FirstChildElement();
+		//loop over each element or reaction, and add them
+		while (data != nullptr)
+		{
+			std::string nodeName = data->Value();
+			//node is an element, so create a new element data
+			if (nodeName == "ElementData")
+			{
+				//initialize the element data to be modified
+				ElementData elementData = ElementData();
 
-		//0
-		ElementData airData = ElementData();
-		airData.name = "air";
-		airData.cell_type = ElementType::gas;
-		airData.color = 0xFF000000;
-		m_ElementData.push_back(airData);
-		m_ElementIDs[airData.name] = m_TotalElements++;
+				//get the name
+				const char* name;
+				auto error = data->QueryAttribute("name", &name);
+				if (!error) {
+					elementData.name = name;
+				}
+				else {
+					data = data->NextSiblingElement();
+					PX_ERROR("No name given to element, skipping");
+					continue;
+				}
+				
+				//gather each attribuite for the element and set the values
+				const char* cell_type;
+				error = data->QueryAttribute("cell_type", &cell_type);
+				if (!error) {
+					std::string cell_type_str = cell_type;
+					//auto cell_type = attribute->Value();
+					if (cell_type_str == "solid") {
+						elementData.cell_type = ElementType::solid;
+					}
+					else if (cell_type_str == "movableSolid") {
+						elementData.cell_type = ElementType::movableSolid;
+					}
+					else if (cell_type_str == "liquid") {
+						elementData.cell_type = ElementType::liquid;
+					}
+					else if (cell_type_str == "gas") {
+						elementData.cell_type = ElementType::gas;
+					}
+					else if (cell_type_str == "fire") {
+						elementData.cell_type = ElementType::fire;
+					}
+				}
+				else {
+					PX_ERROR("No type given to element {0}, defaulting to gas", elementData.name);
+				}
 
-		//1
-		ElementData stoneData = ElementData();
-		stoneData.name = "stone";
-		stoneData.cell_type = ElementType::solid;
-		stoneData.color = 0xFF444444;
-		m_ElementData.push_back(stoneData);
-		m_ElementIDs[stoneData.name] = m_TotalElements++;
+				const char* colorStr;
+				error = data->QueryAttribute("color", &colorStr);
+				uint32_t color = std::stoul(colorStr, nullptr, 16);
+				if (!error) {
+					elementData.color = RGBAtoABGR(color);
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no color", elementData.name);
+				}
 
-		//2
-		ElementData sandData = ElementData();
-		sandData.name = "sand";
-		sandData.cell_type = ElementType::movableSolid;
-		sandData.color = 0xFF00FFFF;
-		sandData.friction = 10;
-		m_ElementData.push_back(sandData);
-		m_ElementIDs[sandData.name] = m_TotalElements++;
+				uint32_t density;
+				error = data->QueryUnsignedAttribute("density", &density);
+				if (!error) {
+					elementData.density = density;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no density", elementData.name);
+				}
 
-		//3
-		ElementData waterData = ElementData();
-		waterData.name = "water";
-		waterData.cell_type = ElementType::liquid;
-		waterData.density = 5;
-		waterData.color = 0xFFFF0000;
-		m_ElementData.push_back(waterData);
-		m_ElementIDs[waterData.name] = m_TotalElements++;
+				uint32_t friction;
+				error = data->QueryUnsignedAttribute("friction", &friction);
+				if (!error) {
+					elementData.friction = friction;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no friction", elementData.name);
+				}
 
-		//4
-		ElementData oilData = ElementData();
-		oilData.name = "oil";
-		oilData.cell_type = ElementType::liquid;
-		oilData.density = 1;
-		oilData.color = 0xFF222222;
-		m_ElementData.push_back(oilData);
-		m_ElementIDs[oilData.name] = m_TotalElements++;
+				bool glow = false;
+				error = data->QueryBoolAttribute("glow", &glow);
+				if (!error) {
+					elementData.glow = glow;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no glow", elementData.name);
+				}
 
-		//5
-		ElementData dampSand = ElementData();
-		dampSand.name = "dampSand";
-		dampSand.cell_type = ElementType::movableSolid;
-		dampSand.density = 2;
-		dampSand.color = 0xFF11AAAA;
-		dampSand.friction = 25;
-		m_ElementData.push_back(dampSand);
-		m_ElementIDs[dampSand.name] = m_TotalElements++;
+				const char* meltedStr;
+				error = data->QueryAttribute("melted", &meltedStr);
+				if (!error) {
+					elementData.melted = meltedStr;
+				}
+				else
+				{
+					//PX_INFO("Element {0} was given no _____", elementData.name);
+				}
+				
+				const char* frozenStr;
+				error = data->QueryAttribute("frozen", &frozenStr);
+				if (!error) {
+					elementData.frozen = frozenStr;
+				}
+				else
+				{
+					//PX_INFO("Element {0} was given no _____", elementData.name);
+				}
 
-		//6
-		ElementData wetSand = ElementData();
-		wetSand.name = "wetSand";
-		wetSand.cell_type = ElementType::movableSolid;
-		wetSand.density = 3;
-		wetSand.color = 0xFF229999;
-		wetSand.friction = 40;
-		m_ElementData.push_back(wetSand);
-		m_ElementIDs[wetSand.name] = m_TotalElements++;
+				int temperature = 20;
+				error = data->QueryIntAttribute("temperature", &temperature);
+				if (!error) {
+					elementData.temperature = temperature;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no temperature", elementData.name);
+				}
+
+				int meltingPoint = 100;
+				error = data->QueryIntAttribute("melting_point", &meltingPoint);
+				if (!error) {
+					elementData.melting_point = meltingPoint;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no melting point", elementData.name);
+				}
+
+				int freezingPoint = 0;
+				error = data->QueryIntAttribute("freezing_point", &freezingPoint);
+				if (!error) {
+					elementData.freezing_point = freezingPoint;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no freezing point", elementData.name);
+				}
+				
+				//end of attributes, read for children like tags and graphics
+				auto tags = data->FirstChildElement("Tags");
+				if (tags)
+				{
+					for (auto tagElement = tags->FirstChildElement(); tagElement != nullptr; tagElement = tagElement->NextSiblingElement())
+					{
+						std::string tag = tagElement->Value();
+						PX_TRACE("Added element {0} to tag {1}", elementData.name, tag);
+						m_TagElements[tag].push_back(m_TotalElements);
+					}
+				}
+
+				//finished reading data, add to the memory!
+				m_ElementData.push_back(elementData);
+				m_ElementIDs[elementData.name] = m_TotalElements++;
+			}
+			//node is a reaction, so add to reaction input list for later
+			else if (nodeName == "Reaction")
+			{
+				//create result reaction
+				Reaction reaction = Reaction();
+
+				uint32_t probability;
+				auto error = data->QueryUnsignedAttribute("probability", &probability);
+				if (!error) {
+					reaction.probablility = probability; 
+				}
+
+				//input cell 0
+				const char* input0str;
+				error = data->QueryAttribute("input_cell_0", &input0str);
+				if (!error) {
+					reaction.input_cell_0 = input0str;
+				}
+				else
+				{
+					PX_INFO("Reaction missing input cell 0");
+				}
+
+				//input cell 1
+				const char* input1str;
+				error = data->QueryAttribute("input_cell_1", &input1str);
+				if (!error) {
+					reaction.input_cell_1 = input1str;
+				}
+				else
+				{
+					PX_INFO("Reaction missing input cell 1");
+				}
+
+				//output cell 0
+				const char* output0str;
+				error = data->QueryAttribute("output_cell_0", &output0str);
+				if (!error) {
+					reaction.output_cell_0 = output0str;
+				}
+				else
+				{
+					PX_INFO("Reaction missing output cell 0");
+				}
+
+				//output cell 1
+				const char* output1str;
+				error = data->QueryAttribute("output_cell_1", &output1str);
+				if (!error) {
+					reaction.output_cell_1 = output1str;
+				}
+				else
+				{
+					PX_INFO("Reaction missing output cell 1");
+				}
+				
+				//end of gathering data, so add to reaction list
+				m_Reactions.push_back(reaction);
+			}
+			PX_TRACE("node name was: {0}", nodeName);
+			data = data->NextSiblingElement();
+		}
 
 
+		////5
+		//ElementData dampSand = ElementData();
+		//dampSand.name = "dampSand";
+		//dampSand.cell_type = ElementType::movableSolid;
+		//dampSand.density = 2;
+		//dampSand.color = 0xFF11AAAA;
+		//dampSand.friction = 25;
+		//m_ElementData.push_back(dampSand);
+		//m_ElementIDs[dampSand.name] = m_TotalElements++;
+
+		////6
+		//ElementData wetSand = ElementData();
+		//wetSand.name = "wetSand";
+		//wetSand.cell_type = ElementType::movableSolid;
+		//wetSand.density = 3;
+		//wetSand.color = 0xFF229999;
+		//wetSand.friction = 40;
+		//m_ElementData.push_back(wetSand);
+		//m_ElementIDs[wetSand.name] = m_TotalElements++;
 
 		//when loading from xml, make a map of tags to elements, so
 		//the reaction table can use it
@@ -115,6 +281,110 @@ namespace Pyxis
 	void World::BuildReactionTable()
 	{
 		m_ReactionLookup = std::vector<std::unordered_map<uint32_t, ReactionResult>>(m_TotalElements);
+
+		std::string input0Tag, input1Tag;
+		//loop over each reaction
+		for each (Reaction reaction in m_Reactions)
+		{
+			//get the first string, input 0
+			if (StringContainsTag(reaction.input_cell_0))
+			{
+				//contains a tag, so keep track of what the tag is and loop
+				input0Tag = TagFromString(reaction.input_cell_0);
+				for each (uint32_t id0 in m_TagElements[input0Tag])
+				{
+					uint32_t idOut0;
+					if (StringContainsTag(reaction.output_cell_0))
+					{
+						idOut0 = m_ElementIDs[ReplaceTagInString(reaction.output_cell_0, m_ElementData[id0].name)];
+					}
+					else
+					{
+						idOut0 = m_ElementIDs[reaction.output_cell_0];
+					}
+					//id0 obtained, move onto next input
+					if (StringContainsTag(reaction.input_cell_1))
+					{
+						input1Tag = TagFromString(reaction.input_cell_1);
+						//input 1 has tag, so loop over tag elements again
+						for each (uint32_t id1 in m_TagElements[input1Tag])
+						{
+							uint32_t idOut1;
+							//id0 and 1 obtained
+							if (StringContainsTag(reaction.output_cell_1))
+							{
+								idOut1 = m_ElementIDs[ReplaceTagInString(reaction.output_cell_1, m_ElementData[id1].name)];
+							}
+							else
+							{
+								idOut1 = m_ElementIDs[reaction.output_cell_1];
+							}
+							//all id's obtained
+							m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
+						}
+					}
+					else
+					{
+						uint32_t id1 = m_ElementIDs[reaction.input_cell_1];
+						uint32_t idOut1 = m_ElementIDs[reaction.output_cell_1];
+						//all id's obtained
+						m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
+						/*m_ReactionLookup[id1][id0] = ReactionResult(reaction.probablility, idOut1, idOut0);*/
+					}
+				}
+			}
+			else
+			{
+				//input 0 has no tag, so move on to next input
+				uint32_t id0 = m_ElementIDs[reaction.input_cell_0];
+				uint32_t idOut0 = m_ElementIDs[reaction.output_cell_0];
+				if (StringContainsTag(reaction.input_cell_1))
+				{
+					input1Tag = TagFromString(reaction.input_cell_1);
+					//input 1 has tag, so loop over tag elements again
+					for each (uint32_t id1 in m_TagElements[input1Tag])
+					{
+						//id0 and 1 obtained
+						uint32_t idOut1;
+						if (StringContainsTag(reaction.output_cell_1))
+						{
+							idOut1 = m_ElementIDs[ReplaceTagInString(reaction.output_cell_1, m_ElementData[id1].name)];
+						}
+						else
+						{
+							idOut1 = m_ElementIDs[reaction.output_cell_1];
+						}
+						//all id's obtained
+						m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
+					}
+				}
+				else
+				{
+					uint32_t id1 = m_ElementIDs[reaction.input_cell_1];
+					uint32_t idOut1 = m_ElementIDs[reaction.output_cell_1];
+					//all id's obtained
+					m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
+				}
+			}
+		}
+
+
+
+		//for each (Reaction reaction in m_Reactions)
+		//{
+		//	//add reaction to the lookup for both cell directions
+		//	m_ReactionLookup[m_ElementIDs[reaction.input_cell_0]][m_ElementIDs[reaction.input_cell_1]] =
+		//		ReactionResult(reaction.probablility,
+		//			m_ElementIDs[reaction.output_cell_0],
+		//			m_ElementIDs[reaction.output_cell_1]);
+
+		//	m_ReactionLookup[m_ElementIDs[reaction.input_cell_1]][m_ElementIDs[reaction.input_cell_0]] =
+		//		ReactionResult(reaction.probablility,
+		//			m_ElementIDs[reaction.output_cell_1],
+		//			m_ElementIDs[reaction.output_cell_0]);
+
+		//}
+		
 		////sand to water becomes damp sand and air
 		//m_ReactionLookup[2][3] = ReactionResult(5, 0);
 
@@ -124,6 +394,55 @@ namespace Pyxis
 		////wet sand and sand becomes two damp sand
 		//m_ReactionLookup[6][2] = ReactionResult(5, 5);
 
+	}
+
+	bool World::StringContainsTag(const std::string& string)
+	{
+		if (string.find("[") != std::string::npos && string.find("[") != std::string::npos) return true;
+		return false;
+	}
+
+	std::string World::TagFromString(const std::string& stringWithTag)
+	{
+		int start = stringWithTag.find("[");
+		int end = stringWithTag.find("]");
+		return stringWithTag.substr(start + 1, (end - start) - 1);
+	}
+
+	std::string World::ReplaceTagInString(const std::string& stringToFill, const std::string& name)
+	{
+		int start = stringToFill.find("[");
+		int end =   stringToFill.find("]");
+		std::string result = stringToFill.substr(0, start) + name;
+		if (end == stringToFill.size() - 1) return result;
+		return result + stringToFill.substr(end + 1, (stringToFill.size() - end) - 1);
+	}
+
+	uint32_t World::RGBAtoABGR(uint32_t RGBA)
+	{
+		int r = (RGBA & 0xFF000000) >> 24;
+		int g = (RGBA & 0x00FF0000) >> 16;
+		int b = (RGBA & 0x0000FF00) >> 8;
+		int a = (RGBA & 0x000000FF) >> 0;
+		
+		//a = std::max(std::min(255, a + random), 0);
+
+		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | ((uint32_t)r << 0);
+	}
+
+	uint32_t World::RandomizeABGRColor(uint32_t ABGR, int randomShift)
+	{
+		#define random ((std::rand() % (randomShift * 2)) - randomShift) //-20 to 20
+		int r = (ABGR & 0x000000FF) >> 0;
+		int g = (ABGR & 0x0000FF00) >> 8;
+		int b = (ABGR & 0x00FF0000) >> 16;
+		int a = (ABGR & 0xFF000000) >> 24;
+
+		r = std::max(std::min(255, r + random), 0);
+		g = std::max(std::min(255, g + random), 0);
+		b = std::max(std::min(255, b + random), 0);
+		
+		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
 	}
 
 	World::~World()
@@ -328,126 +647,12 @@ namespace Pyxis
 		m_ElementData[it->second.cell1ID].UpdateElementData(other);\
 		otherChunk->m_Elements[indexOther] = other;
 
-	#define CheckForReactions xOther = x - 1;\
-	yOther = y;\
-	if (IsInBounds(xOther, yOther))\
-	{\
-		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
-		ElementData& otherData = m_ElementData[other.m_ID];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReaction;\
-			UpdateChunkDirtyRect(x,y,chunk);\
-			continue;\
-		}\
-	}\
-	else\
-	{\
-		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
-		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
-		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
-		Element other = otherChunk->m_Elements[indexOther];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReactionOtherChunk;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
-	}\
-	xOther = x;\
-	yOther = y + 1;\
-	if (IsInBounds(xOther, yOther))\
-	{\
-		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
-		ElementData& otherData = m_ElementData[other.m_ID];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReaction;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
-	}\
-	else\
-	{\
-		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
-		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
-		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
-		Element other = otherChunk->m_Elements[indexOther];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReactionOtherChunk;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
-	}\
-	xOther = x + 1;\
-	yOther = y;\
-	if (IsInBounds(xOther, yOther))\
-	{\
-		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
-		ElementData& otherData = m_ElementData[other.m_ID];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReaction;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
-	}\
-	else\
-	{\
-		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
-		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
-		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
-		Element other = otherChunk->m_Elements[indexOther];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReactionOtherChunk;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
-	}\
-	xOther = x;\
-	yOther = y - 1;\
-	if (IsInBounds(xOther, yOther))\
-	{\
-		Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];\
-		ElementData& otherData = m_ElementData[other.m_ID];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReaction;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
-	}\
-	else\
-	{\
-		glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);\
-		Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));\
-		int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;\
-		Element other = otherChunk->m_Elements[indexOther];\
-		it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);\
-		end = m_ReactionLookup[currElement.m_ID].end();\
-		if (it != end)\
-		{\
-			SolveReactionOtherChunk;\
-			UpdateChunkDirtyRect(x, y, chunk);\
-			continue;\
-		}\
+	float interpolateBetweenValues(float lower, float higher, float val)
+	{
+		//460, 6000, 1000
+		return std::min((std::max(lower, val) - lower), higher - lower) / (higher - lower);
 	}
+
 
 	/// <summary>
 	/// 
@@ -482,8 +687,7 @@ namespace Pyxis
 		///////////////////////////////////////////////////////////////
 		/// Main Update Loop, bottom to top, left,right,left....
 		///////////////////////////////////////////////////////////////
-		if (minmax.first.x <= minmax.second.x)
-			if (minmax.first.y <= minmax.second.y)	
+		if (minmax.first.x <= minmax.second.x && minmax.first.y <= minmax.second.y)
 		for (int y = std::max(minmax.first.y, bucketY * BUCKETSIZE); y <= std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1); y++) //going y then x so we do criss crossing 
 		{
 			directionBit = !directionBit;
@@ -501,146 +705,187 @@ namespace Pyxis
 				//flip the update bit so we know we updated this element
 				currElement.m_Updated = m_UpdateBit;
 
+				if (currElement.m_ID == 0) continue;
+
+				if (currElementData.glow)
+				{
+					int r = (currElement.m_BaseColor >> 0) & 255;
+					int g = (currElement.m_BaseColor >> 8) & 255;
+					int b = (currElement.m_BaseColor >> 16) & 255;
+					r = std::max(r, (int)(Pyxis::interpolateBetweenValues(460, 900, currElement.m_Temperature) * 255.0f));
+					g = std::max(g, (int)(Pyxis::interpolateBetweenValues(460, 1500, currElement.m_Temperature) * 255.0f));
+					b = std::max(b, (int)(Pyxis::interpolateBetweenValues(1000, 6000, currElement.m_Temperature) * 255.0f));
+					currElement.m_Color = (currElementData.color & 0xFF000000) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255);
+					//make it appear hotter depending on temp
+					//temp range from 460 to 6000
+				}
+				
+				if (currElement.m_Temperature >= currElementData.melting_point)
+				{
+					//melt
+					if (currElementData.melted != "")
+					{
+						int newID = m_ElementIDs[currElementData.melted];
+						m_ElementData[newID].UpdateElementData(currElement);
+						currElement.m_ID = newID;
+						chunk->UpdateDirtyRect(x, y);
+						continue;
+					}
+				}
+
+				else if (currElement.m_Temperature <= currElementData.freezing_point)
+				{
+					//freeze
+					if (currElementData.frozen != "")
+					{
+						int newID = m_ElementIDs[currElementData.frozen];
+						m_ElementData[newID].UpdateElementData(currElement);
+						currElement.m_ID = newID;
+						chunk->UpdateDirtyRect(x, y);
+						continue;
+					}
+				}
+
 				int xOther = x;
 				int yOther = y;
+
+				int r = 0;
 
 				//iterators for reaction lookup
 				std::unordered_map<uint32_t, ReactionResult>::iterator it;
 				std::unordered_map<uint32_t, ReactionResult>::iterator end;
 
-				//switch the behavior based on element type
-				switch (currElementData.cell_type)
+				//check for reactions, left,up,right,down
 				{
-				case ElementType::solid:
-					//check for reactions, left,up,right,down
 					xOther = x - 1;
 					yOther = y;
 					if (IsInBounds(xOther, yOther))
 					{
-						//operate within the chunk, since we are in bounds
 						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
 						ElementData& otherData = m_ElementData[other.m_ID];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
-							SolveReaction;							
+							SolveReaction;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
 						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 						Element other = otherChunk->m_Elements[indexOther];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReactionOtherChunk;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
-
 					xOther = x;
 					yOther = y + 1;
 					if (IsInBounds(xOther, yOther))
 					{
-						//operate within the chunk, since we are in bounds
 						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
 						ElementData& otherData = m_ElementData[other.m_ID];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReaction;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
 						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 						Element other = otherChunk->m_Elements[indexOther];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReactionOtherChunk;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
-
 					xOther = x + 1;
 					yOther = y;
 					if (IsInBounds(xOther, yOther))
 					{
-						//operate within the chunk, since we are in bounds
 						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
 						ElementData& otherData = m_ElementData[other.m_ID];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReaction;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
 						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 						Element other = otherChunk->m_Elements[indexOther];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReactionOtherChunk;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
-
 					xOther = x;
 					yOther = y - 1;
 					if (IsInBounds(xOther, yOther))
 					{
-						//operate within the chunk, since we are in bounds
 						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
 						ElementData& otherData = m_ElementData[other.m_ID];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReaction;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
 						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 						Element other = otherChunk->m_Elements[indexOther];
 						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
 						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end)
+						if (it != end && (std::rand() % 101) <= it->second.probability)
 						{
 							SolveReactionOtherChunk;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
+				}
+
+
+				//switch the behavior based on element type
+				switch (currElementData.cell_type)
+				{
+				case ElementType::solid:
 					break;
 				case ElementType::movableSolid:
-					//check for reactions
-					CheckForReactions;
-
 					//check below, and move
 					xOther = x;
 					yOther = y - 1;
@@ -656,7 +901,7 @@ namespace Pyxis
 							if (IsInBounds(x - 1, y))
 							{
 								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].horizontal = 1;
+								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Horizontal = 1;
 							}
 							else
 							{
@@ -664,12 +909,12 @@ namespace Pyxis
 								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 								int indexOther = (((x - 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].horizontal = 1;
+								otherChunk->m_Elements[indexOther].m_Horizontal = 1;
 							}
 							if (IsInBounds(x + 1, y))
 							{
 								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].horizontal = -1;
+								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Horizontal = -1;
 							}
 							else
 							{
@@ -677,7 +922,7 @@ namespace Pyxis
 								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 								int indexOther = (((x + 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].horizontal = -1;
+								otherChunk->m_Elements[indexOther].m_Horizontal = -1;
 							}
 							continue;
 						}
@@ -698,7 +943,7 @@ namespace Pyxis
 							if (IsInBounds(x - 1, y))
 							{
 								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].horizontal = 1;
+								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Horizontal = 1;
 							}
 							else
 							{
@@ -706,12 +951,12 @@ namespace Pyxis
 								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 								int indexOther = (((x - 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].horizontal = 1;
+								otherChunk->m_Elements[indexOther].m_Horizontal = 1;
 							}
 							if (IsInBounds(x + 1, y))
 							{
 								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].horizontal = -1;
+								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Horizontal = -1;
 							}
 							else
 							{
@@ -719,7 +964,7 @@ namespace Pyxis
 								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
 								int indexOther = (((x + 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
 								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].horizontal = -1;
+								otherChunk->m_Elements[indexOther].m_Horizontal = -1;
 							}
 							continue;
 						}
@@ -732,12 +977,12 @@ namespace Pyxis
 						if (rand <= currElementData.friction)
 						{
 							currElement.m_Sliding = false;
-							currElement.horizontal = 0;
+							currElement.m_Horizontal = 0;
 							continue;
 						}
-						if (currElement.horizontal == 0)
+						if (currElement.m_Horizontal == 0)
 						{
-							currElement.horizontal = (std::rand() % 2 == 0) ? -1 : 1;
+							currElement.m_Horizontal = (std::rand() % 2 == 0) ? -1 : 1;
 						}
 					}
 					else
@@ -746,7 +991,7 @@ namespace Pyxis
 					}
 
 					//try moving to the side
-					xOther = x + currElement.horizontal;
+					xOther = x + currElement.m_Horizontal;
 					yOther = y;
 					if (IsInBounds(xOther, yOther))
 					{
@@ -776,7 +1021,6 @@ namespace Pyxis
 
 					break;
 				case ElementType::liquid:
-					CheckForReactions;
 					//check below, and move
 					xOther = x;
 					yOther = y - 1;
@@ -807,7 +1051,7 @@ namespace Pyxis
 						}
 					}
 						
-					int r = std::rand() & 1 ? 1 : -1;
+					r = std::rand() & 1 ? 1 : -1;
 					//int r = (x ^ 98252 + (m_UpdateBit * y) ^ 6234561) ? 1 : -1;
 
 					//try left/right then bottom left/right
@@ -974,6 +1218,101 @@ namespace Pyxis
 					//}
 					////since the liquid didn't move, swap the horizontal
 					//currElement.m_Horizontal = -currElement.m_Horizontal;
+
+					break;
+				case ElementType::gas:
+					r = (std::rand() % 3) - 1; //-1 0 1
+					if (r == 0)
+					{
+						//check above, and move
+						xOther = x;
+						yOther = y + 1;
+						if (IsInBounds(xOther, yOther))
+						{
+							//operate within the chunk, since we are in bounds
+							//Element& other = chunk->GetElement(xOther, yOther);
+							Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+							ElementData& otherData = m_ElementData[other.m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								SwapWithOther;
+								continue;
+							}
+						}
+						else
+						{
+							//we need to get the element by finding the other chunk
+							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+							Element other = otherChunk->m_Elements[indexOther];
+							ElementData& otherData = m_ElementData[other.m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								SwapWithOtherChunk;
+								continue;
+							}
+						}
+					}
+
+					//try left/right
+					xOther = x + r;
+					yOther = y;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
+
+					xOther = x - r;
+					yOther = y;
+					if (IsInBounds(xOther, yOther))
+					{
+						//operate within the chunk, since we are in bounds
+						//Element& other = chunk->GetElement(xOther, yOther);
+						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						{
+							SwapWithOther;
+							continue;
+						}
+					}
+					else
+					{
+						//we need to get the element by finding the other chunk
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
+						Element other = otherChunk->m_Elements[indexOther];
+						ElementData& otherData = m_ElementData[other.m_ID];
+						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						{
+							SwapWithOtherChunk;
+							continue;
+						}
+					}
 
 					break;
 				}

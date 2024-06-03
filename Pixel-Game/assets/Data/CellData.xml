@@ -1,14 +1,182 @@
 <Materials>
 	<ElementData
+		name="air"
+		cell_type="gas"
+		color="000000FF"
+		density="0"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="debug_heat"
+		cell_type="gas"
+		color="FF000088"
+		density="0"
+		>
+	</ElementData>
+
+	<ElementData
+		name="debug_cool"
+		cell_type="gas"
+		color="0000FF88"
+		density="0"
+		>
+	</ElementData>
+	
+	<ElementData
 		name="stone"
 		cell_type="solid"
-		color="FF444444"
+		color="444444FF"
 		density="10"
 		>
-		<ElementTags>
-		</ElementTags>
+		<Tags>
+		</Tags>
 	</ElementData>
-	<Reaction>
 
+	<ElementData
+		name="sand"
+		cell_type="movableSolid"
+		color="FFFF00FF"
+		density="10"
+		friction="10"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="water"
+		cell_type="liquid"
+		color="0000FFFF"
+		density="5"
+		friction="50"
+		melted="steam"
+		melting_point="100"
+		frozen="ice"
+		freezing_point="0"
+		
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="ice"
+		cell_type="solid"
+		color="4444FFFF"
+		density="4"
+		friction="10"
+		melted="water"
+		melting_point="5"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="steam"
+		cell_type="gas"
+		color="AAAAAAFF"
+		density="5"
+		friction="50"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="oil"
+		cell_type="liquid"
+		color="222222FF"
+		density="3"
+		friction="50"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+	
+	<Reaction
+		probability="100"
+		input_cell_0="sand"
+		input_cell_1="water"
+		output_cell_0="wet_sand"
+		output_cell_1="air"
+		>
 	</Reaction>
+
+	<ElementData
+		name="wet_sand"
+		cell_type="movableSolid"
+		color="BBBB00FF"
+		density="12"
+		friction="20"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="lava"
+		cell_type="liquid"
+		color="FF9900FF"
+		density="20"
+		friction="20"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="obsidian"
+		cell_type="solid"
+		color="110011FF"
+		density="18"
+		friction="80"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="iron"
+		cell_type="movableSolid"
+		color="a19d94FF"
+		density="12"
+		friction="80"
+		glow="1"
+		temperature="20"
+		melted="molten_iron"
+		melting_point="1538"
+		>
+		<Tags>
+			<meltable></meltable>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="molten_iron"
+		cell_type="liquid"
+		color="a19d94FF"
+		density="13"
+		friction="20"
+		temperature="1538"
+		glow="1"
+		frozen="iron"
+		freezing_point="1537"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<Reaction
+		probability="100"
+		input_cell_0="lava"
+		input_cell_1="water"
+		output_cell_0="obsidian"
+		output_cell_1="steam"
+		>
+	</Reaction>
+	
 </Materials>

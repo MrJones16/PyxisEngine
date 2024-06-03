@@ -142,13 +142,12 @@ namespace Pyxis
 
 			if (m_SimulationRunning)
 				m_World->UpdateWorld();
-
-			PaintBrushHologram();
 		}
 
 		{
 			PROFILE_SCOPE("Renderer Draw");
 			m_World->RenderWorld();
+			PaintBrushHologram();
 		}
 
 		Renderer2D::EndScene();
@@ -339,25 +338,27 @@ namespace Pyxis
 				ElementData& elementData = m_World->m_ElementData[m_SelectedElementIndex];
 				element.m_ID = m_SelectedElementIndex;
 				element.m_Updated = !m_World->m_UpdateBit;
-				int r =  elementData.color & 0x000000FF;
-				int g = (elementData.color & 0x0000FF00) >> 8;
-				int b = (elementData.color & 0x00FF0000) >> 16;
-				int a = (elementData.color & 0xFF000000) >> 24;
-				//randomize color
-				#define random ((std::rand() % 40) - 20) //-20 to 20
-				r = std::max(std::min(255, r + random), 0);
-				g = std::max(std::min(255, g + random), 0);
-				b = std::max(std::min(255, b + random), 0);
-				//a = std::max(std::min(255, a + random), 0);
-				
-				element.m_Color = ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | ((uint32_t)r << 0);
-
-				//set element and add chunk to update map
-				m_World->SetElement(newPos, element);
+				element.m_BaseColor = World::RandomizeABGRColor(elementData.color, 20);
+				element.m_Color = element.m_BaseColor;
 
 				chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
 				index = m_World->PixelToIndex(newPos);
 				chunk->UpdateDirtyRect(index.x, index.y);
+
+				//set element and add chunk to update map
+				if (m_World->m_ElementIDs["debug_heat"] == m_SelectedElementIndex)
+				{
+					//add heat
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+				}
+				else if (m_World->m_ElementIDs["debug_cool"] == m_SelectedElementIndex)
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+				}
+				else
+					m_World->SetElement(newPos, element);
+
+				
 				map[chunk->m_ChunkPos] = chunk;
 			}
 		}
@@ -394,11 +395,12 @@ namespace Pyxis
 				}
 
 				uint32_t color = m_World->m_ElementData[m_SelectedElementIndex].color;
+				
 				float r = float(color & 0x000000FF) / 255.0f;
 				float g = float((color & 0x0000FF00) >> 8) / 255.0f;
 				float b = float((color & 0x00FF0000) >> 16) / 255.0f;
 				float a = float((color & 0xFF000000) >> 24) / 255.0f;
-				glm::vec4 vecColor = glm::vec4(r,g,b,a);
+				glm::vec4 vecColor = glm::vec4(r,g,b,a * 0.5f);
 				
 				//draw square at that pixel
 				float pixelSize = 1.0f / (float)CHUNKSIZE;
@@ -410,56 +412,5 @@ namespace Pyxis
 		
 	}
 
-	//void GameLayer::PaintBrushHologram()
-	//{
-	//	std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
-
-	//	auto [x, y] = Pyxis::Input::GetMousePosition();
-	//	auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-	//	glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
-
-
-	//	glm::ivec2 newPos = pixelPos;
-	//	for (int x = -m_BrushSize; x <= m_BrushSize; x++)
-	//	{
-	//		for (int y = -m_BrushSize; y <= m_BrushSize; y++)
-	//		{
-	//			newPos = pixelPos + glm::ivec2(x, y);
-	//			Chunk* chunk;
-	//			glm::ivec2 index;
-	//			switch (m_BrushType)
-	//			{
-	//			case BrushType::circle:
-	//				//limit to circle
-	//				if (std::sqrt((float)(x * x) + (float)(y * y)) >= m_BrushSize) continue;
-	//				break;
-	//			case BrushType::square:
-	//				//don't need to skip any
-	//				break;
-	//			}
-
-	//			//get chunk, and skip if doesn't exist yet
-	//			glm::ivec2 chunkPos = m_World->PixelToChunk(newPos);
-	//			auto it = m_World->m_Chunks.find(chunkPos);
-	//			if (it == m_World->m_Chunks.end())
-	//				continue;
-
-	//			//get chunk and index
-	//			chunk = m_World->GetChunk(chunkPos);
-	//			index = m_World->PixelToIndex(newPos);
-	//			//set color and add to list to update texture at end
-	//			uint32_t color = m_World->m_ElementData[m_SelectedElementIndex].color;
-	//			color &= 0x00FFFFFF;
-	//			color += 0x88000000;
-	//			chunk->m_PixelBuffer[index.x + index.y * CHUNKSIZE] = color;
-	//			map[chunk->m_ChunkPos] = chunk;
-	//		}
-	//	}
-	//	for each (auto & pair in map)
-	//	{
-	//		//pair.second->m_Texture->SetData(pair.second->m_PixelBuffer, sizeof(pair.second->m_PixelBuffer));
-	//		pair.second->UpdateTextureForHologram();
-	//	}
-	//}
 
 }

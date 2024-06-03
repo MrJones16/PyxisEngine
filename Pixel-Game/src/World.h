@@ -54,24 +54,27 @@ namespace Pyxis
 		glm::ivec2 PixelToChunk(const glm::ivec2& pixelPos);
 		glm::ivec2 PixelToIndex(const glm::ivec2& pixelPos);
 
-		//std::vector<Chunk*> m_Chunks;
+		bool StringContainsTag(const std::string& string);
+		std::string TagFromString(const std::string& stringWithTag);
+		std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
+
+		static uint32_t RGBAtoABGR(uint32_t RGBA);
+		static uint32_t RandomizeABGRColor(uint32_t RGBA, int randomShift);
+
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
 
-		/*std::vector<Chunk*> m_Chunks_TL;
-		std::vector<Chunk*> m_Chunks_TR;
-		std::vector<Chunk*> m_Chunks_BL;
-		std::vector<Chunk*> m_Chunks_BR;*/
-
+		//keeping track of theads to join them
 		std::vector<std::thread> m_Threads;
 
+		//keeping track of element data, tags, reactions, ect
 		int m_TotalElements = 0;
 		std::vector<ElementData> m_ElementData;
+		std::vector<Reaction> m_Reactions;
+		std::unordered_map<std::string, std::vector<uint32_t>> m_TagElements;
 		std::unordered_map<std::string, uint32_t> m_ElementIDs;
 		std::vector<std::unordered_map<uint32_t, ReactionResult>> m_ReactionLookup;
-		 
-		
-		
 
+		//extra data needed
 		bool m_UpdateBit = false;
 		bool m_Error = false;
 

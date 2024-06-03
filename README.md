@@ -24,6 +24,8 @@ The project uses [Premake 5](https://github.com/premake/premake-core) to build s
 
 * [spdlog](https://github.com/gabime/spdlog) (Very fast, header-only/compiled, C++ logging library.)
 
+* [tinyXML2](https://github.com/leethomason/tinyxml2) (TinyXML-2 is a simple, small, efficient, C++ XML parser)
+
 * (Planned) ASSIMP (In repository, not yet implemented) 
 
 ## What I've Learned
