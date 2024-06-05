@@ -35,7 +35,10 @@ namespace Pyxis
 		uint32_t m_BaseColor = 0xFF000000;
 		uint32_t m_Color = 0xFF000000;
 
-		int32_t m_Temperature = 20;
+		bool m_Ignited = false;
+		int m_Health = 100;
+
+		float m_Temperature = 20;
 
 		int8_t m_Horizontal = 0;
 
@@ -63,8 +66,21 @@ namespace Pyxis
 		//0 - 100, 0 would slide forever, 100 won't slide at all
 		uint32_t friction = 5;//chance to stop when sliding
 
-		int32_t temperature = 20;
+		int health = 100;
+
+		//flammable settings
+		bool flammable = false;
+		bool ignited = false;
+		float ignition_temperature = 371.0f;
+		float fire_temperature = 1000;
+		std::string burnt = "air";
+
+
+
 		bool glow = false;
+		uint32_t conductivity = 0;
+		float temperature = 20;
+
 
 		//name of element to become if melted
 		std::string melted = "";
@@ -80,6 +96,16 @@ namespace Pyxis
 			element.m_BaseColor = color;
 			element.m_Color = color;
 			element.m_Temperature = temperature;
+			element.m_Ignited = ignited;
+			element.m_Health = health;
+		}
+		void UpdateElementData(Element* element)
+		{
+			element->m_BaseColor = color;
+			element->m_Color = color;
+			element->m_Temperature = temperature;
+			element->m_Ignited = ignited;
+			element->m_Health = health;
 		}
 
 	};

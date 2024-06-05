@@ -109,10 +109,10 @@ namespace Pyxis
 	}
 
 
-	void Chunk::UpdateTexture(bool updateEntireTexture)
+	void Chunk::UpdateTexture()
 	{
 		bool debug = false;
-		if (updateEntireTexture)
+		if (debug)
 		{
 			for (int x = 0; x < CHUNKSIZE; x++)
 			{
@@ -121,27 +121,16 @@ namespace Pyxis
 					auto& minmax = m_DirtyRects[(x / BUCKETSIZE) + (y / BUCKETSIZE) * BUCKETSWIDTH];
 					if (x == minmax.first.x || x == minmax.second.x)
 					{
-						if (debug)
-						{
-							if (y >= minmax.first.y && y <= minmax.second.y)
-								m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
-							else
-								m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
-						}
+						if (y >= minmax.first.y && y <= minmax.second.y)
+							m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
 						else
 							m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
-						
 						//draw gray for border
 					}
 					else if (y == minmax.first.y || y == minmax.second.y)
 					{
-						if (debug)
-						{
-							if (y >= minmax.first.y && y <= minmax.second.y)
-								m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
-							else
-								m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
-						}
+						if (y >= minmax.first.y && y <= minmax.second.y)
+							m_PixelBuffer[x + y * CHUNKSIZE] = 0xFF77777777;
 						else
 							m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
 					}

@@ -1,3 +1,5 @@
+
+
 <Materials>
 	<ElementData
 		name="air"
@@ -29,7 +31,21 @@
 		name="stone"
 		cell_type="solid"
 		color="444444FF"
-		density="10"
+		conductivity="1"
+		glow="1"
+		density="30"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="ceramic"
+		cell_type="solid"
+		color="e89e5dFF"
+		conductivity="0.5"
+		glow="1"
+		density="20"
 		>
 		<Tags>
 		</Tags>
@@ -39,6 +55,22 @@
 		name="sand"
 		cell_type="movableSolid"
 		color="FFFF00FF"
+		density="10"
+		friction="10"
+		glow="1"
+		conductivity="10"
+		melted="glass"
+		melting_point="1700"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="glass"
+		cell_type="solid"
+		color="FFFFFFFF"
+		glow="1"
 		density="10"
 		friction="10"
 		>
@@ -52,6 +84,8 @@
 		color="0000FFFF"
 		density="5"
 		friction="50"
+		conductivity="50"
+		temperature="15"
 		melted="steam"
 		melting_point="100"
 		frozen="ice"
@@ -68,8 +102,10 @@
 		color="4444FFFF"
 		density="4"
 		friction="10"
+		temperature="0"
+		conductivity="10"
 		melted="water"
-		melting_point="5"
+		melting_point="1"
 		>
 		<Tags>
 		</Tags>
@@ -81,6 +117,44 @@
 		color="AAAAAAFF"
 		density="5"
 		friction="50"
+		conductivity="10"
+		temperature="110"
+		frozen="water"
+		freezing_point="99"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="fire"
+		cell_type="fire"
+		color="110500FF"
+		density="1"
+		conductivity="100"
+		glow="1"
+		temperature="1000"
+		flammable="1"
+		ignited="1"
+		burnt="air"
+		health="20"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="wood"
+		cell_type="solid"
+		color="cdaa7dFF"
+		conductivity="5"
+		glow="1"
+		density="30"
+		flammable="1"
+		ignition_temperature="371"
+		fire_temperature="1000"
+		health="100"
+		burnt="ash"
 		>
 		<Tags>
 		</Tags>
@@ -92,6 +166,9 @@
 		color="222222FF"
 		density="3"
 		friction="50"
+		fire_temperature="1000"
+		health="50"
+		onDeath="air"
 		>
 		<Tags>
 		</Tags>
@@ -146,6 +223,7 @@
 		density="12"
 		friction="80"
 		glow="1"
+		conductivity="20"
 		temperature="20"
 		melted="molten_iron"
 		melting_point="1538"
@@ -161,8 +239,9 @@
 		color="a19d94FF"
 		density="13"
 		friction="20"
-		temperature="1538"
 		glow="1"
+		conductivity="20"
+		temperature="1538"
 		frozen="iron"
 		freezing_point="1537"
 		>

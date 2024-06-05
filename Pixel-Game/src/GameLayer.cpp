@@ -73,9 +73,8 @@ namespace Pyxis
 		//create a border around first chunk
 		Element stone = Element();
 		stone.m_ID = m_World->m_ElementIDs["stone"];
-		ElementData& elementdata = m_World->m_ElementData[stone.m_ID];
-		stone.m_Color = elementdata.color;
-		stone.m_Updated = !m_World->m_UpdateBit;
+		ElementData& elementData = m_World->m_ElementData[stone.m_ID];
+		elementData.UpdateElementData(stone);
 		for (int i = 0; i < m_World->CHUNKSIZE; i++)
 		{
 			m_World->SetElement({ i, 0 }, stone);//bottom
@@ -141,7 +140,21 @@ namespace Pyxis
 			}*/
 
 			if (m_SimulationRunning)
-				m_World->UpdateWorld();
+			{
+				//keep track of when the world was updated, and only update it if
+				//enough time has passed for the next update to be ready
+				auto time = std::chrono::high_resolution_clock::now();
+				if (m_UpdatesPerSecond > 0 &&
+					std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
+					-
+					std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
+					>= (1.0f / m_UpdatesPerSecond) * 1000000.0f)
+				{
+					m_World->UpdateWorld();
+					m_UpdateTime = time;
+				}
+
+			}
 		}
 
 		{
@@ -174,13 +187,24 @@ namespace Pyxis
 			}
 			ImGui::EndMainMenuBar();
 		}
-
-		
-		if (ImGui::Begin("Brush Settings"))
+		if (ImGui::Begin("Settings"))
 		{
 
+		}
+		ImGui::End();
+
+		
+		if (ImGui::Begin("Settings"))
+		{
 			ImGui::SetNextItemOpen(true);
-			if (ImGui::TreeNode("Bush Shape"))
+			if (ImGui::TreeNode("Simulation"))
+			{
+				ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Brush Shape"))
 			{
 				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
 				{
@@ -338,6 +362,7 @@ namespace Pyxis
 				ElementData& elementData = m_World->m_ElementData[m_SelectedElementIndex];
 				element.m_ID = m_SelectedElementIndex;
 				element.m_Updated = !m_World->m_UpdateBit;
+				elementData.UpdateElementData(element);
 				element.m_BaseColor = World::RandomizeABGRColor(elementData.color, 20);
 				element.m_Color = element.m_BaseColor;
 

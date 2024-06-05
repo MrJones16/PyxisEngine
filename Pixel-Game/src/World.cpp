@@ -93,6 +93,16 @@ namespace Pyxis
 					PX_INFO("Element {0} was given no color", elementData.name);
 				}
 
+				int health = 100;
+				error = data->QueryIntAttribute("health", &health);
+				if (!error) {
+					elementData.health = health;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no health attribute", elementData.name);
+				}
+
 				uint32_t density;
 				error = data->QueryUnsignedAttribute("density", &density);
 				if (!error) {
@@ -113,6 +123,57 @@ namespace Pyxis
 					PX_INFO("Element {0} was given no friction", elementData.name);
 				}
 
+				///fire settings
+				bool flammable = false;
+				error = data->QueryBoolAttribute("flammable", &flammable);
+				if (!error) {
+					elementData.flammable = flammable;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no flammable attribute", elementData.name);
+				}
+
+				bool ignited = false;
+				error = data->QueryBoolAttribute("ignited", &ignited);
+				if (!error) {
+					elementData.ignited = ignited;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no ignited attribute", elementData.name);
+				}
+
+				float ignition_temperature = 371;
+				error = data->QueryFloatAttribute("ignition_temperature", &ignition_temperature);
+				if (!error) {
+					elementData.ignition_temperature = ignition_temperature;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no ignition_temperature", elementData.name);
+				}
+
+				float fire_temperature = 1000;
+				error = data->QueryFloatAttribute("fire_temperature", &fire_temperature);
+				if (!error) {
+					elementData.fire_temperature = fire_temperature;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no ignition_temperature", elementData.name);
+				}
+
+				const char* burnt;
+				error = data->QueryAttribute("burnt", &burnt);
+				if (!error) {
+					elementData.burnt = burnt;
+				}
+				else
+				{
+					//PX_INFO("Element {0} was given no _____", elementData.name);
+				}
+
 				bool glow = false;
 				error = data->QueryBoolAttribute("glow", &glow);
 				if (!error) {
@@ -121,6 +182,16 @@ namespace Pyxis
 				else
 				{
 					PX_INFO("Element {0} was given no glow", elementData.name);
+				}
+
+				uint32_t conductivity = 0;
+				error = data->QueryUnsignedAttribute("conductivity", &conductivity);
+				if (!error) {
+					elementData.conductivity = conductivity;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no conductivity", elementData.name);
 				}
 
 				const char* meltedStr;
@@ -143,8 +214,8 @@ namespace Pyxis
 					//PX_INFO("Element {0} was given no _____", elementData.name);
 				}
 
-				int temperature = 20;
-				error = data->QueryIntAttribute("temperature", &temperature);
+				float temperature = 20;
+				error = data->QueryFloatAttribute("temperature", &temperature);
 				if (!error) {
 					elementData.temperature = temperature;
 				}
@@ -432,7 +503,7 @@ namespace Pyxis
 
 	uint32_t World::RandomizeABGRColor(uint32_t ABGR, int randomShift)
 	{
-		#define random ((std::rand() % (randomShift * 2)) - randomShift) //-20 to 20
+		int random = ((std::rand() % (randomShift * 2)) - randomShift); //-20 to 20
 		int r = (ABGR & 0x000000FF) >> 0;
 		int g = (ABGR & 0x0000FF00) >> 8;
 		int b = (ABGR & 0x00FF0000) >> 16;
@@ -682,16 +753,18 @@ namespace Pyxis
 		 
 		//get the min and max
 		//loop from min to max in both "axies"?
-		bool directionBit = false;
+		bool directionBit = m_UpdateBit;
 
 		///////////////////////////////////////////////////////////////
-		/// Main Update Loop, bottom to top, left,right,left....
+		/// Main Update Loop, back and forth bottom to top, left,right,left....
 		///////////////////////////////////////////////////////////////
+		int startNumy = m_UpdateBit ? std::max(minmax.first.y, bucketY * BUCKETSIZE) : std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1);
+		int compNumberY = m_UpdateBit ? std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1) + 1 : std::max(minmax.first.y, bucketY * BUCKETSIZE) - 1;
 		if (minmax.first.x <= minmax.second.x && minmax.first.y <= minmax.second.y)
-		for (int y = std::max(minmax.first.y, bucketY * BUCKETSIZE); y <= std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1); y++) //going y then x so we do criss crossing 
+		for (int y = startNumy; y != compNumberY; m_UpdateBit ? y++ : y--) //going y then x so we do criss crossing 
 		{
 			directionBit = !directionBit;
-			int startNum = directionBit ? std::max(minmax.first.x, bucketX * BUCKETSIZE) : std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1);
+			int startNum   = directionBit ? std::max(minmax.first.x, bucketX * BUCKETSIZE) : std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1);
 			int compNumber = directionBit ? std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1) + 1 : std::max(minmax.first.x, bucketX * BUCKETSIZE) - 1;
 			//PX_TRACE("x is: {0}", x);
 			for (int x = startNum; x != compNumber; directionBit ? x++ : x--)
@@ -719,32 +792,6 @@ namespace Pyxis
 					//make it appear hotter depending on temp
 					//temp range from 460 to 6000
 				}
-				
-				if (currElement.m_Temperature >= currElementData.melting_point)
-				{
-					//melt
-					if (currElementData.melted != "")
-					{
-						int newID = m_ElementIDs[currElementData.melted];
-						m_ElementData[newID].UpdateElementData(currElement);
-						currElement.m_ID = newID;
-						chunk->UpdateDirtyRect(x, y);
-						continue;
-					}
-				}
-
-				else if (currElement.m_Temperature <= currElementData.freezing_point)
-				{
-					//freeze
-					if (currElementData.frozen != "")
-					{
-						int newID = m_ElementIDs[currElementData.frozen];
-						m_ElementData[newID].UpdateElementData(currElement);
-						currElement.m_ID = newID;
-						chunk->UpdateDirtyRect(x, y);
-						continue;
-					}
-				}
 
 				int xOther = x;
 				int yOther = y;
@@ -755,128 +802,235 @@ namespace Pyxis
 				std::unordered_map<uint32_t, ReactionResult>::iterator it;
 				std::unordered_map<uint32_t, ReactionResult>::iterator end;
 
+
+				Element* elementTop;
+				Element* elementBottom;
+				Element* elementRight;
+				Element* elementLeft;
+				
+				//get cardinal elements
+				{
+					if (IsInBounds(x, y + 1))
+					{
+						elementTop = chunk->m_Elements + (x)+(y + 1) * CHUNKSIZE;
+					}
+					else
+					{
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x, y + 1);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((((x)+CHUNKSIZE) % CHUNKSIZE) + (((y + 1) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+						elementTop = otherChunk->m_Elements + indexOther;
+					}
+
+					if (IsInBounds(x, y - 1))
+					{
+						elementBottom = chunk->m_Elements + (x)+(y - 1) * CHUNKSIZE;
+					}
+					else
+					{
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x, y - 1);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((((x)+CHUNKSIZE) % CHUNKSIZE) + (((y - 1) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+						elementBottom = otherChunk->m_Elements + indexOther;
+					}
+
+					if (IsInBounds(x + 1, y))
+					{
+						elementRight = chunk->m_Elements + (x + 1) + (y)*CHUNKSIZE;
+					}
+					else
+					{
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x + 1, y);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((((x + 1) + CHUNKSIZE) % CHUNKSIZE) + (((y)+CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+						elementRight = otherChunk->m_Elements + indexOther;
+					}
+
+					if (IsInBounds(x - 1, y))
+					{
+						elementLeft = chunk->m_Elements + (x - 1) + (y)*CHUNKSIZE;
+					}
+					else
+					{
+						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x - 1, y);
+						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
+						int indexOther = ((((x - 1) + CHUNKSIZE) % CHUNKSIZE) + (((y)+CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+						elementLeft = otherChunk->m_Elements + indexOther;
+					}
+				}
+
 				//check for reactions, left,up,right,down
 				{
-					xOther = x - 1;
-					yOther = y;
-					if (IsInBounds(xOther, yOther))
+					it = m_ReactionLookup[currElement.m_ID].find(elementLeft->m_ID);
+					end = m_ReactionLookup[currElement.m_ID].end();
+					if (it != end && (std::rand() % 101) <= it->second.probability)
 					{
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
+						currElement.m_ID = it->second.cell0ID;
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						elementLeft->m_ID = it->second.cell1ID;
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementLeft);
+						UpdateChunkDirtyRect(x, y, chunk);
+						continue;
+					}
+
+					it = m_ReactionLookup[currElement.m_ID].find(elementTop->m_ID);
+					end = m_ReactionLookup[currElement.m_ID].end();
+					if (it != end && (std::rand() % 101) <= it->second.probability)
+					{
+						currElement.m_ID = it->second.cell0ID;
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						elementTop->m_ID = it->second.cell1ID;
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementTop);
+						UpdateChunkDirtyRect(x, y, chunk);
+						continue;
+					}
+
+					it = m_ReactionLookup[currElement.m_ID].find(elementRight->m_ID);
+					end = m_ReactionLookup[currElement.m_ID].end();
+					if (it != end && (std::rand() % 101) <= it->second.probability)
+					{
+						currElement.m_ID = it->second.cell0ID;
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						elementRight->m_ID = it->second.cell1ID;
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementRight);
+						UpdateChunkDirtyRect(x, y, chunk);
+						continue;
+					}
+
+					it = m_ReactionLookup[currElement.m_ID].find(elementBottom->m_ID);
+					end = m_ReactionLookup[currElement.m_ID].end();
+					if (it != end && (std::rand() % 101) <= it->second.probability)
+					{
+						currElement.m_ID = it->second.cell0ID;
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						elementBottom->m_ID = it->second.cell1ID;
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementBottom);
+						UpdateChunkDirtyRect(x, y, chunk);
+						continue;
+					}
+				}
+
+				//handle universal element properties
+				if (currElement.m_Temperature >= currElementData.melting_point)
+				{
+					//melt
+					if (currElementData.melted != "")
+					{
+						int newID = m_ElementIDs[currElementData.melted];
+						int temp = currElement.m_Temperature;
+						m_ElementData[newID].UpdateElementData(currElement);
+						currElement.m_Temperature = temp;
+						currElement.m_ID = newID;
+						chunk->UpdateDirtyRect(x, y);
+					}
+				}
+
+				if (currElement.m_Temperature <= currElementData.freezing_point)
+				{
+					//freeze
+					if (currElementData.frozen != "")
+					{
+						int newID = m_ElementIDs[currElementData.frozen];
+						int temp = currElement.m_Temperature;
+						m_ElementData[newID].UpdateElementData(currElement);
+						currElement.m_Temperature = temp;
+						currElement.m_ID = newID;
+						chunk->UpdateDirtyRect(x, y);
+					}
+				}
+
+				if (currElementData.conductivity > 0)
+				{
+					float tempBefore = currElement.m_Temperature;
+					int minConductivity = 0;
+					float diff = 0;
+
+					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementLeft->m_ID].conductivity);
+					diff = ((currElement.m_Temperature - elementLeft->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+					if (diff != 0)
+					{
+						currElement.m_Temperature -= diff;
+						elementLeft->m_Temperature += diff;
+					}
+
+					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementTop->m_ID].conductivity);
+					diff = ((float)(currElement.m_Temperature - elementTop->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+					if (diff != 0)
+					{
+						currElement.m_Temperature -= diff;
+						elementTop->m_Temperature += diff;
+					}
+
+					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementRight->m_ID].conductivity);
+					diff = ((float)(currElement.m_Temperature - elementRight->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+					if (diff != 0)
+					{
+						currElement.m_Temperature -= diff;
+						elementRight->m_Temperature += diff;
+					}
+
+					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementBottom->m_ID].conductivity);
+					diff = ((float)(currElement.m_Temperature - elementBottom->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+					if (diff != 0)
+					{
+						currElement.m_Temperature -= diff;
+						elementBottom->m_Temperature += diff;
+					}
+					if (currElement.m_Temperature != tempBefore) chunk->UpdateDirtyRect(x, y);
+					
+
+				}
+
+				if (currElementData.flammable)
+				{
+					if (currElement.m_Temperature >= currElementData.ignition_temperature) currElement.m_Ignited = true;
+					//check for open air to burn
+					int fireID = m_ElementIDs["fire"];
+					ElementData& fireElementData = m_ElementData[fireID];
+					if (currElement.m_Ignited)
+					{
+						if (currElement.m_ID != fireID && std::rand() % 100 < 11)
 						{
-							SolveReaction;
-							UpdateChunkDirtyRect(x, y, chunk);
+							ElementData& elementLeftData = m_ElementData[elementLeft->m_ID];
+							if (elementLeftData.cell_type == ElementType::gas)
+							{
+								fireElementData.UpdateElementData(elementLeft);
+								elementLeft->m_ID = fireID;
+								elementLeft->m_Temperature = currElementData.fire_temperature;
+
+							}
+							ElementData& elementTopData = m_ElementData[elementTop->m_ID];
+							if (elementTopData.cell_type == ElementType::gas)
+							{
+								fireElementData.UpdateElementData(elementTop);
+								elementTop->m_ID = fireID;
+								elementTop->m_Temperature = currElementData.fire_temperature;
+							}
+							ElementData& elementRightData = m_ElementData[elementRight->m_ID];
+							if (elementRightData.cell_type == ElementType::gas)
+							{
+								fireElementData.UpdateElementData(elementRight);
+								elementRight->m_ID = fireID;
+								elementRight->m_Temperature = currElementData.fire_temperature;
+							}
+							ElementData& elementBottomData = m_ElementData[elementBottom->m_ID];
+							if (elementBottomData.cell_type == ElementType::gas)
+							{
+								fireElementData.UpdateElementData(elementBottom);
+								elementBottom->m_ID = fireID;
+								elementBottom->m_Temperature = currElementData.fire_temperature;
+							}
+						}
+						currElement.m_Health--;
+						if (currElement.m_Health <= 0)
+						{
+							currElement.m_ID = m_ElementIDs[currElementData.burnt];
+							m_ElementData[currElement.m_ID].UpdateElementData(currElement);
 							continue;
 						}
 					}
-					else
-					{
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReactionOtherChunk;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
-					xOther = x;
-					yOther = y + 1;
-					if (IsInBounds(xOther, yOther))
-					{
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReaction;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
-					else
-					{
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReactionOtherChunk;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
-					xOther = x + 1;
-					yOther = y;
-					if (IsInBounds(xOther, yOther))
-					{
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReaction;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
-					else
-					{
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReactionOtherChunk;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
-					xOther = x;
-					yOther = y - 1;
-					if (IsInBounds(xOther, yOther))
-					{
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReaction;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
-					else
-					{
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						it = m_ReactionLookup[currElement.m_ID].find(other.m_ID);
-						end = m_ReactionLookup[currElement.m_ID].end();
-						if (it != end && (std::rand() % 101) <= it->second.probability)
-						{
-							SolveReactionOtherChunk;
-							UpdateChunkDirtyRect(x, y, chunk);
-							continue;
-						}
-					}
+					
+					
 				}
 
 
@@ -887,88 +1041,21 @@ namespace Pyxis
 					break;
 				case ElementType::movableSolid:
 					//check below, and move
-					xOther = x;
-					yOther = y - 1;
-					if (IsInBounds(xOther, yOther))
 					{
-						//operate within the chunk, since we are in bounds
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						ElementData& otherData = m_ElementData[elementBottom->m_ID];
 						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
 						{
 							currElement.m_Sliding = true;
-							SwapWithOther;
-							if (IsInBounds(x - 1, y))
-							{
-								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Horizontal = 1;
-							}
-							else
-							{
-								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x - 1), y);
-								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-								int indexOther = (((x - 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].m_Horizontal = 1;
-							}
-							if (IsInBounds(x + 1, y))
-							{
-								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Horizontal = -1;
-							}
-							else
-							{
-								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x + 1), y);
-								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-								int indexOther = (((x + 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].m_Horizontal = -1;
-							}
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementBottom;
+							*elementBottom = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							elementLeft->m_Sliding = true;
+							elementRight->m_Sliding = true;
 							continue;
 						}
 					}
-					else
-					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
-						{
-							//other element is air so we move to it
-							currElement.m_Sliding = true;
-							SwapWithOtherChunk;
-							if (IsInBounds(x - 1, y))
-							{
-								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x - 1) + y * CHUNKSIZE].m_Horizontal = 1;
-							}
-							else
-							{
-								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x - 1), y);
-								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-								int indexOther = (((x - 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].m_Horizontal = 1;
-							}
-							if (IsInBounds(x + 1, y))
-							{
-								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Sliding = true;
-								chunk->m_Elements[(x + 1) + y * CHUNKSIZE].m_Horizontal = -1;
-							}
-							else
-							{
-								glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2((x + 1), y);
-								Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-								int indexOther = (((x + 1) + CHUNKSIZE) % CHUNKSIZE) + ((y + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-								otherChunk->m_Elements[indexOther].m_Sliding = true;
-								otherChunk->m_Elements[indexOther].m_Horizontal = -1;
-							}
-							continue;
-						}
-					}
+					
 
 					if (currElement.m_Sliding)
 					{
@@ -991,30 +1078,29 @@ namespace Pyxis
 					}
 
 					//try moving to the side
-					xOther = x + currElement.m_Horizontal;
-					yOther = y;
-					if (IsInBounds(xOther, yOther))
+					if (currElement.m_Horizontal > 0)
 					{
-						//operate within the chunk, since we are in bounds
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						ElementData& otherData = m_ElementData[elementRight->m_ID];
 						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
 						{
-							SwapWithOther;
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						ElementData& otherData = m_ElementData[elementLeft->m_ID];
 						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
 						{
-							SwapWithOtherChunk;
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
@@ -1225,92 +1311,141 @@ namespace Pyxis
 					if (r == 0)
 					{
 						//check above, and move
-						xOther = x;
-						yOther = y + 1;
-						if (IsInBounds(xOther, yOther))
 						{
-							//operate within the chunk, since we are in bounds
-							//Element& other = chunk->GetElement(xOther, yOther);
-							Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-							ElementData& otherData = m_ElementData[other.m_ID];
+							ElementData& otherData = m_ElementData[elementTop->m_ID];
 							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
 							{
-								SwapWithOther;
-								continue;
-							}
-						}
-						else
-						{
-							//we need to get the element by finding the other chunk
-							glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-							Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-							int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-							Element other = otherChunk->m_Elements[indexOther];
-							ElementData& otherData = m_ElementData[other.m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								SwapWithOtherChunk;
+								currElement.m_Sliding = true;
+								Element temp = currElement;
+								chunk->m_Elements[x + y * CHUNKSIZE] = *elementTop;
+								*elementTop = temp;
+								UpdateChunkDirtyRect(x, y, chunk);
 								continue;
 							}
 						}
 					}
 
 					//try left/right
-					xOther = x + r;
-					yOther = y;
-					if (IsInBounds(xOther, yOther))
+					if (r > 0)
 					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						ElementData& otherData = m_ElementData[elementRight->m_ID];
 						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
 						{
-							SwapWithOther;
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
+						}
+						{
+							ElementData& otherData = m_ElementData[elementLeft->m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								currElement.m_Sliding = true;
+								Element temp = currElement;
+								chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+								*elementLeft = temp;
+								UpdateChunkDirtyRect(x, y, chunk);
+								continue;
+							}
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						ElementData& otherData = m_ElementData[elementLeft->m_ID];
 						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
 						{
-							SwapWithOtherChunk;
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
+						}
+						{
+							ElementData& otherData = m_ElementData[elementRight->m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								currElement.m_Sliding = true;
+								Element temp = currElement;
+								chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+								*elementRight = temp;
+								UpdateChunkDirtyRect(x, y, chunk);
+								continue;
+							}
 						}
 					}
 
-					xOther = x - r;
-					yOther = y;
-					if (IsInBounds(xOther, yOther))
+					break;
+				case ElementType::fire:
+					r = (std::rand() % 3) - 1; //-1 0 1
+					if (r == 0)
 					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						//check above, and move
+						{
+							ElementData& otherData = m_ElementData[elementTop->m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								currElement.m_Sliding = true;
+								Element temp = currElement;
+								chunk->m_Elements[x + y * CHUNKSIZE] = *elementTop;
+								*elementTop = temp;
+								UpdateChunkDirtyRect(x, y, chunk);
+								continue;
+							}
+						}
+					}
+
+					//try left/right
+					if (r > 0)
+					{
+						ElementData& otherData = m_ElementData[elementRight->m_ID];
 						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
 						{
-							SwapWithOther;
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
+						}
+						{
+							ElementData& otherData = m_ElementData[elementLeft->m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								currElement.m_Sliding = true;
+								Element temp = currElement;
+								chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+								*elementLeft = temp;
+								UpdateChunkDirtyRect(x, y, chunk);
+								continue;
+							}
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
+						ElementData& otherData = m_ElementData[elementLeft->m_ID];
 						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
 						{
-							SwapWithOtherChunk;
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
+						}
+						{
+							ElementData& otherData = m_ElementData[elementRight->m_ID];
+							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+							{
+								currElement.m_Sliding = true;
+								Element temp = currElement;
+								chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+								*elementRight = temp;
+								UpdateChunkDirtyRect(x, y, chunk);
+								continue;
+							}
 						}
 					}
 
@@ -1343,8 +1478,6 @@ namespace Pyxis
 
 		if (result == 0) return;
 		//since we are on an edge, see if we need to get a different chunk
-
-		//SOMETHING IS WRONG!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 		//working on updating chunks
 		Chunk* ChunkToUpdate;

@@ -39,6 +39,8 @@ namespace Pyxis
 		void PaintBrushHologram();
 		//game things
 		Ref<World> m_World;
+		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
+		float m_UpdatesPerSecond = 60;
 		//Ref<Chunk> m_Chunk;
 
 		//scene things
