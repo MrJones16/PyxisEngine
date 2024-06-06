@@ -6,10 +6,13 @@ extern Pyxis::Application* Pyxis::CreateApplication();
 
 int main(int argc, char** argv) {
 
-	Pyxis::Log::Init();
-	PX_CORE_WARN("Initialized Log");
+	#ifndef PX_DIST
+		Pyxis::Log::Init();
+		PX_CORE_WARN("Initialized Log");
+	#endif // !PX_DIST
+
+	
 	int a = 5;
-	PX_INFO("Hello! var = {0}", a);
 
 	auto app = Pyxis::CreateApplication();
 	app->Run();

@@ -26,6 +26,8 @@ namespace Pyxis
 
 		void Close();
 
+		void Sleep(int milliseconds = 1000);
+
 		void Run();
 
 		void OnEvent(Event& e);

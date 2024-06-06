@@ -32,6 +32,11 @@ namespace Pyxis
 		
 	}
 
+	void Application::Sleep(int milliseconds) {
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
+	}
+
 	void Application::Close()
 	{
 		m_Running = false;

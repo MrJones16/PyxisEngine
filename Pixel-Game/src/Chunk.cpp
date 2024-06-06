@@ -32,8 +32,6 @@ namespace Pyxis
 		std::fill(m_PixelBuffer, m_PixelBuffer + (CHUNKSIZE * CHUNKSIZE), 0xFF000000);
 		m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
 
-		std::cout << "texture created and set the data!" << std::endl;
-
 	}
 
 

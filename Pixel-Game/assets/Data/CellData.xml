@@ -84,7 +84,7 @@
 		color="0000FFFF"
 		density="5"
 		friction="50"
-		conductivity="50"
+		conductivity="30"
 		temperature="15"
 		melted="steam"
 		melting_point="100"
@@ -133,7 +133,7 @@
 		density="1"
 		conductivity="100"
 		glow="1"
-		temperature="1000"
+		temperature="1600"
 		flammable="1"
 		ignited="1"
 		burnt="air"
@@ -146,11 +146,12 @@
 	<ElementData
 		name="wood"
 		cell_type="solid"
-		color="cdaa7dFF"
+		color="805b2dFF"
 		conductivity="5"
 		glow="1"
 		density="30"
 		flammable="1"
+		ignited_color="e95e23FF"
 		ignition_temperature="371"
 		fire_temperature="1000"
 		health="100"
@@ -161,14 +162,31 @@
 	</ElementData>
 
 	<ElementData
+		name="ash"
+		cell_type="movableSolid"
+		color="0f0a09FF"
+		density="30"
+		friction="35"
+		conductivity="2"
+		glow="1"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+	
+	<ElementData
 		name="oil"
 		cell_type="liquid"
-		color="222222FF"
-		density="3"
-		friction="50"
-		fire_temperature="1000"
-		health="50"
-		onDeath="air"
+		color="282828FF"
+		conductivity="30"
+		glow="1"
+		density="15"
+		flammable="1"
+		ignited_color="882828FF"
+		ignition_temperature="371"
+		fire_temperature="1600"
+		health="250"
+		burnt="air"
 		>
 		<Tags>
 		</Tags>

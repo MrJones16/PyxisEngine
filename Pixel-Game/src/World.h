@@ -59,7 +59,6 @@ namespace Pyxis
 		std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
 
 		static uint32_t RGBAtoABGR(uint32_t RGBA);
-		static uint32_t RandomizeABGRColor(uint32_t RGBA, int randomShift);
 
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
 

@@ -17,7 +17,28 @@ namespace Pyxis
 		Flammable = 1, Meltable = 2, Corrosive = 4
 	};
 
+	/// <summary>
+	/// helper to mix colors
+	/// </summary>
+	/// <param name="ABGR"></param>
+	/// <param name="randomShift"></param>
+	/// <returns></returns>
+	static uint32_t RandomizeABGRColor(uint32_t ABGR, int randomShift = 20)
+	{
+		int random = ((std::rand() % (randomShift * 2)) - randomShift); //-20 to 20
+		int r = (ABGR & 0x000000FF) >> 0;
+		int g = (ABGR & 0x0000FF00) >> 8;
+		int b = (ABGR & 0x00FF0000) >> 16;
+		int a = (ABGR & 0xFF000000) >> 24;
 
+		if (r + g + b == 0) return 0xFF000000;
+
+		r = std::max(std::min(255, r + random), 0);
+		g = std::max(std::min(255, g + random), 0);
+		b = std::max(std::min(255, b + random), 0);
+
+		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
+	}
 
 	/// <summary>
 	/// Actual element data to be stored in the map, only data that differs on an instance of an element
@@ -93,16 +114,16 @@ namespace Pyxis
 		
 		void UpdateElementData(Element& element)
 		{
-			element.m_BaseColor = color;
-			element.m_Color = color;
+			element.m_BaseColor = RandomizeABGRColor(color);
+			element.m_Color = element.m_BaseColor;
 			element.m_Temperature = temperature;
 			element.m_Ignited = ignited;
 			element.m_Health = health;
 		}
 		void UpdateElementData(Element* element)
 		{
-			element->m_BaseColor = color;
-			element->m_Color = color;
+			element->m_BaseColor = RandomizeABGRColor(color);
+			element->m_Color = element->m_BaseColor;
 			element->m_Temperature = temperature;
 			element->m_Ignited = ignited;
 			element->m_Health = health;

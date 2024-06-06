@@ -14,7 +14,9 @@ namespace Pyxis
 		if (!LoadElementData())
 		{
 			PX_ASSERT(false, "Failed to load element data, shutting down.");
+			PX_ERROR("Failed to load element data, shutting down.");
 			m_Error = true;
+			Application::Get().Sleep(10000);
 			Application::Get().Close();
 			return;
 		}
@@ -501,21 +503,6 @@ namespace Pyxis
 		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | ((uint32_t)r << 0);
 	}
 
-	uint32_t World::RandomizeABGRColor(uint32_t ABGR, int randomShift)
-	{
-		int random = ((std::rand() % (randomShift * 2)) - randomShift); //-20 to 20
-		int r = (ABGR & 0x000000FF) >> 0;
-		int g = (ABGR & 0x0000FF00) >> 8;
-		int b = (ABGR & 0x00FF0000) >> 16;
-		int a = (ABGR & 0xFF000000) >> 24;
-
-		r = std::max(std::min(255, r + random), 0);
-		g = std::max(std::min(255, g + random), 0);
-		b = std::max(std::min(255, b + random), 0);
-		
-		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
-	}
-
 	World::~World()
 	{
 		for each (auto& pair in m_Chunks)
@@ -976,7 +963,7 @@ namespace Pyxis
 						currElement.m_Temperature -= diff;
 						elementBottom->m_Temperature += diff;
 					}
-					if (currElement.m_Temperature != tempBefore) chunk->UpdateDirtyRect(x, y);
+					if (std::abs(currElement.m_Temperature - tempBefore) > 0.5f) chunk->UpdateDirtyRect(x, y);
 					
 
 				}
@@ -989,7 +976,7 @@ namespace Pyxis
 					ElementData& fireElementData = m_ElementData[fireID];
 					if (currElement.m_Ignited)
 					{
-						if (currElement.m_ID != fireID && std::rand() % 100 < 11)
+						if (currElement.m_ID != fireID && std::rand() % 101 < 5)
 						{
 							ElementData& elementLeftData = m_ElementData[elementLeft->m_ID];
 							if (elementLeftData.cell_type == ElementType::gas)
@@ -1022,10 +1009,13 @@ namespace Pyxis
 							}
 						}
 						currElement.m_Health--;
+						currElement.m_Temperature += 5;
 						if (currElement.m_Health <= 0)
 						{
 							currElement.m_ID = m_ElementIDs[currElementData.burnt];
+							int temp = currElement.m_Temperature;
 							m_ElementData[currElement.m_ID].UpdateElementData(currElement);
+							currElement.m_Temperature = temp;
 							continue;
 						}
 					}
@@ -1379,6 +1369,15 @@ namespace Pyxis
 
 					break;
 				case ElementType::fire:
+					//temp drop quickly
+					currElement.m_Temperature *= 0.9f;
+					//die out if cold
+					if (currElement.m_Temperature < 500.0f)
+					{
+						currElement.m_ID = 0;//air
+						m_ElementData[0].UpdateElementData(currElement);
+						continue;
+					}
 					r = (std::rand() % 3) - 1; //-1 0 1
 					if (r == 0)
 					{

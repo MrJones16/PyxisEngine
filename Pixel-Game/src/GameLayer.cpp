@@ -45,7 +45,7 @@ namespace Pyxis
 		Fn m_Func;
 	};
 
-#if PROFILING
+#if PX_PROFILING
 #define PROFILE_SCOPE(name) Timer timer##__LINE__(name, [&](ProfileResult profileResult) {m_ProfilingPanel->m_ProfileResults.push_back(profileResult);})
 #else
 #define PROFILE_SCOPE(name)
@@ -91,6 +91,10 @@ namespace Pyxis
 		//Create panels to add
 		m_ProfilingPanel = CreateRef<ProfilingPanel>();
 		m_Panels.push_back(m_ProfilingPanel);
+		FrameBufferSpecification fbspec;
+		fbspec.Width = m_ViewportSize.x;
+		fbspec.Height = m_ViewportSize.y;
+		m_SceneFrameBuffer = FrameBuffer::Create(fbspec);
 		
 	}
 
@@ -114,7 +118,7 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Renderer Prep");
-			//m_SceneFrameBuffer->Bind();
+			m_SceneFrameBuffer->Bind();
 			RenderCommand::SetClearColor({ 0.2f, 0.2f, 0.2f, 1 });
 			RenderCommand::Clear();
 			Renderer2D::BeginScene((m_ActiveScene->m_ActiveCamera) ? *(m_ActiveScene->m_ActiveCamera) : m_OrthographicCameraController.GetCamera());
@@ -122,6 +126,24 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Game Update");
+			
+			auto [x, y] = GetMousePositionScene();
+			auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+			glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
+
+			auto chunkPos = m_World->PixelToChunk(pixelPos);
+			auto it = m_World->m_Chunks.find(chunkPos);
+			if (it != m_World->m_Chunks.end())
+			{
+				auto index = m_World->PixelToIndex(pixelPos);
+				m_HoveredElement = it->second->m_Elements[index.x + index.y * CHUNKSIZE];
+			}
+			else
+			{
+				m_HoveredElement = Element();
+			}
+			
+
 			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
 			{
 				PaintElementAtCursor();
@@ -165,7 +187,7 @@ namespace Pyxis
 
 		Renderer2D::EndScene();
 
-		//m_SceneFrameBuffer->Unbind()
+		m_SceneFrameBuffer->Unbind();
 	}
 
 	void GameLayer::OnImGuiRender()
@@ -182,16 +204,48 @@ namespace Pyxis
 			//ImGui::DockSpaceOverViewport();
 			if (ImGui::BeginMenu("File"))
 			{
-				ImGui::Text("Welcome to the file menu.");
+				ImGui::Text("nothing here yet!");
 				ImGui::EndMenu();
 			}
 			ImGui::EndMainMenuBar();
 		}
-		if (ImGui::Begin("Settings"))
-		{
+		
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
+		
 
+		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
+		{
+			m_SceneViewIsFocused = ImGui::IsWindowFocused();
+			Application::Get().GetImGuiLayer()->BlockEvents(false);
+			auto sceneViewSize = ImGui::GetContentRegionAvail();
+			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
+			
+			
+			//PX_TRACE("offset: ({0},{1})", m_ViewportOffset.x, m_ViewportOffset.y);
+			//PX_TRACE("window pos: ({0},{1})", ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
+			//PX_TRACE("item rect min: ({0},{1})", ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y);
+			//PX_TRACE("scene view size: ({0},{1})", sceneViewSize.x, sceneViewSize.y);
+			ImGui::Image(
+				(ImTextureID)m_SceneFrameBuffer->GetColorAttatchmentRendererID(),
+				sceneViewSize,
+				ImVec2(0, 1),
+				ImVec2(1, 0),
+				ImVec4(1, 1, 1, 1)
+				//ImVec4(1, 1, 1, 1) border color
+			);
+			m_ViewportOffset = ImGui::GetItemRectMin();
+			
+
+			if (m_ViewportSize.x != sceneViewSize.x || m_ViewportSize.y != sceneViewSize.y)
+			{
+				m_OrthographicCameraController.SetAspect(sceneViewSize.y / sceneViewSize.x);
+				m_SceneFrameBuffer->Resize((uint32_t)sceneViewSize.x, (uint32_t)sceneViewSize.y);
+				m_ViewportSize = { sceneViewSize.x, sceneViewSize.y };
+			}
+
+			ImGui::End();
 		}
-		ImGui::End();
+		ImGui::PopStyleVar();
 
 		
 		if (ImGui::Begin("Settings"))
@@ -200,6 +254,16 @@ namespace Pyxis
 			if (ImGui::TreeNode("Simulation"))
 			{
 				ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Hovered Element Properties"))
+			{
+				ElementData& elementData = m_World->m_ElementData[m_HoveredElement.m_ID];
+				ImGui::Text("Element: %s", elementData.name.c_str());
+				ImGui::Text("- Temperature: %f", m_HoveredElement.m_Temperature);
+
 				ImGui::TreePop();
 			}
 
@@ -224,7 +288,7 @@ namespace Pyxis
 			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Element Type"))
 			{
-				for (int y = 0; y < 4; y++)
+				for (int y = 0; y < (m_World->m_TotalElements / 4) + 1; y++)
 					for (int x = 0; x < 4; x++)
 					{
 						if (x > 0)
@@ -232,12 +296,19 @@ namespace Pyxis
 						int index = y * 4 + x;
 						if (index >= m_World->m_TotalElements) continue;
 						ImGui::PushID(index);
+						auto color = m_World->m_ElementData[index].color;
+						int r = (color & 0x000000FF) >> 0;
+						int g = (color & 0x0000FF00) >> 8;
+						int b = (color & 0x00FF0000) >> 16;
+						int a = (color & 0xFF000000) >> 24;
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
 						std::string name = (m_World->m_ElementData[index].name);
 						if (ImGui::Selectable(name.c_str(), m_SelectedElementIndex == index, 0, ImVec2(50, 25)))
 						{
 							// Toggle clicked cell
 							m_SelectedElementIndex = index;
 						}
+						ImGui::PopStyleColor();
 						ImGui::PopID();
 					}
 				ImGui::TreePop();
@@ -270,6 +341,24 @@ namespace Pyxis
 		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(GameLayer::OnWindowResizeEvent));
 		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
+	}
+
+	std::pair<float, float> GameLayer::GetMousePositionScene()
+	{
+		///if not using a framebuffer / imgui image, just use Pyxis::Input::GetMousePosition();
+		
+		float x = ImGui::GetMousePos().x;
+		float y = ImGui::GetMousePos().y;
+		x -= m_ViewportOffset.x;
+		y -= m_ViewportOffset.y;
+		
+		//PX_TRACE("mouse position in scene: ({0},{1})", x, y);
+		
+		x = (x / m_ViewportSize.x) * Application::Get().GetWindow().GetWidth();
+		y = (y / m_ViewportSize.y) * Application::Get().GetWindow().GetHeight();
+
+
+		return std::pair<float, float>(x, y);
 	}
 
 	bool GameLayer::OnWindowResizeEvent(WindowResizeEvent& event) {
@@ -335,7 +424,10 @@ namespace Pyxis
 	{
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
 
-		auto [x, y] = Pyxis::Input::GetMousePosition();
+		auto [x, y] = GetMousePositionScene();
+		int max_width  = Application::Get().GetWindow().GetWidth();
+		int max_height = Application::Get().GetWindow().GetHeight();
+		if (x > max_width || x < 0 || y > max_height || y < 0 ) return;
 		auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
 		glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
 
@@ -363,7 +455,7 @@ namespace Pyxis
 				element.m_ID = m_SelectedElementIndex;
 				element.m_Updated = !m_World->m_UpdateBit;
 				elementData.UpdateElementData(element);
-				element.m_BaseColor = World::RandomizeABGRColor(elementData.color, 20);
+				//element.m_BaseColor = Pyxis::RandomizeABGRColor(elementData.color, 20);
 				element.m_Color = element.m_BaseColor;
 
 				chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
@@ -396,7 +488,7 @@ namespace Pyxis
 	void GameLayer::PaintBrushHologram()
 	{
 
-		auto [x, y] = Pyxis::Input::GetMousePosition();
+		auto [x, y] = GetMousePositionScene();
 		auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
 		glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
 

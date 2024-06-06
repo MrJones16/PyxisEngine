@@ -25,6 +25,8 @@ namespace Pyxis
 		virtual void OnUpdate(Timestep ts) override;
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
+
+		std::pair<float, float> GetMousePositionScene();
 		bool OnWindowResizeEvent(WindowResizeEvent& event);
 		bool OnKeyPressedEvent(KeyPressedEvent& event);
 		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
@@ -44,8 +46,10 @@ namespace Pyxis
 		//Ref<Chunk> m_Chunk;
 
 		//scene things
+		Ref<FrameBuffer> m_SceneFrameBuffer;
 		OrthographicCameraController m_OrthographicCameraController;
 		glm::vec2 m_ViewportSize;
+		ImVec2 m_ViewportOffset;
 		Ref<Scene> m_ActiveScene;
 
 		bool m_SceneViewIsFocused = false;
@@ -58,6 +62,7 @@ namespace Pyxis
 		int m_SelectedElementIndex = 0;
 		float m_BrushSize = 1;
 		int m_BrushType = BrushType::circle;
+		Element m_HoveredElement = Element();
 
 		//testing / game
 		bool m_SimulationRunning = false;

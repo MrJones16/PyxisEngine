@@ -58,7 +58,7 @@ namespace Pyxis
 	class PixelGame : public Pyxis::Application {
 	public:
 		PixelGame()
-			: Application("Pixel Game", 256 * 3, 256 * 3)
+			: Application("Pixel Game", 1280, 720)
 		{
 			PushLayer(new GameLayer());
 		}

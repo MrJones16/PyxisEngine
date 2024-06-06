@@ -26,7 +26,7 @@ namespace Pyxis
 
 		inline virtual void OnImGuiRender() override
 		{
-			#if PROFILING
+			#if PX_PROFILING
 			const int AverageAmount = 100;
 			ImGui::Begin("Profiler");
 

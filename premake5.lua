@@ -98,12 +98,12 @@ project "Pyxis"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "PX_Release"
+		defines "PX_RELEASE"
 		runtime "Release"
 		optimize "on"
 
 	filter "configurations:Dist"
-		defines "PX_Dist"
+		defines "PX_DIST"
 		runtime "Release"
 		optimize "on"
 
@@ -153,12 +153,12 @@ project "Sandbox"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "PX_Release"
+		defines "PX_RELEASE"
 		runtime "Release"
 		optimize "on"
 
 	filter "configurations:Dist"
-		defines "PX_Dist"
+		defines "PX_DIST"
 		runtime "Release"
 		optimize "on"
 
@@ -209,12 +209,12 @@ project "Pyxis-Editor"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "PX_Release"
+		defines "PX_RELEASE"
 		runtime "Release"
 		optimize "on"
 
 	filter "configurations:Dist"
-		defines "PX_Dist"
+		defines "PX_DIST"
 		runtime "Release"
 		optimize "on"
 
@@ -263,11 +263,11 @@ project "Pixel-Game"
 		symbols "on"
 
 	filter "configurations:Release"
-		defines "PX_Release"
+		defines "PX_RELEASE"
 		runtime "Release"
 		optimize "on"
 
 	filter "configurations:Dist"
-		defines "PX_Dist"
+		defines "PX_DIST"
 		runtime "Release"
 		optimize "on"
