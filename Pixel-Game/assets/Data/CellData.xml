@@ -1,10 +1,9 @@
 
-
 <Materials>
 	<ElementData
 		name="air"
 		cell_type="gas"
-		color="000000FF"
+		color="00000000"
 		density="0"
 		>
 		<Tags>
@@ -31,9 +30,35 @@
 		name="stone"
 		cell_type="solid"
 		color="444444FF"
-		conductivity="1"
+		conductivity="5"
 		glow="1"
 		density="30"
+		melted="lava"
+		melting_point="700"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="dirt"
+		cell_type="solid"
+		color="8f563bFF"
+		conductivity="6"
+		glow="1"
+		density="20"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="grass"
+		cell_type="solid"
+		color="54872fFF"
+		conductivity="5"
+		glow="1"
+		density="20"
 		>
 		<Tags>
 		</Tags>
@@ -82,7 +107,7 @@
 		name="water"
 		cell_type="liquid"
 		color="0000FFFF"
-		density="5"
+		density="10"
 		friction="50"
 		conductivity="30"
 		temperature="15"
@@ -100,7 +125,7 @@
 		name="ice"
 		cell_type="solid"
 		color="4444FFFF"
-		density="4"
+		density="8"
 		friction="10"
 		temperature="0"
 		conductivity="10"
@@ -129,11 +154,12 @@
 	<ElementData
 		name="fire"
 		cell_type="fire"
-		color="110500FF"
+		color="f7e334FF"
 		density="1"
 		conductivity="100"
-		glow="1"
+		glow="0"
 		temperature="1600"
+		ignition_temperature="371"
 		flammable="1"
 		ignited="1"
 		burnt="air"
@@ -147,15 +173,59 @@
 		name="wood"
 		cell_type="solid"
 		color="805b2dFF"
-		conductivity="5"
+		conductivity="10"
 		glow="1"
-		density="30"
+		density="10"
 		flammable="1"
-		ignited_color="e95e23FF"
+		ignited_color="bc170fFF"
 		ignition_temperature="371"
 		fire_temperature="1000"
-		health="100"
-		burnt="ash"
+		
+		health="150"
+		burnt="air"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="coal"
+		cell_type="movableSolid"
+		color="212121FF"
+		health="300"
+		density="14"
+		
+		glow="1"
+		conductivity="5"
+		flammable="1"
+		ignited_color="bc170fFF"
+		ignition_temperature="500"
+		fire_temperature="1600"
+		fire_temperature_increase="6"
+		burnt="air"
+		
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="magnesium"
+		cell_type="movableSolid"
+		color="c2c2c3FF"
+		health="200"
+		density="14"
+		
+		glow="1"
+		conductivity="30"
+		flammable="1"
+		ignited_color="FFFFFFFF"
+		ignition_temperature="2200"
+		fire_temperature="3100"
+		fire_color ="ffffffff"
+		fire_temperature_increase="20"
+		burnt="air"
+		
 		>
 		<Tags>
 		</Tags>
@@ -164,8 +234,8 @@
 	<ElementData
 		name="ash"
 		cell_type="movableSolid"
-		color="0f0a09FF"
-		density="30"
+		color="555555FF"
+		density="7"
 		friction="35"
 		conductivity="2"
 		glow="1"
@@ -180,12 +250,14 @@
 		color="282828FF"
 		conductivity="30"
 		glow="1"
-		density="15"
+		density="9"
 		flammable="1"
 		ignited_color="882828FF"
+		spread_ignition="1"
+		spread_ignition_chance="10"
 		ignition_temperature="371"
 		fire_temperature="1600"
-		health="250"
+		health="200"
 		burnt="air"
 		>
 		<Tags>
@@ -216,8 +288,13 @@
 		name="lava"
 		cell_type="liquid"
 		color="FF9900FF"
-		density="20"
+		density="30"
 		friction="20"
+		conductivity="20"
+		glow="1"
+		temperature="1000"
+		frozen="stone"
+		freezing_point="699"
 		>
 		<Tags>
 		</Tags>
@@ -250,6 +327,7 @@
 			<meltable></meltable>
 		</Tags>
 	</ElementData>
+	
 
 	<ElementData
 		name="molten_iron"
@@ -261,6 +339,39 @@
 		conductivity="20"
 		temperature="1538"
 		frozen="iron"
+		freezing_point="1537"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="electrum"
+		cell_type="movableSolid"
+		color="F2E279FF"
+		density="14"
+		friction="80"
+		glow="1"
+		conductivity="80"
+		temperature="20"
+		melted="molten_electrum"
+		melting_point="1538"
+		>
+		<Tags>
+			<meltable></meltable>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="molten_electrum"
+		cell_type="liquid"
+		color="a19d94FF"
+		density="14"
+		friction="20"
+		glow="1"
+		conductivity="80"
+		temperature="1538"
+		frozen="electrum"
 		freezing_point="1537"
 		>
 		<Tags>

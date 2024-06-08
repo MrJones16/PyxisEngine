@@ -33,8 +33,8 @@ namespace Pyxis
 	{
 		std::string Name;
 		ShaderDataType Type;
-		uint32_t Size;
-		uint32_t Offset;
+		uint64_t Size;
+		uint64_t Offset;
 		bool Normalized;
 
 		BufferElement() : Name("a_"), Type(ShaderDataType::None), Size(0), Offset(0), Normalized(false) {};
@@ -90,7 +90,7 @@ namespace Pyxis
 	private:
 		inline void CalulateOffsetsAndStride()
 		{
-			uint32_t offset = 0;
+			uint64_t offset = 0;
 			m_Stride = 0;
 			for (auto& element : m_Elements)
 			{

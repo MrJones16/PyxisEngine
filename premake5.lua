@@ -8,6 +8,8 @@ workspace "Pyxis"
 		"Dist"
 	}
 
+	
+
 	startproject "Pyxis-Editor"
 
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
@@ -58,7 +60,8 @@ project "Pyxis"
 
 	defines
 	{
-		"_CRT_SECURE_NO_WARNINGS"
+		"_CRT_SECURE_NO_WARNINGS",
+		"_SILENCE_ALL_MS_EXT_DEPRECATION_WARNINGS"
 	}
 
 	includedirs
@@ -90,6 +93,11 @@ project "Pyxis"
 			"PX_PLATFORM_WINDOWS",
 			"PX_BUILD_DLL",
 			"GLFW_INCLUDE_NONE"
+		}
+
+		buildoptions
+		{
+			"-mwindows"
 		}
 
 	filter "configurations:Debug"
@@ -144,6 +152,11 @@ project "Sandbox"
 		defines
 		{
 			"PX_PLATFORM_WINDOWS"
+		}
+
+		buildoptions
+		{
+			"-mwindows"
 		}
 
 
@@ -271,3 +284,7 @@ project "Pixel-Game"
 		defines "PX_DIST"
 		runtime "Release"
 		optimize "on"
+		postbuildcommands 
+		{
+			"{COPYDIR} assets ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}/assets"
+		}

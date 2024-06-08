@@ -31,7 +31,7 @@ namespace Pyxis
 		int b = (ABGR & 0x00FF0000) >> 16;
 		int a = (ABGR & 0xFF000000) >> 24;
 
-		if (r + g + b == 0) return 0xFF000000;
+		if (r + g + b == 0) return 0x00000000;
 
 		r = std::max(std::min(255, r + random), 0);
 		g = std::max(std::min(255, g + random), 0);
@@ -39,6 +39,19 @@ namespace Pyxis
 
 		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | (uint32_t)r;
 	}
+
+	static uint32_t RGBAtoABGR(uint32_t RGBA)
+	{
+		int r = (RGBA & 0xFF000000) >> 24;
+		int g = (RGBA & 0x00FF0000) >> 16;
+		int b = (RGBA & 0x0000FF00) >> 8;
+		int a = (RGBA & 0x000000FF) >> 0;
+
+		//a = std::max(std::min(255, a + random), 0);
+
+		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | ((uint32_t)r << 0);
+	}
+
 
 	/// <summary>
 	/// Actual element data to be stored in the map, only data that differs on an instance of an element
@@ -53,8 +66,8 @@ namespace Pyxis
 			m_Updated = updated;
 		}
 		uint32_t m_ID = 0;
-		uint32_t m_BaseColor = 0xFF000000;
-		uint32_t m_Color = 0xFF000000;
+		uint32_t m_BaseColor = 0x00000000;
+		uint32_t m_Color = 0x00000000;
 
 		bool m_Ignited = false;
 		int m_Health = 100;
@@ -78,22 +91,25 @@ namespace Pyxis
 		std::string name = "default";
 
 		ElementType cell_type = ElementType::gas;
+
 		//solid, movablesolid, liquid, gas, fire
 		uint32_t color = 0xFFFF00FF;
-
-		//0 - 2^32-1
-		uint32_t density = 1;
-
+		uint32_t density = 5;
 		//0 - 100, 0 would slide forever, 100 won't slide at all
-		uint32_t friction = 5;//chance to stop when sliding
+		uint32_t friction = 60;//chance to stop when sliding
 
 		int health = 100;
 
 		//flammable settings
 		bool flammable = false;
 		bool ignited = false;
+		bool spread_ignition = false; // will ignore temp and ignite surrounding elements
+		uint32_t spread_ignition_chance = 10;
+		uint32_t ignited_color = color;
 		float ignition_temperature = 371.0f;
 		float fire_temperature = 1000;
+		uint32_t fire_color = RGBAtoABGR(0xf7e334FF);
+		float fire_temperature_increase = 1;
 		std::string burnt = "air";
 
 
@@ -102,14 +118,13 @@ namespace Pyxis
 		uint32_t conductivity = 0;
 		float temperature = 20;
 
-
 		//name of element to become if melted
 		std::string melted = "";
 		int melting_point = 100;
 
 		//name of element to become if frozen
 		std::string frozen = "";
-		int freezing_point = 100;
+		int freezing_point = 0;
 
 		
 		void UpdateElementData(Element& element)

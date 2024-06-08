@@ -22,6 +22,16 @@ namespace Pyxis
 		}
 
 		BuildReactionTable();
+
+		//set up world noise data
+		m_HeightNoise = FastNoiseLite(m_WorldSeed);
+		m_CaveNoise = FastNoiseLite(m_WorldSeed);
+		//m_HeightNoise.SetFrequency(0.1f);
+
+		AddChunk({ 0,0 });
+		AddChunk({ 0,-1 });
+		AddChunk({ -1,-1 });
+		AddChunk({ -1,0 });
 	}
 
 	bool World::LoadElementData()
@@ -46,6 +56,10 @@ namespace Pyxis
 				//initialize the element data to be modified
 				ElementData elementData = ElementData();
 
+				///////////////////////////////////////////////////
+				/// Basic Attributes
+				///////////////////////////////////////////////////
+				
 				//get the name
 				const char* name;
 				auto error = data->QueryAttribute("name", &name);
@@ -86,8 +100,8 @@ namespace Pyxis
 
 				const char* colorStr;
 				error = data->QueryAttribute("color", &colorStr);
-				uint32_t color = std::stoul(colorStr, nullptr, 16);
 				if (!error) {
+					uint32_t color = std::stoul(colorStr, nullptr, 16);
 					elementData.color = RGBAtoABGR(color);
 				}
 				else
@@ -125,7 +139,10 @@ namespace Pyxis
 					PX_INFO("Element {0} was given no friction", elementData.name);
 				}
 
-				///fire settings
+				///////////////////////////////////////////////////
+				/// Flammable Attributes
+				///////////////////////////////////////////////////
+
 				bool flammable = false;
 				error = data->QueryBoolAttribute("flammable", &flammable);
 				if (!error) {
@@ -136,6 +153,27 @@ namespace Pyxis
 					PX_INFO("Element {0} was given no flammable attribute", elementData.name);
 				}
 
+				bool spread_ignition = false;
+				error = data->QueryBoolAttribute("spread_ignition", &spread_ignition);
+				if (!error) {
+					elementData.spread_ignition = spread_ignition;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no spread_ignition attribute", elementData.name);
+				}
+
+				
+				uint32_t spread_ignition_chance = 0;
+				error = data->QueryUnsignedAttribute("spread_ignition_chance", &spread_ignition_chance);
+				if (!error) {
+					elementData.spread_ignition_chance = spread_ignition_chance;
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no spread_ignition_chance", elementData.name);
+				}
+
 				bool ignited = false;
 				error = data->QueryBoolAttribute("ignited", &ignited);
 				if (!error) {
@@ -144,6 +182,18 @@ namespace Pyxis
 				else
 				{
 					PX_INFO("Element {0} was given no ignited attribute", elementData.name);
+				}
+
+				const char* ignitedColorStr;
+				error = data->QueryAttribute("ignited_color", &ignitedColorStr);
+				if (!error) {
+					uint32_t ignited_color = std::stoul(ignitedColorStr, nullptr, 16);
+					elementData.ignited_color = RGBAtoABGR(ignited_color);
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no ignited_color", elementData.name);
+					elementData.ignited_color = elementData.color;
 				}
 
 				float ignition_temperature = 371;
@@ -163,7 +213,31 @@ namespace Pyxis
 				}
 				else
 				{
-					PX_INFO("Element {0} was given no ignition_temperature", elementData.name);
+					PX_INFO("Element {0} was given no fire_temperature", elementData.name);
+				}
+
+				const char* fireColorStr;
+				error = data->QueryAttribute("fire_color", &fireColorStr);
+				if (!error) {
+					uint32_t fire_color = std::stoul(fireColorStr, nullptr, 16);
+					elementData.fire_color = RGBAtoABGR(fire_color);
+				}
+				else
+				{
+					PX_INFO("Element {0} was given no ignited_color", elementData.name);
+					elementData.ignited_color = elementData.color;
+				}
+
+				float fire_temperature_increase = 1.0f;
+				error = data->QueryFloatAttribute("fire_temperature_increase", &fire_temperature_increase);
+				if (!error) {
+					elementData.fire_temperature_increase = fire_temperature_increase;
+				}
+				else
+				{
+					elementData.fire_temperature_increase = (elementData.fire_temperature) / elementData.health;
+					PX_INFO("Element {0} was given no fire_temperature_increase, defaulting to {1}", elementData.name, elementData.fire_temperature_increase);
+
 				}
 
 				const char* burnt;
@@ -175,6 +249,10 @@ namespace Pyxis
 				{
 					//PX_INFO("Element {0} was given no _____", elementData.name);
 				}
+
+				///////////////////////////////////////////////////
+				/// Temperature Attributes
+				///////////////////////////////////////////////////
 
 				bool glow = false;
 				error = data->QueryBoolAttribute("glow", &glow);
@@ -491,18 +569,6 @@ namespace Pyxis
 		return result + stringToFill.substr(end + 1, (stringToFill.size() - end) - 1);
 	}
 
-	uint32_t World::RGBAtoABGR(uint32_t RGBA)
-	{
-		int r = (RGBA & 0xFF000000) >> 24;
-		int g = (RGBA & 0x00FF0000) >> 16;
-		int b = (RGBA & 0x0000FF00) >> 8;
-		int a = (RGBA & 0x000000FF) >> 0;
-		
-		//a = std::max(std::min(255, a + random), 0);
-
-		return ((uint32_t)a << 24) | ((uint32_t)b << 16) | ((uint32_t)g << 8) | ((uint32_t)r << 0);
-	}
-
 	World::~World()
 	{
 		for each (auto& pair in m_Chunks)
@@ -530,7 +596,11 @@ namespace Pyxis
 		{
 			Chunk* chunk = new Chunk(chunkPos);
 			m_Chunks[chunkPos] = chunk;
+			GenerateChunk(chunk);
+			chunk->UpdateWholeTexture();
 		}
+		
+		
 	}
 
 	Chunk* World::GetChunk(const glm::ivec2& chunkPos)
@@ -540,6 +610,58 @@ namespace Pyxis
 			return it->second;
 		AddChunk(chunkPos);
 		return m_Chunks[chunkPos];
+	}
+
+	void World::GenerateChunk(Chunk* chunk)
+	{
+		glm::vec2 chunkPixelPos = chunk->m_ChunkPos * CHUNKSIZE;
+		for (int x = 0; x < CHUNKSIZE; x++)
+		{
+			for (int y = 0; y < CHUNKSIZE; y++)
+			{
+				glm::vec2 pixelPos = chunkPixelPos + glm::vec2(x,y);
+				if (pixelPos.y >=0)
+				{
+					float amplitude = 20.0f;
+					float heightNoise = ((m_HeightNoise.GetNoise(pixelPos.x, 0.0f) + 1) / 2) * amplitude;
+					float surfaceTop = heightNoise + 80;
+					float grassWidth = 20;
+					if (pixelPos.y > surfaceTop + grassWidth)
+					{
+						//air
+					}
+					else if (pixelPos.y > surfaceTop)
+					{
+						chunk->SetElement(x, y, GetElementByName("grass"));
+					}
+					else if (pixelPos.y > heightNoise)
+					{
+						//dirt
+						chunk->SetElement(x, y, GetElementByName("dirt"));
+					}
+					else
+					{
+						//under the noise value, so stone, blended into the caves
+						float caveNoise = (m_CaveNoise.GetNoise(pixelPos.x, pixelPos.y) + 1) / 2.0f;
+						if (caveNoise >= 0.25f)
+						{
+							chunk->SetElement(x, y, GetElementByName("stone"));
+						}
+					}
+					
+				}
+				else
+				{
+					//under y==0, so 
+					float caveNoise = (m_CaveNoise.GetNoise(pixelPos.x, pixelPos.y) + 1) / 2.0f;
+					if (caveNoise >= 0.25f)
+					{
+						chunk->SetElement(x, y, GetElementByName("stone"));
+					}
+				}
+			}
+		}
+		
 	}
 
 
@@ -766,19 +888,7 @@ namespace Pyxis
 				currElement.m_Updated = m_UpdateBit;
 
 				if (currElement.m_ID == 0) continue;
-
-				if (currElementData.glow)
-				{
-					int r = (currElement.m_BaseColor >> 0) & 255;
-					int g = (currElement.m_BaseColor >> 8) & 255;
-					int b = (currElement.m_BaseColor >> 16) & 255;
-					r = std::max(r, (int)(Pyxis::interpolateBetweenValues(460, 900, currElement.m_Temperature) * 255.0f));
-					g = std::max(g, (int)(Pyxis::interpolateBetweenValues(460, 1500, currElement.m_Temperature) * 255.0f));
-					b = std::max(b, (int)(Pyxis::interpolateBetweenValues(1000, 6000, currElement.m_Temperature) * 255.0f));
-					currElement.m_Color = (currElementData.color & 0xFF000000) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255);
-					//make it appear hotter depending on temp
-					//temp range from 460 to 6000
-				}
+				
 
 				int xOther = x;
 				int yOther = y;
@@ -846,6 +956,10 @@ namespace Pyxis
 					}
 				}
 
+				ElementData& elementLeftData = m_ElementData[elementLeft->m_ID];
+				ElementData& elementRightData = m_ElementData[elementRight->m_ID];
+				ElementData& elementTopData = m_ElementData[elementTop->m_ID];
+				ElementData& elementBottomData = m_ElementData[elementBottom->m_ID];
 				//check for reactions, left,up,right,down
 				{
 					it = m_ReactionLookup[currElement.m_ID].find(elementLeft->m_ID);
@@ -936,80 +1050,115 @@ namespace Pyxis
 					diff = ((currElement.m_Temperature - elementLeft->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
 					if (diff != 0)
 					{
-						currElement.m_Temperature -= diff;
-						elementLeft->m_Temperature += diff;
+						currElement.m_Temperature -= diff / currElementData.density;
+						elementLeft->m_Temperature += diff / elementLeftData.density;
 					}
 
 					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementTop->m_ID].conductivity);
 					diff = ((float)(currElement.m_Temperature - elementTop->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
 					if (diff != 0)
 					{
-						currElement.m_Temperature -= diff;
-						elementTop->m_Temperature += diff;
+						currElement.m_Temperature -= diff / currElementData.density;
+						elementTop->m_Temperature += diff / elementTopData.density;
 					}
 
 					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementRight->m_ID].conductivity);
 					diff = ((float)(currElement.m_Temperature - elementRight->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
 					if (diff != 0)
 					{
-						currElement.m_Temperature -= diff;
-						elementRight->m_Temperature += diff;
+						currElement.m_Temperature -= diff / currElementData.density;
+						elementRight->m_Temperature += diff / elementRightData.density;
 					}
 
 					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementBottom->m_ID].conductivity);
 					diff = ((float)(currElement.m_Temperature - elementBottom->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
 					if (diff != 0)
 					{
-						currElement.m_Temperature -= diff;
-						elementBottom->m_Temperature += diff;
+						currElement.m_Temperature -= diff / currElementData.density;
+						elementBottom->m_Temperature += diff / elementBottomData.density;
 					}
-					if (std::abs(currElement.m_Temperature - tempBefore) > 0.5f) chunk->UpdateDirtyRect(x, y);
+					if (std::abs(currElement.m_Temperature - tempBefore) > 0.01f) chunk->UpdateDirtyRect(x, y);
 					
 
 				}
 
 				if (currElementData.flammable)
 				{
+					if (currElement.m_Temperature < currElementData.ignition_temperature && !currElementData.spread_ignition) currElement.m_Ignited = false;
 					if (currElement.m_Temperature >= currElementData.ignition_temperature) currElement.m_Ignited = true;
-					//check for open air to burn
-					int fireID = m_ElementIDs["fire"];
-					ElementData& fireElementData = m_ElementData[fireID];
 					if (currElement.m_Ignited)
 					{
-						if (currElement.m_ID != fireID && std::rand() % 101 < 5)
+						//try to spread ignition to surrounding elements
+						//if (elementTopData.flammable) 
+						if (currElementData.spread_ignition && std::rand() % 100 < currElementData.spread_ignition_chance)
 						{
-							ElementData& elementLeftData = m_ElementData[elementLeft->m_ID];
-							if (elementLeftData.cell_type == ElementType::gas)
+							if (elementLeftData.flammable) elementLeft->m_Ignited = true;
+							if (elementTopData.flammable) elementTop->m_Ignited = true;
+							if (elementRightData.flammable) elementRight->m_Ignited = true;
+							if (elementBottomData.flammable) elementBottom->m_Ignited = true;
+						}
+
+						//check for open air to burn
+						int fireID = m_ElementIDs["fire"];
+						ElementData& fireElementData = m_ElementData[fireID];
+						if (currElement.m_ID != fireID) //&& std::rand() % 101 < 5
+						{
+
+							int healthDiff = currElement.m_Health;
+							if (elementLeftData.cell_type == ElementType::gas || elementLeftData.cell_type == ElementType::fire)
 							{
 								fireElementData.UpdateElementData(elementLeft);
 								elementLeft->m_ID = fireID;
 								elementLeft->m_Temperature = currElementData.fire_temperature;
-
+								elementLeft->m_BaseColor = currElementData.fire_color;
+								elementLeft->m_Color = currElementData.fire_color;
+								currElement.m_Health--;
+								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
-							ElementData& elementTopData = m_ElementData[elementTop->m_ID];
-							if (elementTopData.cell_type == ElementType::gas)
+							
+							if (elementTopData.cell_type == ElementType::gas || elementTopData.cell_type == ElementType::fire)
 							{
 								fireElementData.UpdateElementData(elementTop);
 								elementTop->m_ID = fireID;
 								elementTop->m_Temperature = currElementData.fire_temperature;
+								elementTop->m_BaseColor = currElementData.fire_color;
+								elementTop->m_Color = currElementData.fire_color;
+								currElement.m_Health--;
+								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
-							ElementData& elementRightData = m_ElementData[elementRight->m_ID];
-							if (elementRightData.cell_type == ElementType::gas)
+							
+							if (elementRightData.cell_type == ElementType::gas || elementRightData.cell_type == ElementType::fire)
 							{
 								fireElementData.UpdateElementData(elementRight);
 								elementRight->m_ID = fireID;
 								elementRight->m_Temperature = currElementData.fire_temperature;
+								elementRight->m_BaseColor = currElementData.fire_color;
+								elementRight->m_Color = currElementData.fire_color;
+								currElement.m_Health--;
+								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
-							ElementData& elementBottomData = m_ElementData[elementBottom->m_ID];
-							if (elementBottomData.cell_type == ElementType::gas)
+							
+							if (elementBottomData.cell_type == ElementType::gas || elementBottomData.cell_type == ElementType::fire)
 							{
 								fireElementData.UpdateElementData(elementBottom);
 								elementBottom->m_ID = fireID;
 								elementBottom->m_Temperature = currElementData.fire_temperature;
+								elementBottom->m_BaseColor = currElementData.fire_color;
+								elementBottom->m_Color = currElementData.fire_color;
+								currElement.m_Health--;
+								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
+							if (currElement.m_Health != healthDiff)
+							{
+								currElement.m_Ignited = true;
+							}
+							else currElement.m_Ignited = false;
 						}
-						currElement.m_Health--;
-						currElement.m_Temperature += 5;
+					}
+					
+					
+					if (currElement.m_Ignited)
+					{
 						if (currElement.m_Health <= 0)
 						{
 							currElement.m_ID = m_ElementIDs[currElementData.burnt];
@@ -1024,6 +1173,31 @@ namespace Pyxis
 				}
 
 
+				//update the texture of the element based on temp / glow / ect
+				uint32_t EditedBaseColor = currElement.m_BaseColor;
+				if (currElement.m_Ignited)
+				{
+					//update color to reflect being on fire
+
+					EditedBaseColor = RandomizeABGRColor(currElementData.ignited_color, 5);
+				}
+
+				if (currElementData.glow)
+				{
+					int r = (EditedBaseColor >> 0) & 255;
+					int g = (EditedBaseColor >> 8) & 255;
+					int b = (EditedBaseColor >> 16) & 255;
+					r = std::max(r, (int)(Pyxis::interpolateBetweenValues(460, 900, currElement.m_Temperature) * 255.0f));
+					g = std::max(g, (int)(Pyxis::interpolateBetweenValues(460, 1500, currElement.m_Temperature) * 255.0f));
+					b = std::max(b, (int)(Pyxis::interpolateBetweenValues(1000, 6000, currElement.m_Temperature) * 255.0f));
+					EditedBaseColor = (currElementData.color & 0xFF000000) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255);
+					//make it appear hotter depending on temp
+					//temp range from 460 to 6000
+				}
+
+				currElement.m_Color = EditedBaseColor;
+
+
 				//switch the behavior based on element type
 				switch (currElementData.cell_type)
 				{
@@ -1033,7 +1207,7 @@ namespace Pyxis
 					//check below, and move
 					{
 						ElementData& otherData = m_ElementData[elementBottom->m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid && otherData.density <= currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1071,7 +1245,7 @@ namespace Pyxis
 					if (currElement.m_Horizontal > 0)
 					{
 						ElementData& otherData = m_ElementData[elementRight->m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid && otherData.density <= currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1084,7 +1258,7 @@ namespace Pyxis
 					else
 					{
 						ElementData& otherData = m_ElementData[elementLeft->m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid)
+						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid && otherData.density <= currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1370,16 +1544,34 @@ namespace Pyxis
 					break;
 				case ElementType::fire:
 					//temp drop quickly
-					currElement.m_Temperature *= 0.9f;
+					//currElement.m_Temperature *= 0.95f;
+					currElement.m_Health--;
 					//die out if cold
-					if (currElement.m_Temperature < 500.0f)
+					if (currElement.m_Temperature < currElementData.ignition_temperature)
 					{
 						currElement.m_ID = 0;//air
 						m_ElementData[0].UpdateElementData(currElement);
 						continue;
 					}
-					r = (std::rand() % 3) - 1; //-1 0 1
-					if (r == 0)
+					//fire gets special color treatment, basically going from starting color, and
+					//losing its b, g, r color values at slower rates, respectively based on health
+					//get rgb values, and diminish them onto the color
+					
+					uint32_t colorRed   = (currElement.m_BaseColor & 0x000000FF) >> 0;
+					uint32_t colorGreen = (currElement.m_BaseColor & 0x0000FF00) >> 8;
+					uint32_t colorBlue = (currElement.m_BaseColor & 0x00FF0000) >> 16;
+					uint32_t colorAlpha  = currElement.m_BaseColor & 0xFF000000;
+
+					float percentAlive = (float)currElement.m_Health / (float)currElementData.health;
+					colorRed *= Pyxis::interpolateBetweenValues(-10, 20, currElement.m_Health);
+					colorGreen *= Pyxis::interpolateBetweenValues(0, 20, currElement.m_Health);
+					colorBlue *= Pyxis::interpolateBetweenValues(5, 20, currElement.m_Health);
+					colorAlpha *= Pyxis::interpolateBetweenValues(0, 20, currElement.m_Health);
+
+					currElement.m_Color = colorAlpha | (colorBlue << 16) | (colorGreen << 8) | colorRed;
+					
+					r = (std::rand() % 101);
+					if (r > 20 && r < 80) //60% to go up
 					{
 						//check above, and move
 						{
@@ -1393,11 +1585,16 @@ namespace Pyxis
 								UpdateChunkDirtyRect(x, y, chunk);
 								continue;
 							}
+							else if (otherData.cell_type == ElementType::fire)
+							{
+								//moving to fire, so combine temp and leave air
+								elementTop->m_Temperature = (elementTop->m_Temperature + currElement.m_Temperature) / 2;
+								currElement.m_ID = 0;
+								m_ElementData[0].UpdateElementData(currElement);
+							}
 						}
 					}
-
-					//try left/right
-					if (r > 0)
+					else if (r > 50) // left / right
 					{
 						ElementData& otherData = m_ElementData[elementRight->m_ID];
 						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
@@ -1409,6 +1606,13 @@ namespace Pyxis
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
+						else if (otherData.cell_type == ElementType::fire)
+						{
+							//moving to fire, so combine temp and leave air
+							elementRight->m_Temperature = (elementRight->m_Temperature + currElement.m_Temperature) / 2;
+							currElement.m_ID = 0;
+							m_ElementData[0].UpdateElementData(currElement);
+						}
 						{
 							ElementData& otherData = m_ElementData[elementLeft->m_ID];
 							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
@@ -1419,6 +1623,13 @@ namespace Pyxis
 								*elementLeft = temp;
 								UpdateChunkDirtyRect(x, y, chunk);
 								continue;
+							}
+							else if (otherData.cell_type == ElementType::fire)
+							{
+								//moving to fire, so combine temp and leave air
+								elementLeft->m_Temperature = (elementLeft->m_Temperature + currElement.m_Temperature) / 2;
+								currElement.m_ID = 0;
+								m_ElementData[0].UpdateElementData(currElement);
 							}
 						}
 					}
@@ -1434,6 +1645,13 @@ namespace Pyxis
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
+						else if (otherData.cell_type == ElementType::fire)
+						{
+							//moving to fire, so combine temp and leave air
+							elementLeft->m_Temperature = (elementLeft->m_Temperature + currElement.m_Temperature) / 2;
+							currElement.m_ID = 0;
+							m_ElementData[0].UpdateElementData(currElement);
+						}
 						{
 							ElementData& otherData = m_ElementData[elementRight->m_ID];
 							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
@@ -1444,6 +1662,13 @@ namespace Pyxis
 								*elementRight = temp;
 								UpdateChunkDirtyRect(x, y, chunk);
 								continue;
+							}
+							else if (otherData.cell_type == ElementType::fire)
+							{
+								//moving to fire, so combine temp and leave air
+								elementRight->m_Temperature = (elementRight->m_Temperature + currElement.m_Temperature) / 2;
+								currElement.m_ID = 0;
+								m_ElementData[0].UpdateElementData(currElement);
 							}
 						}
 					}
@@ -1769,6 +1994,30 @@ namespace Pyxis
 		}
 	}
 
+	void World::Clear()
+	{
+		for each (auto& pair in m_Chunks)
+		{
+			delete pair.second;
+		}
+		m_Chunks.clear();
+		AddChunk(glm::ivec2(0, 0));
+
+
+		//create a border around first chunk
+		Element ceramic = Element();
+		ceramic.m_ID = m_ElementIDs["ceramic"];
+		ElementData& elementData = m_ElementData[ceramic.m_ID];
+		elementData.UpdateElementData(ceramic);
+		for (int i = 0; i < CHUNKSIZE; i++)
+		{
+			SetElement({ i, 0 }, ceramic);//bottom
+			SetElement({ i, CHUNKSIZE - 1 }, ceramic);//top
+			SetElement({ 0, i }, ceramic);//left
+			SetElement({ CHUNKSIZE - 1, i }, ceramic);//right
+		}
+	}
+
 	/// <summary>
 	/// DEPRECATED, no longer used
 	/// </summary>
@@ -1846,6 +2095,14 @@ namespace Pyxis
 		}
 	}
 
+	Element World::GetElementByName(std::string elementName)
+	{
+		Element& result = Element();
+		result.m_ID = m_ElementIDs[elementName];
+		m_ElementData[result.m_ID].UpdateElementData(result);
+		return result;
+	}
+
 	void World::SetElement(const glm::ivec2& pixelPos, const Element& element)
 	{
 		//PX_TRACE("Setting element at ({0}, {1})", pixelPos.x, pixelPos.y);
@@ -1877,6 +2134,14 @@ namespace Pyxis
 		return true;
 	}
 
+	glm::ivec2 World::WorldToPixel(const glm::vec2& worldPos)
+	{
+		glm::ivec2 result = glm::ivec2(worldPos.x * CHUNKSIZE, worldPos.y * CHUNKSIZE);
+		if (worldPos.x < 0) result.x--;
+		if (worldPos.y < 0) result.y--;
+		return result;
+	}
+
 	//Helper to get a chunk from a world pixel position
 	glm::ivec2 World::PixelToChunk(const glm::ivec2& pixelPos)
 	{
@@ -1903,11 +2168,13 @@ namespace Pyxis
 		if (pixelPos.x < 0)
 		{
 			result.x = CHUNKSIZE - (std::abs(pixelPos.x) % CHUNKSIZE);
+			result.x = result.x % CHUNKSIZE;
 		}
 		else result.x = pixelPos.x % CHUNKSIZE;
 		if (pixelPos.y < 0)
 		{
 			result.y = CHUNKSIZE - (std::abs(pixelPos.y) % CHUNKSIZE);
+			result.y = result.y % CHUNKSIZE;
 		}
 		else result.y = pixelPos.y % CHUNKSIZE;
 		return result;

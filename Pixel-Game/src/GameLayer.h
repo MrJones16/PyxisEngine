@@ -30,6 +30,7 @@ namespace Pyxis
 		bool OnWindowResizeEvent(WindowResizeEvent& event);
 		bool OnKeyPressedEvent(KeyPressedEvent& event);
 		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
+		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
 		enum BrushType {
 			circle = 0, square = 1, end

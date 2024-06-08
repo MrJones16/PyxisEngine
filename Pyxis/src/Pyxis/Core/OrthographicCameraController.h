@@ -12,6 +12,10 @@ namespace Pyxis
 	class OrthographicCameraController
 	{
 	public:
+		float m_ZoomLevel = 1;
+		float m_CameraSpeed = 0.5;
+		float m_Sensitivity = 0.5f;
+
 		OrthographicCameraController(float width, float aspect, float nearClip, float farClip)
 			: m_Camera(width, aspect, nearClip, farClip)
 		{
@@ -142,6 +146,13 @@ namespace Pyxis
 			//return glm::vec3(m_Camera.GetRotationMatrix() * glm::vec4(0,0,1,1));
 		}
 
+		void Zoom(float multiplyBy)
+		{
+			m_ZoomLevel *= multiplyBy;
+			m_Camera.SetWidth(m_Size.x * m_ZoomLevel);
+			m_Camera.SetHeight((m_Size.x * m_ZoomLevel) * m_Camera.GetAspect());
+		}
+
 
 		void OnEvent(Event& event)
 		{
@@ -205,8 +216,6 @@ namespace Pyxis
 
 		glm::vec2 m_Size;
 
-		float m_ZoomLevel = 1;
-		float m_CameraSpeed = 1;
-		float m_Sensitivity = 0.5f;
+		
 	};
 }

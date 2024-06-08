@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Chunk.h"
+#include "Pyxis/FastNoiseLite/FastNoiseLite.h"
 
 namespace Pyxis
 {
@@ -37,12 +38,16 @@ namespace Pyxis
 
 		void AddChunk(const glm::ivec2& chunkPos);
 		Chunk* GetChunk(const glm::ivec2& chunkPos);
+		void GenerateChunk(Chunk* chunk);
 
 		void UpdateWorld();
 		void UpdateChunk(Chunk* chunk);
 		void UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY);
 		void UpdateChunkDirtyRect(int x, int y, Chunk* chunk);
 
+		void Clear();
+
+		Element GetElementByName(std::string elementName);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 
 		void RenderWorld();
@@ -51,6 +56,7 @@ namespace Pyxis
 
 		//helper functions
 		static const bool IsInBounds(int x, int y);
+		glm::ivec2 WorldToPixel(const glm::vec2& worldPos);
 		glm::ivec2 PixelToChunk(const glm::ivec2& pixelPos);
 		glm::ivec2 PixelToIndex(const glm::ivec2& pixelPos);
 
@@ -58,8 +64,13 @@ namespace Pyxis
 		std::string TagFromString(const std::string& stringWithTag);
 		std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
 
-		static uint32_t RGBAtoABGR(uint32_t RGBA);
 
+		//world settings, for generation and gameplay?
+		int m_WorldSeed = 1337;
+		FastNoiseLite m_HeightNoise;
+		FastNoiseLite m_CaveNoise;
+
+		//
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
 
 		//keeping track of theads to join them

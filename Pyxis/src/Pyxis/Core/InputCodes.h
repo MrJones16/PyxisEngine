@@ -8,7 +8,9 @@
 #define PX_MOUSE_BUTTON_2         1
 #define PX_MOUSE_BUTTON_3         2
 #define PX_MOUSE_BUTTON_4         3
+#define PX_MOUSE_BUTTON_BACK      3
 #define PX_MOUSE_BUTTON_5         4
+#define PX_MOUSE_BUTTON_FORWARD   4
 #define PX_MOUSE_BUTTON_6         5
 #define PX_MOUSE_BUTTON_7         6
 #define PX_MOUSE_BUTTON_8         7

@@ -173,11 +173,11 @@ namespace Pyxis
 		
 	}
 
-	void Chunk::UpdateTextureForHologram()
+	void Chunk::UpdateWholeTexture()
 	{
 		//set data first, then update the pixels. this allows you to draw over the texture without interupting the actual
 		//elements in the map.
-		m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+		
 		for (int x = 0; x < CHUNKSIZE; x++)
 		{
 			for (int y = 0; y < CHUNKSIZE; y++)
@@ -185,6 +185,7 @@ namespace Pyxis
 				m_PixelBuffer[x + y * CHUNKSIZE] = m_Elements[x + y * CHUNKSIZE].m_Color;
 			}
 		}
+		m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
 
 	}
 

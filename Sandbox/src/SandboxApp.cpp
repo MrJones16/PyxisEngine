@@ -243,8 +243,10 @@ public:
 
 		m_Texture = Pyxis::Texture2D::Create("assets/textures/Wall.png");
 		m_MushroomTexture = Pyxis::Texture2D::Create("assets/textures/bluemush.png");
-
-		m_FrameBuffer = Pyxis::FrameBuffer::Create(1920, 1080);
+		Pyxis::FrameBufferSpecification fbspec;
+		fbspec.Width = 1920;
+		fbspec.Height = 1080;
+		m_FrameBuffer = Pyxis::FrameBuffer::Create(fbspec);
 		Pyxis::Renderer::AddFrameBuffer(m_FrameBuffer);
 		m_PerspectiveCameraController.SetPosition({ 0,0, 2 });
 
@@ -444,7 +446,7 @@ public:
 			//PX_CORE_INFO("{0}, {1}", windowSize.x, windowSize.y);
 			Pyxis::Renderer::OnWindowResize(windowSize.x, windowSize.y);
 			ImGui::Image(
-				(ImTextureID)m_FrameBuffer->GetFrameBufferTexture()->GetID(),
+				(ImTextureID)m_FrameBuffer->GetColorAttatchmentRendererID(),
 				ImGui::GetContentRegionAvail(),
 				ImVec2(0, 1),
 				ImVec2(1, 0),
