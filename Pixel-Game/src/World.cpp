@@ -5,11 +5,54 @@
 #include <mutex>
 
 #include <tinyxml2/tinyxml2.h>
+#include <box2d/b2_math.h>
 
 namespace Pyxis
 {
 	World::World()
 	{
+		m_Box2DWorld = new b2World({ 0, -9.8f });
+
+		//creating a 2d rigid pixel body:
+
+		//begin drawing mode
+
+		//make a vector or something, keeping track of elements placed, and their locations
+		// keep track of min and max for size, so we can allocate 2d array for future algorithms
+		// 
+		//when finished, make the 2d array of elements, and run a marching squares algorithm to find all edge vertices
+		//triangulation algorithm "dockless pecker" for creating triangle shapes for the body
+		//link
+
+		b2BodyDef groundBodyDef;
+		groundBodyDef.position.Set(0, -5.0f);
+
+		b2Body* groundBody = m_Box2DWorld->CreateBody(&groundBodyDef);
+
+		b2PolygonShape groundBox;
+		groundBox.SetAsBox(0.5f, 0.5f);
+		groundBody->CreateFixture(&groundBox, 0.0f);
+
+		b2BodyDef bodyDef;
+		bodyDef.type = b2_dynamicBody;
+		bodyDef.position.Set(0.0f, 4.0f);
+		bodyDef.angle = 1.0f;
+		b2Body* body = m_Box2DWorld->CreateBody(&bodyDef);
+
+		b2PolygonShape dynamicBox;
+		b2Vec2 points[3] = {
+			{-0.5f, 0},
+			{0.5f, 0},
+			{0, 0.5f}
+		};
+		dynamicBox.Set(points, 3);
+
+		b2FixtureDef fixtureDef;
+		fixtureDef.shape = &dynamicBox;
+		fixtureDef.density = 1.0f;
+		fixtureDef.friction = 0.3f;
+
+		body->CreateFixture(&fixtureDef);
 
 		if (!LoadElementData())
 		{
@@ -70,6 +113,16 @@ namespace Pyxis
 					data = data->NextSiblingElement();
 					PX_ERROR("No name given to element, skipping");
 					continue;
+				}
+
+				//get the texture
+				const char* texture;
+				error = data->QueryAttribute("texture", &texture);
+				if (!error) {
+					elementData.SetTexture(texture);
+				}
+				else {
+					PX_ERROR("No texture given to element, using color");
 				}
 				
 				//gather each attribuite for the element and set the values
@@ -193,7 +246,7 @@ namespace Pyxis
 				else
 				{
 					PX_INFO("Element {0} was given no ignited_color", elementData.name);
-					elementData.ignited_color = elementData.color;
+					elementData.ignited_color = 0;
 				}
 
 				float ignition_temperature = 371;
@@ -224,8 +277,7 @@ namespace Pyxis
 				}
 				else
 				{
-					PX_INFO("Element {0} was given no ignited_color", elementData.name);
-					elementData.ignited_color = elementData.color;
+					PX_INFO("Element {0} was given no fire_color", elementData.name);
 				}
 
 				float fire_temperature_increase = 1.0f;
@@ -571,6 +623,8 @@ namespace Pyxis
 
 	World::~World()
 	{
+		delete m_Box2DWorld;
+		m_Box2DWorld = nullptr;
 		for each (auto& pair in m_Chunks)
 		{
 			delete(pair.second);
@@ -632,12 +686,12 @@ namespace Pyxis
 					}
 					else if (pixelPos.y > surfaceTop)
 					{
-						chunk->SetElement(x, y, GetElementByName("grass"));
+						chunk->SetElement(x, y, GetElementByName("grass", x, y));
 					}
 					else if (pixelPos.y > heightNoise)
 					{
 						//dirt
-						chunk->SetElement(x, y, GetElementByName("dirt"));
+						chunk->SetElement(x, y, GetElementByName("dirt", x, y));
 					}
 					else
 					{
@@ -645,7 +699,7 @@ namespace Pyxis
 						float caveNoise = (m_CaveNoise.GetNoise(pixelPos.x, pixelPos.y) + 1) / 2.0f;
 						if (caveNoise >= 0.25f)
 						{
-							chunk->SetElement(x, y, GetElementByName("stone"));
+							chunk->SetElement(x, y, GetElementByName("stone", x, y));
 						}
 					}
 					
@@ -656,7 +710,7 @@ namespace Pyxis
 					float caveNoise = (m_CaveNoise.GetNoise(pixelPos.x, pixelPos.y) + 1) / 2.0f;
 					if (caveNoise >= 0.25f)
 					{
-						chunk->SetElement(x, y, GetElementByName("stone"));
+						chunk->SetElement(x, y, GetElementByName("stone", x, y));
 					}
 				}
 			}
@@ -677,6 +731,15 @@ namespace Pyxis
 		{
 			thread.join();
 		}*/
+
+
+		//pull pixel bodies out of the simulation
+
+		int velocityIterations = 6;
+		int positionIterations = 2;
+		m_Box2DWorld->Step(1.0f / 60.0f, velocityIterations, positionIterations);
+
+		//put pixel bodies back into the simulation, and solve collisions
 
 		for each (auto & pair in m_Chunks)
 		{
@@ -762,43 +825,7 @@ namespace Pyxis
 			UpdateChunkBucket(pair.second, 6 + 1, 6 + 1);
 		}
 
-
-		//std::thread thread = std::thread(&World::UpdateChunk, this, m_Chunks[glm::ivec2(0,0)]);
-		//thread.join();
-		/*for (int x = 0; x < BUCKETSWIDTH; x++)
-		{
-			for (int y = 0; y < BUCKETSWIDTH; y++)
-			{
-				UpdateChunkBucket(m_Chunks[glm::ivec2(0, 0)], x, y);
-			}
-		}*/
-
-		//m_Threads.clear();
-		//for each (auto& pair in m_Chunks)
-		//{
-		//	Chunk* chunk = pair.second;
-		//	m_Threads.push_back(std::thread(&World::UpdateChunk, this, chunk));
-		//	/*m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 2, 0));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 4, 0));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 6, 0));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 0, 2));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 2, 2));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 4, 2));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 6, 2));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 0, 4));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 2, 4));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 4, 4));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 6, 4));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 0, 6));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 2, 6));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 4, 6));
-		//	m_Threads.push_back(std::thread(&World::UpdateChunkBucket, this, chunk, 6, 6));*/
-		//}
-
-		//for each (std::thread& thread in m_Threads)
-		//{
-		//	thread.join();
-		//}
+		
 		
 		for each (auto & pair in m_Chunks)
 		{
@@ -814,18 +841,6 @@ namespace Pyxis
 	//defines for easy to read code
 	#define SwapWithOther chunk->SetElement(xOther, yOther, currElement); chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
 	#define SwapWithOtherChunk otherChunk->m_Elements[indexOther] = currElement; chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
-
-	#define SolveReaction currElement.m_ID = it->second.cell0ID;\
-		m_ElementData[it->second.cell0ID].UpdateElementData(currElement);\
-		other.m_ID = it->second.cell1ID;\
-		m_ElementData[it->second.cell1ID].UpdateElementData(other);\
-		chunk->m_Elements[xOther + yOther * CHUNKSIZE] = other;
-
-	#define SolveReactionOtherChunk currElement.m_ID = it->second.cell0ID;\
-		m_ElementData[it->second.cell0ID].UpdateElementData(currElement);\
-		other.m_ID = it->second.cell1ID;\
-		m_ElementData[it->second.cell1ID].UpdateElementData(other);\
-		otherChunk->m_Elements[indexOther] = other;
 
 	float interpolateBetweenValues(float lower, float higher, float val)
 	{
@@ -967,9 +982,9 @@ namespace Pyxis
 					if (it != end && (std::rand() % 101) <= it->second.probability)
 					{
 						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
 						elementLeft->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementLeft);
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementLeft, x-1, y);
 						UpdateChunkDirtyRect(x, y, chunk);
 						continue;
 					}
@@ -979,9 +994,9 @@ namespace Pyxis
 					if (it != end && (std::rand() % 101) <= it->second.probability)
 					{
 						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
 						elementTop->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementTop);
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementTop, x, y+1);
 						UpdateChunkDirtyRect(x, y, chunk);
 						continue;
 					}
@@ -991,9 +1006,9 @@ namespace Pyxis
 					if (it != end && (std::rand() % 101) <= it->second.probability)
 					{
 						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
 						elementRight->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementRight);
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementRight, x+1, y);
 						UpdateChunkDirtyRect(x, y, chunk);
 						continue;
 					}
@@ -1003,9 +1018,9 @@ namespace Pyxis
 					if (it != end && (std::rand() % 101) <= it->second.probability)
 					{
 						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement);
+						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
 						elementBottom->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementBottom);
+						m_ElementData[it->second.cell1ID].UpdateElementData(elementBottom, x, y-1);
 						UpdateChunkDirtyRect(x, y, chunk);
 						continue;
 					}
@@ -1019,7 +1034,7 @@ namespace Pyxis
 					{
 						int newID = m_ElementIDs[currElementData.melted];
 						int temp = currElement.m_Temperature;
-						m_ElementData[newID].UpdateElementData(currElement);
+						m_ElementData[newID].UpdateElementData(currElement, x, y);
 						currElement.m_Temperature = temp;
 						currElement.m_ID = newID;
 						chunk->UpdateDirtyRect(x, y);
@@ -1033,7 +1048,7 @@ namespace Pyxis
 					{
 						int newID = m_ElementIDs[currElementData.frozen];
 						int temp = currElement.m_Temperature;
-						m_ElementData[newID].UpdateElementData(currElement);
+						m_ElementData[newID].UpdateElementData(currElement, x, y);
 						currElement.m_Temperature = temp;
 						currElement.m_ID = newID;
 						chunk->UpdateDirtyRect(x, y);
@@ -1107,7 +1122,7 @@ namespace Pyxis
 							int healthDiff = currElement.m_Health;
 							if (elementLeftData.cell_type == ElementType::gas || elementLeftData.cell_type == ElementType::fire)
 							{
-								fireElementData.UpdateElementData(elementLeft);
+								fireElementData.UpdateElementData(elementLeft, x-1, y);
 								elementLeft->m_ID = fireID;
 								elementLeft->m_Temperature = currElementData.fire_temperature;
 								elementLeft->m_BaseColor = currElementData.fire_color;
@@ -1118,7 +1133,7 @@ namespace Pyxis
 							
 							if (elementTopData.cell_type == ElementType::gas || elementTopData.cell_type == ElementType::fire)
 							{
-								fireElementData.UpdateElementData(elementTop);
+								fireElementData.UpdateElementData(elementTop, x, y+1);
 								elementTop->m_ID = fireID;
 								elementTop->m_Temperature = currElementData.fire_temperature;
 								elementTop->m_BaseColor = currElementData.fire_color;
@@ -1129,7 +1144,7 @@ namespace Pyxis
 							
 							if (elementRightData.cell_type == ElementType::gas || elementRightData.cell_type == ElementType::fire)
 							{
-								fireElementData.UpdateElementData(elementRight);
+								fireElementData.UpdateElementData(elementRight, x+1, y);
 								elementRight->m_ID = fireID;
 								elementRight->m_Temperature = currElementData.fire_temperature;
 								elementRight->m_BaseColor = currElementData.fire_color;
@@ -1140,7 +1155,7 @@ namespace Pyxis
 							
 							if (elementBottomData.cell_type == ElementType::gas || elementBottomData.cell_type == ElementType::fire)
 							{
-								fireElementData.UpdateElementData(elementBottom);
+								fireElementData.UpdateElementData(elementBottom, x, y-1);
 								elementBottom->m_ID = fireID;
 								elementBottom->m_Temperature = currElementData.fire_temperature;
 								elementBottom->m_BaseColor = currElementData.fire_color;
@@ -1163,7 +1178,7 @@ namespace Pyxis
 						{
 							currElement.m_ID = m_ElementIDs[currElementData.burnt];
 							int temp = currElement.m_Temperature;
-							m_ElementData[currElement.m_ID].UpdateElementData(currElement);
+							m_ElementData[currElement.m_ID].UpdateElementData(currElement, x, y);
 							currElement.m_Temperature = temp;
 							continue;
 						}
@@ -1178,8 +1193,8 @@ namespace Pyxis
 				if (currElement.m_Ignited)
 				{
 					//update color to reflect being on fire
-
-					EditedBaseColor = RandomizeABGRColor(currElementData.ignited_color, 5);
+					if (currElementData.ignited_color != 0)
+						EditedBaseColor = RandomizeABGRColor(currElementData.ignited_color, 5);
 				}
 
 				if (currElementData.glow)
@@ -1187,10 +1202,11 @@ namespace Pyxis
 					int r = (EditedBaseColor >> 0) & 255;
 					int g = (EditedBaseColor >> 8) & 255;
 					int b = (EditedBaseColor >> 16) & 255;
+					int a = EditedBaseColor & 0xff000000;
 					r = std::max(r, (int)(Pyxis::interpolateBetweenValues(460, 900, currElement.m_Temperature) * 255.0f));
 					g = std::max(g, (int)(Pyxis::interpolateBetweenValues(460, 1500, currElement.m_Temperature) * 255.0f));
 					b = std::max(b, (int)(Pyxis::interpolateBetweenValues(1000, 6000, currElement.m_Temperature) * 255.0f));
-					EditedBaseColor = (currElementData.color & 0xFF000000) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255);
+					EditedBaseColor = a | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255);
 					//make it appear hotter depending on temp
 					//temp range from 460 to 6000
 				}
@@ -1550,7 +1566,7 @@ namespace Pyxis
 					if (currElement.m_Temperature < currElementData.ignition_temperature)
 					{
 						currElement.m_ID = 0;//air
-						m_ElementData[0].UpdateElementData(currElement);
+						m_ElementData[0].UpdateElementData(currElement, x, y);
 						continue;
 					}
 					//fire gets special color treatment, basically going from starting color, and
@@ -1590,7 +1606,7 @@ namespace Pyxis
 								//moving to fire, so combine temp and leave air
 								elementTop->m_Temperature = (elementTop->m_Temperature + currElement.m_Temperature) / 2;
 								currElement.m_ID = 0;
-								m_ElementData[0].UpdateElementData(currElement);
+								m_ElementData[0].UpdateElementData(currElement, x, y);
 							}
 						}
 					}
@@ -1611,7 +1627,7 @@ namespace Pyxis
 							//moving to fire, so combine temp and leave air
 							elementRight->m_Temperature = (elementRight->m_Temperature + currElement.m_Temperature) / 2;
 							currElement.m_ID = 0;
-							m_ElementData[0].UpdateElementData(currElement);
+							m_ElementData[0].UpdateElementData(currElement, x, y);
 						}
 						{
 							ElementData& otherData = m_ElementData[elementLeft->m_ID];
@@ -1629,7 +1645,7 @@ namespace Pyxis
 								//moving to fire, so combine temp and leave air
 								elementLeft->m_Temperature = (elementLeft->m_Temperature + currElement.m_Temperature) / 2;
 								currElement.m_ID = 0;
-								m_ElementData[0].UpdateElementData(currElement);
+								m_ElementData[0].UpdateElementData(currElement, x, y);
 							}
 						}
 					}
@@ -1650,7 +1666,7 @@ namespace Pyxis
 							//moving to fire, so combine temp and leave air
 							elementLeft->m_Temperature = (elementLeft->m_Temperature + currElement.m_Temperature) / 2;
 							currElement.m_ID = 0;
-							m_ElementData[0].UpdateElementData(currElement);
+							m_ElementData[0].UpdateElementData(currElement, x, y);
 						}
 						{
 							ElementData& otherData = m_ElementData[elementRight->m_ID];
@@ -1668,7 +1684,7 @@ namespace Pyxis
 								//moving to fire, so combine temp and leave air
 								elementRight->m_Temperature = (elementRight->m_Temperature + currElement.m_Temperature) / 2;
 								currElement.m_ID = 0;
-								m_ElementData[0].UpdateElementData(currElement);
+								m_ElementData[0].UpdateElementData(currElement, x, y);
 							}
 						}
 					}
@@ -2002,13 +2018,13 @@ namespace Pyxis
 		}
 		m_Chunks.clear();
 		AddChunk(glm::ivec2(0, 0));
-
+		m_Chunks[{0, 0}]->Clear();
 
 		//create a border around first chunk
 		Element ceramic = Element();
 		ceramic.m_ID = m_ElementIDs["ceramic"];
 		ElementData& elementData = m_ElementData[ceramic.m_ID];
-		elementData.UpdateElementData(ceramic);
+		elementData.UpdateElementData(ceramic, 0, 0);
 		for (int i = 0; i < CHUNKSIZE; i++)
 		{
 			SetElement({ i, 0 }, ceramic);//bottom
@@ -2095,11 +2111,11 @@ namespace Pyxis
 		}
 	}
 
-	Element World::GetElementByName(std::string elementName)
+	Element World::GetElementByName(std::string elementName, int x, int y)
 	{
 		Element& result = Element();
 		result.m_ID = m_ElementIDs[elementName];
-		m_ElementData[result.m_ID].UpdateElementData(result);
+		m_ElementData[result.m_ID].UpdateElementData(result, x, y);
 		return result;
 	}
 
@@ -2123,6 +2139,42 @@ namespace Pyxis
 			
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
 		}
+
+		auto count = m_Box2DWorld->GetBodyCount();
+		for (auto body = m_Box2DWorld->GetBodyList(); body != nullptr; body = body->GetNext())
+		{
+			auto& T = body->GetTransform();
+			for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
+			{
+				auto shape = (b2PolygonShape*)(fixture->GetShape());
+				for (int i = 0; i < shape->m_count - 1; i++)
+				{
+					auto v = shape->m_vertices[i];
+					float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
+					float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
+
+					auto e = shape->m_vertices[i + 1];
+					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
+					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
+
+					Renderer2D::DrawLine({ x1, y1 }, { x2, y2 });
+				}
+				//draw the last line to connect the shape
+				auto v = shape->m_vertices[shape->m_count - 1];
+				float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
+				float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
+
+				auto e = shape->m_vertices[0];
+				float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
+				float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
+
+				Renderer2D::DrawLine({ x1, y1 }, { x2, y2 });
+			}
+			
+
+			//Renderer2D::DrawQuad(glm::vec2(T.p.x, T.p.y), { 1,1 }, { 1,1,1,1 });
+		}
+		
 	}
 
 

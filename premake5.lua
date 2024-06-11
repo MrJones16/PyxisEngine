@@ -10,7 +10,7 @@ workspace "Pyxis"
 
 	
 
-	startproject "Pyxis-Editor"
+	startproject "Pixel-Game"
 
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
@@ -20,10 +20,12 @@ workspace "Pyxis"
 	IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
 	IncludeDir["glm"] = "Pyxis/vendor/glm"
 	IncludeDir["stb_image"] = "Pyxis/vendor/stb_image"
+	IncludeDir["box2d"] = "Pyxis/vendor/box2d/include"
 	IncludeDir["tinyxml2"] = "Pyxis/vendor/tinyxml2"
 
 
 	group "Dependencies"
+		include "Pyxis/vendor/box2d"
 		include "Pyxis/vendor/GLFW"
 		include "Pyxis/vendor/GLAD"
 		include "Pyxis/vendor/ImGui"
@@ -73,12 +75,14 @@ project "Pyxis"
 		"%{IncludeDir.ImGui}",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.stb_image}",
-		"%{IncludeDir.tinyxml2}"
+		"%{IncludeDir.tinyxml2}",
+		"%{IncludeDir.box2d}"
 
 	}
 
 	links
 	{
+		"box2d",
 		"GLFW",
 		"GLAD",
 		"ImGui",
@@ -253,7 +257,8 @@ project "Pixel-Game"
 		"Pyxis/vendor/spdlog/include",
 		"Pyxis/src",
 		"Pyxis/vendor",
-		"%{IncludeDir.glm}"
+		"%{IncludeDir.glm}",
+		"%{IncludeDir.box2d}"
 	}
 
 	links

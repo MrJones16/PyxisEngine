@@ -77,7 +77,7 @@ Here are the attributes, the values given are the defaults:
 	ignited = "0"					|	bool	| Whether or not the element starts ignited
 	spread_ignition = "0"			|	Bool	| Whether or not the element spreads its ignition regardless of temperature
 	spread_ignition_chance = "10"	|	uint32	| percent chance to spread ignition, requres spread ignition = true
-	ignited_color = "f7e334FF"		|	RGBAHEX	| color of element when ignited, default is base color
+	ignited_color = "0		"		|	RGBAHEX	| color of element when ignited, default is 0, which does nothing
 	ignition_temperature = "300"	|	float	| the temperature this element ignites at
 	fire_temperature = "1000"		|	float	| the temperature this element burns at, and the temp of the flames it emits
 	fire_color = "f7e334FF"			|	RGBAHEX	| color of element when ignited, default is normal fire color

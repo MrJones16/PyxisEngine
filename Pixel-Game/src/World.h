@@ -3,6 +3,13 @@
 #include "Chunk.h"
 #include "Pyxis/FastNoiseLite/FastNoiseLite.h"
 
+//all box2d things
+#include <box2d/b2_world.h>
+#include <box2d/b2_body.h>
+#include <box2d/b2_fixture.h>
+#include <box2d/b2_polygon_shape.h>
+#include <box2d/b2_math.h>
+
 namespace Pyxis
 {
 	/*template<>
@@ -26,6 +33,12 @@ namespace Pyxis
 		}
 	};
 
+	class PixelRigidBody
+	{
+	public:
+		
+	};
+
 	class World
 	{
 	public:
@@ -47,7 +60,7 @@ namespace Pyxis
 
 		void Clear();
 
-		Element GetElementByName(std::string elementName);
+		Element GetElementByName(std::string elementName, int x, int y);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 
 		void RenderWorld();
@@ -65,10 +78,9 @@ namespace Pyxis
 		std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
 
 
-		//world settings, for generation and gameplay?
-		int m_WorldSeed = 1337;
-		FastNoiseLite m_HeightNoise;
-		FastNoiseLite m_CaveNoise;
+		b2World* m_Box2DWorld;
+		std::vector<b2Body*> m_Bodies;
+		std::vector<b2Body*> m_staticBodies;
 
 		//
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
@@ -87,6 +99,11 @@ namespace Pyxis
 		//extra data needed
 		bool m_UpdateBit = false;
 		bool m_Error = false;
+
+		//world settings, for generation and gameplay?
+		int m_WorldSeed = 1337;
+		FastNoiseLite m_HeightNoise;
+		FastNoiseLite m_CaveNoise;
 
 	};
 }

@@ -31,7 +31,4 @@
     <ClCompile Include="src\PixelGameApp.cpp" />
     <ClCompile Include="src\World.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <Xml Include="assets\data\CellData.xml" />
-  </ItemGroup>
 </Project>

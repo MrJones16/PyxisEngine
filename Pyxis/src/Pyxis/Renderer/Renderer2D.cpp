@@ -8,6 +8,7 @@
 
 namespace Pyxis
 {
+
 	struct QuadVertex
 	{
 		glm::vec3 Position;
@@ -17,35 +18,55 @@ namespace Pyxis
 		float TilingFactor;
 	};
 
+	struct LineVertex
+	{
+		//holds useless information, but that info will be used for the same shader as quads use
+		//so it still needs it
+		glm::vec3 Position;
+		glm::vec4 Color;
+		glm::vec2 TexCoord;
+		float TexIndex;
+		float TilingFactor;
+	};
+
+
 	struct RendererData2D
 	{
+		//idk why ref of texture2d is better here, i guess for
+		//if a texture comes from something not a texture2D?
+		static const uint32_t MaxTextureSlots = 32;
+		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
+		uint32_t TextureSlotsIndex = 1;
+		Ref<Shader> TextureShader;
+		Ref<Texture2D> WhiteTexture;
+
+
 		//QUADS
 		static const uint32_t MaxQuads = 40000;
 		static const uint32_t MaxVertices = MaxQuads * 4;
 		static const uint32_t MaxIndices = MaxQuads * 6;
-		static const uint32_t MaxTextureSlots = 32;
 
 		uint32_t QuadIndexCount = 0;
 		QuadVertex* QuadVertexBufferBase = nullptr;
 		QuadVertex* QuadVertexBufferPtr = nullptr;
 		glm::vec4 QuadVertexPositions[4] = {
 			{-0.5f, -0.5f, 0, 1},
-			{0.5f, -0.5f, 0, 1},
-			{0.5f, 0.5f, 0, 1},
-			{-0.5f, 0.5f, 0, 1}
+			{ 0.5f, -0.5f, 0, 1},
+			{ 0.5f,  0.5f, 0, 1},
+			{-0.5f,  0.5f, 0, 1}
 		};
-
-		//idk why ref of texture2d is better here, i guess for
-		//if a texture comes from something not a texture2D?
-		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
-		uint32_t TextureSlotsIndex = 1;
-
 		Ref<VertexArray> QuadVertexArray;
 		Ref<VertexBuffer> QuadVertexBuffer;
-		Ref<Shader> TextureShader;
-		Ref<Texture2D> WhiteTexture;
-
 		
+		//LINES
+		Ref<VertexArray> LineVertexArray;
+		Ref<VertexBuffer> LineVertexBuffer;
+		glm::vec4 LineVertexPositions[2] = {
+			{ -0.5f, 0.0f, 0.0f, 1},
+			{ 0.5f, 0.0f, 0.0f, 1 }
+		};
+		LineVertex LineVertexBufferData[2];
+
 		Renderer2D::Statistics Stats;
 	};
 
@@ -105,7 +126,27 @@ namespace Pyxis
 		s_Data.QuadVertexArray->SetIndexBuffer(QuadIndexBuffer);
 		delete[] QuadIndices;
 
+		//line init
+		s_Data.LineVertexArray = VertexArray::Create();
+		s_Data.LineVertexBuffer = VertexBuffer::Create(2 * sizeof(LineVertex));
 
+		s_Data.LineVertexBuffer->SetLayout(layout);
+		s_Data.LineVertexArray->AddVertexBuffer(s_Data.LineVertexBuffer);
+
+		s_Data.LineVertexBufferData[0].Position = s_Data.LineVertexPositions[0];
+		s_Data.LineVertexBufferData[0].Color = {1,1,1,1};
+		s_Data.LineVertexBufferData[0].TexCoord = {0,0};
+		s_Data.LineVertexBufferData[0].TexIndex = 0.0f;
+		s_Data.LineVertexBufferData[0].TilingFactor = 1;
+
+		s_Data.LineVertexBufferData[1].Position = s_Data.LineVertexPositions[1];
+		s_Data.LineVertexBufferData[1].Color = { 1,1,1,1 };
+		s_Data.LineVertexBufferData[1].TexCoord = { 1,1 };
+		s_Data.LineVertexBufferData[1].TexIndex = 0.0f;
+		s_Data.LineVertexBufferData[1].TilingFactor = 1;
+
+
+		//texture init
 		s_Data.WhiteTexture = Texture2D::Create(1, 1);
 		uint32_t WhiteTextureData = 0xffffffff;
 		s_Data.WhiteTexture->SetData(&WhiteTextureData, sizeof(WhiteTextureData));
@@ -158,6 +199,22 @@ namespace Pyxis
 #if STATISTICS
 		s_Data.Stats.DrawCalls++;
 #endif
+	}
+
+	void Renderer2D::DrawLine(const glm::vec2& start, const glm::vec2& end, const glm::vec4& color)
+	{
+		DrawLine({ start.x, start.y, 0 }, { end.x, end.y, 0 }, color);
+	}
+
+	void Renderer2D::DrawLine(const glm::vec3& start, const glm::vec3& end, const glm::vec4& color)
+	{
+		s_Data.LineVertexBufferData[0].Position = start;
+		s_Data.LineVertexBufferData[0].Color = color;
+		s_Data.LineVertexBufferData[1].Position = end;
+		s_Data.LineVertexBufferData[1].Color = color;
+		s_Data.LineVertexBuffer->SetData(s_Data.LineVertexBufferData, 2 * sizeof(LineVertex));
+		s_Data.TextureSlots[0]->Bind();
+		RenderCommand::DrawLines(s_Data.LineVertexArray, 2);
 	}
 
 	/// <summary>

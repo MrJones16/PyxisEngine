@@ -14,7 +14,6 @@ namespace Pyxis
 		int width, height, channels;
 		stbi_uc* data = stbi_load(path.c_str(), &width, &height, &channels, 0);
 		PX_CORE_ASSERT(data, "Failed to load image!");
-		PX_CORE_INFO("Channels: {0}", channels);
 		m_Width = width;
 		m_Height = height;
 
@@ -84,6 +83,15 @@ namespace Pyxis
 		glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, m_DataFormat, GL_UNSIGNED_BYTE, data);
 	}
 
+	uint8_t* OpenGLTexture2D::GetData()
+	{
+		uint32_t BytesPerPixel = m_DataFormat == GL_RGBA ? 4 : 3;
+		uint8_t* pixels = new uint8_t[m_Width * m_Height * BytesPerPixel];
+		Bind();
+		glGetTexImage(GL_TEXTURE_2D, 0, m_DataFormat, GL_UNSIGNED_BYTE, pixels);
+		return pixels;
+	}
+
 	void OpenGLTexture2D::Bind(uint32_t slot) const
 	{
 		glBindTextureUnit(slot, m_RendererID);
@@ -144,6 +152,11 @@ namespace Pyxis
 	void OpenGLTexture3D::SetData(void* data, uint32_t size)
 	{
 
+	}
+
+	uint8_t* OpenGLTexture3D::GetData()
+	{
+		return nullptr;
 	}
 
 	void OpenGLTexture3D::Bind(uint32_t slot) const

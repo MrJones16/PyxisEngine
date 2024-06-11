@@ -172,6 +172,7 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Renderer Draw");
+			//Renderer2D::DrawLine({ 0,0 }, { 1,1 });
 			m_World->RenderWorld();
 			PaintBrushHologram();
 		}
@@ -493,12 +494,12 @@ namespace Pyxis
 				ElementData& elementData = m_World->m_ElementData[m_SelectedElementIndex];
 				element.m_ID = m_SelectedElementIndex;
 				element.m_Updated = !m_World->m_UpdateBit;
-				elementData.UpdateElementData(element);
 				//element.m_BaseColor = Pyxis::RandomizeABGRColor(elementData.color, 20);
-				element.m_Color = element.m_BaseColor;
 
 				chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
 				index = m_World->PixelToIndex(newPos);
+				elementData.UpdateElementData(element, index.x, index.y);
+				element.m_Color = element.m_BaseColor;
 				chunk->UpdateDirtyRect(index.x, index.y);
 
 				//set element and add chunk to update map

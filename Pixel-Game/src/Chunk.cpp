@@ -39,7 +39,6 @@ namespace Pyxis
 	{
 		for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
 		{
-			
 			m_Elements[i] = Element();
 		}
 

@@ -29,12 +29,13 @@
 	<ElementData
 		name="stone"
 		cell_type="solid"
+		texture="assets/textures/stone_texture.png"
 		color="444444FF"
 		conductivity="5"
 		glow="1"
 		density="30"
 		melted="lava"
-		melting_point="700"
+		melting_point="1000"
 		>
 		<Tags>
 		</Tags>
@@ -43,6 +44,7 @@
 	<ElementData
 		name="dirt"
 		cell_type="solid"
+		texture="assets/textures/dirt_texture.png"
 		color="8f563bFF"
 		conductivity="6"
 		glow="1"
@@ -55,10 +57,52 @@
 	<ElementData
 		name="grass"
 		cell_type="solid"
+		texture="assets/textures/grass_texture.png"
 		color="54872fFF"
 		conductivity="5"
 		glow="1"
 		density="20"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="wood"
+		cell_type="solid"
+		color="805b2dFF"
+		texture="assets/textures/minecraft_wood_texture.png"
+		conductivity="10"
+		glow="1"
+		density="10"
+		flammable="1"
+		ignited_color="bc170fFF"
+		ignition_temperature="371"
+		fire_temperature="1000"
+		
+		health="150"
+		burnt="air"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
+		name="leaf"
+		cell_type="solid"
+		color="00FF00FF"
+		texture="assets/textures/minecraft_leaf_texture.png"
+		conductivity="10"
+		glow="1"
+		density="10"
+		flammable="1"
+		spread_ignition="1"
+		spread_ignition_chance="25"
+		ignition_temperature="371"
+		fire_temperature="750"
+		
+		health="25"
+		burnt="air"
 		>
 		<Tags>
 		</Tags>
@@ -170,25 +214,6 @@
 	</ElementData>
 
 	<ElementData
-		name="wood"
-		cell_type="solid"
-		color="805b2dFF"
-		conductivity="10"
-		glow="1"
-		density="10"
-		flammable="1"
-		ignited_color="bc170fFF"
-		ignition_temperature="371"
-		fire_temperature="1000"
-		
-		health="150"
-		burnt="air"
-		>
-		<Tags>
-		</Tags>
-	</ElementData>
-
-	<ElementData
 		name="coal"
 		cell_type="movableSolid"
 		color="212121FF"
@@ -248,7 +273,7 @@
 		name="oil"
 		cell_type="liquid"
 		color="282828FF"
-		conductivity="30"
+		conductivity="20"
 		glow="1"
 		density="9"
 		flammable="1"
@@ -257,6 +282,7 @@
 		spread_ignition_chance="10"
 		ignition_temperature="371"
 		fire_temperature="1600"
+		fire_temperature_increase="0"
 		health="200"
 		burnt="air"
 		>
@@ -294,7 +320,7 @@
 		glow="1"
 		temperature="1000"
 		frozen="stone"
-		freezing_point="699"
+		freezing_point="999"
 		>
 		<Tags>
 		</Tags>

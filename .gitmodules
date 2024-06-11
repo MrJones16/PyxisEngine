@@ -14,3 +14,6 @@
 [submodule "Pyxis/vendor/ASSIMP"]
 	path = Pyxis/vendor/ASSIMP
 	url = https://github.com/assimp/assimp
+[submodule "Pyxis/vendor/box2d"]
+	path = Pyxis/vendor/box2d
+	url = https://github.com/erincatto/box2d

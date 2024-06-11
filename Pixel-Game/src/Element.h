@@ -81,7 +81,6 @@ namespace Pyxis
 		bool m_Updated = false;
 	};
 
-
 	/// <summary>
 	/// all the properties of an element
 	/// </summary>
@@ -89,6 +88,10 @@ namespace Pyxis
 	{
 		//Behavior and properties
 		std::string name = "default";
+
+		std::string texture_path = "";
+		Ref<Texture2D> texture = nullptr;
+		uint8_t* texture_data = nullptr;
 
 		ElementType cell_type = ElementType::gas;
 
@@ -105,7 +108,7 @@ namespace Pyxis
 		bool ignited = false;
 		bool spread_ignition = false; // will ignore temp and ignite surrounding elements
 		uint32_t spread_ignition_chance = 10;
-		uint32_t ignited_color = color;
+		uint32_t ignited_color = 0;
 		float ignition_temperature = 371.0f;
 		float fire_temperature = 1000;
 		uint32_t fire_color = RGBAtoABGR(0xf7e334FF);
@@ -126,25 +129,94 @@ namespace Pyxis
 		std::string frozen = "";
 		int freezing_point = 0;
 
-		
-		void UpdateElementData(Element& element)
+		void SetTexture(std::string tex_path)
 		{
-			element.m_BaseColor = RandomizeABGRColor(color);
+			texture_path = tex_path;
+			texture = Texture2D::Create(tex_path);
+			texture_data = texture->GetData();
+		}
+
+		
+		void UpdateElementData(Element& element, int x, int y)
+		{
+			if (texture_data != nullptr)
+			{
+				int width = texture->GetWidth();
+				int height = texture->GetHeight();
+				glm::ivec2 result;
+				if (x < 0)
+				{
+					result.x = width - (std::abs(x) % width);
+					result.x = result.x % width;
+				}
+				else result.x = x % width;
+				if (y < 0)
+				{
+					result.y = height - (std::abs(y) % height);
+					result.y = result.y % height;
+				}
+				else result.y = y % height;
+				int index = (result.x * 4) + (result.y * width * 4);
+
+				uint8_t r = texture_data[index];
+				uint8_t g = texture_data[index + 1];
+				uint8_t b = texture_data[index + 2];
+				uint8_t a = texture_data[index + 3];
+
+				element.m_BaseColor = (a << 24) | (b << 16) | (g << 8) | r;
+			}
+			else
+			{
+				element.m_BaseColor = RandomizeABGRColor(color);
+			}
 			element.m_Color = element.m_BaseColor;
 			element.m_Temperature = temperature;
 			element.m_Ignited = ignited;
 			element.m_Health = health;
 		}
-		void UpdateElementData(Element* element)
+
+		void UpdateElementData(Element* element, int x, int y, bool inBounds = false)
 		{
-			element->m_BaseColor = RandomizeABGRColor(color);
+			if (texture_data != nullptr)
+			{
+				int width = texture->GetWidth();
+				int height = texture->GetHeight();
+				glm::ivec2 result;
+				if (x < 0)
+				{
+					result.x = width - (std::abs(x) % width);
+					result.x = result.x % width;
+				}
+				else result.x = x % width;
+				if (y < 0)
+				{
+					result.y = height - (std::abs(y) % height);
+					result.y = result.y % height;
+				}
+				else result.y = y % height;
+
+				int index = (result.x * 4) + (y * width * 4);
+
+				uint8_t r = texture_data[index];
+				uint8_t g = texture_data[index + 1];
+				uint8_t b = texture_data[index + 2];
+				uint8_t a = texture_data[index + 3];
+
+				element->m_BaseColor = (a << 24) | (b << 16) | (g << 8) | r;
+			}
+			else
+			{
+				element->m_BaseColor = RandomizeABGRColor(color);
+			}
 			element->m_Color = element->m_BaseColor;
 			element->m_Temperature = temperature;
 			element->m_Ignited = ignited;
 			element->m_Health = health;
 		}
-
+		
 	};
+
+
 
 	/// <summary>
 	/// for tags, write the name of the tag in []'s like [meltable], and code will handle the rest

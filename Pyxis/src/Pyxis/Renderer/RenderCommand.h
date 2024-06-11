@@ -31,11 +31,13 @@ namespace Pyxis
 
 		inline static void DrawIndexed(const Ref<VertexArray>& vertexArray, uint32_t indexCount = 0)
 		{
+			vertexArray->Bind();
 			s_RendererAPI->DrawIndexed(vertexArray, indexCount);
 		}
 
 		inline static void DrawLines(const Ref<VertexArray>& vertexArray, uint32_t vertexCount)
 		{
+			vertexArray->Bind();
 			s_RendererAPI->DrawLines(vertexArray, vertexCount);
 		}
 

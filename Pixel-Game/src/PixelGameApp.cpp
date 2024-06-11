@@ -6,7 +6,7 @@
 #include "GameLayer.h"
 
 /// <summary>
-/// Things to work on in order:
+/// The basic things to work on in order:
 /// 
 /// 
 /// [({! DONE !})] Updating surrounding dirty rects if needed! falling sand won't tell others it moved, you know?
@@ -43,9 +43,14 @@
 /// 
 /// World Generation
 /// 
-/// start with a simple noise library, like fast noise lite, and get a heightmap of dirt?
+/// [({! DONE !})]start with a simple noise library, like fast noise lite, and get a heightmap of dirt?
+///	
 /// 
 /// Possibly making it possible to save and load the world
+/// 
+/// 
+/// 
+/// possible rework of element updating, to make it so chunks won't be force updated when trying to unload them?
 /// 
 /// Box2D rigid bodies and physics implemented into the game engine...
 ///		sounds like a very painful time
