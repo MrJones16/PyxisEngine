@@ -42,8 +42,11 @@ namespace Pyxis
 		m_Running = false;
 		while (m_LayerStack.begin() != m_LayerStack.end())
 		{
-			m_LayerStack.PopLayer(*(m_LayerStack.end() - 1));
+			Layer* layer = *(m_LayerStack.end() - 1);
+			m_LayerStack.PopLayer(layer);
+			delete layer;
 		}
+		//Sleep(5000);
 	}
 
 	void Application::OnEvent(Event& e)
@@ -96,7 +99,7 @@ namespace Pyxis
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
-		m_Running = false;
+		Close();
 		return true;
 	}
 

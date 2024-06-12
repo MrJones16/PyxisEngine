@@ -72,7 +72,7 @@ namespace Pyxis
 		}
 		~PixelGame()
 		{
-
+			
 		}
 	};
 

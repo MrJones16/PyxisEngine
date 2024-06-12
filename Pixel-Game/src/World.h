@@ -5,10 +5,7 @@
 
 //all box2d things
 #include <box2d/b2_world.h>
-#include <box2d/b2_body.h>
-#include <box2d/b2_fixture.h>
-#include <box2d/b2_polygon_shape.h>
-#include <box2d/b2_math.h>
+#include "PixelRigidBody.h"
 
 namespace Pyxis
 {
@@ -33,11 +30,7 @@ namespace Pyxis
 		}
 	};
 
-	class PixelRigidBody
-	{
-	public:
-		
-	};
+	
 
 	class World
 	{
@@ -62,6 +55,9 @@ namespace Pyxis
 
 		Element GetElementByName(std::string elementName, int x, int y);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
+		Element GetElement(const glm::ivec2& pixelPos);
+
+		void CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max);
 
 		void RenderWorld();
 
@@ -79,8 +75,7 @@ namespace Pyxis
 
 
 		b2World* m_Box2DWorld;
-		std::vector<b2Body*> m_Bodies;
-		std::vector<b2Body*> m_staticBodies;
+		std::vector<PixelRigidBody*> m_PixelBodies;
 
 		//
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;

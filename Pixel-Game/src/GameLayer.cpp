@@ -58,6 +58,11 @@ namespace Pyxis
 
 	}
 
+	GameLayer::~GameLayer()
+	{
+		PX_TRACE("Game Layer Deleted");
+	}
+
 	void GameLayer::OnAttach()
 	{
 		//create the world
@@ -80,12 +85,13 @@ namespace Pyxis
 		fbspec.Width = m_ViewportSize.x;
 		fbspec.Height = m_ViewportSize.y;
 		m_SceneFrameBuffer = FrameBuffer::Create(fbspec);
-		
+
+
 	}
 
-	void GameLayer::OnDetatch()
+	void GameLayer::OnDetach()
 	{
-		
+		PX_TRACE("Detatched game layer");
 	}
 
 	void GameLayer::OnUpdate(Timestep ts)
@@ -139,18 +145,6 @@ namespace Pyxis
 			{
 				PaintElementAtCursor();
 			}
-			/*if (Input::IsMouseButtonPressed(1))
-			{
-				auto [x, y] = Pyxis::Input::GetMousePosition();
-				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-				glm::ivec2 pixelPos = glm::ivec2(vec.x * CHUNKSIZE, vec.y * CHUNKSIZE);
-				m_World->SetElement(pixelPos, m_ElementsMap["Stone"]);
-				Chunk* chunk = m_World->GetChunk(m_World->PixelToChunk(pixelPos));
-				glm::ivec2 index = m_World->PixelToIndex(pixelPos);
-				chunk->UpdateDirtyRect(index.x, index.y);
-
-				chunk->UpdateTexture();
-			}*/
 
 			if (m_SimulationRunning)
 			{
@@ -172,9 +166,17 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Renderer Draw");
-			//Renderer2D::DrawLine({ 0,0 }, { 1,1 });
 			m_World->RenderWorld();
 			PaintBrushHologram();
+			//draw rigid body outline
+			//horizontals
+			glm::vec2 worldMin = glm::vec2((float)m_RigidMin.x / (float)CHUNKSIZE, (float)m_RigidMin.y / (float)CHUNKSIZE);
+			glm::vec2 worldMax = glm::vec2((float)m_RigidMax.x / (float)CHUNKSIZE, (float)m_RigidMax.y / (float)CHUNKSIZE);
+			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMax.x, worldMin.y});
+			Renderer2D::DrawLine({ worldMin.x, worldMax.y }, { worldMax.x, worldMax.y});
+			//vertical lines
+			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMin.x, worldMax.y});
+			Renderer2D::DrawLine({ worldMax.x, worldMin.y }, { worldMax.x, worldMax.y});
 		}
 
 		Renderer2D::EndScene();
@@ -268,6 +270,18 @@ namespace Pyxis
 				if (ImGui::Button("Clear"))
 				{
 					m_World->Clear();
+				}
+
+				if (ImGui::Button("Build Rigid Body"))
+				{
+					if (m_RigidMin.x < m_RigidMax.x)
+					{
+						m_World->CreatePixelRigidBody(m_RigidMin, m_RigidMax);
+
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+
+					}
 				}
 				
 				
@@ -462,6 +476,7 @@ namespace Pyxis
 
 	void GameLayer::PaintElementAtCursor()
 	{
+		//paint a rigid body by tracking min and max
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
 
 		auto [x, y] = GetMousePositionScene();
@@ -513,7 +528,14 @@ namespace Pyxis
 					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
 				}
 				else
+				{
 					m_World->SetElement(newPos, element);
+					//update rigid min and max
+					if (newPos.x < m_RigidMin.x) m_RigidMin.x = newPos.x;
+					if (newPos.y < m_RigidMin.y) m_RigidMin.y = newPos.y;
+					if (newPos.x > m_RigidMax.x) m_RigidMax.x = newPos.x;
+					if (newPos.y > m_RigidMax.y) m_RigidMax.y = newPos.y;
+				}
 
 				
 				map[chunk->m_ChunkPos] = chunk;

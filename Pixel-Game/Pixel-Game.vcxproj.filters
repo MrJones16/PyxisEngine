@@ -23,6 +23,7 @@
       <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="src\World.h" />
+    <ClInclude Include="src\PixelRigidBody.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Chunk.cpp" />
@@ -30,5 +31,9 @@
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
     <ClCompile Include="src\World.cpp" />
+    <ClCompile Include="src\PixelRigidBody.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
 </Project>

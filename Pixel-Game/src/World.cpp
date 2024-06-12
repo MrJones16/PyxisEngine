@@ -623,6 +623,13 @@ namespace Pyxis
 
 	World::~World()
 	{
+		PX_TRACE("Deleting World");
+
+		//delete pixel bodies
+		for each (auto pixelBody in m_PixelBodies)
+		{
+			delete pixelBody;
+		}
 		delete m_Box2DWorld;
 		m_Box2DWorld = nullptr;
 		for each (auto& pair in m_Chunks)
@@ -2128,6 +2135,71 @@ namespace Pyxis
 		GetChunk(PixelToChunk(pixelPos))->SetElement(index.x, index.y, e);
 	}
 
+	Element World::GetElement(const glm::ivec2& pixelPos)
+	{
+		auto chunkPos = PixelToChunk(pixelPos);
+		auto it = m_Chunks.find(chunkPos);
+		if (it != m_Chunks.end())
+		{
+			auto index = PixelToIndex(pixelPos);
+			return it->second->m_Elements[index.x + index.y * CHUNKSIZE];
+		}
+		else return Element();
+	}
+
+	void World::CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max)
+	{
+		PixelRigidBody* body = new PixelRigidBody();
+		body->m_Width = (max.x - min.x) + 1;
+		body->m_Height = (max.y - min.y) + 1;
+		body->m_ElementArray = new Element[body->m_Width * body->m_Height];
+		for (int x = 0; x < body->m_Width; x++)
+		{
+			for (int y = 0; y < body->m_Height; y++)
+			{
+				glm::ivec2 pixelPos = { x + min.x, y + min.y };
+
+				body->m_ElementArray[x + y * body->m_Width] = GetElement(pixelPos);
+				//loop over every element
+			}
+		}
+		//create the base body of the whole pixel body
+		b2BodyDef pixelBodyDef;
+		//TODO
+		//needs to be changed, the position is being set to exact pixel points, but that is only 1/512 in size, when things should scale differently, like 10 pixels being 1 wide
+		pixelBodyDef.position = { ((float)(min.x + max.x) / 2.0f) / (float)CHUNKSIZE, ((float)(min.y + max.y) / 2.0f) / (float)CHUNKSIZE };
+		pixelBodyDef.type = b2_dynamicBody;
+		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
+
+
+		auto contour = body->GetContourPoints();
+		if (contour.size() == 0)
+		{
+			m_Box2DWorld->DestroyBody(body->m_B2Body);
+			delete body;
+			return;
+		}
+		body->m_ContourVector = contour;
+
+
+		//create each of the triangles to comprise the body, each being a fixture
+		b2PolygonShape triangleShape;
+		b2Vec2 points[3] = {
+			{-0.5f, 0},
+			{0.5f, 0},
+			{0, 0.5f}
+		};
+		triangleShape.Set(points, 3);
+
+		b2FixtureDef fixtureDef;
+		fixtureDef.density = 1;
+		fixtureDef.friction = 0.3f;
+		fixtureDef.shape = &triangleShape;
+		body->m_B2Body->CreateFixture(&fixtureDef);
+		m_PixelBodies.push_back(body);
+		
+	}
+
 	void World::RenderWorld()
 	{
 		
@@ -2138,6 +2210,16 @@ namespace Pyxis
 			Renderer2D::DrawQuad(glm::vec2(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f), { 1,1 }, pair.second->m_Texture);
 			
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
+		}
+
+		for each (auto pixelBody in m_PixelBodies)
+		{
+			for (int i = 0; i < pixelBody->m_ContourVector.size() - 1; i++)
+			{
+				glm::vec2 start = pixelBody->m_ContourVector[i];
+				glm::vec2 end = pixelBody->m_ContourVector[i + 1];
+				Renderer2D::DrawLine(start, end, { 0,1,0,1 });
+			}
 		}
 
 		auto count = m_Box2DWorld->GetBodyCount();

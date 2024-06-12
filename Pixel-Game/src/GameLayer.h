@@ -17,10 +17,10 @@ namespace Pyxis
 	{
 	public:
 		GameLayer();
-		virtual ~GameLayer() = default;
+		virtual ~GameLayer();
 
-		virtual void OnAttach();
-		virtual void OnDetatch();
+		virtual void OnAttach() override;
+		virtual void OnDetach() override;
 
 		virtual void OnUpdate(Timestep ts) override;
 		virtual void OnImGuiRender() override;
@@ -64,6 +64,9 @@ namespace Pyxis
 		float m_BrushSize = 1;
 		int m_BrushType = BrushType::circle;
 		Element m_HoveredElement = Element();
+
+		glm::ivec2 m_RigidMin = { 99999999, 99999999 };
+		glm::ivec2 m_RigidMax = { -99999999 , -99999999 };
 
 		//testing / game
 		bool m_SimulationRunning = false;

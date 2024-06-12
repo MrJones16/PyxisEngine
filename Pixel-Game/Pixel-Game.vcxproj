@@ -145,6 +145,7 @@
     <ClInclude Include="src\Panels\Panel.h" />
     <ClInclude Include="src\Panels\ProfilingPanel.h" />
     <ClInclude Include="src\Panels\SceneHierarchyPanel.h" />
+    <ClInclude Include="src\PixelRigidBody.h" />
     <ClInclude Include="src\World.h" />
   </ItemGroup>
   <ItemGroup>
@@ -152,12 +153,16 @@
     <ClCompile Include="src\ChunkWorker.cpp" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
+    <ClCompile Include="src\PixelRigidBody.cpp" />
     <ClCompile Include="src\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pyxis\Pyxis.vcxproj">
       <Project>{C20EEB0D-2E23-13BF-F7A4-B61E63780FF0}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
