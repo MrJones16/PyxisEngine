@@ -6,6 +6,7 @@
 //all box2d things
 #include <box2d/b2_world.h>
 #include "PixelRigidBody.h"
+#include <box2d/b2_math.h>
 
 namespace Pyxis
 {
@@ -55,7 +56,7 @@ namespace Pyxis
 
 		Element GetElementByName(std::string elementName, int x, int y);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
-		Element GetElement(const glm::ivec2& pixelPos);
+		Element& GetElement(const glm::ivec2& pixelPos);
 
 		void CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max);
 

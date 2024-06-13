@@ -6,6 +6,7 @@
 
 #include <tinyxml2/tinyxml2.h>
 #include <box2d/b2_math.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis
 {
@@ -72,9 +73,16 @@ namespace Pyxis
 		//m_HeightNoise.SetFrequency(0.1f);
 
 		AddChunk({ 0,0 });
+		GetChunk({ 0,0 })->Clear();
 		AddChunk({ 0,-1 });
-		AddChunk({ -1,-1 });
+		GetChunk({ 0,-1 })->Clear();
 		AddChunk({ -1,0 });
+		GetChunk({ -1,0 })->Clear();
+		AddChunk({ -1,-1 });
+		GetChunk({ -1,-1 })->Clear();
+		/*AddChunk({ 0,-1 });
+		AddChunk({ -1,-1 });
+		AddChunk({ -1,0 });*/
 	}
 
 	bool World::LoadElementData()
@@ -741,12 +749,151 @@ namespace Pyxis
 
 
 		//pull pixel bodies out of the simulation
+		for each (auto body in m_PixelBodies)
+		{
+			glm::ivec2 centerPixelWorld = { body->m_B2Body->GetPosition().x * 10, body->m_B2Body->GetPosition().y * 10 };
+			//auto skewMatrix = glm::mat2x2(1,0,1,1);
+			//glm::mat2x2 rotationMatrix = 
+
+			float angle = body->m_B2Body->GetTransform().q.GetAngle();
+
+			auto rotationMatrix = glm::mat2x2(1);
+
+			//if angle gets above 45 degrees, apply a 90 deg rotation first
+			//make sure angle is positive
+			while (angle > 0.78539816339f)
+			{
+				angle -= 1.57079632679f;
+				rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
+			}
+			while (angle < -0.78539816339f)
+			{
+				angle += 1.57079632679f;
+				rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
+			}
+
+			float A = -std::tan(angle / 2);
+			float B = std::sin(angle);
+			auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1);//0 a
+			auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);// b 0
+			for (int x = 0; x < body->m_Width; x++)
+			{
+				for (int y = 0; y < body->m_Height; y++)
+				{
+					Element element = body->m_ElementArray[x + y * body->m_Width];
+					if (element.m_ID == 0) continue; //skip empty cells
+
+					//find the element in the world by using the transform of the body and
+					//the position of the element in the array
+					
+
+					glm::ivec2 localPos = { x - body->m_Origin.x, y - body->m_Origin.y };
+					
+
+					glm::ivec2 skewedPos = localPos * rotationMatrix;
+					
+					
+					//skewedPos = horizontalSkewMatrix * skewedPos;
+					//skewedPos = verticalSkewMatrix * skewedPos;
+
+					//horizontal skew:
+					int horizontalSkewAmount = (float)skewedPos.y * A;
+					skewedPos.x += horizontalSkewAmount;
+
+					//vertical skew
+					int skewAmount = (float)skewedPos.x * B;
+					skewedPos.y += skewAmount;
+
+					//horizontal skew:
+					horizontalSkewAmount = (float)skewedPos.y * A;
+					skewedPos.x += horizontalSkewAmount;
+
+					//pixel pos is the pixel at the center of the array, so lets use it
+					//the new position of the element is the skewed position + center offsef
+					glm::ivec2 worldPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+					//set the world element from the array at the found position
+					body->m_ElementArray[x + y * body->m_Width] = GetElement(worldPos);
+					if (body->m_ElementArray[x + y * body->m_Width].m_ID == 0)
+					{
+						PX_TRACE("just pulled an element from the world that is air at ({0},{1})", worldPos.x, worldPos.y);
+					}
+					SetElement(worldPos, Element());
+				}
+			}
+		}
 
 		int velocityIterations = 6;
 		int positionIterations = 2;
 		m_Box2DWorld->Step(1.0f / 60.0f, velocityIterations, positionIterations);
 
 		//put pixel bodies back into the simulation, and solve collisions
+		for each (auto body in m_PixelBodies)
+		{
+			glm::ivec2 centerPixelWorld = { body->m_B2Body->GetPosition().x * 10, body->m_B2Body->GetPosition().y * 10 };
+			//auto skewMatrix = glm::mat2x2(1,0,1,1);
+			//glm::mat2x2 rotationMatrix = 
+
+			float angle = body->m_B2Body->GetTransform().q.GetAngle();
+
+			auto rotationMatrix = glm::mat2x2(1);
+
+			//if angle gets above 45 degrees, apply a 90 deg rotation first
+			//make sure angle is positive
+			while (angle > 0.78539816339f)
+			{
+				angle -= 1.57079632679f;
+				rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
+			}
+			while (angle < -0.78539816339f)
+			{
+				angle += 1.57079632679f;
+				rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
+			}
+
+			float A = -std::tan(angle / 2);
+			float B = std::sin(angle);
+			auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1);//0 a
+			auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);// b 0
+			for (int x = 0; x < body->m_Width; x++)
+			{
+				for (int y = 0; y < body->m_Height; y++)
+				{
+					//PX_TRACE("working pixel: ({0},{1})", x, y);
+					Element element = body->m_ElementArray[x + y * body->m_Width];
+					if (element.m_ID == 0) continue; //skip empty cells
+
+					//find the element in the world by using the transform of the body and
+					//the position of the element in the array
+
+					glm::ivec2 localPos = { x - body->m_Origin.x, y - body->m_Origin.y };
+					//PX_TRACE("local pos: ({0},{1})", localPos.x, localPos.y);
+					glm::ivec2 skewedPos = localPos * rotationMatrix;
+					//PX_TRACE("pixel rotated by 90's: ({0},{1})", skewedPos.x, skewedPos.y);
+					//skewedPos = horizontalSkewMatrix * skewedPos;
+					//skewedPos = verticalSkewMatrix * skewedPos;
+					
+					//horizontal skew:
+					int horizontalSkewAmount = (float)skewedPos.y * A;
+					skewedPos.x += horizontalSkewAmount;
+
+					//vertical skew
+					int skewAmount = (float)skewedPos.x * B;
+					skewedPos.y += skewAmount;
+
+					//horizontal skew:
+					horizontalSkewAmount = (float)skewedPos.y * A;
+					skewedPos.x += horizontalSkewAmount;
+					
+					//pixel pos is the pixel at the center of the array, so lets use it
+					//the new position of the element is the skewed position + center offsef
+					glm::ivec2 worldPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+					//set the world element from the array at the found position
+					SetElement(worldPos, element);
+					//PX_TRACE("setting at position: ({0},{1}) to non-stone ", worldPos.x, worldPos.y);
+				}
+			}
+		}
+
 
 		for each (auto & pair in m_Chunks)
 		{
@@ -1227,6 +1374,8 @@ namespace Pyxis
 				case ElementType::solid:
 					break;
 				case ElementType::movableSolid:
+
+					if (currElement.m_Rigid) continue;
 					//check below, and move
 					{
 						ElementData& otherData = m_ElementData[elementBottom->m_ID];
@@ -2129,13 +2278,21 @@ namespace Pyxis
 	void World::SetElement(const glm::ivec2& pixelPos, const Element& element)
 	{
 		//PX_TRACE("Setting element at ({0}, {1})", pixelPos.x, pixelPos.y);
-		glm::ivec2 index = PixelToIndex(pixelPos);
+		/*glm::ivec2 index = PixelToIndex(pixelPos);
 		Element e = element;
 		e.m_Updated = !m_UpdateBit;
-		GetChunk(PixelToChunk(pixelPos))->SetElement(index.x, index.y, e);
+		GetChunk(PixelToChunk(pixelPos))->SetElement(index.x, index.y, e);*/
+
+		auto chunkPos = PixelToChunk(pixelPos);
+		auto it = m_Chunks.find(chunkPos);
+		if (it != m_Chunks.end())
+		{
+			auto index = PixelToIndex(pixelPos);
+			it->second->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+		}
 	}
 
-	Element World::GetElement(const glm::ivec2& pixelPos)
+	Element& World::GetElement(const glm::ivec2& pixelPos)
 	{
 		auto chunkPos = PixelToChunk(pixelPos);
 		auto it = m_Chunks.find(chunkPos);
@@ -2152,6 +2309,7 @@ namespace Pyxis
 		PixelRigidBody* body = new PixelRigidBody();
 		body->m_Width = (max.x - min.x) + 1;
 		body->m_Height = (max.y - min.y) + 1;
+		body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
 		body->m_ElementArray = new Element[body->m_Width * body->m_Height];
 		for (int x = 0; x < body->m_Width; x++)
 		{
@@ -2159,15 +2317,28 @@ namespace Pyxis
 			{
 				glm::ivec2 pixelPos = { x + min.x, y + min.y };
 
-				body->m_ElementArray[x + y * body->m_Width] = GetElement(pixelPos);
-				//loop over every element
+				//loop over every element, grab it, and make it rigid if it is a movable Solid
+				auto& element = GetElement(pixelPos);
+				auto& elementData = m_ElementData[element.m_ID];
+				if (elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid)
+				{
+					element.m_Rigid = true;
+					body->m_ElementArray[x + y * body->m_Width] = element;
+				}
+				else
+				{
+					//any liquids, gas, or fire is ignored and made id 0 default
+					body->m_ElementArray[x + y * body->m_Width] = Element();
+				}
+				
 			}
 		}
 		//create the base body of the whole pixel body
 		b2BodyDef pixelBodyDef;
 		//TODO
-		//needs to be changed, the position is being set to exact pixel points, but that is only 1/512 in size, when things should scale differently, like 10 pixels being 1 wide
-		pixelBodyDef.position = { ((float)(min.x + max.x) / 2.0f) / (float)CHUNKSIZE, ((float)(min.y + max.y) / 2.0f) / (float)CHUNKSIZE };
+		
+		//for the scaling of the box world and pixel bodies, every 10 pixels is 1 unit in the world space
+		pixelBodyDef.position = { (float)(body->m_Origin.x + min.x) / 10, (float)(body->m_Origin.y + min.y) / 10 };
 		pixelBodyDef.type = b2_dynamicBody;
 		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
 
@@ -2190,6 +2361,8 @@ namespace Pyxis
 			{0, 0.5f}
 		};
 		triangleShape.Set(points, 3);
+
+
 
 		b2FixtureDef fixtureDef;
 		fixtureDef.density = 1;

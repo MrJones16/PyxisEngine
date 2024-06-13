@@ -27,6 +27,7 @@ namespace Pyxis
 		std::vector<glm::ivec2> m_ContourVector;
 		int m_Width;
 		int m_Height;
+		glm::ivec2 m_Origin;
 
 		b2Body* m_B2Body;
 	};

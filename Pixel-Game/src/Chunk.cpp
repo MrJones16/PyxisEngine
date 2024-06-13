@@ -108,7 +108,7 @@ namespace Pyxis
 
 	void Chunk::UpdateTexture()
 	{
-		bool debug = false;
+		bool debug = true;
 		if (debug)
 		{
 			for (int x = 0; x < CHUNKSIZE; x++)

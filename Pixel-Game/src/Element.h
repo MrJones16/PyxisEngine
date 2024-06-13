@@ -77,6 +77,7 @@ namespace Pyxis
 		int8_t m_Horizontal = 0;
 
 		bool m_Sliding = false;
+		bool m_Rigid = false;
 		//uint32_t m_LifeTime = 0;
 		bool m_Updated = false;
 	};
