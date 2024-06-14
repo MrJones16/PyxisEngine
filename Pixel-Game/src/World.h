@@ -58,7 +58,7 @@ namespace Pyxis
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 		Element& GetElement(const glm::ivec2& pixelPos);
 
-		void CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max);
+		void CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max, b2BodyType type = b2_dynamicBody);
 
 		void RenderWorld();
 

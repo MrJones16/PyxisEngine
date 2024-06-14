@@ -181,6 +181,58 @@ namespace Pyxis
 		return ContourVector;
 	}
 
+
+	std::vector<glm::ivec2> PixelRigidBody::SimplifyPoints(const std::vector<glm::ivec2>& contourVector, int startIndex, int endIndex, float threshold)
+	{
+		float maxDist = 0.0f;
+		int maxIndex = 0;
+		float dividend = (contourVector[endIndex].x - contourVector[startIndex].x);
+		if (dividend != 0)
+		{
+			float m = (contourVector[endIndex].y - contourVector[startIndex].y) / dividend;
+			float b = contourVector[startIndex].y - m * contourVector[startIndex].x;
+			float dividend2 = ((m * m) + 1);
+			for (int i = startIndex + 1; i < endIndex; i++)
+			{
+				float distToLine = std::abs((-m * contourVector[i].x) + contourVector[i].y - b) / std::sqrt(dividend2);
+				if (distToLine > maxDist) {
+					maxDist = distToLine;
+					maxIndex = i;
+				}
+			}
+		}
+		else
+		{
+			for (int i = startIndex + 1; i < endIndex; i++)
+			{
+				float distToLine = contourVector[i].x - contourVector[startIndex].x;
+				if (distToLine > maxDist) {
+					maxDist = distToLine;
+					maxIndex = i;
+				}
+			}
+		}
+				
+		if (maxDist > threshold)
+		{
+			//do another simplify to the left and right, and combine them as the result
+			auto result = SimplifyPoints(contourVector, startIndex, maxIndex, threshold);
+			auto right = SimplifyPoints(contourVector, maxIndex, endIndex, threshold); 
+			for (int i = 1; i < right.size(); i++)
+			{
+				result.push_back(right[i]);
+			}
+			return result;
+		}
+
+		auto endResult = std::vector<glm::ivec2>();
+		endResult.push_back(contourVector[startIndex]);
+		endResult.push_back(contourVector[endIndex]);
+		PX_TRACE("Removed Points");
+		return endResult;
+	}
+
+
 	int PixelRigidBody::GetMarchingSquareCase(glm::ivec2 position)
 	{
 		/*

@@ -19,7 +19,7 @@ namespace Pyxis
 
 		std::vector<glm::ivec2> GetContourPoints();
 
-		void SimplifyPoints(std::vector<glm::ivec2>& contourVector);
+		std::vector<glm::ivec2> PixelRigidBody::SimplifyPoints(const std::vector<glm::ivec2>& contourVector, int startIndex, int endIndex, float threshold);
 
 		int GetMarchingSquareCase(glm::ivec2 position);
 

@@ -283,6 +283,18 @@ namespace Pyxis
 
 					}
 				}
+
+				if (ImGui::Button("Build Static Rigid Body"))
+				{
+					if (m_RigidMin.x < m_RigidMax.x)
+					{
+						m_World->CreatePixelRigidBody(m_RigidMin, m_RigidMax, b2_staticBody);
+
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+
+					}
+				}
 				
 				
 				ImGui::TreePop();

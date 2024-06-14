@@ -2304,7 +2304,7 @@ namespace Pyxis
 		else return Element();
 	}
 
-	void World::CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max)
+	void World::CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max, b2BodyType type)
 	{
 		PixelRigidBody* body = new PixelRigidBody();
 		body->m_Width = (max.x - min.x) + 1;
@@ -2339,7 +2339,7 @@ namespace Pyxis
 		
 		//for the scaling of the box world and pixel bodies, every 10 pixels is 1 unit in the world space
 		pixelBodyDef.position = { (float)(body->m_Origin.x + min.x) / 10, (float)(body->m_Origin.y + min.y) / 10 };
-		pixelBodyDef.type = b2_dynamicBody;
+		pixelBodyDef.type = type;
 		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
 
 
@@ -2350,7 +2350,9 @@ namespace Pyxis
 			delete body;
 			return;
 		}
-		body->m_ContourVector = contour;
+
+		body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
+		//auto simplified = body->SimplifyPoints(contour);
 
 
 		//create each of the triangles to comprise the body, each being a fixture
