@@ -22,18 +22,15 @@
     <ClInclude Include="src\Panels\SceneHierarchyPanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
-    <ClInclude Include="src\World.h" />
     <ClInclude Include="src\PixelRigidBody.h" />
+    <ClInclude Include="src\World.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Chunk.cpp" />
     <ClCompile Include="src\ChunkWorker.cpp" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
-    <ClCompile Include="src\World.cpp" />
     <ClCompile Include="src\PixelRigidBody.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="assets\data\CellData.xml" />
+    <ClCompile Include="src\World.cpp" />
   </ItemGroup>
 </Project>

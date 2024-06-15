@@ -32,11 +32,13 @@ namespace Pyxis
 	};
 
 	
+	static const int CHUNKSIZE = 512;
+	static const float PPU = 15.0f; // pixels per unit for box2d sim
+
 
 	class World
 	{
 	public:
-		static const int CHUNKSIZE = 512;
 
 		World();
 		bool LoadElementData();

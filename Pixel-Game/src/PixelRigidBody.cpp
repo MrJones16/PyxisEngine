@@ -20,11 +20,11 @@ namespace Pyxis
 	/// to ignore diagonals if possible
 	/// </summary>
 	/// <returns></returns>
-	std::vector<glm::ivec2> PixelRigidBody::GetContourPoints()
+	std::vector<p2t::Point> PixelRigidBody::GetContourPoints()
 	{
 		//run marching squares on element array to find all vertices
 		//inspired by https://www.emanueleferonato.com/2013/03/01/using-marching-squares-algorithm-to-trace-the-contour-of-an-image/
-		std::vector<glm::ivec2> ContourVector;
+		std::vector<p2t::Point> ContourVector;
 
 		glm::ivec2 cursor = { m_Width - 1,m_Height - 1 };
 		//scroll through element array until you find an element to start at
@@ -167,10 +167,10 @@ namespace Pyxis
 				}
 				break;
 			}
+			// saving contour point
+			ContourVector.push_back(p2t::Point(cursor.x, cursor.y));
 			// moving onto next point
 			cursor += step;
-			// saving contour point
-			ContourVector.push_back(glm::ivec2(cursor));
 			prev = step;
 			//  drawing the line
 			// if we returned to the first point visited, the loop has finished
@@ -182,7 +182,7 @@ namespace Pyxis
 	}
 
 
-	std::vector<glm::ivec2> PixelRigidBody::SimplifyPoints(const std::vector<glm::ivec2>& contourVector, int startIndex, int endIndex, float threshold)
+	std::vector<p2t::Point> PixelRigidBody::SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold)
 	{
 		float maxDist = 0.0f;
 		int maxIndex = 0;
@@ -225,7 +225,7 @@ namespace Pyxis
 			return result;
 		}
 
-		auto endResult = std::vector<glm::ivec2>();
+		auto endResult = std::vector<p2t::Point>();
 		endResult.push_back(contourVector[startIndex]);
 		endResult.push_back(contourVector[endIndex]);
 		PX_TRACE("Removed Points");

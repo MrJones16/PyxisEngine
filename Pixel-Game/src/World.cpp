@@ -6,6 +6,7 @@
 
 #include <tinyxml2/tinyxml2.h>
 #include <box2d/b2_math.h>
+#include <poly2tri/poly2tri.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis
@@ -25,7 +26,7 @@ namespace Pyxis
 		//triangulation algorithm "dockless pecker" for creating triangle shapes for the body
 		//link
 
-		b2BodyDef groundBodyDef;
+		/*b2BodyDef groundBodyDef;
 		groundBodyDef.position.Set(0, -5.0f);
 
 		b2Body* groundBody = m_Box2DWorld->CreateBody(&groundBodyDef);
@@ -53,7 +54,7 @@ namespace Pyxis
 		fixtureDef.density = 1.0f;
 		fixtureDef.friction = 0.3f;
 
-		body->CreateFixture(&fixtureDef);
+		body->CreateFixture(&fixtureDef);*/
 
 		if (!LoadElementData())
 		{
@@ -72,17 +73,19 @@ namespace Pyxis
 		m_CaveNoise = FastNoiseLite(m_WorldSeed);
 		//m_HeightNoise.SetFrequency(0.1f);
 
-		AddChunk({ 0,0 });
+		/*AddChunk({ 0,0 });
 		GetChunk({ 0,0 })->Clear();
 		AddChunk({ 0,-1 });
 		GetChunk({ 0,-1 })->Clear();
 		AddChunk({ -1,0 });
 		GetChunk({ -1,0 })->Clear();
 		AddChunk({ -1,-1 });
-		GetChunk({ -1,-1 })->Clear();
-		/*AddChunk({ 0,-1 });
+		GetChunk({ -1,-1 })->Clear();*/
+
+		AddChunk({ 0,0 });
+		AddChunk({ 0,-1 });
 		AddChunk({ -1,-1 });
-		AddChunk({ -1,0 });*/
+		AddChunk({ -1,0 });
 	}
 
 	bool World::LoadElementData()
@@ -751,7 +754,8 @@ namespace Pyxis
 		//pull pixel bodies out of the simulation
 		for each (auto body in m_PixelBodies)
 		{
-			glm::ivec2 centerPixelWorld = { body->m_B2Body->GetPosition().x * 10, body->m_B2Body->GetPosition().y * 10 };
+			if (body->m_B2Body->GetType() == b2_staticBody) continue;
+			glm::ivec2 centerPixelWorld = { body->m_B2Body->GetPosition().x * PPU, body->m_B2Body->GetPosition().y * PPU };
 			//auto skewMatrix = glm::mat2x2(1,0,1,1);
 			//glm::mat2x2 rotationMatrix = 
 
@@ -829,7 +833,7 @@ namespace Pyxis
 		//put pixel bodies back into the simulation, and solve collisions
 		for each (auto body in m_PixelBodies)
 		{
-			glm::ivec2 centerPixelWorld = { body->m_B2Body->GetPosition().x * 10, body->m_B2Body->GetPosition().y * 10 };
+			glm::ivec2 centerPixelWorld = { body->m_B2Body->GetPosition().x * PPU, body->m_B2Body->GetPosition().y * PPU };
 			//auto skewMatrix = glm::mat2x2(1,0,1,1);
 			//glm::mat2x2 rotationMatrix = 
 
@@ -886,9 +890,13 @@ namespace Pyxis
 					
 					//pixel pos is the pixel at the center of the array, so lets use it
 					//the new position of the element is the skewed position + center offsef
-					glm::ivec2 worldPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+					glm::ivec2 worldPixelPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
 					//set the world element from the array at the found position
-					SetElement(worldPos, element);
+					auto index = PixelToIndex(worldPixelPos);
+					auto chunk = GetChunk(PixelToChunk(worldPixelPos));
+					UpdateChunkDirtyRect(index.x, index.y, chunk);
+					chunk->SetElement(index.x, index.y, element);
+					//SetElement(worldPixelPos, element);
 					//PX_TRACE("setting at position: ({0},{1}) to non-stone ", worldPos.x, worldPos.y);
 				}
 			}
@@ -2337,8 +2345,8 @@ namespace Pyxis
 		b2BodyDef pixelBodyDef;
 		//TODO
 		
-		//for the scaling of the box world and pixel bodies, every 10 pixels is 1 unit in the world space
-		pixelBodyDef.position = { (float)(body->m_Origin.x + min.x) / 10, (float)(body->m_Origin.y + min.y) / 10 };
+		//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
+		pixelBodyDef.position = { (float)(body->m_Origin.x + min.x) / PPU, (float)(body->m_Origin.y + min.y) / PPU };
 		pixelBodyDef.type = type;
 		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
 
@@ -2354,23 +2362,35 @@ namespace Pyxis
 		body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
 		//auto simplified = body->SimplifyPoints(contour);
 
+		//run triangulation algorithm to create the needed triangles/fixtures
+		std::vector<p2t::Point*> polyLine;
+		for each (auto point in body->m_ContourVector)
+		{
+			polyLine.push_back(new p2t::Point(point));
+		}
 
+		p2t::CDT* cdt = new p2t::CDT(polyLine);
+		cdt->Triangulate();
+		auto triangles = cdt->GetTriangles();
+
+		for each (auto triangle in triangles)
+		{
+			b2PolygonShape triangleShape;
+			b2Vec2 points[3] = {
+				{(float)((triangle->GetPoint(0)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(0)->y - body->m_Origin.y) / PPU)},
+				{(float)((triangle->GetPoint(1)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(1)->y - body->m_Origin.y) / PPU)},
+				{(float)((triangle->GetPoint(2)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(2)->y - body->m_Origin.y) / PPU)}
+			};
+			triangleShape.Set(points, 3);
+			b2FixtureDef fixtureDef;
+			fixtureDef.density = 1;
+			fixtureDef.friction = 0.3f;
+			fixtureDef.shape = &triangleShape;
+			body->m_B2Body->CreateFixture(&fixtureDef);
+		}
 		//create each of the triangles to comprise the body, each being a fixture
-		b2PolygonShape triangleShape;
-		b2Vec2 points[3] = {
-			{-0.5f, 0},
-			{0.5f, 0},
-			{0, 0.5f}
-		};
-		triangleShape.Set(points, 3);
-
-
-
-		b2FixtureDef fixtureDef;
-		fixtureDef.density = 1;
-		fixtureDef.friction = 0.3f;
-		fixtureDef.shape = &triangleShape;
-		body->m_B2Body->CreateFixture(&fixtureDef);
+		
+		
 		m_PixelBodies.push_back(body);
 		
 	}
@@ -2387,54 +2407,55 @@ namespace Pyxis
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
 		}
 
-		float pixelSize = (1.0f / CHUNKSIZE);
-
-		for each (auto pixelBody in m_PixelBodies)
+		//float pixelSize = (1.0f / CHUNKSIZE);
+		bool debugDraw = false;
+		if (debugDraw)
 		{
-			for (int i = 0; i < pixelBody->m_ContourVector.size() - 1; i++)
+			for each (auto pixelBody in m_PixelBodies)
 			{
-				glm::vec2 worldPos = { (pixelBody->m_B2Body->GetPosition().x * 10) / CHUNKSIZE, (pixelBody->m_B2Body->GetPosition().y * 10) / CHUNKSIZE };
-				worldPos.x -= ((pixelBody->m_Width / 2.0f) / (float)CHUNKSIZE);// -(1.0f / CHUNKSIZE);
-				worldPos.y -= ((pixelBody->m_Height / 2.0f) / (float)CHUNKSIZE) - (1.5f * pixelSize);
-				glm::vec2 start = ((glm::vec2)(pixelBody->m_ContourVector[i]) / 512.0f) + worldPos;
-				glm::vec2 end = ((glm::vec2)(pixelBody->m_ContourVector[i + 1]) / 512.0f) + worldPos;
-				Renderer2D::DrawLine(start, end, { 0,1,0,1 });
-			}
-		}
-
-		auto count = m_Box2DWorld->GetBodyCount();
-		for (auto body = m_Box2DWorld->GetBodyList(); body != nullptr; body = body->GetNext())
-		{
-			auto& T = body->GetTransform();
-			for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
-			{
-				auto shape = (b2PolygonShape*)(fixture->GetShape());
-				for (int i = 0; i < shape->m_count - 1; i++)
+				for (int i = 0; i < pixelBody->m_ContourVector.size() - 1; i++)
 				{
-					auto v = shape->m_vertices[i];
+					glm::ivec2 pixelPos = { pixelBody->m_B2Body->GetPosition().x * PPU , pixelBody->m_B2Body->GetPosition().y * PPU };
+					pixelPos -= pixelBody->m_Origin;
+					pixelPos.y += 1;
+					glm::vec2 worldPos = { pixelPos.x / (float)CHUNKSIZE, pixelPos.y / (float)CHUNKSIZE };
+					glm::vec2 start = (glm::vec2(pixelBody->m_ContourVector[i].x, pixelBody->m_ContourVector[i].y) / 512.0f) + worldPos;
+					glm::vec2 end = (glm::vec2(pixelBody->m_ContourVector[i + 1].x, pixelBody->m_ContourVector[i + 1].y) / 512.0f) + worldPos;
+					Renderer2D::DrawLine(start, end, { 0,1,0,1 });
+				}
+			}
+
+			auto count = m_Box2DWorld->GetBodyCount();
+			for (auto body = m_Box2DWorld->GetBodyList(); body != nullptr; body = body->GetNext())
+			{
+				auto& T = body->GetTransform();
+				for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
+				{
+					auto shape = (b2PolygonShape*)(fixture->GetShape());
+					for (int i = 0; i < shape->m_count - 1; i++)
+					{
+						auto v = shape->m_vertices[i];
+						float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
+						float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
+
+						auto e = shape->m_vertices[i + 1];
+						float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
+						float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
+
+						Renderer2D::DrawLine({ x1, y1 }, { x2, y2 });
+					}
+					//draw the last line to connect the shape
+					auto v = shape->m_vertices[shape->m_count - 1];
 					float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
 					float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
 
-					auto e = shape->m_vertices[i + 1];
+					auto e = shape->m_vertices[0];
 					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
 
 					Renderer2D::DrawLine({ x1, y1 }, { x2, y2 });
 				}
-				//draw the last line to connect the shape
-				auto v = shape->m_vertices[shape->m_count - 1];
-				float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
-				float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
-
-				auto e = shape->m_vertices[0];
-				float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
-				float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-
-				Renderer2D::DrawLine({ x1, y1 }, { x2, y2 });
 			}
-			
-
-			//Renderer2D::DrawQuad(glm::vec2(T.p.x, T.p.y), { 1,1 }, { 1,1,1,1 });
 		}
 		
 	}

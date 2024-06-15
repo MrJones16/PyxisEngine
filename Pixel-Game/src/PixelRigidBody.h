@@ -6,6 +6,7 @@
 #include <box2d/b2_fixture.h>
 #include <box2d/b2_polygon_shape.h>
 #include <box2d/b2_math.h>
+#include <poly2tri/poly2tri.h>
 
 namespace Pyxis
 {
@@ -17,14 +18,14 @@ namespace Pyxis
 
 		~PixelRigidBody();
 
-		std::vector<glm::ivec2> GetContourPoints();
+		std::vector<p2t::Point> GetContourPoints();
 
-		std::vector<glm::ivec2> PixelRigidBody::SimplifyPoints(const std::vector<glm::ivec2>& contourVector, int startIndex, int endIndex, float threshold);
+		std::vector<p2t::Point> PixelRigidBody::SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold);
 
 		int GetMarchingSquareCase(glm::ivec2 position);
 
 		Element* m_ElementArray;
-		std::vector<glm::ivec2> m_ContourVector;
+		std::vector<p2t::Point> m_ContourVector;
 		int m_Width;
 		int m_Height;
 		glm::ivec2 m_Origin;
