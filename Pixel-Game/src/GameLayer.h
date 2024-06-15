@@ -71,5 +71,6 @@ namespace Pyxis
 		//testing / game
 		bool m_SimulationRunning = false;
 		bool m_Hovering = false;
+		float m_DouglasThreshold = 1.0f;
 	};
 }

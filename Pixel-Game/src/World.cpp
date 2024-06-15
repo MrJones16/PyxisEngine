@@ -2387,12 +2387,17 @@ namespace Pyxis
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
 		}
 
+		float pixelSize = (1.0f / CHUNKSIZE);
+
 		for each (auto pixelBody in m_PixelBodies)
 		{
 			for (int i = 0; i < pixelBody->m_ContourVector.size() - 1; i++)
 			{
-				glm::vec2 start = pixelBody->m_ContourVector[i];
-				glm::vec2 end = pixelBody->m_ContourVector[i + 1];
+				glm::vec2 worldPos = { (pixelBody->m_B2Body->GetPosition().x * 10) / CHUNKSIZE, (pixelBody->m_B2Body->GetPosition().y * 10) / CHUNKSIZE };
+				worldPos.x -= ((pixelBody->m_Width / 2.0f) / (float)CHUNKSIZE);// -(1.0f / CHUNKSIZE);
+				worldPos.y -= ((pixelBody->m_Height / 2.0f) / (float)CHUNKSIZE) - (1.5f * pixelSize);
+				glm::vec2 start = ((glm::vec2)(pixelBody->m_ContourVector[i]) / 512.0f) + worldPos;
+				glm::vec2 end = ((glm::vec2)(pixelBody->m_ContourVector[i + 1]) / 512.0f) + worldPos;
 				Renderer2D::DrawLine(start, end, { 0,1,0,1 });
 			}
 		}

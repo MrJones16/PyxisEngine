@@ -295,6 +295,17 @@ namespace Pyxis
 
 					}
 				}
+
+				ImGui::SliderFloat("Douglas-Peucker Threshold", &m_DouglasThreshold, 0, 2);
+
+				if (ImGui::Button("UpdateOutline"))
+				{
+					for each (auto body in m_World->m_PixelBodies)
+					{
+						auto contour = body->GetContourPoints();
+						body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, m_DouglasThreshold);
+					}
+				}
 				
 				
 				ImGui::TreePop();
