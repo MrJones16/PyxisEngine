@@ -8,21 +8,21 @@ workspace "Pyxis"
 		"Dist"
 	}
 
-	
-
 	startproject "Pixel-Game"
 
 	outputdir = "%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}"
 
 	IncludeDir = {}
-	IncludeDir["GLFW"] = "Pyxis/vendor/GLFW/include"
-	IncludeDir["GLAD"] = "Pyxis/vendor/GLAD/include"
-	IncludeDir["ImGui"] = "Pyxis/vendor/ImGui"
-	IncludeDir["glm"] = "Pyxis/vendor/glm"
+	IncludeDir["spdlog"]	= "Pyxis/vendor/spdlog/include"
+	IncludeDir["asio"]		= "Pyxis/vendor/asio/asio/include"
+	IncludeDir["GLFW"]		= "Pyxis/vendor/GLFW/include"
+	IncludeDir["GLAD"]		= "Pyxis/vendor/GLAD/include"
+	IncludeDir["ImGui"]		= "Pyxis/vendor/ImGui"
+	IncludeDir["glm"]		= "Pyxis/vendor/glm"
 	IncludeDir["stb_image"] = "Pyxis/vendor/stb_image"
-	IncludeDir["box2d"] = "Pyxis/vendor/box2d/include"
-	IncludeDir["tinyxml2"] = "Pyxis/vendor/tinyxml2"
-	IncludeDir["poly2tri"] = "Pyxis/vendor/poly2tri"
+	IncludeDir["box2d"]		= "Pyxis/vendor/box2d/include"
+	IncludeDir["tinyxml2"]	= "Pyxis/vendor/tinyxml2"
+	IncludeDir["poly2tri"]	= "Pyxis/vendor/poly2tri"
 
 
 	group "Dependencies"
@@ -53,6 +53,7 @@ project "Pyxis"
 		"%{prj.name}/src/**.h",
 		"%{prj.name}/src/**.hpp",
 		"%{prj.name}/src/**.cpp",
+		"%{prj.name}/vendor/asio/asio/include/**.hpp",
 		"%{prj.name}/vendor/stb_image/**.h",
 		"%{prj.name}/vendor/stb_image/**.cpp",
 		"%{prj.name}/vendor/glm/glm/**.hpp",
@@ -72,7 +73,8 @@ project "Pyxis"
 	includedirs
 	{
 		"%{prj.name}/src",
-		"%{prj.name}/vendor/spdlog/include",
+		"%{IncludeDir.spdlog}",
+		"%{IncludeDir.asio}",
 		"%{IncludeDir.GLFW}",
 		"%{IncludeDir.GLAD}",
 		"%{IncludeDir.ImGui}",
@@ -98,6 +100,8 @@ project "Pyxis"
 
 		defines
 		{
+			"ASIO_STANDALONE",
+			"_WIN32_WINNT=0x0A00",
 			"PX_PLATFORM_WINDOWS",
 			"PX_BUILD_DLL",
 			"GLFW_INCLUDE_NONE"

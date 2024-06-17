@@ -17,3 +17,6 @@
 [submodule "Pyxis/vendor/box2d"]
 	path = Pyxis/vendor/box2d
 	url = https://github.com/erincatto/box2d
+[submodule "Pyxis/vendor/asio"]
+	path = Pyxis/vendor/asio
+	url = https://github.com/chriskohlhoff/asio

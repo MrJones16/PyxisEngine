@@ -29,6 +29,9 @@
 
 #include "Pyxis/Renderer/Camera.h"
 
+//---------- Networking ----------//
+
+#include "Pyxis/Network/Network.h"
 
 //---------- Game ----------//
 #include "Pyxis/Game/Scene.h"

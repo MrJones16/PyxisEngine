@@ -6,7 +6,6 @@
 #include <Platform/OpenGL/OpenGLShader.h>
 #include <chrono>
 
-
 namespace Pyxis
 {
 
@@ -55,7 +54,7 @@ namespace Pyxis
 		: Layer("GameLayer"),
 		m_OrthographicCameraController(2, 1 / 1, -100, 100)
 	{
-
+		
 	}
 
 	GameLayer::~GameLayer()

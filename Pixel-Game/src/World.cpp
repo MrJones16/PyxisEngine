@@ -2303,13 +2303,8 @@ namespace Pyxis
 	Element& World::GetElement(const glm::ivec2& pixelPos)
 	{
 		auto chunkPos = PixelToChunk(pixelPos);
-		auto it = m_Chunks.find(chunkPos);
-		if (it != m_Chunks.end())
-		{
-			auto index = PixelToIndex(pixelPos);
-			return it->second->m_Elements[index.x + index.y * CHUNKSIZE];
-		}
-		else return Element();
+		auto index = PixelToIndex(pixelPos);
+		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
 	}
 
 	void World::CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max, b2BodyType type)
