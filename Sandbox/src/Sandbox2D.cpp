@@ -44,12 +44,28 @@ void Sandbox2D::OnUpdate(Pyxis::Timestep ts)
 			auto msg = m_ClientInterface.Incoming().pop_front().msg;
 			switch (msg.header.id)
 			{
+			case Pyxis::Network::CustomMessageTypes::ServerAccept:
+			{
+				//server has responded to a ping request
+				PX_TRACE("Server Accepted Connection");
+				
+			}
+			break;
 			case Pyxis::Network::CustomMessageTypes::ServerPing:
+			{
 				std::chrono::system_clock::time_point timeNow = std::chrono::system_clock::now();
 				std::chrono::system_clock::time_point timeThen;
 				msg >> timeThen;
 				PX_TRACE("Ping: {0}", std::chrono::duration<double>(timeNow - timeThen).count());
-				break;
+			}
+			break;
+			case Pyxis::Network::CustomMessageTypes::ServerMessage:
+			{
+				uint32_t clientID;
+				msg >> clientID;
+				PX_TRACE("Hello from [{0}]", clientID);
+			}
+			break;
 			}
 		}
 	}
@@ -102,6 +118,11 @@ bool Sandbox2D::OnKeyPressedEvent(Pyxis::KeyPressedEvent& event) {
 	if (event.GetKeyCode() == PX_KEY_P)
 	{
 		m_ClientInterface.PingServer();
+	}
+	if (event.GetKeyCode() == PX_KEY_M)
+	{
+		m_ClientInterface.MessageAll();
+
 	}
 	//m_OrthographicCameraController.SetAspect((float)event.GetHeight() / (float)event.GetWidth());
 	//Pyxis::Renderer::OnWindowResize(event.GetWidth(), event.GetHeight());

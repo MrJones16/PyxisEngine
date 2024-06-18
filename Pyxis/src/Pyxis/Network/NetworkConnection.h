@@ -8,6 +8,11 @@ namespace Pyxis
 {
 	namespace Network
 	{
+		//forward declare server pointer
+
+		template<typename T>
+		class ServerInterface;
+
 		template<typename T>
 		class Connection : public std::enable_shared_from_this<Connection<T>>
 		{
@@ -20,6 +25,21 @@ namespace Pyxis
 				: m_AsioContext(asioContext), m_Socket(std::move(socket)), m_QueueMessagesIn(qIn)
 			{
 				m_OwnerType = parent;
+				if (m_OwnerType == Owner::server)
+				{
+					//connection is Server -> Client, construct random data for the client
+					// to transform and send back for validation
+					m_HandshakeOut = uint64_t(std::chrono::system_clock::now().time_since_epoch().count());
+
+					//precalc the result for checking when the client responds
+					m_HandshakeCheck = scramble(m_HandshakeOut);
+				}
+				else
+				{
+					//owner is Clienter -> Server, so we have nothing to define
+					m_HandshakeIn = 0;
+					m_HandshakeOut = 0;
+				}
 			}
 
 			~Connection() 
@@ -34,14 +54,23 @@ namespace Pyxis
 
 		public:
 
-			inline void ConnectToClient(uint32_t uid = 0)
+			inline void ConnectToClient(Pyxis::Network::ServerInterface<T>* server, uint32_t uid = 0)
 			{
 				if (m_OwnerType == Owner::server)
 				{
 					if (m_Socket.is_open())
 					{
 						m_ID = uid;
-						ReadHeader();
+						//was: ReadHeader();
+
+						//A client has attempted to connect to the server, but we need
+						//the client to first valdate itself, so first write out the
+						//handshake data to be validated
+						WriteValidation();
+
+						//next, issue a tast to sit and wait asynchronously for
+						//precisely the validation data send back from client
+						ReadValidation(server);
 					}
 				}
 			}
@@ -57,7 +86,7 @@ namespace Pyxis
 						{
 							if (!ec)
 							{
-								ReadHeader();
+								ReadValidation();
 							}
 							else
 							{
@@ -199,6 +228,76 @@ namespace Pyxis
 				ReadHeader();
 			}
 
+			inline void WriteValidation()
+			{
+				asio::async_write(m_Socket, asio::buffer(&m_HandshakeOut, sizeof(uint64_t)),
+					[this](std::error_code ec, std::size_t length)
+					{
+						if (!ec)
+						{
+							//validation data sent, clients should sit and wait for a response
+							if (m_OwnerType == Owner::client)
+							{
+								ReadHeader();
+							}
+							//no else needed, because the next command
+							//for server is handled in ConnectToClient
+						}
+						else
+						{
+							m_Socket.close();
+						}
+					});
+			}
+
+			inline void ReadValidation(Pyxis::Network::ServerInterface<T>* server = nullptr)
+			{
+				asio::async_read(m_Socket, asio::buffer(&m_HandshakeIn, sizeof(uint64_t)),
+					[this, server](std::error_code ec, std::size_t length)
+					{
+						if (!ec)
+						{
+							if (m_OwnerType == Owner::server)
+							{
+								if (m_HandshakeIn == m_HandshakeCheck)
+								{
+									PX_CORE_INFO("Client Validated");
+									server->OnClientValidated(this->shared_from_this());
+
+									//now sit and recieve data
+									ReadHeader();
+								}
+								else
+								{
+									PX_CORE_WARN("Client Disconnected (Failed Validation)");
+									m_Socket.close();
+								}
+							}
+							else
+							{
+								//connection is a client, so solve puzzle
+								m_HandshakeOut = scramble(m_HandshakeIn);
+
+								//write the validation
+								WriteValidation();
+							}
+						}
+						else
+						{
+							PX_CORE_ERROR("[{0}] Read Header Fail: {1}", m_ID, ec.message());
+							m_Socket.close();
+						}
+					});
+			}
+
+			inline uint64_t scramble(uint64_t input)
+			{
+				uint64_t out = input * 0x000000012167F051;
+				out = out ^ 0xFEEDDADADEADBEEF;
+				out = (out & 0xF0F0F0F0F0F0F0F0) >> 3 | (out & 0x0F0F0F0F0F0F0F0F) << 5;
+				return out ^ 0xDEADABBABEEFFACE;
+			}
+
 		protected:
 			//each connection has a unique socket to a remote
 			asio::ip::tcp::socket m_Socket;
@@ -221,6 +320,11 @@ namespace Pyxis
 
 			//the unique identifier of the connection
 			uint32_t m_ID = 0;
+
+			//handshake validation
+			uint64_t m_HandshakeOut = 0;
+			uint64_t m_HandshakeIn = 0;
+			uint64_t m_HandshakeCheck = 0;
 
 		};
 	}

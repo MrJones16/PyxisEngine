@@ -35,7 +35,7 @@ namespace Pyxis
 
 
 		//server update
-		m_ServerInterface.Update();
+		m_ServerInterface.Update(-1, true);
 
 
 		//m_FrameBuffer->Unbind()

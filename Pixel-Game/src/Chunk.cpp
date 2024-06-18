@@ -1,5 +1,4 @@
 #include "Chunk.h"
-#include "World.h"
 #include "Pyxis/Renderer/Renderer2D.h"
 
 namespace Pyxis

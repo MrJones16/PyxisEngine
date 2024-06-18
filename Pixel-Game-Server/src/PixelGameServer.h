@@ -16,11 +16,16 @@ namespace Pyxis
 	protected:
 		bool OnClientConnect(std::shared_ptr<Pyxis::Network::Connection<Network::CustomMessageTypes>> client) override
 		{
+			Network::Message<Network::CustomMessageTypes> msg;
+			msg.header.id = Network::CustomMessageTypes::ServerAccept;
+			client->Send(msg);
+
 			return true;
 		}
 
 		void OnClientDisconnect(std::shared_ptr<Pyxis::Network::Connection<Network::CustomMessageTypes>> client) override
 		{
+			PX_TRACE("Removing Client [{0}]", client->GetID());
 			return;
 		}
 
@@ -29,12 +34,21 @@ namespace Pyxis
 			switch (msg.header.id)
 			{
 			case Network::CustomMessageTypes::ServerPing:
+			{
 				PX_TRACE("[{0}]: Server Ping", client->GetID());
 				//simply bounce the message back
 				client->Send(msg);
+			}
 				break;
-			default:
-				break;
+			case Network::CustomMessageTypes::MessageAll:
+			{
+				PX_TRACE("[{0}]: Message All", client->GetID());
+				Network::Message<Network::CustomMessageTypes> msg;
+				msg.header.id = Network::CustomMessageTypes::ServerMessage;
+				msg << client->GetID();
+				MessageAllClients(msg, client);
+			}
+			break;
 			}
 			return;
 		}

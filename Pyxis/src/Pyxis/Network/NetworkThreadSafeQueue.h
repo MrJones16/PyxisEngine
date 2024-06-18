@@ -31,12 +31,20 @@ namespace Pyxis
 			{
 				std::scoped_lock lock(muxQueue);
 				deqQueue.emplace_back(std::move(item));
+
+				//signal the wait that there has been a message
+				//std::unique_lock<std::mutex> ul(muxBlocking);
+				cvBlocking.notify_one();
 			}
 
 			inline void push_front(const T& item)
 			{
 				std::scoped_lock lock(muxQueue);
 				deqQueue.emplace_front(std::move(item));
+
+				//signal the wait that there has been a message
+				//std::unique_lock<std::mutex> ul(muxBlocking);
+				cvBlocking.notify_one();
 			}
 
 			//returns true if Queue has no items
@@ -75,9 +83,21 @@ namespace Pyxis
 				return t;
 			}
 
+			inline void wait()
+			{
+				std::unique_lock<std::mutex> ul(muxBlocking);
+				while (empty())
+				{
+					cvBlocking.wait(ul);
+				}
+			}
+
 		protected:
 			std::mutex muxQueue;
 			std::deque<T> deqQueue;
+
+			std::condition_variable cvBlocking;
+			std::mutex muxBlocking;
 		};
 	}
 }

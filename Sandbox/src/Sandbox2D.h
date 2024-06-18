@@ -4,8 +4,6 @@
 #include <Pyxis/Network/Network.h>
 #include "Pyxis/Core/OrthographicCameraController.h"
 
-
-
 class SandboxClient : public Pyxis::Network::ClientInterface<Pyxis::Network::CustomMessageTypes>
 {
 public:
@@ -15,6 +13,12 @@ public:
 		msg.header.id = Pyxis::Network::CustomMessageTypes::ServerPing;
 		std::chrono::system_clock::time_point timeNow = std::chrono::system_clock::now();
 		msg << timeNow;
+		m_Connection->Send(msg);
+	}
+	void MessageAll()
+	{
+		Pyxis::Network::Message<Pyxis::Network::CustomMessageTypes> msg;
+		msg.header.id = Pyxis::Network::CustomMessageTypes::MessageAll;
 		m_Connection->Send(msg);
 	}
 };

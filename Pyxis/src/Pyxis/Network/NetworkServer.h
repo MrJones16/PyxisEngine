@@ -79,7 +79,7 @@ namespace Pyxis
 								//connection allowed, so add to container of new connections
 								m_DeqConnections.push_back(std::move(newConn));
 
-								m_DeqConnections.back()->ConnectToClient(nIDCounter++);
+								m_DeqConnections.back()->ConnectToClient(this, nIDCounter++);
 
 								PX_CORE_INFO("[{0}] Connection Approved", m_DeqConnections.back()->GetID());
 							}
@@ -123,9 +123,10 @@ namespace Pyxis
 				//using a bool to not change the deq while iterating
 				for (auto& client : m_DeqConnections)
 				{
-					if (client && client->IsConnected() && client != ignoreClient)
+					if (client && client->IsConnected())
 					{
-						client->Send(msg);
+						if (client != ignoreClient)
+							client->Send(msg);
 					}
 					else
 					{
@@ -134,17 +135,18 @@ namespace Pyxis
 						InvalidClientExists = true;
 					}
 				}
-
+				 
 				if (InvalidClientExists)
 				{
 					m_DeqConnections.erase(
-						std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), nullptr), m_DeqConnections)
+						std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), nullptr), m_DeqConnections.end());
 				}
 
 			}
 
-			inline void Update(size_t maxMessages = -1)
+			inline void Update(size_t maxMessages = -1, bool waitForMessages = false)
 			{
+				if (waitForMessages) m_QueueMessagesIn.wait();
 				size_t messageCount = 0;
 				while (messageCount < maxMessages && !m_QueueMessagesIn.empty())
 				{
@@ -173,6 +175,13 @@ namespace Pyxis
 
 			//called when a message arrives
 			virtual void OnMessage(std::shared_ptr<Connection<T>> client, Message<T>& msg)
+			{
+
+			}
+
+		public:
+
+			virtual void OnClientValidated(std::shared_ptr<Connection<T>> client)
 			{
 
 			}
