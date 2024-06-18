@@ -150,12 +150,18 @@ project "Sandbox"
 		"Pyxis/vendor/spdlog/include",
 		"Pyxis/src",
 		"Pyxis/vendor",
-		"%{IncludeDir.glm}"
+		"%{IncludeDir.glm}",
+		"%{IncludeDir.asio}",
 	}
 
 	links
 	{
 		"Pyxis"
+	}
+
+	postbuildcommands 
+	{
+		"{COPYDIR} assets ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}/assets"
 	}
 
 	filter "system:windows"
@@ -219,6 +225,11 @@ project "Pyxis-Editor"
 		"Pyxis"
 	}
 
+	postbuildcommands 
+	{
+		"{COPYDIR} assets ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}/assets"
+	}
+
 	filter "system:windows"
 		systemversion "latest"
 
@@ -266,12 +277,18 @@ project "Pixel-Game"
 		"Pyxis/src",
 		"Pyxis/vendor",
 		"%{IncludeDir.glm}",
-		"%{IncludeDir.box2d}"
+		"%{IncludeDir.box2d}",
+		"%{IncludeDir.asio}",
 	}
 
 	links
 	{
 		"Pyxis"
+	}
+
+	postbuildcommands 
+	{
+		"{COPYDIR} assets ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}/assets"
 	}
 
 	filter "system:windows"
@@ -297,7 +314,67 @@ project "Pixel-Game"
 		defines "PX_DIST"
 		runtime "Release"
 		optimize "on"
-		postbuildcommands 
+
+
+project "Pixel-Game-Server"
+	location "Pixel-Game-Server"
+	kind "ConsoleApp"
+	language "C++"
+	cppdialect "C++17"
+	staticruntime "on"
+
+	targetdir ("bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
+	objdir ("bin-int/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}")
+
+	files 
+	{
+		"%{prj.name}/src/**.h",
+		"%{prj.name}/src/**.hpp",
+		"%{prj.name}/src/**.cpp"
+	}
+
+	includedirs
+	{
+		"Pyxis/vendor/spdlog/include",
+		"Pyxis/src",
+		"Pyxis/vendor",
+		"%{IncludeDir.glm}",
+		"%{IncludeDir.box2d}",
+		"%{IncludeDir.asio}",
+	}
+
+	links
+	{
+		"Pyxis",
+		"Pixel-Game"
+	}
+
+	postbuildcommands 
+	{
+		"{COPYDIR} assets ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}/assets"
+	}
+
+	filter "system:windows"
+		systemversion "latest"
+
+		defines
 		{
-			"{COPYDIR} assets ../bin/%{cfg.buildcfg}-%{cfg.system}-%{cfg.architecture}/%{prj.name}/assets"
+			"PX_PLATFORM_WINDOWS"
 		}
+
+
+	filter "configurations:Debug"
+		defines "PX_DEBUG"
+		runtime "Debug"
+		symbols "on"
+
+	filter "configurations:Release"
+		defines "PX_RELEASE"
+		runtime "Release"
+		optimize "on"
+
+	filter "configurations:Dist"
+		defines "PX_DIST"
+		runtime "Release"
+		optimize "on"
+		

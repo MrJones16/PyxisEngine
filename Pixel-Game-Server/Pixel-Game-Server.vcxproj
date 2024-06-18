@@ -15,10 +15,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{366450AB-22C7-DF4F-CB4C-1806B78EABD2}</ProjectGuid>
+    <ProjectGuid>{128D7902-7EA3-7798-C71A-03BA33704820}</ProjectGuid>
     <IgnoreWarnCompileDuplicatedFilename>true</IgnoreWarnCompileDuplicatedFilename>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>Pyxis-Editor</RootNamespace>
+    <RootNamespace>Pixel-Game-Server</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -55,23 +55,23 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>..\bin\Debug-windows-x86_64\Pyxis-Editor\</OutDir>
-    <IntDir>..\bin-int\Debug-windows-x86_64\Pyxis-Editor\</IntDir>
-    <TargetName>Pyxis-Editor</TargetName>
+    <OutDir>..\bin\Debug-windows-x86_64\Pixel-Game-Server\</OutDir>
+    <IntDir>..\bin-int\Debug-windows-x86_64\Pixel-Game-Server\</IntDir>
+    <TargetName>Pixel-Game-Server</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\bin\Release-windows-x86_64\Pyxis-Editor\</OutDir>
-    <IntDir>..\bin-int\Release-windows-x86_64\Pyxis-Editor\</IntDir>
-    <TargetName>Pyxis-Editor</TargetName>
+    <OutDir>..\bin\Release-windows-x86_64\Pixel-Game-Server\</OutDir>
+    <IntDir>..\bin-int\Release-windows-x86_64\Pixel-Game-Server\</IntDir>
+    <TargetName>Pixel-Game-Server</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Dist|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>..\bin\Dist-windows-x86_64\Pyxis-Editor\</OutDir>
-    <IntDir>..\bin-int\Dist-windows-x86_64\Pyxis-Editor\</IntDir>
-    <TargetName>Pyxis-Editor</TargetName>
+    <OutDir>..\bin\Dist-windows-x86_64\Pixel-Game-Server\</OutDir>
+    <IntDir>..\bin-int\Dist-windows-x86_64\Pixel-Game-Server\</IntDir>
+    <TargetName>Pixel-Game-Server</TargetName>
     <TargetExt>.exe</TargetExt>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -79,7 +79,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PX_PLATFORM_WINDOWS;PX_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -99,7 +99,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PX_PLATFORM_WINDOWS;PX_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -123,7 +123,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PX_PLATFORM_WINDOWS;PX_DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -143,18 +143,18 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\EditorLayer.h" />
-    <ClInclude Include="src\Panels\InspectorPanel.h" />
-    <ClInclude Include="src\Panels\Panel.h" />
-    <ClInclude Include="src\Panels\SceneHierarchyPanel.h" />
+    <ClInclude Include="src\PixelGameServer.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\EditorLayer.cpp" />
-    <ClCompile Include="src\PyxisEditorApp.cpp" />
+    <ClCompile Include="src\PixelGameServer.cpp" />
+    <ClCompile Include="src\PixelGameServerApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pyxis\Pyxis.vcxproj">
       <Project>{C20EEB0D-2E23-13BF-F7A4-B61E63780FF0}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\Pixel-Game\Pixel-Game.vcxproj">
+      <Project>{2E61DF5C-1A19-21AA-8320-FA056FF7BB9A}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

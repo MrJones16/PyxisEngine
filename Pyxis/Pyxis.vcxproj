@@ -177,9 +177,11 @@
     <ClInclude Include="src\Pyxis\Game\Scene.h" />
     <ClInclude Include="src\Pyxis\ImGui\ImGuiLayer.h" />
     <ClInclude Include="src\Pyxis\Network\Network.h" />
+    <ClInclude Include="src\Pyxis\Network\NetworkClient.h" />
     <ClInclude Include="src\Pyxis\Network\NetworkCommon.h" />
     <ClInclude Include="src\Pyxis\Network\NetworkConnection.h" />
     <ClInclude Include="src\Pyxis\Network\NetworkMessage.h" />
+    <ClInclude Include="src\Pyxis\Network\NetworkServer.h" />
     <ClInclude Include="src\Pyxis\Network\NetworkThreadSafeQueue.h" />
     <ClInclude Include="src\Pyxis\Renderer\Buffer.h" />
     <ClInclude Include="src\Pyxis\Renderer\Camera.h" />
@@ -1185,8 +1187,10 @@
     <ClCompile Include="src\Pyxis\ImGui\ImGuiBuild.cpp" />
     <ClCompile Include="src\Pyxis\ImGui\ImGuiLayer.cpp" />
     <ClCompile Include="src\Pyxis\Network\Network.cpp" />
+    <ClCompile Include="src\Pyxis\Network\NetworkClient.cpp" />
     <ClCompile Include="src\Pyxis\Network\NetworkCommon.cpp" />
     <ClCompile Include="src\Pyxis\Network\NetworkConnection.cpp" />
+    <ClCompile Include="src\Pyxis\Network\NetworkServer.cpp" />
     <ClCompile Include="src\Pyxis\Network\NetworkThreadSafeQueue.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Buffer.cpp" />
     <ClCompile Include="src\Pyxis\Renderer\Camera.cpp" />

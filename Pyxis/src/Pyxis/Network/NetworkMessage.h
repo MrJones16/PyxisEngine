@@ -9,7 +9,7 @@ namespace Pyxis
 	namespace Network
 	{
 		template<typename T>
-		struct Message_Header
+		struct MessageHeader
 		{
 			T id{};
 			uint32_t size = 0;
@@ -18,7 +18,7 @@ namespace Pyxis
 		template<typename T>
 		struct Message
 		{
-			Message_Header<T> header{};
+			MessageHeader<T> header{};
 			std::vector<uint8_t> body;
 
 			/// <summary>
@@ -26,7 +26,7 @@ namespace Pyxis
 			/// </summary>
 			size_t size() const
 			{
-				return sizeof(Message_Header<T>) + body.size();
+				return body.size();
 			}
 
 			/// <summary>
@@ -54,7 +54,7 @@ namespace Pyxis
 				msg.body.resize(msg.body.size() + sizeof(DataType));
 
 				//physically copy the data into the newly allocated vector space
-				std::memcpy(msg.body + i, &data, sizeof(DataType));
+				std::memcpy(msg.body.data() + i, &data, sizeof(DataType));
 
 				//recalculate the message size
 				msg.header.size = msg.size();
@@ -87,10 +87,13 @@ namespace Pyxis
 
 		};
 
+		template <typename T>
+		class Connection;
+
 		template<typename T>
 		struct OwnedMessage
 		{
-			Ref<Connection<T>> remote = nullptr;
+			std::shared_ptr<Connection<T>> remote = nullptr;
 			Message<T> msg;
 
 			/// <summary>

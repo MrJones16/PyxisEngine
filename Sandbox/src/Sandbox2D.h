@@ -1,7 +1,23 @@
 #pragma once
 
 #include "Pyxis.h"
+#include <Pyxis/Network/Network.h>
 #include "Pyxis/Core/OrthographicCameraController.h"
+
+
+
+class SandboxClient : public Pyxis::Network::ClientInterface<Pyxis::Network::CustomMessageTypes>
+{
+public:
+	void PingServer()
+	{
+		Pyxis::Network::Message<Pyxis::Network::CustomMessageTypes> msg;
+		msg.header.id = Pyxis::Network::CustomMessageTypes::ServerPing;
+		std::chrono::system_clock::time_point timeNow = std::chrono::system_clock::now();
+		msg << timeNow;
+		m_Connection->Send(msg);
+	}
+};
 
 class Sandbox2D : public Pyxis::Layer
 {
@@ -15,28 +31,15 @@ public:
 	virtual void OnUpdate(Pyxis::Timestep ts) override;
 	virtual void OnImGuiRender() override;
 	virtual void OnEvent(Pyxis::Event& e) override;
+	bool OnKeyPressedEvent(Pyxis::KeyPressedEvent& event);
 	bool OnWindowResizeEvent(Pyxis::WindowResizeEvent& event);
+
 private:
 	Pyxis::OrthographicCameraController m_OrthographicCameraController;
 
-	struct ProfileResult
-	{
-		const char* Name;
-		float Time;
-	};
+	//SandboxServer m_ServerInterface;
 
-	std::vector<ProfileResult> m_ProfileResults;
-	std::vector<float> m_ProfileAverageValue;
-	std::vector<float> m_ProfileAverageValueStorage;
-	int m_ProfileAverageCount = 100;
+	SandboxClient m_ClientInterface;
 
-	Pyxis::Ref<Pyxis::FrameBuffer> m_SceneFrameBuffer;
-	Pyxis::Ref<Pyxis::Texture2D> m_TestTexture;
-	Pyxis::Ref<Pyxis::Texture2D> m_SpritesheetTexture;
-	Pyxis::Ref<Pyxis::SubTexture2D> m_SubTextureTest;
 
-	glm::vec4 m_TestColor = { 0.2f, 0.3f, 0.8f , 1.0f };
-	glm::vec3 m_TestPosition = { 0.0f, 0.0f, 0.0f};
-	glm::vec2 m_TestSize = { 1.0f, 1.0f };
-	float m_TestRotation = 0.0f;
 };

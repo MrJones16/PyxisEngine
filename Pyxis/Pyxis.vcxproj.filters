@@ -246,10 +246,19 @@
     <ClInclude Include="src\Pyxis\Network\Network.h">
       <Filter>src\Pyxis\Network</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pyxis\Network\NetworkClient.h">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClInclude>
     <ClInclude Include="src\Pyxis\Network\NetworkCommon.h">
       <Filter>src\Pyxis\Network</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pyxis\Network\NetworkConnection.h">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClInclude>
     <ClInclude Include="src\Pyxis\Network\NetworkMessage.h">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Pyxis\Network\NetworkServer.h">
       <Filter>src\Pyxis\Network</Filter>
     </ClInclude>
     <ClInclude Include="src\Pyxis\Network\NetworkThreadSafeQueue.h">
@@ -3207,7 +3216,6 @@
     <ClInclude Include="vendor\tinyxml2\tinyxml2.h">
       <Filter>vendor\tinyxml2</Filter>
     </ClInclude>
-    <ClInclude Include="src\Pyxis\Network\NetworkConnection.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp">
@@ -3260,6 +3268,24 @@
     </ClCompile>
     <ClCompile Include="src\Pyxis\ImGui\ImGuiLayer.cpp">
       <Filter>src\Pyxis\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Network\Network.cpp">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Network\NetworkClient.cpp">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Network\NetworkCommon.cpp">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Network\NetworkConnection.cpp">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Network\NetworkServer.cpp">
+      <Filter>src\Pyxis\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Pyxis\Network\NetworkThreadSafeQueue.cpp">
+      <Filter>src\Pyxis\Network</Filter>
     </ClCompile>
     <ClCompile Include="src\Pyxis\Renderer\Buffer.cpp">
       <Filter>src\Pyxis\Renderer</Filter>
@@ -3321,9 +3347,5 @@
     <ClCompile Include="vendor\tinyxml2\xmltest.cpp">
       <Filter>vendor\tinyxml2</Filter>
     </ClCompile>
-    <ClCompile Include="src\Pyxis\Network\Network.cpp" />
-    <ClCompile Include="src\Pyxis\Network\NetworkCommon.cpp" />
-    <ClCompile Include="src\Pyxis\Network\NetworkThreadSafeQueue.cpp" />
-    <ClCompile Include="src\Pyxis\Network\NetworkConnection.cpp" />
   </ItemGroup>
 </Project>

@@ -30,13 +30,13 @@ namespace Pyxis
 			inline void push_back(const T& item)
 			{
 				std::scoped_lock lock(muxQueue);
-				return deqQueue.emplace_back(std::move(item));
+				deqQueue.emplace_back(std::move(item));
 			}
 
 			inline void push_front(const T& item)
 			{
 				std::scoped_lock lock(muxQueue);
-				return deqQueue.emplace_front(std::move(item));
+				deqQueue.emplace_front(std::move(item));
 			}
 
 			//returns true if Queue has no items
