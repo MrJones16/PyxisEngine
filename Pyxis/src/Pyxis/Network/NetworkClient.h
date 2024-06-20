@@ -51,7 +51,7 @@ namespace Pyxis
 					PX_CORE_ERROR("Client Exception: {0}", e.what());
 					return false;
 				}
-				return false;
+				return true;
 			}
 
 			// Disconnect from server
@@ -88,6 +88,12 @@ namespace Pyxis
 			ThreadSafeQueue<OwnedMessage<T>>& Incoming()
 			{
 				return m_QueueMessagesIn;
+			}
+
+			//Send a message to the server
+			void Send(const Message<T>& msg)
+			{
+				m_Connection->Send(msg);
 			}
 
 

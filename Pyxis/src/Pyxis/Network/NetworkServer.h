@@ -201,7 +201,7 @@ namespace Pyxis
 			asio::ip::tcp::acceptor m_AsioAcceptor;
 
 			// clients will be identified in the "wider system" via an ID
-			uint32_t nIDCounter = 10000;
+			uint64_t nIDCounter = 10000;
 
 
 		};

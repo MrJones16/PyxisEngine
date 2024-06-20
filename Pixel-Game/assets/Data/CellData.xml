@@ -29,7 +29,7 @@
 	<ElementData
 		name="stone"
 		cell_type="solid"
-		texture="assets/textures/stone_texture.png"
+		texture="textures/stone_texture.png"
 		color="444444FF"
 		conductivity="5"
 		glow="1"
@@ -44,7 +44,7 @@
 	<ElementData
 		name="dirt"
 		cell_type="solid"
-		texture="assets/textures/dirt_texture.png"
+		texture="textures/dirt_texture.png"
 		color="8f563bFF"
 		conductivity="6"
 		glow="1"
@@ -57,7 +57,7 @@
 	<ElementData
 		name="grass"
 		cell_type="solid"
-		texture="assets/textures/grass_texture.png"
+		texture="textures/grass_texture.png"
 		color="54872fFF"
 		conductivity="5"
 		glow="1"
@@ -71,7 +71,7 @@
 		name="wood"
 		cell_type="solid"
 		color="805b2dFF"
-		texture="assets/textures/minecraft_wood_texture.png"
+		texture="textures/minecraft_wood_texture.png"
 		conductivity="10"
 		glow="1"
 		density="10"
@@ -88,10 +88,24 @@
 	</ElementData>
 
 	<ElementData
+		name="flesh"
+		cell_type="movableSolid"
+		color="FFFF99FF"
+		conductivity="1"
+		glow="0"
+		density="10"
+		melting_point="900"
+		melted="steam"
+		>
+		<Tags>
+		</Tags>
+	</ElementData>
+
+	<ElementData
 		name="leaf"
 		cell_type="solid"
 		color="00FF00FF"
-		texture="assets/textures/minecraft_leaf_texture.png"
+		texture="textures/minecraft_leaf_texture.png"
 		conductivity="10"
 		glow="1"
 		density="10"

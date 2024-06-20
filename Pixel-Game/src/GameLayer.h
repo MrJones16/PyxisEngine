@@ -6,20 +6,20 @@
 #include "Panels/Panel.h"
 #include "Panels/ProfilingPanel.h"
 
-#include "World.h"
+#include "common/World.h"
+#include "common/PixelClientInterface.h"
 
 
 
 namespace Pyxis
 {
-	
-
 	class GameLayer : public Layer
 	{
 	public:
 		GameLayer();
 		virtual ~GameLayer();
 
+		//Layer functions
 		virtual void OnAttach() override;
 		virtual void OnDetach() override;
 
@@ -27,32 +27,40 @@ namespace Pyxis
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
-		std::pair<float, float> GetMousePositionScene();
 		bool OnWindowResizeEvent(WindowResizeEvent& event);
 		bool OnKeyPressedEvent(KeyPressedEvent& event);
 		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
+		//game functions
+		void HandleMessages();
+		bool CreateWorld();
+		void TextCentered(std::string text);
+		std::pair<float, float> GetMousePositionScene();
+		
+
+	public:
 		enum BrushType {
 			circle = 0, square = 1, end
 		};
-
-	private:
-
 		void PaintElementAtCursor();
 		void PaintBrushHologram();
+
+	private:
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
 		float m_UpdatesPerSecond = 60;
-		//Ref<Chunk> m_Chunk;
+
+		//multiplayer things
+		PixelClientInterface m_ClientInterface;
+		bool m_Connecting = true;
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;
 		OrthographicCameraController m_OrthographicCameraController;
 		glm::vec2 m_ViewportSize;
 		ImVec2 m_ViewportOffset;
-		Ref<Scene> m_ActiveScene;
 
 		bool m_SceneViewIsFocused = false;
 

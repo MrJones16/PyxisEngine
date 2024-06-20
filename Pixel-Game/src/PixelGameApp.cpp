@@ -58,6 +58,30 @@
 ///		experiment with streaming the world data to a second client? i really want this tbh
 ///		any game is better with friends
 /// 
+/// multiplayer notes:
+/// 
+/// the server will hold a main game state, the actual "world" to be saved or loaded.
+/// clients will hold a copy of that game state, and a layer on top of that called a "desync state"
+/// the desync state will hold the "input actions" of the player right now, and when those input
+/// actions finally make a round trip, they will update the game state for the player, and refresh
+/// the desync state accordingly
+/// 
+/// COMBINED NEEDED THINGS:
+/// * Input Actions: all input actions used by the player to interact with the game.
+/// 
+/// 
+/// SERVER DATASTRUCTURES:
+/// * World (the authoritative world state)
+/// 
+/// 
+/// CLIENT DATASTRUCTURES
+/// 
+/// * World (game state)
+/// * Desynced World (desynced game state for instant player movement, the feel good)
+/// * Network Input Listener (Gets all inputs from player and )
+/// 
+/// 
+/// 
 /// </summary>
 
 namespace Pyxis

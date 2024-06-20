@@ -40,8 +40,8 @@ namespace Pyxis
 	{
 	public:
 
-		World();
-		bool LoadElementData();
+		World(std::string assetPath = "assets");
+		bool LoadElementData(std::string assetPath);
 		void BuildReactionTable();
 		~World();
 
@@ -50,19 +50,21 @@ namespace Pyxis
 		void GenerateChunk(Chunk* chunk);
 
 		void UpdateWorld();
-		void UpdateChunk(Chunk* chunk);
 		void UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY);
 		void UpdateChunkDirtyRect(int x, int y, Chunk* chunk);
 
 		void Clear();
-
-		Element GetElementByName(std::string elementName, int x, int y);
-		void SetElement(const glm::ivec2& pixelPos, const Element& element);
-		Element& GetElement(const glm::ivec2& pixelPos);
-
-		void CreatePixelRigidBody(const glm::ivec2& min, const glm::ivec2& max, b2BodyType type = b2_dynamicBody);
-
 		void RenderWorld();
+
+	public:
+		Element GetElementByName(std::string elementName, int x, int y);
+		Element& GetElement(const glm::ivec2& pixelPos);
+		void SetElement(const glm::ivec2& pixelPos, const Element& element);
+
+		void CreatePixelRigidBody(uint32_t uuid, const glm::ivec2& min, const glm::ivec2& max, b2BodyType type = b2_dynamicBody);
+
+		Player* CreatePlayer(uint32_t playerID, glm::vec2 position);
+
 
 
 
@@ -78,7 +80,8 @@ namespace Pyxis
 
 
 		b2World* m_Box2DWorld;
-		std::vector<PixelRigidBody*> m_PixelBodies;
+		std::unordered_map<uint32_t, PixelRigidBody*> m_PixelBodyMap;
+		//std::vector<PixelRigidBody*> m_PixelBodies;
 
 		//
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;

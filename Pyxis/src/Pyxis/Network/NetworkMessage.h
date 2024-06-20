@@ -70,7 +70,8 @@ namespace Pyxis
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to have been in a body vector");
 
 				//cache the location towards the end of the vector where the pulled data starts
-				size_t i = msg.body.size() - sizeof(DataType);
+				size_t dataSize = sizeof(DataType);
+				size_t i = msg.body.size() - dataSize;
 
 				//physically copy the memory to the DataType variable
 				std::memcpy(&data, msg.body.data() + i, sizeof(DataType));

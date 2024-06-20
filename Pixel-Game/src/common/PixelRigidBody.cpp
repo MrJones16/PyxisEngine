@@ -267,4 +267,16 @@ namespace Pyxis
 
 		return result;
 	}
+
+
+	Player::Player()
+	{
+	}
+	Player::~Player()
+	{
+	}
+	void Player::SetPosition(glm::vec2 position)
+	{
+		m_B2Body->SetTransform({ position.x, position.y }, m_B2Body->GetAngle());
+	}
 }

@@ -4,11 +4,11 @@
     <Filter Include="Panels">
       <UniqueIdentifier>{A80D95C9-94AF-BF9F-7D6A-D3F369AB46F0}</UniqueIdentifier>
     </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{AEFEE3F6-9AA0-0ECD-835B-22216F9C951D}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Chunk.h" />
-    <ClInclude Include="src\ChunkWorker.h" />
-    <ClInclude Include="src\Element.h" />
     <ClInclude Include="src\GameLayer.h" />
     <ClInclude Include="src\Panels\InspectorPanel.h">
       <Filter>Panels</Filter>
@@ -22,15 +22,45 @@
     <ClInclude Include="src\Panels\SceneHierarchyPanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
-    <ClInclude Include="src\PixelRigidBody.h" />
-    <ClInclude Include="src\World.h" />
+    <ClInclude Include="src\common\Chunk.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\ChunkWorker.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\Element.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\PixelClientInterface.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\PixelRigidBody.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="src\common\World.h">
+      <Filter>common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Chunk.cpp" />
-    <ClCompile Include="src\ChunkWorker.cpp" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
-    <ClCompile Include="src\PixelRigidBody.cpp" />
-    <ClCompile Include="src\World.cpp" />
+    <ClCompile Include="src\common\Chunk.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\ChunkWorker.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\PixelClientInterface.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\PixelRigidBody.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="src\common\World.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
 </Project>

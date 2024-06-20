@@ -330,17 +330,22 @@ project "Pixel-Game-Server"
 	{
 		"%{prj.name}/src/**.h",
 		"%{prj.name}/src/**.hpp",
-		"%{prj.name}/src/**.cpp"
+		"%{prj.name}/src/**.cpp",
+		
+		"Pixel-Game/src/common/**.h",	
+		"Pixel-Game/src/common/**.cpp"
 	}
 
 	includedirs
 	{
+		"Pixel-Game/src",
 		"Pyxis/vendor/spdlog/include",
 		"Pyxis/src",
 		"Pyxis/vendor",
 		"%{IncludeDir.glm}",
 		"%{IncludeDir.box2d}",
 		"%{IncludeDir.asio}",
+
 	}
 
 	links

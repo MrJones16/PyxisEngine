@@ -79,7 +79,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PX_PLATFORM_WINDOWS;PX_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Pixel-Game\src;..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
@@ -99,7 +99,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PX_PLATFORM_WINDOWS;PX_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Pixel-Game\src;..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -123,7 +123,7 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <PreprocessorDefinitions>PX_PLATFORM_WINDOWS;PX_DIST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\Pixel-Game\src;..\Pyxis\vendor\spdlog\include;..\Pyxis\src;..\Pyxis\vendor;..\Pyxis\vendor\glm;..\Pyxis\vendor\box2d\include;..\Pyxis\vendor\asio\asio\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -143,9 +143,20 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Pixel-Game\src\common\Chunk.h" />
+    <ClInclude Include="..\Pixel-Game\src\common\ChunkWorker.h" />
+    <ClInclude Include="..\Pixel-Game\src\common\Element.h" />
+    <ClInclude Include="..\Pixel-Game\src\common\PixelClientInterface.h" />
+    <ClInclude Include="..\Pixel-Game\src\common\PixelRigidBody.h" />
+    <ClInclude Include="..\Pixel-Game\src\common\World.h" />
     <ClInclude Include="src\PixelGameServer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\Pixel-Game\src\common\Chunk.cpp" />
+    <ClCompile Include="..\Pixel-Game\src\common\ChunkWorker.cpp" />
+    <ClCompile Include="..\Pixel-Game\src\common\PixelClientInterface.cpp" />
+    <ClCompile Include="..\Pixel-Game\src\common\PixelRigidBody.cpp" />
+    <ClCompile Include="..\Pixel-Game\src\common\World.cpp" />
     <ClCompile Include="src\PixelGameServer.cpp" />
     <ClCompile Include="src\PixelGameServerApp.cpp" />
   </ItemGroup>

@@ -64,18 +64,19 @@ namespace Pyxis
 
 	void GameLayer::OnAttach()
 	{
-		//create the world
-		m_World = CreateRef<World>();
-		if (m_World->m_Error)
-		{
-			PX_ERROR("Failed to create the world");
+		//Connect to the server:
+		if (!m_ClientInterface.Connect("127.0.0.1", 60000)) {
+			PX_ERROR("Failed to connect to the server...");
+			Application::Get().Sleep(2000);
+			Application::Get().Close();
 			return;
 		}
+
 
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
 		Renderer2D::Init();
 
-		m_ActiveScene = CreateRef<Scene>();
+		//m_ActiveScene = CreateRef<Scene>();
 
 		//Create panels to add
 		m_ProfilingPanel = CreateRef<ProfilingPanel>();
@@ -93,9 +94,18 @@ namespace Pyxis
 		PX_TRACE("Detatched game layer");
 	}
 
+
 	void GameLayer::OnUpdate(Timestep ts)
 	{
 		//PROFILE_SCOPE("GameLayer::OnUpdate");
+
+		HandleMessages();
+
+		if (m_Connecting)
+		{
+			//still connecting...
+			return;
+		}
 
 		//update
 		//if (m_SceneViewIsFocused)
@@ -111,7 +121,7 @@ namespace Pyxis
 			m_SceneFrameBuffer->Bind();
 			RenderCommand::SetClearColor({ 198 / 255.0f, 239/255.0f, 249/255.0f, 1 });
 			RenderCommand::Clear();
-			Renderer2D::BeginScene((m_ActiveScene->m_ActiveCamera) ? *(m_ActiveScene->m_ActiveCamera) : m_OrthographicCameraController.GetCamera());
+			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
 		}
 
 		{
@@ -185,9 +195,23 @@ namespace Pyxis
 
 	void GameLayer::OnImGuiRender()
 	{
+
+		if (m_Connecting)
+		{
+			//show that we are connecting
+			/*ImGui::SetNextWindowDockID(dock);*/
+			std::string text = "Connecting To Server...";
+			if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
+			{
+				TextCentered(text);
+			}
+			ImGui::End();
+			return;
+		}
 		//ImGui::ShowDemoWindow();
 		
-		ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		
 
 		m_Hovering = ImGui::IsWindowHovered();
 		
@@ -275,7 +299,7 @@ namespace Pyxis
 				{
 					if (m_RigidMin.x < m_RigidMax.x)
 					{
-						m_World->CreatePixelRigidBody(m_RigidMin, m_RigidMax);
+						m_World->CreatePixelRigidBody((uint32_t)(std::rand()), m_RigidMin, m_RigidMax);
 
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
@@ -287,7 +311,7 @@ namespace Pyxis
 				{
 					if (m_RigidMin.x < m_RigidMax.x)
 					{
-						m_World->CreatePixelRigidBody(m_RigidMin, m_RigidMax, b2_staticBody);
+						m_World->CreatePixelRigidBody((uint32_t)(std::rand()), m_RigidMin, m_RigidMax, b2_staticBody);
 
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
@@ -295,7 +319,7 @@ namespace Pyxis
 					}
 				}
 
-				ImGui::SliderFloat("Douglas-Peucker Threshold", &m_DouglasThreshold, 0, 2);
+				/*ImGui::SliderFloat("Douglas-Peucker Threshold", &m_DouglasThreshold, 0, 2);
 
 				if (ImGui::Button("UpdateOutline"))
 				{
@@ -304,7 +328,7 @@ namespace Pyxis
 						auto contour = body->GetContourPoints();
 						body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, m_DouglasThreshold);
 					}
-				}
+				}*/
 				
 				
 				ImGui::TreePop();
@@ -388,6 +412,28 @@ namespace Pyxis
 		ImGui::End();
 #endif
 	}
+
+	void GameLayer::TextCentered(std::string text)
+	{
+		float win_width = ImGui::GetWindowSize().x;
+		float text_width = ImGui::CalcTextSize(text.c_str()).x;
+
+		// calculate the indentation that centers the text on one line, relative
+		// to window left, regardless of the `ImGuiStyleVar_WindowPadding` value
+		float text_indentation = (win_width - text_width) * 0.5f;
+
+		// if text is too long to be drawn on one line, `text_indentation` can
+		// become too small or even negative, so we check a minimum indentation
+		float min_indentation = 20.0f;
+		if (text_indentation <= min_indentation) {
+			text_indentation = min_indentation;
+		}
+		ImGui::SameLine(text_indentation);
+		ImGui::PushTextWrapPos(win_width - text_indentation);
+		ImGui::TextWrapped(text.c_str());
+		ImGui::PopTextWrapPos();
+	}
+
 	void GameLayer::OnEvent(Event& e)
 	{
 		//PX_CORE_INFO("event: {0}", e);
@@ -397,6 +443,94 @@ namespace Pyxis
 		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
 		dispatcher.Dispatch<MouseScrolledEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseScrolledEvent));
+	}
+
+	void GameLayer::HandleMessages()
+	{
+		if (m_ClientInterface.IsConnected())
+		{
+			while (!m_ClientInterface.Incoming().empty())
+			{
+				auto msg = m_ClientInterface.Incoming().pop_front().msg;
+				switch (msg.header.id)
+				{
+				case GameMessage::Ping:
+				{
+					break;
+				}
+				case GameMessage::Server_ClientAccepted:
+				{
+					Network::Message<GameMessage> msg;
+					msg.header.id = GameMessage::Client_RegisterWithServer;
+					m_ClientInterface.Send(msg);
+
+					break;
+				}
+				case GameMessage::Server_ClientAssignID:
+				{
+					msg >> m_ClientInterface.m_ID;
+					CreateWorld();
+					m_World->CreatePlayer(m_ClientInterface.m_ID, { 30, 200 });
+
+					Network::Message<GameMessage> msg;
+					msg.header.id = GameMessage::Game_AddPlayer;
+
+					//all game changing messages / input actions will start with
+					// the game tick / "heartbeat"
+					uint64_t tick = 0;
+					msg << tick;
+
+					//for adding a player, ill put in the id, and position
+					msg << m_ClientInterface.m_ID;
+					msg << glm::vec2(30, 200);
+
+					m_ClientInterface.Send(msg);
+					m_Connecting = false;
+					break;
+				}
+				case GameMessage::Game_AddPlayer:
+				{
+					uint64_t tick;
+					uint64_t id;
+					glm::vec2 position;
+					msg >> position >> id >> tick;
+					m_World->CreatePlayer(id, position);
+					break;
+				}
+				case GameMessage::Game_RemovePlayer:
+				{
+					break;
+				}
+				case GameMessage::Game_TickClosure:
+				{
+					break;
+				}
+				default:
+					break;
+				}
+			}
+		}
+		else
+		{
+			//lost connection
+			PX_WARN("Lost connection to server.");
+			Application::Get().Sleep(2000);
+			Application::Get().Close();
+		}
+	}
+
+	bool GameLayer::CreateWorld()
+	{
+		//create the world
+		m_World = CreateRef<World>();
+		if (m_World->m_Error)
+		{
+			PX_ERROR("Failed to create the world");
+			Application::Get().Sleep(2000);
+			Application::Get().Close();
+			return false;
+		}
+		return true;
 	}
 
 	std::pair<float, float> GameLayer::GetMousePositionScene()

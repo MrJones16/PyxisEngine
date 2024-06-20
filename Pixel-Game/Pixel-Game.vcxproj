@@ -143,29 +143,34 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\Chunk.h" />
-    <ClInclude Include="src\ChunkWorker.h" />
-    <ClInclude Include="src\Element.h" />
     <ClInclude Include="src\GameLayer.h" />
     <ClInclude Include="src\Panels\InspectorPanel.h" />
     <ClInclude Include="src\Panels\Panel.h" />
     <ClInclude Include="src\Panels\ProfilingPanel.h" />
     <ClInclude Include="src\Panels\SceneHierarchyPanel.h" />
-    <ClInclude Include="src\PixelRigidBody.h" />
-    <ClInclude Include="src\World.h" />
+    <ClInclude Include="src\common\Chunk.h" />
+    <ClInclude Include="src\common\ChunkWorker.h" />
+    <ClInclude Include="src\common\Element.h" />
+    <ClInclude Include="src\common\PixelClientInterface.h" />
+    <ClInclude Include="src\common\PixelRigidBody.h" />
+    <ClInclude Include="src\common\World.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Chunk.cpp" />
-    <ClCompile Include="src\ChunkWorker.cpp" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
-    <ClCompile Include="src\PixelRigidBody.cpp" />
-    <ClCompile Include="src\World.cpp" />
+    <ClCompile Include="src\common\Chunk.cpp" />
+    <ClCompile Include="src\common\ChunkWorker.cpp" />
+    <ClCompile Include="src\common\PixelClientInterface.cpp" />
+    <ClCompile Include="src\common\PixelRigidBody.cpp" />
+    <ClCompile Include="src\common\World.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Pyxis\Pyxis.vcxproj">
       <Project>{C20EEB0D-2E23-13BF-F7A4-B61E63780FF0}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

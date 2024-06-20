@@ -47,14 +47,14 @@ namespace Pyxis
 
 			}
 
-			uint32_t GetID()
+			uint64_t GetID()
 			{
 				return m_ID;
 			}
 
 		public:
 
-			inline void ConnectToClient(Pyxis::Network::ServerInterface<T>* server, uint32_t uid = 0)
+			inline void ConnectToClient(Pyxis::Network::ServerInterface<T>* server, uint64_t uid = 0)
 			{
 				if (m_OwnerType == Owner::server)
 				{
@@ -319,7 +319,7 @@ namespace Pyxis
 			Owner m_OwnerType = Owner::server;
 
 			//the unique identifier of the connection
-			uint32_t m_ID = 0;
+			uint64_t m_ID = 0;
 
 			//handshake validation
 			uint64_t m_HandshakeOut = 0;

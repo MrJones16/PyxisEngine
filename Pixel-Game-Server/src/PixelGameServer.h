@@ -3,62 +3,16 @@
 #include "Pyxis.h"
 #include <Pyxis/Network/Network.h>
 #include "Pyxis/Core/OrthographicCameraController.h"
+#include "common/PixelClientInterface.h"
+#include "common/World.h"
 
 namespace Pyxis
 {
-	class PixelGameServerInterface : public Pyxis::Network::ServerInterface<Network::CustomMessageTypes>
+
+	class PixelGameServer : public Pyxis::Layer, public Network::ServerInterface<GameMessage>
 	{
 	public:
-		PixelGameServerInterface(uint16_t port) : Pyxis::Network::ServerInterface<Network::CustomMessageTypes>(port)
-		{
-
-		}
-	protected:
-		bool OnClientConnect(std::shared_ptr<Pyxis::Network::Connection<Network::CustomMessageTypes>> client) override
-		{
-			Network::Message<Network::CustomMessageTypes> msg;
-			msg.header.id = Network::CustomMessageTypes::ServerAccept;
-			client->Send(msg);
-
-			return true;
-		}
-
-		void OnClientDisconnect(std::shared_ptr<Pyxis::Network::Connection<Network::CustomMessageTypes>> client) override
-		{
-			PX_TRACE("Removing Client [{0}]", client->GetID());
-			return;
-		}
-
-		void OnMessage(std::shared_ptr<Pyxis::Network::Connection<Network::CustomMessageTypes>> client, Pyxis::Network::Message< Network::CustomMessageTypes>& msg) override
-		{
-			switch (msg.header.id)
-			{
-			case Network::CustomMessageTypes::ServerPing:
-			{
-				PX_TRACE("[{0}]: Server Ping", client->GetID());
-				//simply bounce the message back
-				client->Send(msg);
-			}
-				break;
-			case Network::CustomMessageTypes::MessageAll:
-			{
-				PX_TRACE("[{0}]: Message All", client->GetID());
-				Network::Message<Network::CustomMessageTypes> msg;
-				msg.header.id = Network::CustomMessageTypes::ServerMessage;
-				msg << client->GetID();
-				MessageAllClients(msg, client);
-			}
-			break;
-			}
-			return;
-		}
-
-	};
-
-	class PixelGameServer : public Pyxis::Layer
-	{
-	public:
-		PixelGameServer();
+		PixelGameServer(uint16_t port);
 		virtual ~PixelGameServer() = default;
 
 		virtual void OnAttach();
@@ -68,10 +22,22 @@ namespace Pyxis
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Pyxis::Event& e) override;
 		bool OnWindowResizeEvent(Pyxis::WindowResizeEvent& event);
+
+	protected:
+		bool OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
+		void OnClientDisconnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
+		void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
+		void OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client) override;
+
 	private:
 		Pyxis::OrthographicCameraController m_OrthographicCameraController;
 
-		PixelGameServerInterface m_ServerInterface;
+		/// <summary>
+		/// The authoritative world. 
+		/// </summary>
+		World m_World;
+
+		//PixelServerInterface m_ServerInterface;
 
 	};
 }
