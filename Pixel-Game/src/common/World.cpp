@@ -715,15 +715,12 @@ namespace Pyxis
 		{
 			if (pair.second->m_B2Body->GetType() == b2_staticBody) continue;
 			glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
-			//auto skewMatrix = glm::mat2x2(1,0,1,1);
-			//glm::mat2x2 rotationMatrix = 
 
 			float angle = pair.second->m_B2Body->GetTransform().q.GetAngle();
 
 			auto rotationMatrix = glm::mat2x2(1);
 
 			//if angle gets above 45 degrees, apply a 90 deg rotation first
-			//make sure angle is positive
 			while (angle > 0.78539816339f)
 			{
 				angle -= 1.57079632679f;
@@ -743,21 +740,14 @@ namespace Pyxis
 			{
 				for (int y = 0; y < pair.second->m_Height; y++)
 				{
-					Element element = pair.second->m_ElementArray[x + y * pair.second->m_Width];
-					if (element.m_ID == 0) continue; //skip empty cells
+					if (pair.second->m_ElementArray[x + y * pair.second->m_Width].m_ID == 0) continue; //skip empty cells
 
 					//find the element in the world by using the transform of the body and
 					//the position of the element in the array
 					
-
 					glm::ivec2 localPos = { x - pair.second->m_Origin.x, y - pair.second->m_Origin.y };
 					
-
 					glm::ivec2 skewedPos = localPos * rotationMatrix;
-					
-					
-					//skewedPos = horizontalSkewMatrix * skewedPos;
-					//skewedPos = verticalSkewMatrix * skewedPos;
 
 					//horizontal skew:
 					int horizontalSkewAmount = (float)skewedPos.y * A;
@@ -793,15 +783,12 @@ namespace Pyxis
 		for each (auto pair in m_PixelBodyMap)
 		{
 			glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
-			//auto skewMatrix = glm::mat2x2(1,0,1,1);
-			//glm::mat2x2 rotationMatrix = 
 
 			float angle = pair.second->m_B2Body->GetTransform().q.GetAngle();
 
 			auto rotationMatrix = glm::mat2x2(1);
 
 			//if angle gets above 45 degrees, apply a 90 deg rotation first
-			//make sure angle is positive
 			while (angle > 0.78539816339f)
 			{
 				angle -= 1.57079632679f;
@@ -821,19 +808,14 @@ namespace Pyxis
 			{
 				for (int y = 0; y < pair.second->m_Height; y++)
 				{
-					//PX_TRACE("working pixel: ({0},{1})", x, y);
-					Element element = pair.second->m_ElementArray[x + y * pair.second->m_Width];
+					Element& element = pair.second->m_ElementArray[x + y * pair.second->m_Width];
 					if (element.m_ID == 0) continue; //skip empty cells
 
 					//find the element in the world by using the transform of the body and
 					//the position of the element in the array
 
 					glm::ivec2 localPos = { x - pair.second->m_Origin.x, y - pair.second->m_Origin.y };
-					//PX_TRACE("local pos: ({0},{1})", localPos.x, localPos.y);
 					glm::ivec2 skewedPos = localPos * rotationMatrix;
-					//PX_TRACE("pixel rotated by 90's: ({0},{1})", skewedPos.x, skewedPos.y);
-					//skewedPos = horizontalSkewMatrix * skewedPos;
-					//skewedPos = verticalSkewMatrix * skewedPos;
 					
 					//horizontal skew:
 					int horizontalSkewAmount = (float)skewedPos.y * A;
@@ -855,8 +837,6 @@ namespace Pyxis
 					auto chunk = GetChunk(PixelToChunk(worldPixelPos));
 					UpdateChunkDirtyRect(index.x, index.y, chunk);
 					chunk->SetElement(index.x, index.y, element);
-					//SetElement(worldPixelPos, element);
-					//PX_TRACE("setting at position: ({0},{1}) to non-stone ", worldPos.x, worldPos.y);
 				}
 			}
 		}
@@ -947,16 +927,26 @@ namespace Pyxis
 		}
 
 		
-		
-		for each (auto & pair in m_Chunks)
+		if (!m_ServerMode)
 		{
-			pair.second->UpdateTexture();
+			for each (auto & pair in m_Chunks)
+			{
+				pair.second->UpdateTexture();
+			}
 		}
 		
 
 		//UpdateChunk(m_Chunks[{0, 0}]);
 
 		m_UpdateBit = !m_UpdateBit;
+	}
+
+	void World::UpdateTextures()
+	{
+		for each (auto & pair in m_Chunks)
+		{
+			pair.second->UpdateTexture();
+		}
 	}
 
 	//defines for easy to read code
@@ -2251,7 +2241,19 @@ namespace Pyxis
 		if (it != m_Chunks.end())
 		{
 			auto index = PixelToIndex(pixelPos);
-			it->second->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+			if (element.m_ID == m_ElementIDs["debug_heat"])
+			{
+				it->second->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+			}
+			else if (element.m_ID == m_ElementIDs["debug_cool"])
+			{
+				it->second->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+			}
+			else
+			{
+				it->second->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+			}
+			UpdateChunkDirtyRect(index.x, index.y, it->second);
 		}
 	}
 
@@ -2262,40 +2264,33 @@ namespace Pyxis
 		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
 	}
 
-	void World::CreatePixelRigidBody(uint32_t uuid, const glm::ivec2& min, const glm::ivec2& max, b2BodyType type)
+	void World::CreatePixelRigidBody(uint32_t uuid, const glm::ivec2& size, Element* ElementArray, glm::ivec2 pixelPosition, b2BodyType type)
 	{
 		PixelRigidBody* body = new PixelRigidBody();
-		body->m_Width = (max.x - min.x) + 1;
-		body->m_Height = (max.y - min.y) + 1;
+		body->m_Width = size.x;
+		body->m_Height = size.y;
 		body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
-		body->m_ElementArray = new Element[body->m_Width * body->m_Height];
+		body->m_ElementArray = ElementArray;
+
+		//put the body into the world:
 		for (int x = 0; x < body->m_Width; x++)
 		{
 			for (int y = 0; y < body->m_Height; y++)
 			{
-				glm::ivec2 pixelPos = { x + min.x, y + min.y };
-
-				//loop over every element, grab it, and make it rigid if it is a movable Solid
-				auto& element = GetElement(pixelPos);
-				auto& elementData = m_ElementData[element.m_ID];
-				if (elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid)
+				Element& element = ElementArray[x + y * body->m_Width];
+				if (element.m_ID != 0)
 				{
-					element.m_Rigid = true;
-					body->m_ElementArray[x + y * body->m_Width] = element;
+					auto pixelPos = glm::ivec2((pixelPosition.x - body->m_Origin.x) + x, (pixelPosition.y - body->m_Origin.y) + y);
+					SetElement(pixelPos, element);
 				}
-				else
-				{
-					//any liquids, gas, or fire is ignored and made id 0 default
-					body->m_ElementArray[x + y * body->m_Width] = Element();
-				}
-				
 			}
 		}
+		
 		//create the base body of the whole pixel body
 		b2BodyDef pixelBodyDef;
 		
 		//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
-		pixelBodyDef.position = { (float)(body->m_Origin.x + min.x) / PPU, (float)(body->m_Origin.y + min.y) / PPU };
+		pixelBodyDef.position = { (float)(pixelPosition.x) / PPU, (float)(pixelPosition.y) / PPU };
 		pixelBodyDef.type = type;
 		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
 
@@ -2320,10 +2315,10 @@ namespace Pyxis
 			polyLine.push_back(new p2t::Point(point));
 		}
 
+		//create each of the triangles to comprise the body, each being a fixture
 		p2t::CDT* cdt = new p2t::CDT(polyLine);
 		cdt->Triangulate();
 		auto triangles = cdt->GetTriangles();
-
 		for each (auto triangle in triangles)
 		{
 			b2PolygonShape triangleShape;
@@ -2339,11 +2334,128 @@ namespace Pyxis
 			fixtureDef.shape = &triangleShape;
 			body->m_B2Body->CreateFixture(&fixtureDef);
 		}
-		//create each of the triangles to comprise the body, each being a fixture
-		
-		
+
 		m_PixelBodyMap.insert({ uuid, body });
-		
+	}
+
+
+	void World::HandleTickClosure(MergedTickClosure& tc)
+	{
+		for (int i = 0; i < tc.m_InputActionCount; i++)
+		{
+			InputAction IA;
+			tc >> IA;
+			switch (IA)
+			{
+			case InputAction::Add_Player:
+			{
+				uint64_t ID;
+				tc >> ID;
+
+				glm::ivec2 pixelPos;
+				tc >> pixelPos;
+
+				CreatePlayer(ID, pixelPos);
+				break;
+			}
+			case InputAction::PauseGame:
+			{
+				uint64_t ID;
+				tc >> ID;
+				m_Running = false;
+				break;
+			}
+			case InputAction::ResumeGame:
+			{
+				uint64_t ID;
+				tc >> ID;
+				m_Running = true;
+				break;
+			}
+			case InputAction::TransformRigidBody:
+			{
+				uint64_t ID;
+				tc >> ID;
+
+				glm::ivec2 maximum;
+				tc >> maximum;
+
+				glm::ivec2 minimum;
+				tc >> minimum;
+
+				b2BodyType type;
+				tc >> type;
+
+				int width = (maximum.x - minimum.x) + 1;
+				int height = (maximum.y - minimum.y) + 1;
+				auto ElementArray = new Element[width * height];
+				if (minimum.x < maximum.x)
+				{
+					for (int x = 0; x < width; x++)
+					{
+						for (int y = 0; y < height; y++)
+						{
+							glm::ivec2 pixelPos = { x + minimum.x, y + minimum.y };
+
+							//loop over every element, grab it, and make it rigid if it is a movable Solid
+							auto& element = GetElement(pixelPos);
+							auto& elementData = m_ElementData[element.m_ID];
+							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+							{
+								element.m_Rigid = true;
+								ElementArray[x + y * width] = element;
+								SetElement(pixelPos, Element());
+							}
+							else
+							{
+								//any liquids, gas, or fire is ignored and made id 0 default
+								ElementArray[x + y * width] = Element();
+							}
+
+						}
+					}
+					CreatePixelRigidBody((uint32_t)(std::rand()), { width, height }, ElementArray, (minimum + maximum) / 2, type);
+				}
+				break;
+			}
+			case Pyxis::InputAction::Input_Move:
+			{
+				//PX_TRACE("input action: Input_Move");
+				break;
+			}
+			case Pyxis::InputAction::Input_Place:
+			{
+				//PX_TRACE("input action: Input_Place");
+				uint64_t id;
+				tc >> id;
+				glm::ivec2 pixelPos;
+				tc >> pixelPos;
+				Element element;
+				tc >> element;
+				SetElement(pixelPos, element);
+				//PX_INFO("pixel pos: ({0},{1})", pixelPos.x, pixelPos.y);
+				break;
+			}
+			case Pyxis::InputAction::Input_StepSimulation:
+			{
+				PX_TRACE("input action: Input_StepSimulation");
+				break;
+			}
+			default:
+			{
+				PX_TRACE("input action: default?");
+				break;
+			}
+			}
+		}
+		if (m_Running)
+		{
+			UpdateWorld();
+		}
+		else
+		{
+			UpdateTextures();
+		}
 	}
 
 	Player* World::CreatePlayer(uint32_t playerID, glm::vec2 pixelPosition)

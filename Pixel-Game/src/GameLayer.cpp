@@ -5,6 +5,7 @@
 
 #include <Platform/OpenGL/OpenGLShader.h>
 #include <chrono>
+#include <variant>
 
 namespace Pyxis
 {
@@ -52,7 +53,7 @@ namespace Pyxis
 
 	GameLayer::GameLayer()
 		: Layer("GameLayer"),
-		m_OrthographicCameraController(2, 1 / 1, -100, 100)
+		m_OrthographicCameraController(2, 1 / 1, -100, 100), m_CurrentTickClosure()
 	{
 		
 	}
@@ -101,11 +102,29 @@ namespace Pyxis
 
 		HandleMessages();
 
+		if (m_LatencyStateReset)
+		{
+			//i need to reset the latency state, and show what the world 
+			//should look like with the latency inputs
+			//m_LatencyWorld = m_World;
+		}
+
 		if (m_Connecting)
 		{
 			//still connecting...
 			return;
 		}
+
+		//handling messages will clear the latency state, as well as
+		//remove the input that was added, so now i get my new inputs for
+		//the next tick, and add them to the queue
+
+		if (m_LatencyInputQueue.size() >= m_LatencyQueueLimit)
+		{
+			//we hit the limit of prediction, so skip furthering the simulation
+			return;
+		}
+
 
 		//update
 		//if (m_SceneViewIsFocused)
@@ -152,10 +171,26 @@ namespace Pyxis
 
 			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
 			{
-				PaintElementAtCursor();
+				auto [x, y] = GetMousePositionScene();
+				int max_width = Application::Get().GetWindow().GetWidth();
+				int max_height = Application::Get().GetWindow().GetHeight();
+				if (x > max_width || x < 0 || y > max_height || y < 0) return;
+				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+				if (m_BuildingRigidBody)
+				{
+					if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
+					if (pixelPos.x > m_RigidMax.x) m_RigidMax.x = pixelPos.x;
+					if (pixelPos.y < m_RigidMin.y) m_RigidMin.y = pixelPos.y;
+					if (pixelPos.y > m_RigidMax.y) m_RigidMax.y = pixelPos.y;
+				}
+				else
+				{
+					PaintElementAtCursor(pixelPos);
+				}
 			}
 
-			if (m_SimulationRunning)
+			if (m_LatencyInputQueue.size() < m_LatencyQueueLimit)
 			{
 				//keep track of when the world was updated, and only update it if
 				//enough time has passed for the next update to be ready
@@ -166,7 +201,19 @@ namespace Pyxis
 					std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
 					>= (1.0f / m_UpdatesPerSecond) * 1000000.0f)
 				{
-					m_World->UpdateWorld();
+					Network::Message<GameMessage> msg;
+					msg.header.id = GameMessage::Game_TickClosure;
+					msg << m_CurrentTickClosure.m_Data;
+					msg << m_CurrentTickClosure.m_InputActionCount;
+					msg << m_GameTick;
+					msg << m_ClientInterface.m_ID;
+					m_ClientInterface.Send(msg);
+
+					m_GameTick++;
+
+					//reset tick closure
+					m_CurrentTickClosure = TickClosure();
+					//m_CurrentTickClosure.m_Tick = m_GameTick;
 					m_UpdateTime = time;
 				}
 
@@ -195,11 +242,12 @@ namespace Pyxis
 
 	void GameLayer::OnImGuiRender()
 	{
+		auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 
 		if (m_Connecting)
 		{
 			//show that we are connecting
-			/*ImGui::SetNextWindowDockID(dock);*/
+			ImGui::SetNextWindowDockID(dock);
 			std::string text = "Connecting To Server...";
 			if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
 			{
@@ -210,9 +258,6 @@ namespace Pyxis
 		}
 		//ImGui::ShowDemoWindow();
 		
-		auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-		
-
 		m_Hovering = ImGui::IsWindowHovered();
 		
 
@@ -229,7 +274,7 @@ namespace Pyxis
 		
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
 		
-
+		ImGui::SetNextWindowDockID(dock);
 		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
 		{
 			m_SceneViewIsFocused = ImGui::IsWindowFocused();
@@ -270,13 +315,13 @@ namespace Pyxis
 			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Simulation"))
 			{
-				ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
-				ImGui::SetItemTooltip("Default: 60");
-				if (m_SimulationRunning)
+				//ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
+				//ImGui::SetItemTooltip("Default: 60");
+				if (m_World->m_Running)
 				{
 					if (ImGui::Button("Pause"))
 					{
-						m_SimulationRunning = false;
+						m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.m_ID);
 					}
 					ImGui::SetItemTooltip("Shortcut: Space");
 				}
@@ -284,7 +329,7 @@ namespace Pyxis
 				{
 					if (ImGui::Button("Play"))
 					{
-						m_SimulationRunning = true;
+						m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.m_ID);
 					}
 					ImGui::SetItemTooltip("Shortcut: Space");
 					//ImGui::EndTooltip();
@@ -294,28 +339,34 @@ namespace Pyxis
 				{
 					m_World->Clear();
 				}
-
-				if (ImGui::Button("Build Rigid Body"))
+				
+				if (m_BuildingRigidBody)
 				{
-					if (m_RigidMin.x < m_RigidMax.x)
+					if (ImGui::Button("Build Rigid Body"))
 					{
-						m_World->CreatePixelRigidBody((uint32_t)(std::rand()), m_RigidMin, m_RigidMax);
-
+						m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, m_ClientInterface.m_ID);
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
+					}
+					if (ImGui::Button("Build Static Rigid Body"))
+					{
+						m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_staticBody, m_RigidMin, m_RigidMax, m_ClientInterface.m_ID);
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+					}
 
+					if (ImGui::Button("Stop Building Rigid Body"))
+					{
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+						m_BuildingRigidBody = false;
 					}
 				}
-
-				if (ImGui::Button("Build Static Rigid Body"))
+				else
 				{
-					if (m_RigidMin.x < m_RigidMax.x)
+					if (ImGui::Button("Start Building Rigid Body"))
 					{
-						m_World->CreatePixelRigidBody((uint32_t)(std::rand()), m_RigidMin, m_RigidMax, b2_staticBody);
-
-						m_RigidMin = { 9999999, 9999999 };
-						m_RigidMax = { -9999999, -9999999 };
-
+						m_BuildingRigidBody = true;
 					}
 				}
 
@@ -460,6 +511,7 @@ namespace Pyxis
 				}
 				case GameMessage::Server_ClientAccepted:
 				{
+					//Server has told us we are validated! so ask it for my ID
 					Network::Message<GameMessage> msg;
 					msg.header.id = GameMessage::Client_RegisterWithServer;
 					m_ClientInterface.Send(msg);
@@ -468,41 +520,42 @@ namespace Pyxis
 				}
 				case GameMessage::Server_ClientAssignID:
 				{
+					//server responded with our ID 
 					msg >> m_ClientInterface.m_ID;
-					CreateWorld();
-					m_World->CreatePlayer(m_ClientInterface.m_ID, { 30, 200 });
-
+					
+					//now ask the server for the game data
 					Network::Message<GameMessage> msg;
-					msg.header.id = GameMessage::Game_AddPlayer;
-
-					//all game changing messages / input actions will start with
-					// the game tick / "heartbeat"
-					uint64_t tick = 0;
-					msg << tick;
-
-					//for adding a player, ill put in the id, and position
-					msg << m_ClientInterface.m_ID;
-					msg << glm::vec2(30, 200);
-
+					msg.header.id = GameMessage::Game_RequestGameData;
 					m_ClientInterface.Send(msg);
+
+					break;
+				}
+				case GameMessage::Game_GameData:
+				{
+					msg >> m_GameTick;
+					CreateWorld();
+					PX_TRACE("loaded game at tick {0}", m_GameTick);
+
+					//Network::Message<GameMessage> msg;
+					//m_CurrentTickClosure.AddInputAction(InputAction::Add_Player, glm::ivec2(30,200), m_ClientInterface.m_ID);
+
 					m_Connecting = false;
+					m_SimulationRunning = true;
 					break;
 				}
-				case GameMessage::Game_AddPlayer:
+				case GameMessage::Game_MergedTickClosure:
 				{
-					uint64_t tick;
-					uint64_t id;
-					glm::vec2 position;
-					msg >> position >> id >> tick;
-					m_World->CreatePlayer(id, position);
-					break;
-				}
-				case GameMessage::Game_RemovePlayer:
-				{
-					break;
-				}
-				case GameMessage::Game_TickClosure:
-				{
+					MergedTickClosure tickClosure;
+					msg >> tickClosure.m_Tick;
+					msg >> tickClosure.m_InputActionCount;
+					msg >> tickClosure.m_Data;
+
+					//TODO
+					//as the client, i now need to remove the input actions from the 
+					//latency queue for the tick i recieved
+					m_LatencyStateReset = true;
+					m_World->HandleTickClosure(tickClosure);
+
 					break;
 				}
 				default:
@@ -561,11 +614,29 @@ namespace Pyxis
 	bool GameLayer::OnKeyPressedEvent(KeyPressedEvent& event) {
 		if (event.GetKeyCode() == PX_KEY_SPACE)
 		{
-			m_SimulationRunning = !m_SimulationRunning;
+			if (m_World->m_Running)
+			{
+				m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.m_ID);
+			}
+			else 
+			{
+				m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.m_ID);
+			}
 		}
 		if (event.GetKeyCode() == PX_KEY_RIGHT)
 		{
-			m_World->UpdateWorld();
+			Network::Message<GameMessage> msg;
+			msg.header.id = GameMessage::Game_TickClosure;
+			msg << m_CurrentTickClosure.m_Data;
+			msg << m_CurrentTickClosure.m_InputActionCount;
+			msg << m_GameTick;
+			msg << m_ClientInterface.m_ID;
+			m_ClientInterface.Send(msg);
+			//m_World->UpdateWorld();
+			m_GameTick++;
+			//reset tick closure
+			m_CurrentTickClosure = TickClosure();
+			//m_CurrentTickClosure.m_Tick = m_GameTick;
 		}
 		if (event.GetKeyCode() == PX_KEY_C)
 		{
@@ -630,18 +701,10 @@ namespace Pyxis
 		return false;
 	}
 
-	void GameLayer::PaintElementAtCursor()
+	void GameLayer::PaintElementAtCursor(glm::ivec2 pixelPos)
 	{
 		//paint a rigid body by tracking min and max
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
-
-		auto [x, y] = GetMousePositionScene();
-		int max_width  = Application::Get().GetWindow().GetWidth();
-		int max_height = Application::Get().GetWindow().GetHeight();
-		if (x > max_width || x < 0 || y > max_height || y < 0 ) return;
-		auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-		glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
-
 
 		glm::ivec2 newPos = pixelPos;
 		for (int x = -m_BrushSize; x <= m_BrushSize; x++)
@@ -669,32 +732,12 @@ namespace Pyxis
 
 				chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
 				index = m_World->PixelToIndex(newPos);
+
 				elementData.UpdateElementData(element, index.x, index.y);
 				element.m_Color = element.m_BaseColor;
-				chunk->UpdateDirtyRect(index.x, index.y);
 
-				//set element and add chunk to update map
-				if (m_World->m_ElementIDs["debug_heat"] == m_SelectedElementIndex)
-				{
-					//add heat
-					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
-				}
-				else if (m_World->m_ElementIDs["debug_cool"] == m_SelectedElementIndex)
-				{
-					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
-				}
-				else
-				{
-					m_World->SetElement(newPos, element);
-					//update rigid min and max
-					if (newPos.x < m_RigidMin.x) m_RigidMin.x = newPos.x;
-					if (newPos.y < m_RigidMin.y) m_RigidMin.y = newPos.y;
-					if (newPos.x > m_RigidMax.x) m_RigidMax.x = newPos.x;
-					if (newPos.y > m_RigidMax.y) m_RigidMax.y = newPos.y;
-				}
 
-				
-				map[chunk->m_ChunkPos] = chunk;
+				m_CurrentTickClosure.AddInputAction(InputAction::Input_Place, element, newPos, m_ClientInterface.m_ID);
 			}
 		}
 		for each(auto& pair in map)

@@ -81,7 +81,7 @@ namespace Pyxis
 
 								m_DeqConnections.back()->ConnectToClient(this, nIDCounter++);
 
-								PX_CORE_INFO("[{0}] Connection Approved", m_DeqConnections.back()->GetID());
+								PX_CORE_INFO("[SERVER] Connection [{0}] Approved", m_DeqConnections.back()->GetID());
 							}
 							else
 							{
@@ -111,7 +111,7 @@ namespace Pyxis
 					OnClientDisconnect(client);
 					client.reset();
 					m_DeqConnections.erase(
-						std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), client), m_DeqConnections)
+						std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), client), m_DeqConnections.end());
 
 				}
 			}
@@ -130,7 +130,8 @@ namespace Pyxis
 					}
 					else
 					{
-						OnClientDisconnect(client);
+						if (client != ignoreClient)
+							OnClientDisconnect(client);
 						client.reset();
 						InvalidClientExists = true;
 					}

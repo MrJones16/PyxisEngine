@@ -18,11 +18,11 @@
 
 #ifdef PX_DEBUG
 #define PX_ENABLE_ASSERTS
-#define PX_PROFILING 1
+#define PX_PROFILING 0
 #endif
 
 #ifdef PX_RELEASE
-#define PX_PROFILING 1
+#define PX_PROFILING 0
 #endif
 
 #ifdef PX_DIST

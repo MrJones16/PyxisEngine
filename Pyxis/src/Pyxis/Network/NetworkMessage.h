@@ -44,7 +44,7 @@ namespace Pyxis
 			template<typename DataType>
 			friend Message<T>& operator << (Message<T>& msg, const DataType& data)
 			{
-				//chack that the type of the data being pushed is trivially copyable
+				//check that the type of the data being pushed is trivially copyable
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into message body vector");
 
 				//cache current vector size, as this is where we will add the data
@@ -64,9 +64,24 @@ namespace Pyxis
 			}
 
 			template<typename DataType>
+			friend Message<T>& operator << (Message<T>& msg, const std::vector<DataType>& data)
+			{
+				//check that the data is easily copyable
+				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into message body vector");
+
+				for (auto it = data.rbegin(); it != data.rend(); it++)
+				{
+					msg << *it;
+				}
+				msg << uint32_t(data.size());
+
+				return msg;
+			}
+
+			template<typename DataType>
 			friend Message<T>& operator >> (Message<T>& msg, DataType& data)
 			{
-				//chack that the data is easily copyable
+				//check that the data is easily copyable
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to have been in a body vector");
 
 				//cache the location towards the end of the vector where the pulled data starts
@@ -83,6 +98,30 @@ namespace Pyxis
 				msg.header.size = msg.size();
 
 				//return the target message so it can be "chained"
+				return msg;
+			}
+
+			template<typename DataType>
+			friend Message<T>& operator >> (Message<T>& msg, std::vector<DataType>& data)
+			{
+				//check that the data is easily copyable
+				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to have been in a body vector");
+
+				//make sure we empty the array first, as we are supposed to be replacing it... or maybe not?
+				data.clear();
+
+				//get the amount of items to extract
+				uint32_t itemCount = 0;
+				msg >> itemCount;
+
+				//loop over that many elements and pull them out
+				for (int i = 0; i < itemCount; i++)
+				{
+					DataType dt;
+					msg >> dt;
+					data.push_back(dt);
+				}
+
 				return msg;
 			}
 

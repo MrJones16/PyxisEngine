@@ -15,9 +15,10 @@ namespace Pyxis
 		Client_RegisterWithServer,
 		Client_UnregisterWithServer,
 
-		Game_AddPlayer,
-		Game_RemovePlayer,
+		Game_RequestGameData,
+		Game_GameData,
 		Game_TickClosure,
+		Game_MergedTickClosure,
 
 		Message_All,
 		Server_Message,

@@ -142,6 +142,7 @@ namespace Pyxis
 						else
 						{
 							PX_CORE_ERROR("[{0}] Read Header Fail: {1}", m_ID, ec.message());
+							
 							m_Socket.close();
 						}
 					});

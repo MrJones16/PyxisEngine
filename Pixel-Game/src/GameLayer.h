@@ -43,7 +43,7 @@ namespace Pyxis
 		enum BrushType {
 			circle = 0, square = 1, end
 		};
-		void PaintElementAtCursor();
+		void PaintElementAtCursor(glm::ivec2 pixelPos);
 		void PaintBrushHologram();
 
 	private:
@@ -54,7 +54,14 @@ namespace Pyxis
 
 		//multiplayer things
 		PixelClientInterface m_ClientInterface;
+		bool m_LatencyStateReset = false;
 		bool m_Connecting = true;
+
+		uint64_t m_GameTick = 0;
+		TickClosure m_CurrentTickClosure;
+		std::deque<TickClosure> m_LatencyInputQueue;
+		const int m_LatencyQueueLimit = 100;
+
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;
@@ -73,6 +80,7 @@ namespace Pyxis
 		float m_BrushSize = 1;
 		int m_BrushType = BrushType::circle;
 		Element m_HoveredElement = Element();
+		bool m_BuildingRigidBody = false;
 
 		glm::ivec2 m_RigidMin = { 99999999, 99999999 };
 		glm::ivec2 m_RigidMax = { -99999999 , -99999999 };
