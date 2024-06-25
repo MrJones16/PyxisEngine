@@ -28,6 +28,13 @@ namespace Pyxis
 		PushOverlay(m_ImGuiLayer);
 	}
 
+	Application::Application(const std::string& name, bool consoleOnly) {
+
+		PX_CORE_ASSERT(!s_Instance, "Application already exists!");
+		s_Instance = this;
+		m_ImGuiLayer = nullptr;
+	}
+
 	Application::~Application() {
 		
 	}

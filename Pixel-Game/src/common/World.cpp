@@ -530,33 +530,6 @@ namespace Pyxis
 				}
 			}
 		}
-
-
-
-		//for each (Reaction reaction in m_Reactions)
-		//{
-		//	//add reaction to the lookup for both cell directions
-		//	m_ReactionLookup[m_ElementIDs[reaction.input_cell_0]][m_ElementIDs[reaction.input_cell_1]] =
-		//		ReactionResult(reaction.probablility,
-		//			m_ElementIDs[reaction.output_cell_0],
-		//			m_ElementIDs[reaction.output_cell_1]);
-
-		//	m_ReactionLookup[m_ElementIDs[reaction.input_cell_1]][m_ElementIDs[reaction.input_cell_0]] =
-		//		ReactionResult(reaction.probablility,
-		//			m_ElementIDs[reaction.output_cell_1],
-		//			m_ElementIDs[reaction.output_cell_0]);
-
-		//}
-		
-		////sand to water becomes damp sand and air
-		//m_ReactionLookup[2][3] = ReactionResult(5, 0);
-
-		////damp sand and water becomes wet sand and air
-		//m_ReactionLookup[5][3] = ReactionResult(6, 0);
-
-		////wet sand and sand becomes two damp sand
-		//m_ReactionLookup[6][2] = ReactionResult(5, 5);
-
 	}
 
 
@@ -564,19 +537,22 @@ namespace Pyxis
 	/// Takes the message with the world data, and loads the world with it
 	/// Expects this order to pull items out
 	///
-	/// world seed				| 
+	/// world seed				| int
 	/// 
 	/// How many chunks			| uint32
 	///		chunk pos			| ivec2
+	///		chunk dirtyrects	| pair<glm::ivec2,glm::ivec2>
 	///		chunk data			| Element...
 	/// how many pixel bodies	| uint32
 	///		rigid body data		| 
-	///			id
-	///			size
-	///			array
-	///			position
+	///			id				| uint64_t
+	///			size			| glm::ivec2
+	///			array			| Element*
+	///			position	
 	///			rotation
 	///			type
+	///			angular velocity
+	///			linear velocity
 	/// </summary>
 	/// <param name="msg"></param>
 	void World::LoadWorld(Network::Message<GameMessage>& msg)
@@ -604,10 +580,14 @@ namespace Pyxis
 
 			PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(), "Tried to load a chunk that already existed");
 			Chunk* chunk = new Chunk(chunkPos);
-			m_Chunks[chunkPos] = chunk;
-			for (int i = (CHUNKSIZE * CHUNKSIZE) - 1; i >= 0; i--)
+			for (int ii = (BUCKETSWIDTH * BUCKETSWIDTH) - 1; ii >= 0; ii--)
 			{
-				msg >> chunk->m_Elements[i];
+				msg >> chunk->m_DirtyRects[ii];
+			}
+			m_Chunks[chunkPos] = chunk;
+			for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--)
+			{
+				msg >> chunk->m_Elements[ii];
 			}
 
 			chunk->UpdateWholeTexture();
@@ -671,8 +651,13 @@ namespace Pyxis
 			{
 				msg << pair.second->m_Elements[i];
 			}
+			for each (auto minmax in pair.second->m_DirtyRects)
+			{
+				msg << minmax;
+			}
 			msg << pair.first;
 		}
+
 		msg << uint32_t(m_Chunks.size());
 		PX_TRACE("Uploaded {0} chunks", m_Chunks.size());
 

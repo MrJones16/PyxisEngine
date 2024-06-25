@@ -31,13 +31,12 @@ namespace Pyxis
 
 	void PixelGameServer::OnDetatch()
 	{
+		//stop the server
 		Stop();
 	}
 
 	void PixelGameServer::OnUpdate(Pyxis::Timestep ts)
 	{
-		//Pyxis::Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
-		 
 		//check to make sure all the players are still connected
 		std::vector< std::shared_ptr<Network::Connection<GameMessage>>> clientsToRemove;
 		for each (std::shared_ptr<Network::Connection<GameMessage>> client in m_DeqConnections)
@@ -121,16 +120,11 @@ namespace Pyxis
 			m_World.HandleTickClosure(mtc);
 			m_MTCDeque.pop_front();
 		}
-
-
-
-		//m_FrameBuffer->Unbind()
-		//Pyxis::Renderer2D::EndScene();
 	}
 
 	void PixelGameServer::OnImGuiRender()
 	{
-		ImGui::DockSpaceOverViewport();
+		//we are a server, do no imgui rendering!
 	}
 
 	void PixelGameServer::OnEvent(Pyxis::Event& e)
@@ -150,9 +144,6 @@ namespace Pyxis
 	bool PixelGameServer::OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client)
 	{
 		//I am able to block the incoming connection if i desire here
-		/*Network::Message<GameMessage> msg;
-		msg.header.id = GameMessage::Server_ClientConnected;
-		client->Send(msg);*/
 		m_PlayerCount++;
 
 		return true;
@@ -190,9 +181,7 @@ namespace Pyxis
 		case GameMessage::Game_RequestGameData:
 		{
 			//client is requesting the world data, so send it!
-			//send the world, and rigid bodies
-
-			///TODO need to put in actual world data, and possibly pause the game?
+			//send the world and rigid body data
 			Network::Message<GameMessage> msg;
 			msg.header.id = GameMessage::Game_GameData;
 			//in order to send the game data, i'll pause the game for now while its sending?
@@ -228,8 +217,6 @@ namespace Pyxis
 			msg >> tick;
 			msg >> tickClosure.m_InputActionCount;
 			msg >> tickClosure.m_Data;
-
-			//std::cout << ID << "'s m_tick: " << tick << std::endl;
 
 			if (m_MTCDeque.size() == 0)
 			{
