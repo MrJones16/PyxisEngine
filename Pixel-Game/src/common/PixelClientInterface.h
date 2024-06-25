@@ -17,6 +17,8 @@ namespace Pyxis
 
 		Game_RequestGameData,
 		Game_GameData,
+		Game_Loaded,
+		Game_TickToEnter,
 		Game_TickClosure,
 		Game_MergedTickClosure,
 

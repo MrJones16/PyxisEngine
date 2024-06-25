@@ -7,6 +7,8 @@
 #include <box2d/b2_world.h>
 #include "PixelRigidBody.h"
 #include <box2d/b2_math.h>
+#include "PixelClientInterface.h"
+
 
 namespace Pyxis
 {
@@ -32,6 +34,12 @@ namespace Pyxis
 		uint32_t m_InputActionCount = 0;
 
 	public:
+		void AddInputAction(InputAction action)
+		{
+			*(this) << action;
+			m_InputActionCount++;
+		}
+
 		template<typename... Arguments>
 		void AddInputAction(InputAction action, Arguments ... args)
 		{
@@ -101,17 +109,17 @@ namespace Pyxis
 	class MergedTickClosure : public TickClosure
 	{
 	public:
-		//the tick this action should occur
+		//the "heartbeat" tick this action should occur
 		uint64_t m_Tick = 0;
 
-		uint16_t m_TickClosureCount = 0;
-		inline void AddTickClosure(TickClosure& tickClosure)
+		std::unordered_set<uint64_t> m_Clients;
+		inline void AddTickClosure(TickClosure& tickClosure, uint64_t clientID)
 		{
 			size_t i = m_Data.size(); // get current end point of data
 			m_Data.resize(m_Data.size() + tickClosure.m_Data.size());
 			memcpy(m_Data.data() + i, tickClosure.m_Data.data(), tickClosure.m_Data.size());
 			m_InputActionCount += tickClosure.m_InputActionCount;
-			m_TickClosureCount++;
+			m_Clients.insert(clientID);
 		}
 	};
 
@@ -129,16 +137,17 @@ namespace Pyxis
 
 	
 	static const int CHUNKSIZE = 512;
-	static const float PPU = 15.0f; // pixels per unit for box2d sim
-
 
 	class World
 	{
 	public:
 
-		World(std::string assetPath = "assets");
+		World(std::string assetPath = "assets", int seed = 1337);
+		void Initialize(int worldSeed);
 		bool LoadElementData(std::string assetPath);
 		void BuildReactionTable();
+		void LoadWorld(Network::Message<GameMessage>& msg);
+		void GetWorldData(Network::Message<GameMessage>& msg);
 		~World();
 
 		void AddChunk(const glm::ivec2& chunkPos);
@@ -157,11 +166,12 @@ namespace Pyxis
 		Element GetElementByName(std::string elementName, int x, int y);
 		Element& GetElement(const glm::ivec2& pixelPos);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
-		void CreatePixelRigidBody(uint32_t uuid, const glm::ivec2& size, Element* ElementArray, glm::ivec2 pixelPos, b2BodyType type = b2_dynamicBody);
+		PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody);
+		void PutPixelBodyInWorld(const PixelRigidBody& body);
 
 	public:
 		void HandleTickClosure(MergedTickClosure& tc);
-		Player* CreatePlayer(uint32_t playerID, glm::vec2 position);
+		Player* CreatePlayer(uint64_t playerID, glm::vec2 position);
 
 
 		//helper functions
@@ -176,7 +186,7 @@ namespace Pyxis
 
 
 		b2World* m_Box2DWorld;
-		std::unordered_map<uint32_t, PixelRigidBody*> m_PixelBodyMap;
+		std::unordered_map<uint64_t, PixelRigidBody*> m_PixelBodyMap;
 		//std::vector<PixelRigidBody*> m_PixelBodies;
 
 		//

@@ -54,10 +54,13 @@ namespace Pyxis
 
 		//multiplayer things
 		PixelClientInterface m_ClientInterface;
+		std::deque<MergedTickClosure> m_MTCQueue;
 		bool m_LatencyStateReset = false;
 		bool m_Connecting = true;
+		bool m_WaitForWorldData = true;
+		uint64_t m_TickToEnter = -1; // set to max value
 
-		uint64_t m_GameTick = 0;
+		uint64_t m_Heartbeat = 0;
 		TickClosure m_CurrentTickClosure;
 		std::deque<TickClosure> m_LatencyInputQueue;
 		const int m_LatencyQueueLimit = 100;

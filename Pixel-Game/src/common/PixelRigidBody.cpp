@@ -12,6 +12,33 @@ namespace Pyxis
 		delete[] m_ElementArray;
 	}
 
+	void PixelRigidBody::SetPixelPosition(const glm::ivec2& position)
+	{
+		m_B2Body->SetTransform({ (float)(position.x) / PPU, (float)(position.y) / PPU }, m_B2Body->GetAngle());
+	}
+	void PixelRigidBody::SetPosition(const glm::vec2& position)
+	{
+		m_B2Body->SetTransform({ position.x, position.y}, m_B2Body->GetAngle());
+	}
+
+	void PixelRigidBody::SetRotation(float rotation)
+	{
+		b2Vec2 position = m_B2Body->GetPosition();
+		m_B2Body->SetTransform(position, rotation);
+	}
+
+	void PixelRigidBody::SetAngularVelocity(float velocity)
+	{
+		m_B2Body->SetAngularVelocity(velocity);
+	}
+
+	void PixelRigidBody::SetLinearVelocity(const b2Vec2& velocity)
+	{
+		m_B2Body->SetLinearVelocity(velocity);
+	}
+	
+	
+
 	/// <summary>
 	/// gathers the outline points of the rigid body, and returns a vector of
 	/// size 0 if there was a failure

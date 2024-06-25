@@ -36,10 +36,14 @@ namespace Pyxis
 		/// The authoritative world. 
 		/// </summary>
 		World m_World;
-		uint64_t m_GameTick = 0;
+		/// <summary>
+		/// the game tick the server is currently at
+		/// </summary>
+		uint64_t m_Heartbeat = 0;
 		//PixelServerInterface m_ServerInterface;
 
 		int m_PlayerCount = 0;
+		std::unordered_set<uint64_t> m_ClientsNeededForTick;
 		std::deque<MergedTickClosure> m_MTCDeque;
 		//std::unordered_map<uint64_t, MergedTickClosure> m_TickClosureMap;
 

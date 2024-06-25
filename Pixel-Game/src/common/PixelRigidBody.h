@@ -10,6 +10,19 @@
 
 namespace Pyxis
 {
+	/// <summary>
+	/// this is based on how many pixels represent 1 unit.
+	/// if an object had a velocity of -10, it would fall 10 pixels at
+	/// a PPU of 1, whereas it would fall 100 pixels at a PPU of 10;
+	/// 
+	/// basically, what matters is this is the value of an average
+	/// width / size pixel body. like a 1x1 box is this wide/tall
+	/// 
+	/// I have it at 16 cause a 16x16 box is a box to me!
+	/// </summary>
+	static const float PPU = 16.0f; // pixels per unit for box2d sim
+
+
 	class PixelRigidBody
 	{
 	public:
@@ -17,6 +30,14 @@ namespace Pyxis
 		PixelRigidBody();
 		~PixelRigidBody();
 
+		void SetPixelPosition(const glm::ivec2& position);
+		void SetPosition(const glm::vec2& position);
+		void SetRotation(float rotation);
+		void SetAngularVelocity(float velocity);
+		void SetLinearVelocity(const b2Vec2& velocity);
+
+	public:
+		//algorithms for creating a box2d body
 		std::vector<p2t::Point> GetContourPoints();
 		std::vector<p2t::Point> PixelRigidBody::SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold);
 		int GetMarchingSquareCase(glm::ivec2 position);

@@ -102,17 +102,61 @@ namespace Pyxis
 
 		HandleMessages();
 
+		if (m_Connecting)
+		{
+			//still connecting...
+
+			//while we are connecting, if we have the world data, it is still our
+			//job to catch up to the server, which means 
+			if (!m_WaitForWorldData)
+			{
+				if (m_MTCQueue.size() > 0)
+				{
+					//as the client, i now need to remove the input actions from the 
+					//latency queue for the tick i recieved, but not
+					//in this section where i'm not sending any ticks
+					m_LatencyStateReset = true;
+					m_World->HandleTickClosure(m_MTCQueue.front());
+					m_MTCQueue.pop_front();
+					m_Heartbeat++;
+				}
+				if (m_Heartbeat == m_TickToEnter)
+				{
+					PX_TRACE("Reached Tick: {0}, I'm caught up!", m_TickToEnter);
+					//we loaded the world, and we are caught up to what the
+					//server has sent, since we reached the tick to enter
+
+					//begin the game and start sending ticks! 
+					//the server is waiting for us!
+					m_Connecting = false;
+					m_SimulationRunning = true;
+				}
+				
+			}
+			return;
+		}
+
+		//go through all the recieved merged tick closures and resolve them
+		while (m_MTCQueue.size() > 0)
+		{
+			//TODO
+			//as the client, i now need to remove the input actions from the 
+			//latency queue for the tick i recieved
+
+			m_LatencyStateReset = true;
+			m_World->HandleTickClosure(m_MTCQueue.front());
+			//PX_TRACE("Handling a tick closure for tick: {0}!", m_MTCQueue.front().m_Tick);
+			m_MTCQueue.pop_front();
+			//dont increment game tick, because that is the "heartbeat" of constant input messages to align
+			//the game tick doesn't represent how many times the simulation has been stepped, but the amount
+			//of input messages sent
+		}
+
 		if (m_LatencyStateReset)
 		{
 			//i need to reset the latency state, and show what the world 
 			//should look like with the latency inputs
 			//m_LatencyWorld = m_World;
-		}
-
-		if (m_Connecting)
-		{
-			//still connecting...
-			return;
 		}
 
 		//handling messages will clear the latency state, as well as
@@ -121,6 +165,8 @@ namespace Pyxis
 
 		if (m_LatencyInputQueue.size() >= m_LatencyQueueLimit)
 		{
+			//this will be important for not spamming the server!
+			// 
 			//we hit the limit of prediction, so skip furthering the simulation
 			return;
 		}
@@ -205,15 +251,16 @@ namespace Pyxis
 					msg.header.id = GameMessage::Game_TickClosure;
 					msg << m_CurrentTickClosure.m_Data;
 					msg << m_CurrentTickClosure.m_InputActionCount;
-					msg << m_GameTick;
+					msg << m_Heartbeat;
 					msg << m_ClientInterface.m_ID;
 					m_ClientInterface.Send(msg);
+					//PX_TRACE("sent tick closure for tick {0}", m_Heartbeat);
 
-					m_GameTick++;
+					m_Heartbeat++;
 
 					//reset tick closure
 					m_CurrentTickClosure = TickClosure();
-					//m_CurrentTickClosure.m_Tick = m_GameTick;
+					//m_CurrentTickClosure.m_Tick = m_Heartbeat;
 					m_UpdateTime = time;
 				}
 
@@ -281,12 +328,6 @@ namespace Pyxis
 			Application::Get().GetImGuiLayer()->BlockEvents(false);
 			auto sceneViewSize = ImGui::GetContentRegionAvail();
 			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
-			
-			
-			//PX_TRACE("offset: ({0},{1})", m_ViewportOffset.x, m_ViewportOffset.y);
-			//PX_TRACE("window pos: ({0},{1})", ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
-			//PX_TRACE("item rect min: ({0},{1})", ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y);
-			//PX_TRACE("scene view size: ({0},{1})", sceneViewSize.x, sceneViewSize.y);
 			ImGui::Image(
 				(ImTextureID)m_SceneFrameBuffer->GetColorAttatchmentRendererID(),
 				sceneViewSize,
@@ -344,13 +385,29 @@ namespace Pyxis
 				{
 					if (ImGui::Button("Build Rigid Body"))
 					{
-						m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, m_ClientInterface.m_ID);
+						srand(time(0));
+						uint64_t uuid = std::rand();
+						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
+						{
+							srand(time(0));
+							uint64_t uuid = std::rand();
+						}
+						if (m_RigidMin.x < m_RigidMax.x)
+							m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, uuid);
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
 					}
 					if (ImGui::Button("Build Static Rigid Body"))
 					{
-						m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_staticBody, m_RigidMin, m_RigidMax, m_ClientInterface.m_ID);
+						srand(time(0));
+						uint64_t uuid = std::rand();
+						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
+						{
+							srand(time(0));
+							uint64_t uuid = std::rand();
+						}
+						if (m_RigidMin.x < m_RigidMax.x)
+							m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_staticBody, m_RigidMin, m_RigidMax, uuid);
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
 					}
@@ -388,6 +445,10 @@ namespace Pyxis
 			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Hovered Element Properties"))
 			{
+				auto [x, y] = GetMousePositionScene();
+				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+				ImGui::Text(("(" + std::to_string(pixelPos.x) + ", " + std::to_string(pixelPos.y) + ")").c_str());
 				ElementData& elementData = m_World->m_ElementData[m_HoveredElement.m_ID];
 				ImGui::Text("Element: %s", elementData.name.c_str());
 				ImGui::Text("- Temperature: %f", m_HoveredElement.m_Temperature);
@@ -532,29 +593,41 @@ namespace Pyxis
 				}
 				case GameMessage::Game_GameData:
 				{
-					msg >> m_GameTick;
+					msg >> m_Heartbeat;
 					CreateWorld();
-					PX_TRACE("loaded game at tick {0}", m_GameTick);
+					msg >> m_World->m_Running;
+					m_World->LoadWorld(msg);
+					
+					PX_TRACE("loaded game at tick {0}", m_Heartbeat);
 
-					//Network::Message<GameMessage> msg;
-					//m_CurrentTickClosure.AddInputAction(InputAction::Add_Player, glm::ivec2(30,200), m_ClientInterface.m_ID);
+					//now that i have finished downloading the world
+					// (which might have taken a while)
+					// tell the server i am done
 
-					m_Connecting = false;
-					m_SimulationRunning = true;
+					Network::Message<GameMessage> msg;
+					
+					m_WaitForWorldData = false;
+					//now catch up from all the inputs sent while loading
+					HandleMessages();
+					//now that i caught up on all the messages, be finished connecting
+					//and start sending my own ticks, and make others wait
+					msg.header.id = GameMessage::Game_Loaded;
+					m_ClientInterface.Send(msg);
+					break;
+				}
+				case GameMessage::Game_TickToEnter:
+				{
+					msg >> m_TickToEnter;
+					PX_TRACE("Tick to enter at: {0}", m_TickToEnter);
 					break;
 				}
 				case GameMessage::Game_MergedTickClosure:
 				{
+					m_MTCQueue.push_back(MergedTickClosure());
 					MergedTickClosure tickClosure;
-					msg >> tickClosure.m_Tick;
-					msg >> tickClosure.m_InputActionCount;
-					msg >> tickClosure.m_Data;
-
-					//TODO
-					//as the client, i now need to remove the input actions from the 
-					//latency queue for the tick i recieved
-					m_LatencyStateReset = true;
-					m_World->HandleTickClosure(tickClosure);
+					msg >> m_MTCQueue.back().m_Tick;
+					msg >> m_MTCQueue.back().m_InputActionCount;
+					msg >> m_MTCQueue.back().m_Data;
 
 					break;
 				}
@@ -625,18 +698,7 @@ namespace Pyxis
 		}
 		if (event.GetKeyCode() == PX_KEY_RIGHT)
 		{
-			Network::Message<GameMessage> msg;
-			msg.header.id = GameMessage::Game_TickClosure;
-			msg << m_CurrentTickClosure.m_Data;
-			msg << m_CurrentTickClosure.m_InputActionCount;
-			msg << m_GameTick;
-			msg << m_ClientInterface.m_ID;
-			m_ClientInterface.Send(msg);
-			//m_World->UpdateWorld();
-			m_GameTick++;
-			//reset tick closure
-			m_CurrentTickClosure = TickClosure();
-			//m_CurrentTickClosure.m_Tick = m_GameTick;
+			m_CurrentTickClosure.AddInputAction(InputAction::Input_StepSimulation);
 		}
 		if (event.GetKeyCode() == PX_KEY_C)
 		{
@@ -730,7 +792,6 @@ namespace Pyxis
 				element.m_Updated = !m_World->m_UpdateBit;
 				//element.m_BaseColor = Pyxis::RandomizeABGRColor(elementData.color, 20);
 
-				chunk = m_World->GetChunk(m_World->PixelToChunk(newPos));
 				index = m_World->PixelToIndex(newPos);
 
 				elementData.UpdateElementData(element, index.x, index.y);

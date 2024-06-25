@@ -39,18 +39,25 @@ namespace Pyxis
 		//Pyxis::Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
 		 
 		//check to make sure all the players are still connected
+		std::vector< std::shared_ptr<Network::Connection<GameMessage>>> clientsToRemove;
 		for each (std::shared_ptr<Network::Connection<GameMessage>> client in m_DeqConnections)
 		{
 			if (!client->IsConnected())
 			{
-				//client is no longer connected, so remove them
-				OnClientDisconnect(client);
-				//client.reset();
-				m_DeqConnections.erase(
-					std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), client), m_DeqConnections.end());
-				
+				clientsToRemove.push_back(client);
 			}
 		}
+		//delete the clients after iterating
+		for each (auto client in clientsToRemove)
+		{
+			//client is no longer connected, so remove them
+			OnClientDisconnect(client);
+			//client.reset();
+			m_DeqConnections.erase(
+				std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), client), m_DeqConnections.end());
+		}
+
+		//server is sending merged closure ticks when first joining the server...
 
 		//server update
 		if (m_PlayerCount <= 0)
@@ -71,10 +78,36 @@ namespace Pyxis
 			PX_TRACE("Server is waiting on tick {0}", m_MTCDeque.front().m_Tick);
 		}
 
-
-
-		while (m_MTCDeque.size() > 0 && m_MTCDeque.front().m_TickClosureCount >= m_PlayerCount)
+		///if there are no players, 
+		if (m_PlayerCount == 0)
 		{
+			while (m_MTCDeque.size() > 0)
+			{
+				//handle the remaining merged tick closures
+				MergedTickClosure& mtc = m_MTCDeque.front();
+				m_Heartbeat++;
+				m_World.HandleTickClosure(mtc);
+				m_MTCDeque.pop_front();
+			}
+		}
+
+
+		while (m_MTCDeque.size() > 0)
+		{
+			bool missingClient = false;
+			for each (uint64_t id in m_ClientsNeededForTick)
+			{
+				if (m_MTCDeque.front().m_Clients.find(id) == m_MTCDeque.front().m_Clients.end())
+				{
+					//one of the clients we need are missing, so wait
+					missingClient = true;
+					//PX_TRACE("Waiting on client [{0}]", id);
+					break;
+				}
+			}
+			if (missingClient) break;
+
+			//we have all the clients we need, so send the merged tick!
 			Network::Message<GameMessage> msg;
 			msg.header.id = GameMessage::Game_MergedTickClosure;
 
@@ -84,14 +117,9 @@ namespace Pyxis
 			msg << mtc.m_Tick;
 
 			MessageAllClients(msg);
-			m_GameTick++;
+			m_Heartbeat++;
 			m_World.HandleTickClosure(mtc);
 			m_MTCDeque.pop_front();
-
-			//now that i sent the merged packet to everyone, and i updated the authoritative world with
-			//that same packet, ill update the world.
-			if (m_World.m_Running)
-				m_World.UpdateWorld();
 		}
 
 
@@ -125,6 +153,7 @@ namespace Pyxis
 		/*Network::Message<GameMessage> msg;
 		msg.header.id = GameMessage::Server_ClientConnected;
 		client->Send(msg);*/
+		m_PlayerCount++;
 
 		return true;
 	}
@@ -133,6 +162,7 @@ namespace Pyxis
 	{
 		PX_TRACE("Removing Client [{0}]", client->GetID());
 		m_PlayerCount--;
+		m_ClientsNeededForTick.erase(client->GetID());
 		return;
 	}
 
@@ -165,10 +195,25 @@ namespace Pyxis
 			///TODO need to put in actual world data, and possibly pause the game?
 			Network::Message<GameMessage> msg;
 			msg.header.id = GameMessage::Game_GameData;
-			msg << m_GameTick;
+			//in order to send the game data, i'll pause the game for now while its sending?
+			//or maybe not, and ill just keep updating and sending the client the 
+			//merged ticks so it can catch up afterwards
+			m_World.GetWorldData(msg);
+			msg << m_World.m_Running;
+			msg << m_Heartbeat;
 			client->Send(msg);
-			m_PlayerCount++;
 
+			break;
+		}
+		case GameMessage::Game_Loaded:
+		{
+			//the server now expects that client to send ticks
+			m_ClientsNeededForTick.insert(client->GetID());
+			PX_TRACE("Starting to need client {0} at game tick {1}", client->GetID(), m_Heartbeat);
+			Network::Message<GameMessage> msg;
+			msg.header.id = GameMessage::Game_TickToEnter;
+			msg << m_Heartbeat;
+			client->Send(msg);
 			break;
 		}
 		case GameMessage::Game_TickClosure:
@@ -191,7 +236,7 @@ namespace Pyxis
 				//first merged tick closure, so just add it
 				MergedTickClosure mtc;
 				mtc.m_Tick = tick;
-				mtc.AddTickClosure(tickClosure);
+				mtc.AddTickClosure(tickClosure, client->GetID());
 				m_MTCDeque.push_back(mtc);
 			}
 			else
@@ -203,20 +248,20 @@ namespace Pyxis
 					if (tick == m_MTCDeque.at(i).m_Tick)
 					{
 						//found the same tick in the queue, so add it
-						m_MTCDeque.at(i).AddTickClosure(tickClosure);
+						m_MTCDeque.at(i).AddTickClosure(tickClosure, client->GetID());
 						return;
 					}
 				}
 				//didn't find the tick closure in the queue, so just add it
 				MergedTickClosure mtc;
 				mtc.m_Tick = tick;
-				mtc.AddTickClosure(tickClosure);
+				mtc.AddTickClosure(tickClosure, client->GetID());
 				m_MTCDeque.push_back(mtc);
 			}
 			break;
 		}
 		}
-		//no more code here, there is a return in the switch
+		//no more code here, there is a return in the switch statement
 		return;
 	}
 

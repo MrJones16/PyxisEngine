@@ -11,7 +11,7 @@
 
 namespace Pyxis
 {
-	World::World(std::string assetPath)
+	World::World(std::string assetPath, int seed)
 	{
 		m_Box2DWorld = new b2World({ 0, -9.8f });
 
@@ -28,23 +28,13 @@ namespace Pyxis
 		BuildReactionTable();
 
 		//set up world noise data
+		Initialize(seed);
+	}
+
+	void World::Initialize(int worldSeed)
+	{
 		m_HeightNoise = FastNoiseLite(m_WorldSeed);
 		m_CaveNoise = FastNoiseLite(m_WorldSeed);
-		//m_HeightNoise.SetFrequency(0.1f);
-
-		/*AddChunk({ 0,0 });
-		GetChunk({ 0,0 })->Clear();
-		AddChunk({ 0,-1 });
-		GetChunk({ 0,-1 })->Clear();
-		AddChunk({ -1,0 });
-		GetChunk({ -1,0 })->Clear();
-		AddChunk({ -1,-1 });
-		GetChunk({ -1,-1 })->Clear();*/
-
-		AddChunk({ 0,0 });
-		AddChunk({ 0,-1 });
-		AddChunk({ -1,-1 });
-		AddChunk({ -1,0 });
 	}
 
 	bool World::LoadElementData(std::string assetPath)
@@ -569,6 +559,126 @@ namespace Pyxis
 
 	}
 
+
+	/// <summary>
+	/// Takes the message with the world data, and loads the world with it
+	/// Expects this order to pull items out
+	///
+	/// world seed				| 
+	/// 
+	/// How many chunks			| uint32
+	///		chunk pos			| ivec2
+	///		chunk data			| Element...
+	/// how many pixel bodies	| uint32
+	///		rigid body data		| 
+	///			id
+	///			size
+	///			array
+	///			position
+	///			rotation
+	///			type
+	/// </summary>
+	/// <param name="msg"></param>
+	void World::LoadWorld(Network::Message<GameMessage>& msg)
+	{
+
+		//things still to synchronize:
+		//
+		// pixel body velocity
+		// chunk dirty rects
+		// 
+		//
+
+		int worldSeed;
+		msg >> worldSeed;
+		Initialize(worldSeed);
+
+		//Loading the chunks
+		uint32_t chunkCount = 0;
+		msg >> chunkCount;
+		PX_TRACE("Going to load {0} chunks", chunkCount);
+		glm::ivec2 chunkPos;
+		for (int i = 0; i < chunkCount; i++)
+		{
+			msg >> chunkPos;
+
+			PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(), "Tried to load a chunk that already existed");
+			Chunk* chunk = new Chunk(chunkPos);
+			m_Chunks[chunkPos] = chunk;
+			for (int i = (CHUNKSIZE * CHUNKSIZE) - 1; i >= 0; i--)
+			{
+				msg >> chunk->m_Elements[i];
+			}
+
+			chunk->UpdateWholeTexture();
+
+		}
+
+
+		uint32_t pixelBodyCount = 0;
+		msg >> pixelBodyCount;
+		PX_TRACE("Going to load {0} pixel bodies", pixelBodyCount);
+		for (int i = 0; i < pixelBodyCount; i++)
+		{
+			uint64_t uuid;
+			glm::ivec2 size;
+			msg >> uuid >> size;
+			Element* elementArray = new Element[size.x * size.y];
+			for (int ii = (size.x * size.y) - 1; ii >= 0; ii--)
+			{
+				msg >> elementArray[ii];
+			}
+			glm::vec2 position;
+			float rotation;
+			b2BodyType type;
+			float angularVelocity;
+			b2Vec2 linearVelocity;
+			msg >> position >> rotation >> type >> angularVelocity >> linearVelocity;
+			PixelRigidBody* body = CreatePixelRigidBody(uuid, size, elementArray, type);
+			body->SetPosition(position);
+			body->SetRotation(rotation);
+			body->SetAngularVelocity(angularVelocity);
+			body->SetLinearVelocity(linearVelocity);
+			// can safely ignore putting it in the world, since when we got the world
+			// data it is already there!
+			
+		}
+	}
+
+	void World::GetWorldData(Network::Message<GameMessage>& msg)
+	{
+		for each (auto pair in m_PixelBodyMap)
+		{
+			msg << pair.second->m_B2Body->GetLinearVelocity();
+			msg << pair.second->m_B2Body->GetAngularVelocity();
+			msg << pair.second->m_B2Body->GetType();
+			msg << pair.second->m_B2Body->GetAngle();
+			msg << pair.second->m_B2Body->GetPosition();
+			glm::ivec2 size = { pair.second->m_Width, pair.second->m_Height };
+			for (int i = 0; i < size.x * size.y; i++)
+			{
+				msg << pair.second->m_ElementArray[i];
+			}
+			msg << size;
+			msg << pair.first;
+		}
+		msg << uint32_t(m_PixelBodyMap.size());
+		PX_TRACE("Uploaded {0} pixel bodies", m_PixelBodyMap.size());
+
+		for each (auto pair in m_Chunks)
+		{
+			for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
+			{
+				msg << pair.second->m_Elements[i];
+			}
+			msg << pair.first;
+		}
+		msg << uint32_t(m_Chunks.size());
+		PX_TRACE("Uploaded {0} chunks", m_Chunks.size());
+
+		msg << m_WorldSeed;
+	}
+
 	bool World::StringContainsTag(const std::string& string)
 	{
 		if (string.find("[") != std::string::npos && string.find("[") != std::string::npos) return true;
@@ -633,6 +743,7 @@ namespace Pyxis
 		
 		
 	}
+
 
 	Chunk* World::GetChunk(const glm::ivec2& chunkPos)
 	{
@@ -711,6 +822,7 @@ namespace Pyxis
 
 
 		//pull pixel bodies out of the simulation
+		//PX_TRACE("Updating {0} pixel bodies", m_PixelBodyMap.size());
 		for each (auto pair in m_PixelBodyMap)
 		{
 			if (pair.second->m_B2Body->GetType() == b2_staticBody) continue;
@@ -764,13 +876,28 @@ namespace Pyxis
 					//pixel pos is the pixel at the center of the array, so lets use it
 					//the new position of the element is the skewed position + center offsef
 					glm::ivec2 worldPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+					//PX_TRACE("pulled world pos: ({0},{1})", worldPos.x, worldPos.y);
 					//set the world element from the array at the found position
-					pair.second->m_ElementArray[x + y * pair.second->m_Width] = GetElement(worldPos);
-					if (pair.second->m_ElementArray[x + y * pair.second->m_Width].m_ID == 0)
+					Element& worldElement = GetElement(worldPos);
+					if (pair.second->m_ElementArray[x + y * pair.second->m_Width].m_ID != worldElement.m_ID)
 					{
-						PX_TRACE("just pulled an element from the world that is air at ({0},{1})", worldPos.x, worldPos.y);
+						//element has changed over the last update, could have been removed
+						//or melted or something of the sort. because of this, we need to
+						//re-create our rigid body!
+						//TODO: recreate rigid body
+						
+						//pull the element out
+						pair.second->m_ElementArray[x + y * pair.second->m_Width] = worldElement;
+						SetElement(worldPos, Element());
+						PX_TRACE("Element changed over update at ({0},{1})", worldPos.x, worldPos.y);
 					}
-					SetElement(worldPos, Element());
+					else
+					{
+						//element should be the same, so nothing has changed, pull the element out
+						pair.second->m_ElementArray[x + y * pair.second->m_Width] = worldElement;
+						SetElement(worldPos, Element());
+					}
+					
 				}
 			}
 		}
@@ -782,6 +909,7 @@ namespace Pyxis
 		//put pixel bodies back into the simulation, and solve collisions
 		for each (auto pair in m_PixelBodyMap)
 		{
+			if (pair.second->m_B2Body->GetType() == b2_staticBody) continue;
 			glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
 
 			float angle = pair.second->m_B2Body->GetTransform().q.GetAngle();
@@ -832,11 +960,22 @@ namespace Pyxis
 					//pixel pos is the pixel at the center of the array, so lets use it
 					//the new position of the element is the skewed position + center offsef
 					glm::ivec2 worldPixelPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+					//PX_TRACE("placed world pos: ({0},{1})", worldPixelPos.x, worldPixelPos.y);
 					//set the world element from the array at the found position
-					auto index = PixelToIndex(worldPixelPos);
-					auto chunk = GetChunk(PixelToChunk(worldPixelPos));
-					UpdateChunkDirtyRect(index.x, index.y, chunk);
-					chunk->SetElement(index.x, index.y, element);
+					if (GetElement(worldPixelPos).m_ID != 0)
+					{
+						//we are replacing something that is in the way!
+						
+						//if it is not a solid, then send it in the air like a particle
+						// 
+						// and if it is a solid, then just... hide it? idk
+						//could have a bitmap of elements that are hidden
+						//so that they can be preserved and no weird things
+						//happen.
+
+
+					}
+					SetElement(worldPixelPos, element);
 				}
 			}
 		}
@@ -2236,25 +2375,22 @@ namespace Pyxis
 		e.m_Updated = !m_UpdateBit;
 		GetChunk(PixelToChunk(pixelPos))->SetElement(index.x, index.y, e);*/
 
-		auto chunkPos = PixelToChunk(pixelPos);
-		auto it = m_Chunks.find(chunkPos);
-		if (it != m_Chunks.end())
+		Chunk* chunk = GetChunk(PixelToChunk(pixelPos));
+		auto index = PixelToIndex(pixelPos);
+		if (element.m_ID == m_ElementIDs["debug_heat"])
 		{
-			auto index = PixelToIndex(pixelPos);
-			if (element.m_ID == m_ElementIDs["debug_heat"])
-			{
-				it->second->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
-			}
-			else if (element.m_ID == m_ElementIDs["debug_cool"])
-			{
-				it->second->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
-			}
-			else
-			{
-				it->second->m_Elements[index.x + index.y * CHUNKSIZE] = element;
-			}
-			UpdateChunkDirtyRect(index.x, index.y, it->second);
+			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
 		}
+		else if (element.m_ID == m_ElementIDs["debug_cool"])
+		{
+			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+		}
+		else
+		{
+			chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+		}
+		UpdateChunkDirtyRect(index.x, index.y, chunk);
+		
 	}
 
 	Element& World::GetElement(const glm::ivec2& pixelPos)
@@ -2264,33 +2400,29 @@ namespace Pyxis
 		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
 	}
 
-	void World::CreatePixelRigidBody(uint32_t uuid, const glm::ivec2& size, Element* ElementArray, glm::ivec2 pixelPosition, b2BodyType type)
+	/// <summary>
+	/// Creates a pixel rigid body, but it is not placed in the world!
+	/// you have to call PutPixelBodyInWorld after setting the pixel bodies
+	/// position
+	/// </summary>
+	/// <param name="uuid"></param>
+	/// <param name="size"></param>
+	/// <param name="ElementArray"></param>
+	/// <param name="type"></param>
+	/// <returns></returns>
+	PixelRigidBody* World::CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type)
 	{
 		PixelRigidBody* body = new PixelRigidBody();
 		body->m_Width = size.x;
 		body->m_Height = size.y;
 		body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
 		body->m_ElementArray = ElementArray;
-
-		//put the body into the world:
-		for (int x = 0; x < body->m_Width; x++)
-		{
-			for (int y = 0; y < body->m_Height; y++)
-			{
-				Element& element = ElementArray[x + y * body->m_Width];
-				if (element.m_ID != 0)
-				{
-					auto pixelPos = glm::ivec2((pixelPosition.x - body->m_Origin.x) + x, (pixelPosition.y - body->m_Origin.y) + y);
-					SetElement(pixelPos, element);
-				}
-			}
-		}
 		
 		//create the base body of the whole pixel body
 		b2BodyDef pixelBodyDef;
 		
 		//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
-		pixelBodyDef.position = { (float)(pixelPosition.x) / PPU, (float)(pixelPosition.y) / PPU };
+		pixelBodyDef.position = {0,0};
 		pixelBodyDef.type = type;
 		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
 
@@ -2302,7 +2434,7 @@ namespace Pyxis
 		{
 			m_Box2DWorld->DestroyBody(body->m_B2Body);
 			delete body;
-			return;
+			return nullptr;
 		}
 
 		auto contourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
@@ -2334,8 +2466,27 @@ namespace Pyxis
 			fixtureDef.shape = &triangleShape;
 			body->m_B2Body->CreateFixture(&fixtureDef);
 		}
-
+		PX_TRACE("Pixel body created with ID: {0}", uuid);
 		m_PixelBodyMap.insert({ uuid, body });
+		return body;
+	}
+
+	void World::PutPixelBodyInWorld(const PixelRigidBody& body)
+	{
+		glm::ivec2 pixelPosition = glm::ivec2(body.m_B2Body->GetPosition().x * PPU, body.m_B2Body->GetPosition().y * PPU);
+		//PX_TRACE("pixel body put in world at: ({0},{1})", pixelPosition.x, pixelPosition.y);
+		for (int x = 0; x < body.m_Width; x++)
+		{
+			for (int y = 0; y < body.m_Height; y++)
+			{
+				Element& element = body.m_ElementArray[x + y * body.m_Width];
+				if (element.m_ID != 0)
+				{
+					auto pixelPos = glm::ivec2((pixelPosition.x - body.m_Origin.x) + x, (pixelPosition.y - body.m_Origin.y) + y);
+					SetElement(pixelPos, element);
+				}
+			}
+		}
 	}
 
 
@@ -2391,6 +2542,7 @@ namespace Pyxis
 				auto ElementArray = new Element[width * height];
 				if (minimum.x < maximum.x)
 				{
+					int mass = 0;
 					for (int x = 0; x < width; x++)
 					{
 						for (int y = 0; y < height; y++)
@@ -2405,6 +2557,7 @@ namespace Pyxis
 								element.m_Rigid = true;
 								ElementArray[x + y * width] = element;
 								SetElement(pixelPos, Element());
+								mass++;
 							}
 							else
 							{
@@ -2414,7 +2567,15 @@ namespace Pyxis
 
 						}
 					}
-					CreatePixelRigidBody((uint32_t)(std::rand()), { width, height }, ElementArray, (minimum + maximum) / 2, type);
+					PX_TRACE("Mass is: {0}", mass);
+					PixelRigidBody* body = CreatePixelRigidBody(ID, { width, height }, ElementArray, type);
+					if (body == nullptr) 
+					{
+						PX_TRACE("Failed to create rigid body");
+						continue;
+					}
+					body->SetPixelPosition((minimum + maximum) / 2);
+					PutPixelBodyInWorld(*body);
 				}
 				break;
 			}
@@ -2458,7 +2619,7 @@ namespace Pyxis
 		}
 	}
 
-	Player* World::CreatePlayer(uint32_t playerID, glm::vec2 pixelPosition)
+	Player* World::CreatePlayer(uint64_t playerID, glm::vec2 pixelPosition)
 	{
 		Player* player = new Player();
 		player->m_Width = 10;
