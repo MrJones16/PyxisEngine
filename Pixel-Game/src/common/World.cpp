@@ -13,6 +13,7 @@ namespace Pyxis
 {
 	World::World(std::string assetPath, int seed)
 	{
+		
 		m_Box2DWorld = new b2World({ 0, -9.8f });
 
 		if (!LoadElementData(assetPath))
@@ -564,10 +565,12 @@ namespace Pyxis
 		// chunk dirty rects
 		// 
 		//
+		
+		msg >> m_WorldSeed;
+		Initialize(m_WorldSeed);
 
-		int worldSeed;
-		msg >> worldSeed;
-		Initialize(worldSeed);
+		msg >> m_UpdateBit;
+		msg >> m_SimulationTick;
 
 		//Loading the chunks
 		uint32_t chunkCount = 0;
@@ -614,9 +617,9 @@ namespace Pyxis
 			float angularVelocity;
 			b2Vec2 linearVelocity;
 			msg >> position >> rotation >> type >> angularVelocity >> linearVelocity;
-			PixelRigidBody* body = CreatePixelRigidBody(uuid, size, elementArray, type);
-			body->SetPosition(position);
-			body->SetRotation(rotation);
+			PixelRigidBody* body = new PixelRigidBody(uuid, size, elementArray, type, m_Box2DWorld);
+			m_PixelBodyMap[uuid] = body;
+			body->SetTransform(position, rotation);
 			body->SetAngularVelocity(angularVelocity);
 			body->SetLinearVelocity(linearVelocity);
 			// can safely ignore putting it in the world, since when we got the world
@@ -661,12 +664,14 @@ namespace Pyxis
 		msg << uint32_t(m_Chunks.size());
 		PX_TRACE("Uploaded {0} chunks", m_Chunks.size());
 
+		msg << m_SimulationTick;
+		msg << m_UpdateBit;
 		msg << m_WorldSeed;
 	}
 
 	bool World::StringContainsTag(const std::string& string)
 	{
-		if (string.find("[") != std::string::npos && string.find("[") != std::string::npos) return true;
+		if (string.find("[") != std::string::npos && string.find("]") != std::string::npos) return true;
 		return false;
 	}
 
@@ -791,10 +796,43 @@ namespace Pyxis
 		
 	}
 
+	Element World::GetElementByName(std::string elementName, int x, int y)
+	{
+		Element& result = Element();
+		result.m_ID = m_ElementIDs[elementName];
+		m_ElementData[result.m_ID].UpdateElementData(result, x, y);
+		return result;
+	}
+
+	Element& World::GetElement(const glm::ivec2& pixelPos)
+	{
+		auto chunkPos = PixelToChunk(pixelPos);
+		auto index = PixelToIndex(pixelPos);
+		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+	}
+
+	void World::SetElement(const glm::ivec2& pixelPos, const Element& element)
+	{
+		Chunk* chunk = GetChunk(PixelToChunk(pixelPos));
+		auto index = PixelToIndex(pixelPos);
+		if (element.m_ID == m_ElementIDs["debug_heat"])
+		{
+			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+		}
+		else if (element.m_ID == m_ElementIDs["debug_cool"])
+		{
+			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+		}
+		else
+		{
+			chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+		}
+		UpdateChunkDirtyRect(index.x, index.y, chunk);
+
+	}
 
 	void World::UpdateWorld()
 	{
-
 		/*m_Threads.clear();
 		for each (auto& pair in m_Chunks)
 		{
@@ -1063,6 +1101,7 @@ namespace Pyxis
 		//UpdateChunk(m_Chunks[{0, 0}]);
 
 		m_UpdateBit = !m_UpdateBit;
+		m_SimulationTick++;
 	}
 
 	void World::UpdateTextures()
@@ -1130,6 +1169,8 @@ namespace Pyxis
 			for (int x = startNum; x != compNumber; directionBit ? x++ : x--)
 			{
 				//we now have an x and y of the element in the array, so update it
+				//first lets seed random, so the simulation is deterministic!
+				SeedRandom(x, y);
 				Element& currElement = chunk->m_Elements[x + y * CHUNKSIZE];
 				ElementData& currElementData = m_ElementData[currElement.m_ID];
 
@@ -2344,45 +2385,47 @@ namespace Pyxis
 	}
 
 
-	Element World::GetElementByName(std::string elementName, int x, int y)
+	void World::ResetBox2D()
 	{
-		Element& result = Element();
-		result.m_ID = m_ElementIDs[elementName];
-		m_ElementData[result.m_ID].UpdateElementData(result, x, y);
-		return result;
-	}
-
-	void World::SetElement(const glm::ivec2& pixelPos, const Element& element)
-	{
-		//PX_TRACE("Setting element at ({0}, {1})", pixelPos.x, pixelPos.y);
-		/*glm::ivec2 index = PixelToIndex(pixelPos);
-		Element e = element;
-		e.m_Updated = !m_UpdateBit;
-		GetChunk(PixelToChunk(pixelPos))->SetElement(index.x, index.y, e);*/
-
-		Chunk* chunk = GetChunk(PixelToChunk(pixelPos));
-		auto index = PixelToIndex(pixelPos);
-		if (element.m_ID == m_ElementIDs["debug_heat"])
+		PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);
+		//struct to hold the data of the b2 bodies
+		struct PixelBodyData
 		{
-			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
-		}
-		else if (element.m_ID == m_ElementIDs["debug_cool"])
+			uint64_t id;
+			b2Vec2 linearVelocity;
+			float angularVelocity;
+			float angle;
+			b2Vec2 position;
+			//Element* elementArray;
+		};
+		std::unordered_map<uint64_t, PixelBodyData> storage;
+		for each (auto pair in m_PixelBodyMap)
 		{
-			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+			//store the data to re-apply later
+			PixelBodyData data;
+			data.linearVelocity = pair.second->m_B2Body->GetLinearVelocity();
+			data.angularVelocity = pair.second->m_B2Body->GetAngularVelocity();
+			data.angle = pair.second->m_B2Body->GetAngle();
+			data.position = pair.second->m_B2Body->GetPosition();
+			//data.elementArray = pair.second->m_ElementArray;
+			storage[pair.first] = data;
+			//delete each b2body
+			m_Box2DWorld->DestroyBody(pair.second->m_B2Body);
 		}
-		else
+		//in theory this should delete the bodies so the above
+		//step is unnecessary but it is nicer like this
+		m_Box2DWorld->~b2World();
+		m_Box2DWorld = new b2World({ 0, -9.8f });
+		for each (auto pair in m_PixelBodyMap)
 		{
-			chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
-		}
-		UpdateChunkDirtyRect(index.x, index.y, chunk);
-		
-	}
+			//recreate the box2d body for each rigid body!
+			pair.second->CreateB2Body(m_Box2DWorld);
 
-	Element& World::GetElement(const glm::ivec2& pixelPos)
-	{
-		auto chunkPos = PixelToChunk(pixelPos);
-		auto index = PixelToIndex(pixelPos);
-		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+			PixelBodyData& data = storage[pair.first];
+			pair.second->m_B2Body->SetTransform(data.position, data.angle);
+			pair.second->m_B2Body->SetLinearVelocity(data.linearVelocity);
+			pair.second->m_B2Body->SetAngularVelocity(data.angularVelocity);
+		}
 	}
 
 	/// <summary>
@@ -2390,71 +2433,66 @@ namespace Pyxis
 	/// you have to call PutPixelBodyInWorld after setting the pixel bodies
 	/// position
 	/// </summary>
-	/// <param name="uuid"></param>
-	/// <param name="size"></param>
-	/// <param name="ElementArray"></param>
-	/// <param name="type"></param>
-	/// <returns></returns>
-	PixelRigidBody* World::CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type)
-	{
-		PixelRigidBody* body = new PixelRigidBody();
-		body->m_Width = size.x;
-		body->m_Height = size.y;
-		body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
-		body->m_ElementArray = ElementArray;
-		
-		//create the base body of the whole pixel body
-		b2BodyDef pixelBodyDef;
-		
-		//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
-		pixelBodyDef.position = {0,0};
-		pixelBodyDef.type = type;
-		body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
+	//PixelRigidBody* World::CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type)
+	//{
+	//	PixelRigidBody* body = new PixelRigidBody();
+	//	body->m_Width = size.x;
+	//	body->m_Height = size.y;
+	//	body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
+	//	body->m_ElementArray = ElementArray;
+	//	
+	//	//create the base body of the whole pixel body
+	//	b2BodyDef pixelBodyDef;
+	//	
+	//	//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
+	//	pixelBodyDef.position = {0,0};
+	//	pixelBodyDef.type = type;
+	//	body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
 
 
-		//BUG ERROR FIX TODO WRONG BROKEN
-		// getcontour points is able to have repeating points, which is a no-no for box2d triangles / triangulation
-		auto contour = body->GetContourPoints();
-		if (contour.size() == 0)
-		{
-			m_Box2DWorld->DestroyBody(body->m_B2Body);
-			delete body;
-			return nullptr;
-		}
+	//	//BUG ERROR FIX TODO WRONG BROKEN
+	//	// getcontour points is able to have repeating points, which is a no-no for box2d triangles / triangulation
+	//	auto contour = body->GetContourPoints();
+	//	if (contour.size() == 0)
+	//	{
+	//		m_Box2DWorld->DestroyBody(body->m_B2Body);
+	//		delete body;
+	//		return nullptr;
+	//	}
 
-		auto contourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
-		//auto simplified = body->SimplifyPoints(contour);
+	//	auto contourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
+	//	//auto simplified = body->SimplifyPoints(contour);
 
-		//run triangulation algorithm to create the needed triangles/fixtures
-		std::vector<p2t::Point*> polyLine;
-		for each (auto point in contourVector)
-		{
-			polyLine.push_back(new p2t::Point(point));
-		}
+	//	//run triangulation algorithm to create the needed triangles/fixtures
+	//	std::vector<p2t::Point*> polyLine;
+	//	for each (auto point in contourVector)
+	//	{
+	//		polyLine.push_back(new p2t::Point(point));
+	//	}
 
-		//create each of the triangles to comprise the body, each being a fixture
-		p2t::CDT* cdt = new p2t::CDT(polyLine);
-		cdt->Triangulate();
-		auto triangles = cdt->GetTriangles();
-		for each (auto triangle in triangles)
-		{
-			b2PolygonShape triangleShape;
-			b2Vec2 points[3] = {
-				{(float)((triangle->GetPoint(0)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(0)->y - body->m_Origin.y) / PPU)},
-				{(float)((triangle->GetPoint(1)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(1)->y - body->m_Origin.y) / PPU)},
-				{(float)((triangle->GetPoint(2)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(2)->y - body->m_Origin.y) / PPU)}
-			};
-			triangleShape.Set(points, 3);
-			b2FixtureDef fixtureDef;
-			fixtureDef.density = 1;
-			fixtureDef.friction = 0.3f;
-			fixtureDef.shape = &triangleShape;
-			body->m_B2Body->CreateFixture(&fixtureDef);
-		}
-		PX_TRACE("Pixel body created with ID: {0}", uuid);
-		m_PixelBodyMap.insert({ uuid, body });
-		return body;
-	}
+	//	//create each of the triangles to comprise the body, each being a fixture
+	//	p2t::CDT* cdt = new p2t::CDT(polyLine);
+	//	cdt->Triangulate();
+	//	auto triangles = cdt->GetTriangles();
+	//	for each (auto triangle in triangles)
+	//	{
+	//		b2PolygonShape triangleShape;
+	//		b2Vec2 points[3] = {
+	//			{(float)((triangle->GetPoint(0)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(0)->y - body->m_Origin.y) / PPU)},
+	//			{(float)((triangle->GetPoint(1)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(1)->y - body->m_Origin.y) / PPU)},
+	//			{(float)((triangle->GetPoint(2)->x - body->m_Origin.x) / PPU), (float)((triangle->GetPoint(2)->y - body->m_Origin.y) / PPU)}
+	//		};
+	//		triangleShape.Set(points, 3);
+	//		b2FixtureDef fixtureDef;
+	//		fixtureDef.density = 1;
+	//		fixtureDef.friction = 0.3f;
+	//		fixtureDef.shape = &triangleShape;
+	//		body->m_B2Body->CreateFixture(&fixtureDef);
+	//	}
+	//	PX_TRACE("Pixel body created with ID: {0}", uuid);
+	//	m_PixelBodyMap.insert({ uuid, body });
+	//	return body;
+	//}
 
 	void World::PutPixelBodyInWorld(const PixelRigidBody& body)
 	{
@@ -2477,6 +2515,7 @@ namespace Pyxis
 
 	void World::HandleTickClosure(MergedTickClosure& tc)
 	{
+		//PX_TRACE("tick closure {0} applied to simulation tick {1}", tc.m_Tick, m_SimulationTick);
 		for (int i = 0; i < tc.m_InputActionCount; i++)
 		{
 			InputAction IA;
@@ -2524,6 +2563,7 @@ namespace Pyxis
 
 				int width = (maximum.x - minimum.x) + 1;
 				int height = (maximum.y - minimum.y) + 1;
+				if (width * height <= 0) break;
 				auto ElementArray = new Element[width * height];
 				if (minimum.x < maximum.x)
 				{
@@ -2553,14 +2593,19 @@ namespace Pyxis
 						}
 					}
 					PX_TRACE("Mass is: {0}", mass);
-					PixelRigidBody* body = CreatePixelRigidBody(ID, { width, height }, ElementArray, type);
+					PixelRigidBody* body = new PixelRigidBody(ID, { width, height }, ElementArray, type, m_Box2DWorld);
 					if (body == nullptr) 
 					{
 						PX_TRACE("Failed to create rigid body");
 						continue;
 					}
-					body->SetPixelPosition((minimum + maximum) / 2);
-					PutPixelBodyInWorld(*body);
+					else
+					{
+						m_PixelBodyMap[body->m_ID] = body;
+						body->SetPixelPosition((minimum + maximum) / 2);
+						PutPixelBodyInWorld(*body);
+					}
+					
 				}
 				break;
 			}
@@ -2585,6 +2630,7 @@ namespace Pyxis
 			case Pyxis::InputAction::Input_StepSimulation:
 			{
 				PX_TRACE("input action: Input_StepSimulation");
+				UpdateWorld();
 				break;
 			}
 			default:
@@ -2676,6 +2722,18 @@ namespace Pyxis
 	}
 
 
+	/// <summary>
+	/// Seeds Rand() based on a few factors of the world.
+	/// It is deterministic by update tick and position, so
+	/// it is thread safe.
+	/// </summary>
+	void World::SeedRandom(int xPos, int yPos)
+	{
+		unsigned int seed = ((xPos * 58102) << m_SimulationTick % 5)
+			+ (((yPos * 986124) * m_SimulationTick) >> 2);
+		std::srand(seed);
+		//PX_TRACE("Seeded rand with: {0}", seed);
+	}
 
 	const bool World::IsInBounds(int x, int y)
 	{

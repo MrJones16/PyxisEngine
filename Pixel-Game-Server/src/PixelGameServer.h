@@ -39,7 +39,7 @@ namespace Pyxis
 		/// <summary>
 		/// the game tick the server is currently at
 		/// </summary>
-		uint64_t m_Heartbeat = 0;
+		uint64_t m_InputTick = 0;
 		//PixelServerInterface m_ServerInterface;
 
 		int m_PlayerCount = 0;

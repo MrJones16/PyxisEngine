@@ -11,12 +11,13 @@ namespace Pyxis
 		Server_ClientConnected,
 		Server_ClientAccepted,
 		Server_ClientAssignID,
-		
+
 		Client_RegisterWithServer,
 		Client_UnregisterWithServer,
 
 		Game_RequestGameData,
 		Game_GameData,
+		Game_ResetBox2D,
 		Game_Loaded,
 		Game_TickToEnter,
 		Game_TickClosure,

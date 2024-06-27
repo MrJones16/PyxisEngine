@@ -58,16 +58,22 @@
 /// 
 /// Things to work on:
 /// 
-///		-	Deterministic falling sand updating!
+///		-	[Done!] Deterministic falling sand updating!
 /// 
 /// 
 ///		-	Pixel bodies storing a vector of their elements
 ///		-	Pixel bodies having a hidden bit
 ///		-	Pixel bodies throwing liquid/sand in the air
+///		-	static collisions with ground near dynamic bodies
 ///		-	[hard]	Pixel bodies deforming, splitting
 /// 
 /// 
+///		-	Drag and Drop a png? or blueprints?
+///		-	Saving and loading worlds
+/// 
+/// 
 ///		-	[hard]	Players and Creatures, and their respective loading/unloading
+///		-	Player movement
 /// 
 /// </summary>
 

@@ -7,6 +7,7 @@
 #include <box2d/b2_polygon_shape.h>
 #include <box2d/b2_math.h>
 #include <poly2tri/poly2tri.h>
+#include <box2d/b2_world.h>
 
 namespace Pyxis
 {
@@ -28,9 +29,13 @@ namespace Pyxis
 	public:
 
 		PixelRigidBody();
+		PixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody, b2World* world = nullptr);
 		~PixelRigidBody();
 
+		void CreateB2Body(b2World* world);
+
 		void SetPixelPosition(const glm::ivec2& position);
+		void SetTransform(const glm::vec2& position, float rotation);
 		void SetPosition(const glm::vec2& position);
 		void SetRotation(float rotation);
 		void SetAngularVelocity(float velocity);
@@ -49,7 +54,10 @@ namespace Pyxis
 		Element* m_ElementArray;
 		glm::ivec2 m_Origin;
 
-		b2Body* m_B2Body;
+		uint64_t m_ID;
+
+		b2BodyType m_Type = b2_dynamicBody;
+		b2Body* m_B2Body = nullptr;
 
 		//std::vector<p2t::Point> m_ContourVector;
 	};

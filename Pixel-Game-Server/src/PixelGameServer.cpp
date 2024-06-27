@@ -78,13 +78,15 @@ namespace Pyxis
 		}
 
 		///if there are no players, 
+		//todo: if a player joins, could they join in the middle of this?
+		//they would be out of sync!
 		if (m_PlayerCount == 0)
 		{
 			while (m_MTCDeque.size() > 0)
 			{
 				//handle the remaining merged tick closures
 				MergedTickClosure& mtc = m_MTCDeque.front();
-				m_Heartbeat++;
+				m_InputTick++;
 				m_World.HandleTickClosure(mtc);
 				m_MTCDeque.pop_front();
 			}
@@ -116,9 +118,9 @@ namespace Pyxis
 			msg << mtc.m_Tick;
 
 			MessageAllClients(msg);
-			m_Heartbeat++;
 			m_World.HandleTickClosure(mtc);
 			m_MTCDeque.pop_front();
+			m_InputTick++;
 		}
 	}
 
@@ -189,8 +191,16 @@ namespace Pyxis
 			//merged ticks so it can catch up afterwards
 			m_World.GetWorldData(msg);
 			msg << m_World.m_Running;
-			msg << m_Heartbeat;
+			msg << m_InputTick;
 			client->Send(msg);
+
+			//as soon as a new client joins the game,
+			//we have to reset everyones box2d simulation, so send that now so everyone stays in sync!
+			Network::Message<GameMessage> b2msg;
+			b2msg.header.id = GameMessage::Game_ResetBox2D;
+			m_World.ResetBox2D();
+			b2msg << m_World.m_SimulationTick;
+			MessageAllClients(b2msg, client);
 
 			break;
 		}
@@ -198,10 +208,10 @@ namespace Pyxis
 		{
 			//the server now expects that client to send ticks
 			m_ClientsNeededForTick.insert(client->GetID());
-			PX_TRACE("Starting to need client {0} at game tick {1}", client->GetID(), m_Heartbeat);
+			PX_TRACE("Starting to need client {0} at game tick {1}", client->GetID(), m_InputTick);
 			Network::Message<GameMessage> msg;
 			msg.header.id = GameMessage::Game_TickToEnter;
-			msg << m_Heartbeat;
+			msg << m_InputTick;
 			client->Send(msg);
 			break;
 		}

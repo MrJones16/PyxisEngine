@@ -154,6 +154,10 @@ namespace Pyxis
 		Chunk* GetChunk(const glm::ivec2& chunkPos);
 		void GenerateChunk(Chunk* chunk);
 
+		Element GetElementByName(std::string elementName, int x, int y);
+		Element& GetElement(const glm::ivec2& pixelPos);
+		void SetElement(const glm::ivec2& pixelPos, const Element& element);
+
 		void UpdateWorld();
 		void UpdateTextures();
 		void UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY);
@@ -163,10 +167,8 @@ namespace Pyxis
 		void RenderWorld();
 
 	public:
-		Element GetElementByName(std::string elementName, int x, int y);
-		Element& GetElement(const glm::ivec2& pixelPos);
-		void SetElement(const glm::ivec2& pixelPos, const Element& element);
-		PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody);
+		void ResetBox2D();
+		//PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody);
 		void PutPixelBodyInWorld(const PixelRigidBody& body);
 
 	public:
@@ -175,6 +177,9 @@ namespace Pyxis
 
 
 		//helper functions
+
+		
+		void SeedRandom(int xPos, int yPos);
 		static const bool IsInBounds(int x, int y);
 		glm::ivec2 WorldToPixel(const glm::vec2& worldPos);
 		glm::ivec2 PixelToChunk(const glm::ivec2& pixelPos);
@@ -204,14 +209,15 @@ namespace Pyxis
 		std::vector<std::unordered_map<uint32_t, ReactionResult>> m_ReactionLookup;
 
 		//extra data needed
-		bool m_Running = true;
-		bool m_UpdateBit = false;
+		bool m_Running = true;				// Needs to be synchronized
+		bool m_UpdateBit = false;			// Needs to be synchronized
 		bool m_Error = false;
 		//server mode ignores textures!
 		bool m_ServerMode = false;
 
 		//world settings, for generation and gameplay?
-		int m_WorldSeed = 1337;
+		int m_WorldSeed = 1337;				// Needs to be synchronized
+		uint64_t m_SimulationTick = 0;	// Needs to be synchronized
 		FastNoiseLite m_HeightNoise;
 		FastNoiseLite m_CaveNoise;
 

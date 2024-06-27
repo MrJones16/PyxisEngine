@@ -59,6 +59,7 @@ namespace Pyxis
 		bool m_Connecting = true;
 		bool m_WaitForWorldData = true;
 		uint64_t m_TickToEnter = -1; // set to max value
+		uint64_t m_TickToResetBox2D = -1; // set to max value
 
 		uint64_t m_Heartbeat = 0;
 		TickClosure m_CurrentTickClosure;

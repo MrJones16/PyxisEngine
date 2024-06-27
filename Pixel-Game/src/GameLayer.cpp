@@ -110,12 +110,24 @@ namespace Pyxis
 			//job to catch up to the server, which means 
 			if (!m_WaitForWorldData)
 			{
+				//we are no longer waiting on the world data, so its time to catch up
+				//all the ticks we missed while getting game data
 				if (m_MTCQueue.size() > 0)
 				{
 					//as the client, i now need to remove the input actions from the 
 					//latency queue for the tick i recieved, but not
 					//in this section where i'm not sending any ticks
+
+
+					if (m_MTCQueue.front().m_Tick < m_Heartbeat)
+					{
+						//we were sent a merged tick closure before we requested data, so ignore this since
+						//the world state we recieved already had this tick applied
+						m_MTCQueue.pop_front();
+						return;
+					}
 					m_LatencyStateReset = true;
+					PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World->m_SimulationTick);
 					m_World->HandleTickClosure(m_MTCQueue.front());
 					m_MTCQueue.pop_front();
 					m_Heartbeat++;
@@ -144,6 +156,12 @@ namespace Pyxis
 			//latency queue for the tick i recieved
 
 			m_LatencyStateReset = true;
+			//reset world, then apply the tick closure
+			if (m_World->m_SimulationTick == m_TickToResetBox2D)
+			{
+				m_World->ResetBox2D();
+				m_TickToResetBox2D = -1;
+			}
 			m_World->HandleTickClosure(m_MTCQueue.front());
 			//PX_TRACE("Handling a tick closure for tick: {0}!", m_MTCQueue.front().m_Tick);
 			m_MTCQueue.pop_front();
@@ -238,8 +256,7 @@ namespace Pyxis
 
 			if (m_LatencyInputQueue.size() < m_LatencyQueueLimit)
 			{
-				//keep track of when the world was updated, and only update it if
-				//enough time has passed for the next update to be ready
+				//keep track of how fast we should be sending our input action updates
 				auto time = std::chrono::high_resolution_clock::now();
 				if (m_UpdatesPerSecond > 0 &&
 					std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
@@ -599,18 +616,19 @@ namespace Pyxis
 					m_World->LoadWorld(msg);
 					
 					PX_TRACE("loaded game at tick {0}", m_Heartbeat);
+					PX_TRACE("Game simulation tick is {0}", m_World->m_SimulationTick);
 
 					//now that i have finished downloading the world
 					// (which might have taken a while)
 					// tell the server i am done
 
-					Network::Message<GameMessage> msg;
 					
 					m_WaitForWorldData = false;
 					//now catch up from all the inputs sent while loading
 					HandleMessages();
 					//now that i caught up on all the messages, be finished connecting
 					//and start sending my own ticks, and make others wait
+					Network::Message<GameMessage> msg;
 					msg.header.id = GameMessage::Game_Loaded;
 					m_ClientInterface.Send(msg);
 					break;
@@ -619,6 +637,17 @@ namespace Pyxis
 				{
 					msg >> m_TickToEnter;
 					PX_TRACE("Tick to enter at: {0}", m_TickToEnter);
+					break;
+				}
+				case GameMessage::Game_ResetBox2D:
+				{
+					//gather all rigid body data, store it, and reload it!
+					//this has to be done once we are finished with all the previously
+					//collected mtc's, so we will mark when we are supposed to
+					//reset, and do it then!
+					msg >> m_TickToResetBox2D;
+					PX_TRACE("Sim Tick to reset at: {0}", m_TickToResetBox2D);
+					PX_TRACE("current sim tick: {0}", m_World->m_SimulationTick);
 					break;
 				}
 				case GameMessage::Game_MergedTickClosure:

@@ -7,14 +7,93 @@ namespace Pyxis
 
 	}
 
+	PixelRigidBody::PixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type, b2World* world)
+	{
+		m_ID = uuid;
+		m_Width = size.x;
+		m_Height = size.y;
+		m_Type = type;
+		m_Origin = { m_Width / 2, m_Height / 2 };
+		m_ElementArray = ElementArray;
+
+		//create the base body of the whole pixel body
+		b2BodyDef pixelBodyDef;
+
+		//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
+		pixelBodyDef.position = { 0,0 };
+		pixelBodyDef.type = type;
+		
+		if (world != nullptr)
+		{
+			CreateB2Body(world);
+		}
+	}
+
 	PixelRigidBody::~PixelRigidBody()
 	{
 		delete[] m_ElementArray;
 	}
 
+	void PixelRigidBody::CreateB2Body(b2World* world)
+	{
+
+		//create the base body of the whole pixel body
+		b2BodyDef pixelBodyDef;
+
+		//for the scaling of the box world and pixel bodies, every PPU pixels is 1 unit in the world space
+		pixelBodyDef.position = { 0,0 };
+		pixelBodyDef.type = m_Type;
+		m_B2Body = world->CreateBody(&pixelBodyDef);
+
+
+		//BUG ERROR FIX TODO WRONG BROKEN
+		// getcontour points is able to have repeating points, which is a no-no for box2d triangles / triangulation
+		auto contour = GetContourPoints();
+		if (contour.size() == 0)
+		{
+			world->DestroyBody(m_B2Body);
+			delete this;
+			return;
+		}
+
+		auto contourVector = SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
+		//auto simplified = body->SimplifyPoints(contour);
+
+		//run triangulation algorithm to create the needed triangles/fixtures
+		std::vector<p2t::Point*> polyLine;
+		for each (auto point in contourVector)
+		{
+			polyLine.push_back(new p2t::Point(point));
+		}
+
+		//create each of the triangles to comprise the body, each being a fixture
+		p2t::CDT* cdt = new p2t::CDT(polyLine);
+		cdt->Triangulate();
+		auto triangles = cdt->GetTriangles();
+		for each (auto triangle in triangles)
+		{
+			b2PolygonShape triangleShape;
+			b2Vec2 points[3] = {
+				{(float)((triangle->GetPoint(0)->x - m_Origin.x) / PPU), (float)((triangle->GetPoint(0)->y - m_Origin.y) / PPU)},
+				{(float)((triangle->GetPoint(1)->x - m_Origin.x) / PPU), (float)((triangle->GetPoint(1)->y - m_Origin.y) / PPU)},
+				{(float)((triangle->GetPoint(2)->x - m_Origin.x) / PPU), (float)((triangle->GetPoint(2)->y - m_Origin.y) / PPU)}
+			};
+			triangleShape.Set(points, 3);
+			b2FixtureDef fixtureDef;
+			fixtureDef.density = 1;
+			fixtureDef.friction = 0.3f;
+			fixtureDef.shape = &triangleShape;
+			m_B2Body->CreateFixture(&fixtureDef);
+		}
+	}
+
 	void PixelRigidBody::SetPixelPosition(const glm::ivec2& position)
 	{
 		m_B2Body->SetTransform({ (float)(position.x) / PPU, (float)(position.y) / PPU }, m_B2Body->GetAngle());
+	}
+	void PixelRigidBody::SetTransform(const glm::vec2& position, float rotation)
+	{
+		m_B2Body->SetTransform({ position.x, position.y }, rotation);
 	}
 	void PixelRigidBody::SetPosition(const glm::vec2& position)
 	{
