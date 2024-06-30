@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Element.h"
+#include "VectorHash.h"
 
 #include <box2d/b2_body.h>
 #include <box2d/b2_fixture.h>
@@ -23,16 +24,36 @@ namespace Pyxis
 	/// </summary>
 	static const float PPU = 16.0f; // pixels per unit for box2d sim
 
+	struct RigidBodyElement
+	{
+		RigidBodyElement() {}
+		RigidBodyElement(Element e)
+			: element(e)
+		{}
+		RigidBodyElement(Element e, glm::ivec2 worldPosition)
+			: element(e), worldPos(worldPosition)
+		{}
+		Element element = Element();
+		bool hidden = false;
+		glm::ivec2 worldPos = { 0,0 };
+	};
+
+	struct PixelBodyData
+	{
+		b2Vec2 linearVelocity;
+		float angularVelocity;
+		float angle;
+		b2Vec2 position;
+	};
 
 	class PixelRigidBody
 	{
 	public:
-
-		PixelRigidBody();
-		PixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody, b2World* world = nullptr);
+		PixelRigidBody(uint64_t uuid, const glm::ivec2& size, std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements, b2BodyType type = b2_dynamicBody, b2World* world = nullptr);
 		~PixelRigidBody();
 
-		void CreateB2Body(b2World* world);
+		bool CreateB2Body(b2World* world);
+		std::vector<PixelRigidBody*> RecreateB2Body(unsigned int randSeed, b2World* world);
 
 		void SetPixelPosition(const glm::ivec2& position);
 		void SetTransform(const glm::vec2& position, float rotation);
@@ -41,23 +62,33 @@ namespace Pyxis
 		void SetAngularVelocity(float velocity);
 		void SetLinearVelocity(const b2Vec2& velocity);
 
+		glm::ivec2 GetPixelPosition();
+
 	public:
 		//algorithms for creating a box2d body
 		std::vector<p2t::Point> GetContourPoints();
 		std::vector<p2t::Point> PixelRigidBody::SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold);
 		int GetMarchingSquareCase(glm::ivec2 position);
 
+		std::vector<glm::ivec2> PullContinuousElements(std::unordered_map<glm::ivec2, RigidBodyElement, HashVector>& elements);
+		void FloodPull(glm::ivec2 pos, std::vector<glm::ivec2>& result, std::unordered_map<glm::ivec2, RigidBodyElement, HashVector>& elements);
+
 	public:
-		int m_Width;
-		int m_Height;
+		int m_Width = 0;
+		int m_Height = 0;
 
-		Element* m_ElementArray;
-		glm::ivec2 m_Origin;
+		/// <summary>
+		/// m_Elements holds the LOCAL positions based on the origin!
+		/// to index like an array, add the origin back
+		/// </summary>
+		std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> m_Elements;
+		glm::ivec2 m_Origin = {0,0};
 
-		uint64_t m_ID;
+		uint64_t m_ID = 0;
 
 		b2BodyType m_Type = b2_dynamicBody;
 		b2Body* m_B2Body = nullptr;
+		bool m_InWorld = false;
 
 		//std::vector<p2t::Point> m_ContourVector;
 	};
@@ -65,7 +96,7 @@ namespace Pyxis
 	class Player : public PixelRigidBody
 	{
 	public:
-		Player();
+		Player(uint64_t uuid, const glm::ivec2& size, std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements, b2BodyType type, b2World* world);
 		~Player();
 
 	public:

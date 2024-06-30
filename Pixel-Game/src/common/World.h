@@ -2,6 +2,7 @@
 
 #include "Chunk.h"
 #include "Pyxis/FastNoiseLite/FastNoiseLite.h"
+#include "VectorHash.h"
 
 //all box2d things
 #include <box2d/b2_world.h>
@@ -17,10 +18,12 @@ namespace Pyxis
 		Add_Player,
 		Remove_Player,
 		PauseGame, ResumeGame,
-		TransformRigidBody,
+		ClearWorld,
+		TransformRegionToRigidBody,
 		Input_Move,
 		Input_Place,
 		Input_StepSimulation,
+
 	};
 
 	//class InputActionData : 
@@ -123,15 +126,16 @@ namespace Pyxis
 		}
 	};
 
-	class HashVector
+	class WakeUpQueryCallback : public b2QueryCallback
 	{
 	public:
-		size_t operator()(glm::ivec2 vector) const
+		bool ReportFixture(b2Fixture* fixture)
 		{
-			size_t seed = 0;
-			seed = vector.x + 0xae3779b9 + (seed << 6) + (seed >> 2);
-			seed ^= vector.y + 0x87d81ab8 + (seed << 7) + (seed >> 3);
-			return seed;
+			b2Body* body = fixture->GetBody();
+			//PX_TRACE("Found an object in the update region");
+			body->SetAwake(true);
+			// Return true to continue the query.
+			return true;
 		}
 	};
 
@@ -157,6 +161,7 @@ namespace Pyxis
 		Element GetElementByName(std::string elementName, int x, int y);
 		Element& GetElement(const glm::ivec2& pixelPos);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
+		void SetElementWithoutDirtyRectUpdate(const glm::ivec2& pixelPos, const Element& element);
 
 		void UpdateWorld();
 		void UpdateTextures();
@@ -169,11 +174,11 @@ namespace Pyxis
 	public:
 		void ResetBox2D();
 		//PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody);
-		void PutPixelBodyInWorld(const PixelRigidBody& body);
+		void PutPixelBodyInWorld(PixelRigidBody& body);
 
 	public:
 		void HandleTickClosure(MergedTickClosure& tc);
-		Player* CreatePlayer(uint64_t playerID, glm::vec2 position);
+		Player* CreatePlayer(uint64_t playerID, glm::ivec2 position);
 
 
 		//helper functions
@@ -212,6 +217,10 @@ namespace Pyxis
 		bool m_Running = true;				// Needs to be synchronized
 		bool m_UpdateBit = false;			// Needs to be synchronized
 		bool m_Error = false;
+
+		//temps
+		bool m_DebugDrawColliders = false;
+
 		//server mode ignores textures!
 		bool m_ServerMode = false;
 

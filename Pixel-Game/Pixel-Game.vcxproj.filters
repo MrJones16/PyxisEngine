@@ -59,6 +59,7 @@
     <ClCompile Include="src\common\World.cpp">
       <Filter>common</Filter>
     </ClCompile>
+    <ClCompile Include="src\common\VectorHash.h" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="assets\data\CellData.xml" />

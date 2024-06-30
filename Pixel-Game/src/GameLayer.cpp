@@ -395,7 +395,12 @@ namespace Pyxis
 
 				if (ImGui::Button("Clear"))
 				{
-					m_World->Clear();
+					m_CurrentTickClosure.AddInputAction(InputAction::ClearWorld);
+				}
+
+				if (ImGui::Button("Toggle Collider View"))
+				{
+					m_World->m_DebugDrawColliders = !m_World->m_DebugDrawColliders;
 				}
 				
 				if (m_BuildingRigidBody)
@@ -410,11 +415,11 @@ namespace Pyxis
 							uint64_t uuid = std::rand();
 						}
 						if (m_RigidMin.x < m_RigidMax.x)
-							m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, uuid);
+							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, uuid);
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
 					}
-					if (ImGui::Button("Build Static Rigid Body"))
+					if (ImGui::Button("Build Kinematic Rigid Body"))
 					{
 						srand(time(0));
 						uint64_t uuid = std::rand();
@@ -424,7 +429,7 @@ namespace Pyxis
 							uint64_t uuid = std::rand();
 						}
 						if (m_RigidMin.x < m_RigidMax.x)
-							m_CurrentTickClosure.AddInputAction(InputAction::TransformRigidBody, b2_staticBody, m_RigidMin, m_RigidMax, uuid);
+							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_kinematicBody, m_RigidMin, m_RigidMax, uuid);
 						m_RigidMin = { 9999999, 9999999 };
 						m_RigidMax = { -9999999, -9999999 };
 					}

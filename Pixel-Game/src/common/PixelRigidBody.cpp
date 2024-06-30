@@ -2,19 +2,11 @@
 
 namespace Pyxis
 {
-	PixelRigidBody::PixelRigidBody()
-	{
 
-	}
-
-	PixelRigidBody::PixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type, b2World* world)
+	PixelRigidBody::PixelRigidBody(uint64_t uuid, const glm::ivec2& size, std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements, b2BodyType type, b2World* world)
+		: m_ID(uuid), m_Width(size.x), m_Height(size.y), m_Type(type),
+		m_Origin(size / 2), m_Elements(elements)
 	{
-		m_ID = uuid;
-		m_Width = size.x;
-		m_Height = size.y;
-		m_Type = type;
-		m_Origin = { m_Width / 2, m_Height / 2 };
-		m_ElementArray = ElementArray;
 
 		//create the base body of the whole pixel body
 		b2BodyDef pixelBodyDef;
@@ -25,16 +17,25 @@ namespace Pyxis
 		
 		if (world != nullptr)
 		{
-			CreateB2Body(world);
+			if (!CreateB2Body(world))
+			{
+				PX_ERROR("Failed to create the b2 body for pixel body {0}", m_ID);
+				m_B2Body = nullptr;
+			}
+			
 		}
 	}
 
+	/// <summary>
+	/// this does not remove the m_b2body! you need to call
+	/// destroybody on the b2world.
+	/// </summary>
 	PixelRigidBody::~PixelRigidBody()
 	{
-		delete[] m_ElementArray;
+
 	}
 
-	void PixelRigidBody::CreateB2Body(b2World* world)
+	bool PixelRigidBody::CreateB2Body(b2World* world)
 	{
 
 		//create the base body of the whole pixel body
@@ -52,11 +53,18 @@ namespace Pyxis
 		if (contour.size() == 0)
 		{
 			world->DestroyBody(m_B2Body);
-			delete this;
-			return;
+			return false;
 		}
-
-		auto contourVector = SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
+		std::vector<p2t::Point> contourVector;
+		if (contour.size() > 20)
+		{
+			contourVector = SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
+		}
+		else
+		{
+			contourVector = contour;
+		}
+		
 		//auto simplified = body->SimplifyPoints(contour);
 
 		//run triangulation algorithm to create the needed triangles/fixtures
@@ -74,9 +82,9 @@ namespace Pyxis
 		{
 			b2PolygonShape triangleShape;
 			b2Vec2 points[3] = {
-				{(float)((triangle->GetPoint(0)->x - m_Origin.x) / PPU), (float)((triangle->GetPoint(0)->y - m_Origin.y) / PPU)},
-				{(float)((triangle->GetPoint(1)->x - m_Origin.x) / PPU), (float)((triangle->GetPoint(1)->y - m_Origin.y) / PPU)},
-				{(float)((triangle->GetPoint(2)->x - m_Origin.x) / PPU), (float)((triangle->GetPoint(2)->y - m_Origin.y) / PPU)}
+				{(float)((triangle->GetPoint(0)->x) / PPU), (float)((triangle->GetPoint(0)->y) / PPU)},
+				{(float)((triangle->GetPoint(1)->x) / PPU), (float)((triangle->GetPoint(1)->y) / PPU)},
+				{(float)((triangle->GetPoint(2)->x) / PPU), (float)((triangle->GetPoint(2)->y) / PPU)}
 			};
 			triangleShape.Set(points, 3);
 			b2FixtureDef fixtureDef;
@@ -85,6 +93,143 @@ namespace Pyxis
 			fixtureDef.shape = &triangleShape;
 			m_B2Body->CreateFixture(&fixtureDef);
 		}
+		return true;
+	}
+
+
+	/// <summary>
+	/// returns a vector of any new pixel rigid bodies that
+	/// might have been made from splitting
+	/// </summary>
+	std::vector<PixelRigidBody*> PixelRigidBody::RecreateB2Body(unsigned int randSeed, b2World* world)
+	{
+		//same as creating a b2body, but we have to remove the previous one, and 
+		// look out for multiple bodies since a split
+		// could have occured
+		// AND re-configure the local positions / origins...
+		//TODO: Re-do the origin and local points...
+
+		//the vector of new bodies made by the split
+		std::vector<PixelRigidBody*> result;
+
+		//step 1 make sure we aren't completely erased!
+		if (m_Elements.size() == 0)
+		{
+			//we have been erased, so delete myself!
+			world->DestroyBody(m_B2Body);
+			m_B2Body = nullptr;
+			return result;
+		}
+		
+		//store the momentum data of the body
+		PixelBodyData data;
+		data.position = m_B2Body->GetPosition();
+		data.angle = m_B2Body->GetAngle();
+		data.linearVelocity = m_B2Body->GetLinearVelocity();
+		data.angularVelocity = m_B2Body->GetAngularVelocity();
+
+		//copy the elements of the main starting body
+		std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elementsCopy = m_Elements;
+
+		//pull the first body out, we will make this the new main body
+		std::vector<glm::ivec2> thisLocalSet = PullContinuousElements(elementsCopy);
+		std::vector<glm::ivec2> thisWorldSet;
+		// we now have a set of all the local points for the main body
+		// we will iterate over them, find the min/max, middle, and create a new
+		// body for it!
+		glm::ivec2 pixelPos = GetPixelPosition();
+		
+		//get the radius around the world point to scope to ish
+		int maxSize = std::max(m_Width, m_Height) * 2;
+
+		//we won't reset the main body until after, because we will
+		//use it for the element data!
+		std::srand(randSeed);
+		while (elementsCopy.size() > 0)
+		{
+			//there are still other rigid bodies to be created!
+
+			//local set will hold the local indices to the elements map
+			std::vector<glm::ivec2> localSet = PullContinuousElements(elementsCopy);
+			//world set will hold the world positions, for use after
+			std::vector<glm::ivec2> worldSet;
+			
+			
+			
+			glm::ivec2 worldMin = pixelPos + maxSize;
+			glm::ivec2 worldMax = pixelPos - maxSize;
+			for (int i = 0; i < localSet.size(); i++)
+			{
+				//TODO: test changing the pullcontinuous to give world in the first place?
+				worldSet.push_back(m_Elements[localSet[i]].worldPos);
+				
+				//it is now a world pos!
+				if (worldSet[i].x < worldMin.x) worldMin.x = worldSet[i].x;
+				if (worldSet[i].y < worldMin.y) worldMin.y = worldSet[i].y;
+				if (worldSet[i].x > worldMax.x) worldMax.x = worldSet[i].x;
+				if (worldSet[i].y > worldMax.y) worldMax.y = worldSet[i].y;
+			}
+			//we now have the world positions, and the min/max!
+			int width = (worldMax.x - worldMin.x) + 1;
+			int height = (worldMax.y - worldMin.y) + 1;
+			glm::ivec2 origin = { width / 2, height / 2 };
+			//we have to create an entire new rigid body!
+			
+			uint64_t newID = std::rand() * 0xfacebeef; //random number cause i can
+			std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> subElements;
+			glm::ivec2 worldCenter = worldMin + origin;
+			for (int i = 0; i < localSet.size(); i++)
+			{
+				subElements[worldSet[i] - worldCenter] = RigidBodyElement(m_Elements[localSet[i]]);
+			}
+			result.push_back(new PixelRigidBody(newID, glm::ivec2(width, height), subElements, m_Type, world));
+			result.back()->SetPixelPosition(worldCenter);
+			//TODO: alter velocities based on distance to original center
+			//for more realistic slicing
+			result.back()->SetLinearVelocity(data.linearVelocity);
+			result.back()->SetAngularVelocity(data.angularVelocity);
+			//ignore pos and angle as they are reset
+		}
+		//since we are finished with creating the sub-bodies, finish updating our own
+
+		//set the min max inverted so i can find the new min/max
+		glm::ivec2 worldMin = pixelPos + maxSize;
+		glm::ivec2 worldMax = pixelPos - maxSize;
+		for (int i = 0; i < thisLocalSet.size(); i++)
+		{
+			//TODO: test changing the pullcontinuous to give world in the first place?
+			thisWorldSet.push_back(m_Elements[thisLocalSet[i]].worldPos);
+
+			//it is now a world pos!
+			if (thisWorldSet[i].x < worldMin.x) worldMin.x = thisWorldSet[i].x;
+			if (thisWorldSet[i].y < worldMin.y) worldMin.y = thisWorldSet[i].y;
+			if (thisWorldSet[i].x > worldMax.x) worldMax.x = thisWorldSet[i].x;
+			if (thisWorldSet[i].y > worldMax.y) worldMax.y = thisWorldSet[i].y;
+		}
+		//we now have the world positions, and the min/max!
+		m_Width = (worldMax.x - worldMin.x) + 1;
+		m_Height = (worldMax.y - worldMin.y) + 1;
+		m_Origin = { m_Width / 2, m_Height / 2 };
+
+		std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> newElements;
+		glm::ivec2 worldCenter = worldMin + m_Origin;
+		for (int i = 0; i < thisLocalSet.size(); i++)
+		{
+			newElements[thisWorldSet[i] - worldCenter] = RigidBodyElement(m_Elements[thisLocalSet[i]]);
+		}
+		//finally, erase the old storage, and use the new one!
+		m_Elements = newElements;
+
+
+		
+		world->DestroyBody(m_B2Body);
+		if (CreateB2Body(world))
+		{
+			SetPixelPosition(worldCenter);
+			m_B2Body->SetLinearVelocity(data.linearVelocity);
+			m_B2Body->SetAngularVelocity(data.angularVelocity);
+		}
+		return result;
 	}
 
 	void PixelRigidBody::SetPixelPosition(const glm::ivec2& position)
@@ -115,12 +260,18 @@ namespace Pyxis
 	{
 		m_B2Body->SetLinearVelocity(velocity);
 	}
+
+	glm::ivec2 PixelRigidBody::GetPixelPosition()
+	{
+		auto pos = m_B2Body->GetPosition();
+		return glm::ivec2(pos.x * PPU, pos.y * PPU);
+	}
 	
 	
 
 	/// <summary>
-	/// gathers the outline points of the rigid body, and returns a vector of
-	/// size 0 if there was a failure
+	/// gathers the COUNTERCLOCKWISE outline points of the rigid body, and 
+	/// returns a vector of size 0 if there was a failure
 	/// 
 	/// currently tries to grab as many diagonals as possible, but could be better to switch the two special cases to be inverted
 	/// to ignore diagonals if possible
@@ -132,21 +283,20 @@ namespace Pyxis
 		//inspired by https://www.emanueleferonato.com/2013/03/01/using-marching-squares-algorithm-to-trace-the-contour-of-an-image/
 		std::vector<p2t::Point> ContourVector;
 
-		glm::ivec2 cursor = { m_Width - 1,m_Height - 1 };
+		glm::ivec2 cursor = glm::ivec2(m_Width,m_Height) - m_Origin; // get top right local pos
 		//scroll through element array until you find an element to start at
-		while (m_ElementArray[cursor.x + cursor.y * m_Width].m_ID == 0)
+		while (m_Elements.find(cursor) == m_Elements.end())
 		{
 			cursor.x--;
-			if (cursor.x < 0)
+			if (cursor.x < -m_Origin.x)
 			{
-				cursor.x = m_Width - 1;
+				cursor.x = (m_Width - 1) - m_Origin.x;
 				cursor.y--;
-				if (cursor.y < 0)
+				if (cursor.y < -m_Origin.y)
 				{
 					//ran out of pixels to test for! so the entire array is air...
 					return ContourVector;
 				}
-
 			}
 		}
 
@@ -339,7 +489,7 @@ namespace Pyxis
 	}
 
 
-	int PixelRigidBody::GetMarchingSquareCase(glm::ivec2 position)
+	int PixelRigidBody::GetMarchingSquareCase(glm::ivec2 localPosition)
 	{
 		/*
 
@@ -354,29 +504,55 @@ namespace Pyxis
 		*/
 
 		int result = 0;
-		if ((position.x) >= 0 && (position.x) < m_Width && (position.y) >= 0 && (position.y) < m_Height)
-		{
-			if (m_ElementArray[position.x + position.y * m_Width].m_ID != 0) result += 8;
-		}
-		if ((position.x - 1) >= 0 && (position.x - 1) < m_Width && (position.y) >= 0 && (position.y) < m_Height)
-		{
-			if (m_ElementArray[(position.x - 1) + (position.y) * m_Width].m_ID != 0) result += 4;
-		}
-		if ((position.x) >= 0 && (position.x) < m_Width && (position.y + 1) >= 0 && (position.y + 1) < m_Height)
-		{
-			if (m_ElementArray[position.x + (position.y + 1) * m_Width].m_ID != 0) result += 2;
-		}
-		if ((position.x - 1) >= 0 && (position.x - 1) < m_Width && (position.y + 1) >= 0 && (position.y + 1) < m_Height)
-		{
-			if (m_ElementArray[(position.x - 1) + (position.y + 1) * m_Width].m_ID != 0) result += 1;
-		}
+		auto it = m_Elements.find(localPosition + glm::ivec2(0, 0));
+		if (it != m_Elements.end()) result += 8;
+
+		it = m_Elements.find(localPosition + glm::ivec2(-1, 0));
+		if (it != m_Elements.end()) result += 4;
+
+		it = m_Elements.find(localPosition + glm::ivec2(0, 1));
+		if (it != m_Elements.end()) result += 2;
+
+		it = m_Elements.find(localPosition + glm::ivec2(-1, 1));
+		if (it != m_Elements.end()) result += 1;
 
 		return result;
 	}
 
-
-	Player::Player()
+	/// <summary>
+	/// takes a map of local points, floodfills from the first element, and returns what it pulled out
+	/// as a vector of the local positions.
+	/// 
+	/// !REMOVES things from the map!
+	/// </summary>
+	/// <param name="elements"></param>
+	/// <returns></returns>
+	std::vector<glm::ivec2> PixelRigidBody::PullContinuousElements(std::unordered_map<glm::ivec2, RigidBodyElement, HashVector>& elements)
 	{
+		std::vector<glm::ivec2> result;
+		FloodPull(elements.begin()->first, result, elements);
+		return result;
+	}
+
+	void PixelRigidBody::FloodPull(glm::ivec2 pos, std::vector<glm::ivec2>& result, std::unordered_map<glm::ivec2, RigidBodyElement, HashVector>& elements)
+	{
+		if (elements.find(pos) != elements.end())
+		{
+			//there is an element here, so add it and recursively call neighbors
+			result.push_back(pos);
+			elements.erase(pos);
+			FloodPull(pos + glm::ivec2(1, 0), result, elements);
+			FloodPull(pos + glm::ivec2(-1, 0), result, elements);
+			FloodPull(pos + glm::ivec2(0, 1), result, elements);
+			FloodPull(pos + glm::ivec2(0, -1), result, elements);
+		}
+	}
+
+
+	Player::Player(uint64_t uuid, const glm::ivec2& size, std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements, b2BodyType type, b2World* world)
+		: PixelRigidBody(uuid, size, elements, type, world)
+	{
+
 	}
 	Player::~Player()
 	{

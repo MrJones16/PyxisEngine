@@ -59,13 +59,16 @@
 /// Things to work on:
 /// 
 ///		-	[Done!] Deterministic falling sand updating!
+///		-	[Done!] Box2d simulation synchronized on multiplayer
+///		-	[Done!] Pixel bodies storing a vector of their elements
 /// 
 /// 
-///		-	Pixel bodies storing a vector of their elements
+/// 
+///		-	make it so one player isnt super far ahead on input ticks
+///		-	[hard]	Pixel bodies deforming, splitting
+///		-	static collisions with ground near dynamic bodies
 ///		-	Pixel bodies having a hidden bit
 ///		-	Pixel bodies throwing liquid/sand in the air
-///		-	static collisions with ground near dynamic bodies
-///		-	[hard]	Pixel bodies deforming, splitting
 /// 
 /// 
 ///		-	Drag and Drop a png? or blueprints?

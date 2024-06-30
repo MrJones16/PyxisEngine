@@ -156,6 +156,7 @@
     <ClInclude Include="src\common\World.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\common\VectorHash.h" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
     <ClCompile Include="src\common\Chunk.cpp" />
