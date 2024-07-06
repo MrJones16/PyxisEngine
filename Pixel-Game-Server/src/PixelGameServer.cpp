@@ -12,7 +12,7 @@ namespace Pyxis
 	PixelGameServer::PixelGameServer(uint16_t port)
 		: Network::ServerInterface<GameMessage>(port), Layer("Pyxis Server"),
 		m_OrthographicCameraController(5, 9.0f / 16.0f, -100, 100),
-		m_World("../Pixel-Game/assets")
+		m_World()//m_World("../Pixel-Game/assets")
 	{
 		m_World.m_ServerMode = true;
 	}

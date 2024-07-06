@@ -60,4 +60,7 @@
       <Filter>src</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="assets\data\CellData.xml" />
+  </ItemGroup>
 </Project>

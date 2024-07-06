@@ -168,6 +168,9 @@
       <Project>{2E61DF5C-1A19-21AA-8320-FA056FF7BB9A}</Project>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Xml Include="assets\data\CellData.xml" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

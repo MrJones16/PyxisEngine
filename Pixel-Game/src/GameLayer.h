@@ -61,10 +61,12 @@ namespace Pyxis
 		uint64_t m_TickToEnter = -1; // set to max value
 		uint64_t m_TickToResetBox2D = -1; // set to max value
 
-		uint64_t m_Heartbeat = 0;
+		uint64_t m_InputTick = 0;
 		TickClosure m_CurrentTickClosure;
 		std::deque<TickClosure> m_LatencyInputQueue;
-		const int m_LatencyQueueLimit = 100;
+		const int m_LatencyQueueLimit = 200; // this value should represent 1/60th the seconds server round trip delay
+		uint64_t latestMergedTick = 0;
+		bool m_WaitingForOthers = false;
 
 
 		//scene things

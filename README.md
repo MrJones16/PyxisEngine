@@ -21,7 +21,7 @@ Pyxis, as it is now, is a multiplayer falling sand simulation. My inspiration be
 
 
 ### Notes
-Server's port is 60000, and everything is run on TCP at the moment
+Server's port is 21218, and everything is run on TCP at the moment(very laggy :( )
 
 Clients aren't yet able to slow down for each other, so the client farthest in the lead has to wait on the one furthest behind. will be fixed soon!
 

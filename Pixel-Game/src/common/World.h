@@ -23,6 +23,7 @@ namespace Pyxis
 		Input_Move,
 		Input_Place,
 		Input_StepSimulation,
+		Input_MousePosition,
 
 	};
 

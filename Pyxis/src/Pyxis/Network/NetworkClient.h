@@ -33,15 +33,19 @@ namespace Pyxis
 					asio::ip::tcp::resolver resolver(m_Context);
 					asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
 
+					asio::ip::udp::resolver resolverUDP(m_Context);
+					asio::ip::udp::resolver::results_type endpointsUDP = resolverUDP.resolve(host, std::to_string(port));
+
 					//create connection
 					m_Connection = std::make_unique<Connection<T>>(
 						Connection<T>::Owner::client,
 						m_Context, 
-						asio::ip::tcp::socket(m_Context), 
+						asio::ip::tcp::socket(m_Context),
+						std::make_shared<asio::ip::udp::socket>(m_Context),
 						m_QueueMessagesIn);
 
 					//tell the connection object to connect to server
-					m_Connection->ConnectToServer(endpoints);
+					m_Connection->ConnectToServer(endpoints, endpointsUDP);
 
 					//start context thread
 					m_ContextThread = std::thread([this]() {m_Context.run(); });
@@ -94,6 +98,11 @@ namespace Pyxis
 			void Send(const Message<T>& msg)
 			{
 				m_Connection->Send(msg);
+			}
+
+			void SendUDP(Message<T>& msg)
+			{
+				m_Connection->SendUDP(msg);
 			}
 
 

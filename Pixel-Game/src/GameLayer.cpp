@@ -66,7 +66,7 @@ namespace Pyxis
 	void GameLayer::OnAttach()
 	{
 		//Connect to the server:
-		if (!m_ClientInterface.Connect("127.0.0.1", 60000)) {
+		if (!m_ClientInterface.Connect("127.0.0.1", 21218)) {
 			PX_ERROR("Failed to connect to the server...");
 			Application::Get().Sleep(2000);
 			Application::Get().Close();
@@ -119,7 +119,7 @@ namespace Pyxis
 					//in this section where i'm not sending any ticks
 
 
-					if (m_MTCQueue.front().m_Tick < m_Heartbeat)
+					if (m_MTCQueue.front().m_Tick < m_InputTick)
 					{
 						//we were sent a merged tick closure before we requested data, so ignore this since
 						//the world state we recieved already had this tick applied
@@ -130,9 +130,9 @@ namespace Pyxis
 					PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World->m_SimulationTick);
 					m_World->HandleTickClosure(m_MTCQueue.front());
 					m_MTCQueue.pop_front();
-					m_Heartbeat++;
+					m_InputTick++;
 				}
-				if (m_Heartbeat == m_TickToEnter)
+				if (m_InputTick == m_TickToEnter)
 				{
 					PX_TRACE("Reached Tick: {0}, I'm caught up!", m_TickToEnter);
 					//we loaded the world, and we are caught up to what the
@@ -147,7 +147,6 @@ namespace Pyxis
 			}
 			return;
 		}
-
 		//go through all the recieved merged tick closures and resolve them
 		while (m_MTCQueue.size() > 0)
 		{
@@ -163,12 +162,41 @@ namespace Pyxis
 				m_TickToResetBox2D = -1;
 			}
 			m_World->HandleTickClosure(m_MTCQueue.front());
+			latestMergedTick = m_MTCQueue.front().m_Tick;
 			//PX_TRACE("Handling a tick closure for tick: {0}!", m_MTCQueue.front().m_Tick);
 			m_MTCQueue.pop_front();
 			//dont increment game tick, because that is the "heartbeat" of constant input messages to align
 			//the game tick doesn't represent how many times the simulation has been stepped, but the amount
 			//of input messages sent
 		}
+
+		//TODO: replace this with actual input queue, and expected ping time.
+		{
+			//just using the latency queue limit, as that will replace this in the future
+			if (m_InputTick - latestMergedTick > m_LatencyQueueLimit)
+			{
+
+
+				//we are ahead by the limit, so disable ourselves from adding any more until we let everyone else catch back up,
+				//at least until we hit the length we want to be at for the expected ping,
+				//for now, just clear our newest inputs, so we don't send a fat tick closure, and wait till we get half in queue
+
+				m_WaitingForOthers = true;
+			}
+
+			if (m_InputTick - latestMergedTick < m_LatencyQueueLimit / 2)
+			{
+				//we let everyone get caught up at least half way
+				m_WaitingForOthers = false;
+			}
+
+			if (m_WaitingForOthers)
+			{
+				m_CurrentTickClosure = TickClosure();
+			}
+		}
+		
+
 
 		if (m_LatencyStateReset)
 		{
@@ -254,7 +282,7 @@ namespace Pyxis
 				}
 			}
 
-			if (m_LatencyInputQueue.size() < m_LatencyQueueLimit)
+			if (m_LatencyInputQueue.size() < m_LatencyQueueLimit && !m_WaitingForOthers)
 			{
 				//keep track of how fast we should be sending our input action updates
 				auto time = std::chrono::high_resolution_clock::now();
@@ -264,20 +292,25 @@ namespace Pyxis
 					std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
 					>= (1.0f / m_UpdatesPerSecond) * 1000000.0f)
 				{
+					//add the current mouse pos as a input action, to show other players
+					//where you are looking
+					m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, m_ClientInterface.m_ID, pixelPos);
+
+
 					Network::Message<GameMessage> msg;
 					msg.header.id = GameMessage::Game_TickClosure;
 					msg << m_CurrentTickClosure.m_Data;
 					msg << m_CurrentTickClosure.m_InputActionCount;
-					msg << m_Heartbeat;
+					msg << m_InputTick;
 					msg << m_ClientInterface.m_ID;
 					m_ClientInterface.Send(msg);
-					//PX_TRACE("sent tick closure for tick {0}", m_Heartbeat);
+					//PX_TRACE("sent tick closure for tick {0}", m_InputTick);
 
-					m_Heartbeat++;
+					m_InputTick++;
 
 					//reset tick closure
 					m_CurrentTickClosure = TickClosure();
-					//m_CurrentTickClosure.m_Tick = m_Heartbeat;
+					//m_CurrentTickClosure.m_Tick = m_InputTick;
 					m_UpdateTime = time;
 				}
 
@@ -613,14 +646,16 @@ namespace Pyxis
 
 					break;
 				}
+				//update ping case? for better prediction
 				case GameMessage::Game_GameData:
 				{
-					msg >> m_Heartbeat;
+					msg >> m_InputTick;
 					CreateWorld();
 					msg >> m_World->m_Running;
 					m_World->LoadWorld(msg);
+					latestMergedTick = m_InputTick;
 					
-					PX_TRACE("loaded game at tick {0}", m_Heartbeat);
+					PX_TRACE("loaded game at tick {0}", m_InputTick);
 					PX_TRACE("Game simulation tick is {0}", m_World->m_SimulationTick);
 
 					//now that i have finished downloading the world

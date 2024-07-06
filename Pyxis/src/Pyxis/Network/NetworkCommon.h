@@ -13,6 +13,7 @@
 #include <asio.hpp>
 #include <asio/ts/buffer.hpp>
 #include <asio/ts/internet.hpp>
+#include <asio/basic_socket_iostream.hpp>
 
 namespace Pyxis
 {

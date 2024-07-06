@@ -2715,6 +2715,21 @@ namespace Pyxis
 				UpdateWorld();
 				break;
 			}
+			case InputAction::Input_MousePosition:
+			{
+				glm::ivec2 mousePos;
+				uint64_t ID;
+				tc >> mousePos >> ID;
+				HashVector hasher;
+				uint32_t uintColor = hasher(mousePos);
+				glm::vec4 color = { (uintColor >> 24) / 255.0f, (uintColor >> 16) / 255.0f , (uintColor >> 8) / 255.0f, 1 };
+				glm::ivec2 size = glm::ivec2(2.0f / CHUNKSIZE);
+				if (!m_ServerMode)
+				{
+					Renderer2D::DrawQuad(glm::vec3(mousePos.x / CHUNKSIZE, mousePos.y / CHUNKSIZE, 2), size, color);
+				}
+				break;
+			}
 			case InputAction::ClearWorld:
 			{
 				Clear();

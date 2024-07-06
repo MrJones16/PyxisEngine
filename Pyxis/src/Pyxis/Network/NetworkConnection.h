@@ -21,8 +21,9 @@ namespace Pyxis
 			{
 				server, client,
 			};
-			Connection(Owner parent, asio::io_context& asioContext, asio::ip::tcp::socket socket, ThreadSafeQueue<OwnedMessage<T>>& qIn)
-				: m_AsioContext(asioContext), m_Socket(std::move(socket)), m_QueueMessagesIn(qIn)
+			Connection(Owner parent, asio::io_context& asioContext, asio::ip::tcp::socket socket, std::shared_ptr<asio::ip::udp::socket> udpSocket, ThreadSafeQueue<OwnedMessage<T>>& qIn)
+				: m_AsioContext(asioContext), m_Socket(std::move(socket)), m_QueueMessagesIn(qIn),
+				m_UDPSocket(udpSocket)
 			{
 				m_OwnerType = parent;
 				if (m_OwnerType == Owner::server)
@@ -75,7 +76,7 @@ namespace Pyxis
 				}
 			}
 
-			inline void ConnectToServer(const asio::ip::tcp::resolver::results_type& endpoints)
+			inline void ConnectToServer(const asio::ip::tcp::resolver::results_type& endpoints, const asio::ip::udp::resolver::results_type& endpointsUDP)
 			{
 				//only clients can connect to servers
 				if (m_OwnerType == Owner::client)
@@ -93,8 +94,22 @@ namespace Pyxis
 								PX_CORE_ERROR("Client Error: {0}", ec.message());
 							}
 						});
+					//request asio attempts to connect to an endpoint for UDP as well
+					asio::async_connect(*m_UDPSocket, endpointsUDP,
+						[this](std::error_code ec, asio::ip::udp::endpoint endpoint)
+						{
+							if (!ec)
+							{
+								ReadHeaderUDP();
+							}
+							else
+							{
+								PX_CORE_ERROR("Client UDP Error: {0}", ec.message());
+							}
+						});
 				}
 			}
+			
 			inline void Disconnect() 
 			{
 				if (IsConnected())
@@ -102,6 +117,7 @@ namespace Pyxis
 					asio::post(m_AsioContext, [this]() {m_Socket.close(); });
 				}
 			}
+			
 			inline bool IsConnected()
 			{
 				return m_Socket.is_open();
@@ -118,6 +134,14 @@ namespace Pyxis
 							WriteHeader();
 						}
 					});
+			}
+
+			//client and server can both use this to send messages using UDP
+			inline void SendUDP(Message<T>& msg) {
+				//clients will send their ID, so the message can be tied to them
+				if (m_OwnerType == Owner::client)
+					msg << m_ID;
+				WriteHeaderUDP(msg);
 			}
 
 		private:
@@ -144,6 +168,39 @@ namespace Pyxis
 							PX_CORE_ERROR("[{0}] Read Header Fail: {1}", m_ID, ec.message());
 							
 							m_Socket.close();
+							if (m_OwnerType == Owner::client)
+								m_UDPSocket->close();
+						}
+					});
+			}
+
+			//ASYNC - prime context ready to read a message header on UDP
+			void ReadHeaderUDP()
+			{
+				//client just recieves in general, no need to specify from who!
+				//server doesn't listen in connections!
+				m_UDPSocket->async_receive(asio::buffer(&m_msgTemporaryInUDP.header, sizeof(MessageHeader<T>)),
+					[this](std::error_code ec, std::size_t length)
+					{
+						PX_TRACE("Recieved UDP Header");
+						if (!ec)
+						{
+							if (m_msgTemporaryInUDP.header.size > 0)
+							{
+								m_msgTemporaryInUDP.body.resize(m_msgTemporaryInUDP.header.size);
+								ReadBodyUDP();
+							}
+							else
+							{
+								AddToIncomingMessageQueueUDP();
+							}
+						}
+						else
+						{
+							PX_CORE_ERROR("[{0}] Read Header UDP Fail: {1}", m_ID, ec.message());
+
+							m_Socket.close();
+							m_UDPSocket->close();
 						}
 					});
 			}
@@ -163,6 +220,30 @@ namespace Pyxis
 							//as above
 							PX_CORE_ERROR("[{0}] Read Body Fail: {1}", m_ID, ec.message());
 							m_Socket.close();
+							if (m_OwnerType == Owner::client)
+								m_UDPSocket->close();
+						}
+					});
+			}
+
+			//ASYNC - prime context ready to read a message body on UDP
+			void ReadBodyUDP()
+			{
+				//client only
+				m_UDPSocket->async_receive(asio::buffer(m_msgTemporaryInUDP.body.data(), m_msgTemporaryInUDP.body.size()),
+					[this](std::error_code ec, std::size_t length)
+					{
+						PX_TRACE("Recieved UDP Body");
+						if (!ec)
+						{
+							AddToIncomingMessageQueueUDP();
+						}
+						else
+						{
+							//as above
+							PX_CORE_ERROR("[{0}] Read Body UDP Fail: {1}", m_ID, ec.message());
+							m_Socket.close();
+							m_UDPSocket->close();
 						}
 					});
 			}
@@ -196,6 +277,18 @@ namespace Pyxis
 					});
 			}
 
+			//ASYNC - prime context ready to write a message header on UDP
+			void WriteHeaderUDP(const Message<T>& msg)
+			{
+				m_UDPSocket->send_to(asio::buffer(&msg, sizeof(Message<T>)), 
+					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
+
+				/*if (msg.body.size() > 0)
+				{
+					WriteBodyUDP(msg);
+				}*/
+			}
+
 			//ASYNC - prime context ready to write a message body
 			void WriteBody()
 			{
@@ -215,8 +308,17 @@ namespace Pyxis
 						{
 							PX_CORE_ERROR("[{0}] Write Body Fail.", m_ID);
 							m_Socket.close();
+							if (m_OwnerType == Owner::client)
+								m_UDPSocket->close();
 						}
 					});
+			}
+
+			//ASYNC - prime context ready to write a message body on UDP
+			void WriteBodyUDP(const Message<T>& msg)
+			{
+				m_UDPSocket->send_to(asio::buffer(msg.body.data(), msg.body.size()),
+					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
 			}
 
 			inline void AddToIncomingMessageQueue()
@@ -227,6 +329,16 @@ namespace Pyxis
 					m_QueueMessagesIn.push_back({ nullptr, m_msgTemporaryIn });
 
 				ReadHeader();
+			}
+
+			inline void AddToIncomingMessageQueueUDP()
+			{
+				if (m_OwnerType == Owner::server)
+					m_QueueMessagesIn.push_back({ this->shared_from_this(), m_msgTemporaryInUDP });
+				else
+					m_QueueMessagesIn.push_back({ nullptr, m_msgTemporaryInUDP });
+
+				ReadHeaderUDP();
 			}
 
 			inline void WriteValidation()
@@ -267,11 +379,14 @@ namespace Pyxis
 
 									//now sit and recieve data
 									ReadHeader();
+
+									ReadHeaderUDP();
 								}
 								else
 								{
 									PX_CORE_WARN("Client Disconnected (Failed Validation)");
 									m_Socket.close();
+
 								}
 							}
 							else
@@ -287,6 +402,8 @@ namespace Pyxis
 						{
 							PX_CORE_ERROR("[{0}] Read Header Fail: {1}", m_ID, ec.message());
 							m_Socket.close();
+							if (m_OwnerType == Owner::client)
+								m_UDPSocket->close();
 						}
 					});
 			}
@@ -300,8 +417,11 @@ namespace Pyxis
 			}
 
 		protected:
-			//each connection has a unique socket to a remote
+			// each connection has a unique socket to a remote
 			asio::ip::tcp::socket m_Socket;
+
+			// accompanied with a UDP socket
+			std::shared_ptr<asio::ip::udp::socket> m_UDPSocket;
 
 			//this context is shared with the whole asio instance
 			asio::io_context& m_AsioContext;
@@ -310,11 +430,15 @@ namespace Pyxis
 			//of this connection
 			ThreadSafeQueue<Message<T>> m_QueueMessagesOut;
 
+			//this queue holds all UDP messages to be sent to the remote side
+			ThreadSafeQueue<Message<T>> m_QueueMessagesOutUDP;
+
 			//This queue holds all messages that have been recieved from
 			//the remote side of this connection. Note is is a reference
 			//as the "owner" of this connection is expected to provide a queue
 			ThreadSafeQueue<OwnedMessage<T>>& m_QueueMessagesIn;
 			Message<T> m_msgTemporaryIn;
+			Message<T> m_msgTemporaryInUDP;
 
 			// the "owner" decides how some of the context behaves
 			Owner m_OwnerType = Owner::server;

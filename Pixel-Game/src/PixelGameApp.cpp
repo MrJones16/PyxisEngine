@@ -62,6 +62,9 @@
 ///		-	[Done!] Box2d simulation synchronized on multiplayer
 ///		-	[Done!] Pixel bodies storing a vector of their elements
 /// 
+///		-	Air brush is invisible
+///		-	See eachothers cursors
+///		-	UDP and TCP, dumb tcp...
 /// 
 /// 
 ///		-	make it so one player isnt super far ahead on input ticks

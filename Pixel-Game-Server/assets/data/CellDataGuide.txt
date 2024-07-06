@@ -1,0 +1,95 @@
+File node starts with <Materials></Materials>
+
+A node of "Reaction" describes the reaction between
+two elements.
+example: 
+<Reaction
+	probability="100"
+	input_cell_0="sand"
+	input_cell_1="water"
+	output_cell_0="wet_sand"
+	output_cell_1="air"
+	>
+</Reaction>
+
+by having a string in []'s it can use a tag instead:
+
+<Reaction
+	probability="100"
+	input_cell_0="lava"
+	input_cell_1="[meltable]"
+	output_cell_0="lava"
+	output_cell_1="molten_[meltable]"
+	>
+</Reaction>
+
+a tag in the input field must be only a tag, and a tag in the output field has to
+use the same cell as the input tag.
+so this would not work:
+
+<Reaction
+	probability="100"
+	input_cell_0="lava"
+	input_cell_1="[meltable]"
+	output_cell_0="molten_[meltable]"
+	output_cell_1="lava"
+	>
+</Reaction>
+
+A node of "ElementData" describes an element.
+example:
+
+<ElementData
+	name="ceramic"
+	cell_type="solid"
+	color="e89e5dFF"
+	conductivity="0.5"
+	glow="1"
+	density="20"
+	>
+	<Tags>
+	</Tags>
+</ElementData>
+
+an element can have a <Tags> node, where inside can be any tag for reaction use
+example:
+<Tags>
+	<Meltable></Meltable>
+</Tags>
+
+
+Here are the attributes, the values given are the defaults:
+
+|||||||||||||||||| Basic Attributes ||||||||||||||||||
+
+	name = "default"				|	string	| The unique name of the element 
+
+	cell_type = "gas"				|	string	| The state / type of the element: solid, movableSolid, liquid, gas, fire
+
+	color = "FF00FFFF"				|	RGBAHEX	| The base color of the element
+	density = "5"					|	uint	| The mass / density of the object. 
+	friction = "60"					|	uint	| the chance to stop sliding : 0 - 100, 0 would slide forever, 100 won't slide at all
+	health = "100"					|	int		| The health of the element, used for burn duration
+
+|||||||||||||||||| Flammable Attributes ||||||||||||||||||
+
+	flammable = "0"					|	bool	| Whether or not the element is flammable. The fire properties require this to work
+	ignited = "0"					|	bool	| Whether or not the element starts ignited
+	spread_ignition = "0"			|	Bool	| Whether or not the element spreads its ignition regardless of temperature
+	spread_ignition_chance = "10"	|	uint32	| percent chance to spread ignition, requres spread ignition = true
+	ignited_color = "0		"		|	RGBAHEX	| color of element when ignited, default is 0, which does nothing
+	ignition_temperature = "300"	|	float	| the temperature this element ignites at
+	fire_temperature = "1000"		|	float	| the temperature this element burns at, and the temp of the flames it emits
+	fire_color = "f7e334FF"			|	RGBAHEX	| color of element when ignited, default is normal fire color
+	fire_temperature_increase = "1"	|	float	| the rate at which this element heats up, default = fire_temperature / health
+	burnt = "air"					|	string	| the name of the element to turn into once burnt
+
+|||||||||||||||||| Temperature Attributes ||||||||||||||||||
+
+	glow="0"						| bool, whether or not the element glows red hot
+	conductivity="100"				| How rapidly it transfers its heat
+	temperature="1600"				| The starting temperature of the element
+	melted = ""						|	string	| if == "" will not melt | name of the element to melt into
+	melting_point = "100"			|	float	| temperature at which transforms to melted
+	frozen = ""						|	string	| if == "" will not freeze | name of the element to freeze into
+	freezing_point = "0"			|	float	| temperature at which transforms to melted

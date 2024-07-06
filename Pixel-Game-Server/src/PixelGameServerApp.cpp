@@ -15,7 +15,7 @@ public:
 
 	}
 public:
-	Pyxis::PixelGameServer m_ServerLayer = Pyxis::PixelGameServer(60000);
+	Pyxis::PixelGameServer m_ServerLayer = Pyxis::PixelGameServer(21218);
 };
 
 /*Application* Pyxis::CreateApplication() {
