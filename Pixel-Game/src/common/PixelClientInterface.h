@@ -9,6 +9,7 @@ namespace Pyxis
 		Ping,
 
 		Server_ClientConnected,
+		Server_ClientDisconnected,
 		Server_ClientAccepted,
 		Server_ClientAssignID,
 

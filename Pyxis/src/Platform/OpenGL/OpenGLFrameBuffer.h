@@ -14,7 +14,7 @@ namespace Pyxis
 		virtual void Bind() const override;
 		virtual void Unbind() const override;
 
-		inline virtual uint32_t GetColorAttatchmentRendererID() const override { return m_ColorAttatchment; }
+		inline virtual uint32_t GetColorAttachmentRendererID() const override { return m_ColorAttatchment; }
 		virtual void Resize(uint32_t width, uint32_t height) override;
 
 		virtual const FrameBufferSpecification& GetSpecification() const { return m_Specification; }

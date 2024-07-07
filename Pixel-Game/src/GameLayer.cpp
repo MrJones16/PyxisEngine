@@ -128,7 +128,7 @@ namespace Pyxis
 					}
 					m_LatencyStateReset = true;
 					PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World->m_SimulationTick);
-					m_World->HandleTickClosure(m_MTCQueue.front());
+					HandleTickClosure(m_MTCQueue.front());
 					m_MTCQueue.pop_front();
 					m_InputTick++;
 				}
@@ -161,7 +161,7 @@ namespace Pyxis
 				m_World->ResetBox2D();
 				m_TickToResetBox2D = -1;
 			}
-			m_World->HandleTickClosure(m_MTCQueue.front());
+			HandleTickClosure(m_MTCQueue.front());
 			latestMergedTick = m_MTCQueue.front().m_Tick;
 			//PX_TRACE("Handling a tick closure for tick: {0}!", m_MTCQueue.front().m_Tick);
 			m_MTCQueue.pop_front();
@@ -241,13 +241,13 @@ namespace Pyxis
 			auto [x, y] = GetMousePositionScene();
 			auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
 			
-			glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+			glm::ivec2 mousePixelPos = m_World->WorldToPixel(vec);
 
-			auto chunkPos = m_World->PixelToChunk(pixelPos);
+			auto chunkPos = m_World->PixelToChunk(mousePixelPos);
 			auto it = m_World->m_Chunks.find(chunkPos);
 			if (it != m_World->m_Chunks.end())
 			{
-				auto index = m_World->PixelToIndex(pixelPos);
+				auto index = m_World->PixelToIndex(mousePixelPos);
 				m_HoveredElement = it->second->m_Elements[index.x + index.y * CHUNKSIZE];
 				if (m_HoveredElement.m_ID >= m_World->m_TotalElements)
 				{
@@ -278,7 +278,13 @@ namespace Pyxis
 				}
 				else
 				{
-					PaintElementAtCursor(pixelPos);
+					m_CurrentTickClosure.AddInputAction(
+						InputAction::Input_Place, 
+						(uint8_t)m_BrushSize,
+						(uint16_t)m_BrushType,
+						(uint32_t)m_SelectedElementIndex,
+						pixelPos, 
+						m_ClientInterface.m_ID);
 				}
 			}
 
@@ -294,7 +300,7 @@ namespace Pyxis
 				{
 					//add the current mouse pos as a input action, to show other players
 					//where you are looking
-					m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, m_ClientInterface.m_ID, pixelPos);
+					m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, m_ClientInterface.m_ID, mousePixelPos);
 
 
 					Network::Message<GameMessage> msg;
@@ -330,6 +336,16 @@ namespace Pyxis
 			//vertical lines
 			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMin.x, worldMax.y});
 			Renderer2D::DrawLine({ worldMax.x, worldMin.y }, { worldMax.x, worldMax.y});
+
+			for each (auto playerCursor in m_PlayerCursors)
+			{
+				//skip your own mouse pos
+				if (playerCursor.first == m_ClientInterface.m_ID) continue;
+				//draw the 3x3 square for each players cursor
+				glm::vec3 worldPos = glm::vec3((float)playerCursor.second.pixelPosition.x / CHUNKSIZE, (float)playerCursor.second.pixelPosition.y / CHUNKSIZE, 5);
+				glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
+				Renderer2D::DrawQuad(worldPos, size, playerCursor.second.color);
+			}
 		}
 
 		Renderer2D::EndScene();
@@ -379,7 +395,7 @@ namespace Pyxis
 			auto sceneViewSize = ImGui::GetContentRegionAvail();
 			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
 			ImGui::Image(
-				(ImTextureID)m_SceneFrameBuffer->GetColorAttatchmentRendererID(),
+				(ImTextureID)m_SceneFrameBuffer->GetColorAttachmentRendererID(),
 				sceneViewSize,
 				ImVec2(0, 1),
 				ImVec2(1, 0),
@@ -646,6 +662,17 @@ namespace Pyxis
 
 					break;
 				}
+				case GameMessage::Server_ClientConnected:
+				{
+					//someone else joined, so we will:
+					// * keep track of their mouse position to draw it
+					//
+					uint64_t id;
+					msg >> id;
+
+					m_PlayerCursors[id] = PlayerCursor(id);
+					break;
+				}
 				//update ping case? for better prediction
 				case GameMessage::Game_GameData:
 				{
@@ -711,6 +738,180 @@ namespace Pyxis
 			PX_WARN("Lost connection to server.");
 			Application::Get().Sleep(2000);
 			Application::Get().Close();
+		}
+	}
+
+	void GameLayer::HandleTickClosure(MergedTickClosure& tc)
+	{
+		for (int i = 0; i < tc.m_InputActionCount; i++)
+		{
+			InputAction IA;
+			tc >> IA;
+			switch (IA)
+			{
+			case InputAction::Add_Player:
+			{
+				uint64_t ID;
+				tc >> ID;
+
+				glm::ivec2 pixelPos;
+				tc >> pixelPos;
+
+				m_World->CreatePlayer(ID, pixelPos);
+				break;
+			}
+			case InputAction::PauseGame:
+			{
+				uint64_t ID;
+				tc >> ID;
+				m_World->m_Running = false;
+				break;
+			}
+			case InputAction::ResumeGame:
+			{
+				uint64_t ID;
+				tc >> ID;
+				m_World->m_Running = true;
+				break;
+			}
+			case InputAction::TransformRegionToRigidBody:
+			{
+				uint64_t ID;
+				tc >> ID;
+
+				glm::ivec2 maximum;
+				tc >> maximum;
+
+				glm::ivec2 minimum;
+				tc >> minimum;
+
+				b2BodyType type;
+				tc >> type;
+
+				int width = (maximum.x - minimum.x) + 1;
+				int height = (maximum.y - minimum.y) + 1;
+				if (width * height <= 0) break;
+				glm::ivec2 newMin = maximum;
+				glm::ivec2 newMax = minimum;
+				//iterate over section and find the width, height, center, ect
+				int mass = 0;
+				for (int x = 0; x < width; x++)
+				{
+					for (int y = 0; y < height; y++)
+					{
+						glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
+						auto& element = m_World->GetElement(pixelPos);
+						auto& elementData = m_World->m_ElementData[element.m_ID];
+						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+						{
+							if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
+							if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
+							if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
+							if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
+							mass++;
+						}
+					}
+				}
+				if (mass < 2) continue;//skip if we are 1 element or 0
+				PX_TRACE("transforming {0} elements to a rigid body", mass);
+
+				width = (newMax.x - newMin.x) + 1;
+				height = (newMax.y - newMin.y) + 1;
+
+				glm::ivec2 origin = { width / 2, height / 2 };
+				std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
+				for (int x = 0; x < width; x++)
+				{
+					for (int y = 0; y < height; y++)
+					{
+						glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
+
+						//loop over every element, grab it, and make it rigid if it is a movable Solid
+						auto& element = m_World->GetElement(pixelPos);
+						auto& elementData = m_World->m_ElementData[element.m_ID];
+						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+						{
+							element.m_Rigid = true;
+							//set the elements at the local position to be the element pulled from world
+							elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
+							m_World->SetElement(pixelPos, Element());
+						}
+					}
+				}
+				glm::ivec2 size = newMax - newMin;
+				PX_TRACE("Mass is: {0}", mass);
+				PixelRigidBody* body = new PixelRigidBody(ID, size, elements, type, m_World->m_Box2DWorld);
+				if (body->m_B2Body == nullptr)
+				{
+					PX_TRACE("Failed to create rigid body");
+					continue;
+				}
+				else
+				{
+					m_World->m_PixelBodyMap[body->m_ID] = body;
+					auto pixelPos = (newMin + newMax) / 2;
+					if (width % 2 == 0) pixelPos.x += 1;
+					if (height % 2 == 0) pixelPos.y += 1;
+					body->SetPixelPosition(pixelPos);
+					m_World->PutPixelBodyInWorld(*body);
+				}
+
+
+				break;
+			}
+			case Pyxis::InputAction::Input_Move:
+			{
+				//PX_TRACE("input action: Input_Move");
+				break;
+			}
+			case Pyxis::InputAction::Input_Place:
+			{
+				//PX_TRACE("input action: Input_Place");
+				uint64_t id;
+				glm::ivec2 pixelPos;
+				uint32_t elementID;
+				BrushType brush;
+				uint8_t brushSize;
+				tc >> id >> pixelPos >> elementID >> brush >> brushSize;
+
+				m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
+				break;
+			}
+			case Pyxis::InputAction::Input_StepSimulation:
+			{
+				PX_TRACE("input action: Input_StepSimulation");
+				m_World->UpdateWorld();
+				break;
+			}
+			case InputAction::Input_MousePosition:
+			{
+				glm::ivec2 mousePos;
+				uint64_t ID;
+				tc >> mousePos >> ID;
+				if (mousePos.x < -2000000000) break;
+
+				m_PlayerCursors[ID].pixelPosition = mousePos;
+				break;
+			}
+			case InputAction::ClearWorld:
+			{
+				m_World->Clear();
+				break;
+			}
+			default:
+			{
+				PX_TRACE("input action: default?");
+				break;
+			}
+			}
+		}
+		if (m_World->m_Running)
+		{
+			m_World->UpdateWorld();
+		}
+		else
+		{
+			m_World->UpdateTextures();
 		}
 	}
 
@@ -830,50 +1031,6 @@ namespace Pyxis
 		}
 		
 		return false;
-	}
-
-	void GameLayer::PaintElementAtCursor(glm::ivec2 pixelPos)
-	{
-		//paint a rigid body by tracking min and max
-		std::unordered_map<glm::ivec2, Chunk*, HashVector> map;
-
-		glm::ivec2 newPos = pixelPos;
-		for (int x = -m_BrushSize; x <= m_BrushSize; x++)
-		{
-			for (int y = -m_BrushSize; y <= m_BrushSize; y++)
-			{
-				newPos = pixelPos + glm::ivec2(x,y);
-				Chunk* chunk;
-				glm::ivec2 index;
-				switch (m_BrushType)
-				{
-				case BrushType::circle:
-					//limit brush to circle
-					if (std::sqrt((float)(x * x) + (float)(y * y)) >= m_BrushSize) continue;
-					break;
-				case BrushType::square:
-					break;
-				}
-				//get element / color
-				Element element = Element();
-				ElementData& elementData = m_World->m_ElementData[m_SelectedElementIndex];
-				element.m_ID = m_SelectedElementIndex;
-				element.m_Updated = !m_World->m_UpdateBit;
-				//element.m_BaseColor = Pyxis::RandomizeABGRColor(elementData.color, 20);
-
-				index = m_World->PixelToIndex(newPos);
-
-				elementData.UpdateElementData(element, index.x, index.y);
-				element.m_Color = element.m_BaseColor;
-
-
-				m_CurrentTickClosure.AddInputAction(InputAction::Input_Place, element, newPos, m_ClientInterface.m_ID);
-			}
-		}
-		for each(auto& pair in map)
-		{
-			pair.second->UpdateTexture();
-		}
 	}
 
 	void GameLayer::PaintBrushHologram()

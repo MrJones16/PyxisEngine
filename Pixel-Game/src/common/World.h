@@ -27,6 +27,10 @@ namespace Pyxis
 
 	};
 
+	enum BrushType : uint16_t {
+		circle = 0, square = 1, end
+	};
+
 	//class InputActionData : 
 
 	class TickClosure
@@ -164,6 +168,8 @@ namespace Pyxis
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 		void SetElementWithoutDirtyRectUpdate(const glm::ivec2& pixelPos, const Element& element);
 
+		void PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID, BrushType brush, uint8_t brushSize);
+
 		void UpdateWorld();
 		void UpdateTextures();
 		void UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY);
@@ -178,7 +184,8 @@ namespace Pyxis
 		void PutPixelBodyInWorld(PixelRigidBody& body);
 
 	public:
-		void HandleTickClosure(MergedTickClosure& tc);
+		//moved to game layer and server respectively
+		//void HandleTickClosure(MergedTickClosure& tc);
 		Player* CreatePlayer(uint64_t playerID, glm::ivec2 position);
 
 

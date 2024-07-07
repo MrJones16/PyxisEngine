@@ -23,7 +23,7 @@ namespace Pyxis
 		virtual void Bind() const = 0;
 		virtual void Unbind() const = 0;
 
-		virtual uint32_t GetColorAttatchmentRendererID() const = 0;
+		virtual uint32_t GetColorAttachmentRendererID() const = 0;
 		virtual void Resize(uint32_t width, uint32_t height) = 0;
 		//virtual void BindTexture(Ref<Texture2D> texture) const = 0;
 		//virtual void UnbindTexture() const = 0;

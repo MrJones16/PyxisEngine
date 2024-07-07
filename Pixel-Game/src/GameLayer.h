@@ -34,16 +34,13 @@ namespace Pyxis
 
 		//game functions
 		void HandleMessages();
+		void HandleTickClosure(MergedTickClosure& tc);
 		bool CreateWorld();
 		void TextCentered(std::string text);
 		std::pair<float, float> GetMousePositionScene();
 		
 
 	public:
-		enum BrushType {
-			circle = 0, square = 1, end
-		};
-		void PaintElementAtCursor(glm::ivec2 pixelPos);
 		void PaintBrushHologram();
 
 	private:
@@ -52,22 +49,46 @@ namespace Pyxis
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
 		float m_UpdatesPerSecond = 60;
 
-		//multiplayer things
+		//core multiplayer things
 		PixelClientInterface m_ClientInterface;
 		std::deque<MergedTickClosure> m_MTCQueue;
 		bool m_LatencyStateReset = false;
+		uint64_t m_InputTick = 0;
+		TickClosure m_CurrentTickClosure;
+		std::deque<TickClosure> m_LatencyInputQueue;
+		const int m_LatencyQueueLimit = 200; // this value should represent 1/60th the seconds server round trip delay
+		uint64_t latestMergedTick = 0;//temp?
+		bool m_WaitingForOthers = false;
+
+		//multiplayer connecting things
 		bool m_Connecting = true;
 		bool m_WaitForWorldData = true;
 		uint64_t m_TickToEnter = -1; // set to max value
 		uint64_t m_TickToResetBox2D = -1; // set to max value
 
-		uint64_t m_InputTick = 0;
-		TickClosure m_CurrentTickClosure;
-		std::deque<TickClosure> m_LatencyInputQueue;
-		const int m_LatencyQueueLimit = 200; // this value should represent 1/60th the seconds server round trip delay
-		uint64_t latestMergedTick = 0;
-		bool m_WaitingForOthers = false;
+		struct PlayerCursor
+		{
+			PlayerCursor() = default;
+			PlayerCursor(uint64_t id)
+			{
+				std::vector<glm::vec4> colorOptions =
+				{
+					glm::vec4(1,0,0,1),//red
+					glm::vec4(1,0.5f,0,1),//orange
+					glm::vec4(1,1,0,1),//yellow
+					glm::vec4(0,1,0,1),//green
+					glm::vec4(0,0,1,1),//blue
+					glm::vec4(1,0,0.2f,1),//indigo
+					glm::vec4(1,0,0.8f,1),//violet
+				};
+				color = colorOptions[id % colorOptions.size()];
+			}
+			glm::ivec2 pixelPosition = {0,0};
+			glm::vec4 color = {1,1,1,1};
+		};
 
+		//multiplayer functionality
+		std::unordered_map<uint64_t, PlayerCursor> m_PlayerCursors;
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;
@@ -84,7 +105,7 @@ namespace Pyxis
 		//player tools
 		int m_SelectedElementIndex = 0;
 		float m_BrushSize = 1;
-		int m_BrushType = BrushType::circle;
+		BrushType m_BrushType = BrushType::circle;
 		Element m_HoveredElement = Element();
 		bool m_BuildingRigidBody = false;
 

@@ -860,6 +860,51 @@ namespace Pyxis
 
 	}
 
+	void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID, BrushType brush, uint8_t brushSize)
+	{
+		std::unordered_set<Chunk*> chunksToUpdate;
+
+		glm::ivec2 newPos = pixelPos;
+		for (int x = -brushSize; x <= brushSize; x++)
+		{
+			for (int y = -brushSize; y <= brushSize; y++)
+			{
+				newPos = pixelPos + glm::ivec2(x, y);
+				Chunk* chunk;
+				glm::ivec2 index;
+				switch (brush)
+				{
+				case BrushType::circle:
+					//limit brush to circle
+					if (std::sqrt((float)(x * x) + (float)(y * y)) >= brushSize) continue;
+					break;
+				case BrushType::square:
+					break;
+				}
+
+				//get chunk / index
+				chunk = GetChunk(PixelToChunk(newPos));
+				chunksToUpdate.insert(chunk);
+				index = PixelToIndex(newPos);
+
+				//get element / color
+				Element element = Element();
+				ElementData& elementData = m_ElementData[elementID];
+				element.m_ID = elementID;
+				element.m_Updated = !m_UpdateBit;
+				elementData.UpdateElementData(element, index.x, index.y);
+
+				//set the element
+				chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+				chunk->UpdateDirtyRect(index.x, index.y);
+			}
+		}
+		for each (auto chunk in chunksToUpdate)
+		{
+			chunk->UpdateTexture();
+		}
+	}
+
 	void World::UpdateWorld()
 	{
 		/*m_Threads.clear();
@@ -2569,187 +2614,6 @@ namespace Pyxis
 			SetElement(mappedElement.second.worldPos, mappedElement.second.element);
 		}
 		body.m_InWorld = true;
-	}
-
-
-	void World::HandleTickClosure(MergedTickClosure& tc)
-	{
-		//PX_TRACE("tick closure {0} applied to simulation tick {1}", tc.m_Tick, m_SimulationTick);
-		for (int i = 0; i < tc.m_InputActionCount; i++)
-		{
-			InputAction IA;
-			tc >> IA;
-			switch (IA)
-			{
-			case InputAction::Add_Player:
-			{
-				uint64_t ID;
-				tc >> ID;
-
-				glm::ivec2 pixelPos;
-				tc >> pixelPos;
-
-				CreatePlayer(ID, pixelPos);
-				break;
-			}
-			case InputAction::PauseGame:
-			{
-				uint64_t ID;
-				tc >> ID;
-				m_Running = false;
-				break;
-			}
-			case InputAction::ResumeGame:
-			{
-				uint64_t ID;
-				tc >> ID;
-				m_Running = true;
-				break;
-			}
-			case InputAction::TransformRegionToRigidBody:
-			{
-				uint64_t ID;
-				tc >> ID;
-
-				glm::ivec2 maximum;
-				tc >> maximum;
-
-				glm::ivec2 minimum;
-				tc >> minimum;
-
-				b2BodyType type;
-				tc >> type;
-
-				int width = (maximum.x - minimum.x) + 1;
-				int height = (maximum.y - minimum.y) + 1;
-				if (width * height <= 0) break;
-				glm::ivec2 newMin = maximum;
-				glm::ivec2 newMax = minimum;
-				//iterate over section and find the width, height, center, ect
-				int mass = 0;
-				for (int x = 0; x < width; x++)
-				{
-					for (int y = 0; y < height; y++)
-					{
-						glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-						auto& element = GetElement(pixelPos);
-						auto& elementData = m_ElementData[element.m_ID];
-						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-						{
-							if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-							if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-							if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-							if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-							mass++;
-						}
-					}
-				}
-				if (mass < 2) continue;//skip if we are 1 element or 0
-				PX_TRACE("transforming {0} elements to a rigid body", mass);
-				
-				width = (newMax.x - newMin.x) + 1;
-				height = (newMax.y - newMin.y) + 1;
-
-				glm::ivec2 origin = { width / 2, height / 2 };
-				std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-				for (int x = 0; x < width; x++)
-				{
-					for (int y = 0; y < height; y++)
-					{
-						glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
-
-						//loop over every element, grab it, and make it rigid if it is a movable Solid
-						auto& element = GetElement(pixelPos);
-						auto& elementData = m_ElementData[element.m_ID];
-						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-						{
-							element.m_Rigid = true;
-							//set the elements at the local position to be the element pulled from world
-							elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-							SetElement(pixelPos, Element());
-						}
-					}
-				}
-				glm::ivec2 size = newMax - newMin;
-				PX_TRACE("Mass is: {0}", mass);
-				PixelRigidBody* body = new PixelRigidBody(ID, size, elements, type, m_Box2DWorld);
-				if (body->m_B2Body == nullptr) 
-				{
-					PX_TRACE("Failed to create rigid body");
-					continue;
-				}
-				else
-				{
-					m_PixelBodyMap[body->m_ID] = body;
-					auto pixelPos = (newMin + newMax) / 2;
-					if (width % 2 == 0) pixelPos.x += 1;
-					if (height % 2 == 0) pixelPos.y += 1;
-					body->SetPixelPosition(pixelPos);
-					PutPixelBodyInWorld(*body);
-				}
-					
-				
-				break;
-			}
-			case Pyxis::InputAction::Input_Move:
-			{
-				//PX_TRACE("input action: Input_Move");
-				break;
-			}
-			case Pyxis::InputAction::Input_Place:
-			{
-				//PX_TRACE("input action: Input_Place");
-				uint64_t id;
-				tc >> id;
-				glm::ivec2 pixelPos;
-				tc >> pixelPos;
-				Element element;
-				tc >> element;
-				SetElement(pixelPos, element);
-				//PX_INFO("pixel pos: ({0},{1})", pixelPos.x, pixelPos.y);
-				break;
-			}
-			case Pyxis::InputAction::Input_StepSimulation:
-			{
-				PX_TRACE("input action: Input_StepSimulation");
-				UpdateWorld();
-				break;
-			}
-			case InputAction::Input_MousePosition:
-			{
-				glm::ivec2 mousePos;
-				uint64_t ID;
-				tc >> mousePos >> ID;
-				HashVector hasher;
-				uint32_t uintColor = hasher(mousePos);
-				glm::vec4 color = { (uintColor >> 24) / 255.0f, (uintColor >> 16) / 255.0f , (uintColor >> 8) / 255.0f, 1 };
-				glm::ivec2 size = glm::ivec2(2.0f / CHUNKSIZE);
-				if (!m_ServerMode)
-				{
-					Renderer2D::DrawQuad(glm::vec3(mousePos.x / CHUNKSIZE, mousePos.y / CHUNKSIZE, 2), size, color);
-				}
-				break;
-			}
-			case InputAction::ClearWorld:
-			{
-				Clear();
-				break;
-			}
-			default:
-			{
-				PX_TRACE("input action: default?");
-				break;
-			}
-			}
-		}
-		if (m_Running)
-		{
-			UpdateWorld();
-		}
-		else
-		{
-			UpdateTextures();
-		}
 	}
 
 	Player* World::CreatePlayer(uint64_t playerID, glm::ivec2 pixelPosition)

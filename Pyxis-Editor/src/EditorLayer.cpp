@@ -160,7 +160,7 @@ namespace Pyxis
 			//ImGui::GetForegroundDrawList()->AddRect(ImVec2(0, 0), windowSize, ImU32(0xFFFFFFFF));
 			ImVec2 windowSize = ImGui::GetContentRegionAvail();
 			ImGui::Image(
-				(ImTextureID)m_SceneFrameBuffer->GetColorAttatchmentRendererID(),
+				(ImTextureID)m_SceneFrameBuffer->GetColorAttachmentRendererID(),
 				windowSize,
 				ImVec2(0, 1),
 				ImVec2(1, 0),

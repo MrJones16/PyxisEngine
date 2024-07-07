@@ -28,6 +28,7 @@ namespace Pyxis
 		void OnClientDisconnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
 		void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
 		void OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client) override;
+		void HandleTickClosure(MergedTickClosure& tc);
 
 	private:
 		Pyxis::OrthographicCameraController m_OrthographicCameraController;
