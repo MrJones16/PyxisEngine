@@ -102,9 +102,27 @@ namespace Pyxis
 
 			void SendUDP(Message<T>& msg)
 			{
+				//when a client sends a UDP message, it needs to send it's ID so the server knows
+				//who it is coming from.
+
+				//mainly doing this instead of ip/port since testing on my own machine
+
+
+				msg << m_ID;
+				PX_TRACE("Sending UDP message: Size:{0} | ID: {1}", msg.header.size, m_ID);
 				m_Connection->SendUDP(msg);
 			}
 
+		public:
+			void SetID(uint64_t id)
+			{
+				m_ID = id;
+				m_Connection->SetID(id);
+			}
+			uint64_t GetID()
+			{
+				return m_ID;
+			}
 
 		protected:
 			//asio context handles the data transfer
@@ -112,6 +130,9 @@ namespace Pyxis
 
 			//but needs a thread of its own to execute its work commands
 			std::thread m_ContextThread;
+
+			//the unique ID of the client
+			uint64_t m_ID = 0;
 
 			//this is the hardware socket that is connected to the server
 			asio::ip::tcp::socket m_Socket;

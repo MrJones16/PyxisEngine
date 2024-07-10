@@ -34,7 +34,8 @@ namespace Pyxis
 					//give it something to do
 					WaitForClientConnection();
 
-					ReadHeaderUDP();
+					ReadUDPMessage();
+					//ReadHeaderUDP();
 
 					//then start the context, so it doesnt stop
 					m_ContextThread = std::thread([this]() {m_AsioContext.run(); });
@@ -83,9 +84,10 @@ namespace Pyxis
 							{
 								//connection allowed, so add to container of new connections
 								m_DeqConnections.push_back(std::move(newConn));
-								m_ClientMap[m_DeqConnections.back()->GetID()] = m_DeqConnections.back();
 
 								m_DeqConnections.back()->ConnectToClient(this, nIDCounter++);
+
+								m_ClientMap[m_DeqConnections.back()->GetID()] = m_DeqConnections.back();
 
 								PX_CORE_INFO("[SERVER] Connection [{0}] Approved", m_DeqConnections.back()->GetID());
 							}
@@ -217,15 +219,65 @@ namespace Pyxis
 
 		protected:
 
+			void ReadUDPMessage()
+			{
+				m_UDPSocket->async_receive_from(asio::buffer(m_ReceiveBuffer, 1024),
+					m_RemoteEndpoint,
+					[this](std::error_code ec, std::size_t length)
+					{
+						PX_TRACE("Recieved UDP Header, of length {0}", length);
+						if (!ec)
+						{
+							if (length < sizeof(MessageHeader<T>)) 
+							{
+								PX_TRACE("didn't recieve enough information for header");
+							}
+							else
+							{
+								//extract header from data
+								memcpy(&m_msgTemporaryInUDP.header, m_ReceiveBuffer, sizeof(MessageHeader<T>));
+
+								//make sure we are only pulling a max amount out of the body so we don't
+								//access unknown memory
+								if (m_msgTemporaryInUDP.header.size < (1024 - sizeof(MessageHeader<T>)))
+								{
+									//extract the length of data into the body
+									m_msgTemporaryInUDP.body.resize(m_msgTemporaryInUDP.header.size);
+									memcpy(m_msgTemporaryInUDP.body.data(), m_ReceiveBuffer + sizeof(MessageHeader<T>), m_msgTemporaryInUDP.header.size);
+									//pull the client ID from the body, and push the message with the correct client
+									uint64_t clientID;
+									m_msgTemporaryInUDP >> clientID;
+									PX_TRACE("Header was from client [{0}]", clientID);
+									m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });
+								}
+							}
+						}
+						else
+						{
+							PX_CORE_ERROR("[SERVER] Read Header UDP Fail: {0}", ec.message());
+
+							//gonna skip closing the socket since we are listening for all clients
+							//m_UDPSocket->close();
+						}
+
+						//continue reading UDP messages
+						ReadUDPMessage();
+					});
+			}
+
 			//ASYNC - prime context ready to read a message header on UDP, for server single udp socket
 			void ReadHeaderUDP()
 			{
+				//asio::async_read(m_UDPSocket
+				
+
 				m_UDPSocket->async_receive(asio::buffer(&m_msgTemporaryInUDP.header, sizeof(MessageHeader<T>)),
 					[this](std::error_code ec, std::size_t length)
 					{
-						PX_TRACE("Recieved UDP Header");
+						PX_TRACE("Recieved UDP Header, expecting size: {0}", m_msgTemporaryInUDP.header.size);
 						if (!ec)
 						{
+							if (length < sizeof(MessageHeader<T>)) PX_TRACE("didn't recieve enough information for header");
 							if (m_msgTemporaryInUDP.header.size > 0)
 							{
 								m_msgTemporaryInUDP.body.resize(m_msgTemporaryInUDP.header.size);
@@ -245,20 +297,48 @@ namespace Pyxis
 							m_UDPSocket->close();
 						}
 					});
+				/*m_UDPSocket->async_receive(asio::buffer(&m_msgTemporaryInUDP.header, sizeof(MessageHeader<T>)),
+					[this](std::error_code ec, std::size_t length)
+					{
+						PX_TRACE("Recieved UDP Header, size: {0}", m_msgTemporaryInUDP.header.size);
+						if (!ec)
+						{
+							PX_TRACE("Size of message: {0}", m_msgTemporaryInUDP.header.size);
+							if (m_msgTemporaryInUDP.header.size > 0)
+							{
+								m_msgTemporaryInUDP.body.resize(m_msgTemporaryInUDP.header.size);
+								ReadBodyUDP();
+							}
+							else
+							{
+								m_QueueMessagesIn.push_back({ nullptr, m_msgTemporaryInUDP });
+								PX_TRACE("Recieved header with no body...");
+								ReadHeaderUDP();
+							}
+						}
+						else
+						{
+							PX_CORE_ERROR("[SERVER] Read Header UDP Fail: {0}", ec.message());
+
+							m_UDPSocket->close();
+						}
+					});*/
 			}
 
 			//prime to read the body of the message, for server single udp socket
 			void ReadBodyUDP()
 			{
-				m_UDPSocket->async_receive(asio::buffer(m_msgTemporaryInUDP.body.data(), m_msgTemporaryInUDP.body.size()),
+				m_UDPSocket->async_receive_from(asio::buffer(m_RecieveBuffer, 1024),
+					m_RemoteEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
-						PX_TRACE("Recieved UDP Body");
+						PX_TRACE("Read {0} bytes for body", length);
+						PX_TRACE("Recieved UDP Body, size: {0}", m_msgTemporaryInUDP.body.size());
 						if (!ec)
 						{
 							uint64_t clientID;
 							m_msgTemporaryInUDP >> clientID;
-							m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });
+							m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP});
 							ReadHeaderUDP();
 						}
 						else
@@ -313,6 +393,8 @@ namespace Pyxis
 			asio::ip::tcp::acceptor m_AsioAcceptor;
 
 			std::shared_ptr<asio::ip::udp::socket> m_UDPSocket;
+			asio::ip::udp::endpoint m_RemoteEndpoint;
+			uint8_t m_ReceiveBuffer[1024];
 			Message<T> m_msgTemporaryInUDP;
 
 			// clients will be identified in the "wider system" via an ID

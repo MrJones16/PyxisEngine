@@ -284,7 +284,7 @@ namespace Pyxis
 						(uint16_t)m_BrushType,
 						(uint32_t)m_SelectedElementIndex,
 						pixelPos, 
-						m_ClientInterface.m_ID);
+						m_ClientInterface.GetID());
 				}
 			}
 
@@ -300,7 +300,7 @@ namespace Pyxis
 				{
 					//add the current mouse pos as a input action, to show other players
 					//where you are looking
-					m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, m_ClientInterface.m_ID, mousePixelPos);
+					m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, m_ClientInterface.GetID(), mousePixelPos);
 
 
 					Network::Message<GameMessage> msg;
@@ -308,8 +308,8 @@ namespace Pyxis
 					msg << m_CurrentTickClosure.m_Data;
 					msg << m_CurrentTickClosure.m_InputActionCount;
 					msg << m_InputTick;
-					msg << m_ClientInterface.m_ID;
-					m_ClientInterface.Send(msg);
+					msg << m_ClientInterface.GetID();
+					m_ClientInterface.SendUDP(msg);
 					//PX_TRACE("sent tick closure for tick {0}", m_InputTick);
 
 					m_InputTick++;
@@ -340,7 +340,7 @@ namespace Pyxis
 			for each (auto playerCursor in m_PlayerCursors)
 			{
 				//skip your own mouse pos
-				if (playerCursor.first == m_ClientInterface.m_ID) continue;
+				if (playerCursor.first == m_ClientInterface.GetID()) continue;
 				//draw the 3x3 square for each players cursor
 				glm::vec3 worldPos = glm::vec3((float)playerCursor.second.pixelPosition.x / CHUNKSIZE, (float)playerCursor.second.pixelPosition.y / CHUNKSIZE, 5);
 				glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
@@ -428,7 +428,7 @@ namespace Pyxis
 				{
 					if (ImGui::Button("Pause"))
 					{
-						m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.m_ID);
+						m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.GetID());
 					}
 					ImGui::SetItemTooltip("Shortcut: Space");
 				}
@@ -436,7 +436,7 @@ namespace Pyxis
 				{
 					if (ImGui::Button("Play"))
 					{
-						m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.m_ID);
+						m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.GetID());
 					}
 					ImGui::SetItemTooltip("Shortcut: Space");
 					//ImGui::EndTooltip();
@@ -653,7 +653,9 @@ namespace Pyxis
 				case GameMessage::Server_ClientAssignID:
 				{
 					//server responded with our ID 
-					msg >> m_ClientInterface.m_ID;
+					uint64_t id;
+					msg >> id;
+					m_ClientInterface.SetID(std::move(id));
 					
 					//now ask the server for the game data
 					Network::Message<GameMessage> msg;
@@ -959,11 +961,11 @@ namespace Pyxis
 		{
 			if (m_World->m_Running)
 			{
-				m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.m_ID);
+				m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.GetID());
 			}
 			else 
 			{
-				m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.m_ID);
+				m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.GetID());
 			}
 		}
 		if (event.GetKeyCode() == PX_KEY_RIGHT)

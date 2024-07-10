@@ -31,6 +31,5 @@ namespace Pyxis
 	class PixelClientInterface : public Network::ClientInterface<GameMessage>
 	{
 	public:
-		uint64_t m_ID = 0;
 	};
 }

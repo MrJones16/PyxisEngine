@@ -433,7 +433,7 @@ namespace Pyxis
 			}
 			default:
 			{
-				PX_TRACE("input action: default?");
+				PX_TRACE("Input Action Error. You have probably mis-aligned the data");
 				break;
 			}
 			}

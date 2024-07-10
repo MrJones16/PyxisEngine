@@ -48,6 +48,11 @@ namespace Pyxis
 
 			}
 
+			void SetID(uint64_t id)
+			{
+				m_ID = id;
+			}
+
 			uint64_t GetID()
 			{
 				return m_ID;
@@ -124,6 +129,7 @@ namespace Pyxis
 			}
 
 			inline void Send(const Message<T>& msg) {
+				//PX_TRACE("Sending message, size:{0}", msg.header.size);
 				asio::post(m_AsioContext,
 					[this, msg]()
 					{
@@ -139,9 +145,8 @@ namespace Pyxis
 			//client and server can both use this to send messages using UDP
 			inline void SendUDP(Message<T>& msg) {
 				//clients will send their ID, so the message can be tied to them
-				if (m_OwnerType == Owner::client)
-					msg << m_ID;
-				WriteHeaderUDP(msg);
+				WriteUDPMessage(msg);
+				//WriteHeaderUDP(msg);
 			}
 
 		private:
@@ -278,15 +283,27 @@ namespace Pyxis
 			}
 
 			//ASYNC - prime context ready to write a message header on UDP
-			void WriteHeaderUDP(const Message<T>& msg)
+			void WriteUDPMessage(Message<T>& msg)
 			{
-				m_UDPSocket->send_to(asio::buffer(&msg, sizeof(Message<T>)), 
+				std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
+				memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
+				memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
+				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()),
 					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
 
 				/*if (msg.body.size() > 0)
 				{
 					WriteBodyUDP(msg);
 				}*/
+			}
+
+			//ASYNC - prime context ready to write a message header on UDP
+			void WriteHeaderUDP(Message<T>& msg)
+			{
+				m_UDPSocket->send_to(asio::buffer(&msg.header, sizeof(MessageHeader<T>)), 
+					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
+
+				WriteBodyUDP(msg);
 			}
 
 			//ASYNC - prime context ready to write a message body
@@ -315,7 +332,7 @@ namespace Pyxis
 			}
 
 			//ASYNC - prime context ready to write a message body on UDP
-			void WriteBodyUDP(const Message<T>& msg)
+			void WriteBodyUDP(Message<T>& msg)
 			{
 				m_UDPSocket->send_to(asio::buffer(msg.body.data(), msg.body.size()),
 					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
@@ -380,7 +397,7 @@ namespace Pyxis
 									//now sit and recieve data
 									ReadHeader();
 
-									ReadHeaderUDP();
+									//ReadHeaderUDP();
 								}
 								else
 								{

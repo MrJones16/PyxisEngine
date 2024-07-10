@@ -47,7 +47,7 @@ namespace Pyxis
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
-		float m_UpdatesPerSecond = 60;
+		float m_UpdatesPerSecond = 20;
 
 		//core multiplayer things
 		PixelClientInterface m_ClientInterface;
