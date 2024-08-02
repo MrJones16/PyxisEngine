@@ -74,12 +74,19 @@ namespace Pyxis
 
 	void Application::PushLayer(Layer* layer)
 	{
-		m_LayerStack.PushLayer(layer);
+		m_LayersToAdd.push(layer);
+		//m_LayerStack.PushLayer(layer);
 	}
 
 	void Application::PushOverlay(Layer* layer)
 	{
 		m_LayerStack.PushOverlay(layer);
+	}
+
+	void Application::PopLayer(Layer* layer)
+	{
+		m_LayersToRemove.push(layer);
+		//m_LayerStack.PopLayer(layer);
 	}
 
 	void Application::Run() {
@@ -88,6 +95,19 @@ namespace Pyxis
 			float time = (float)glfwGetTime();
 			Timestep timestep = time - m_LastFrameTime;
 			m_LastFrameTime = time;
+
+			while (!m_LayersToAdd.empty())
+			{
+				m_LayerStack.PushLayer(m_LayersToAdd.front());
+				m_LayersToAdd.pop();
+			}
+
+			while (!m_LayersToRemove.empty())
+			{
+				m_LayerStack.PopLayer(m_LayersToRemove.front());
+				m_LayersToRemove.pop();
+			}
+
 
 			if (!m_Minimized) {
 				for (Layer* layer : m_LayerStack)

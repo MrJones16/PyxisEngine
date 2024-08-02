@@ -144,6 +144,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\GameLayer.h" />
+    <ClInclude Include="src\MenuLayer.h" />
     <ClInclude Include="src\Panels\InspectorPanel.h" />
     <ClInclude Include="src\Panels\Panel.h" />
     <ClInclude Include="src\Panels\ProfilingPanel.h" />
@@ -158,6 +159,7 @@
   <ItemGroup>
     <ClCompile Include="src\common\VectorHash.h" />
     <ClCompile Include="src\GameLayer.cpp" />
+    <ClCompile Include="src\MenuLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
     <ClCompile Include="src\common\Chunk.cpp" />
     <ClCompile Include="src\common\ChunkWorker.cpp" />

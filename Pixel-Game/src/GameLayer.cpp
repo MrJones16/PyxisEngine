@@ -91,69 +91,9 @@ namespace Pyxis
 	void GameLayer::OnUpdate(Timestep ts)
 	{
 		//PROFILE_SCOPE("GameLayer::OnUpdate");
-		
 
-		if (m_Connecting)
-		{
-			//still connecting...
-
-			//make sure the socket is still open, and if it isn't then return to main menu
-			if (!m_ClientInterface.IsConnected())
-			{
-				m_Connecting = false;
-				m_InMainMenu = true;
-				return;
-			}
-
-			//since we know we are connected still, call handle messages.
-			//cant be called before since we aren't always connected to something
-			HandleMessages();
-
-			//while we are connecting, if we have the world data, it is still our
-			//job to catch up to the server, which means 
-			if (!m_WaitForWorldData)
-			{
-				//we are no longer waiting on the world data, so its time to catch up
-				//all the ticks we missed while getting game data
-				if (m_MTCQueue.size() > 0)
-				{
-					//as the client, i now need to remove the input actions from the 
-					//latency queue for the tick i recieved, but not
-					//in this section where i'm not sending any ticks
-
-
-					if (m_MTCQueue.front().m_Tick < m_InputTick)
-					{
-						//we were sent a merged tick closure before we requested data, so ignore this since
-						//the world state we recieved already had this tick applied
-						m_MTCQueue.pop_front();
-						return;
-					}
-					m_LatencyStateReset = true;
-					PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World->m_SimulationTick);
-					HandleTickClosure(m_MTCQueue.front());
-					m_MTCQueue.pop_front();
-					m_InputTick++;
-				}
-				if (m_InputTick == m_TickToEnter)
-				{
-					PX_TRACE("Reached Tick: {0}, I'm caught up!", m_TickToEnter);
-					//we loaded the world, and we are caught up to what the
-					//server has sent, since we reached the tick to enter
-
-					//begin the game and start sending ticks! 
-					//the server is waiting for us!
-					m_Connecting = false;
-					m_InMainMenu = false;
-					m_SimulationRunning = true;
-				}
-				
-			}
-			return;
-		}
-
-		//don't do anything if we are in the main menu
-		if (m_InMainMenu) return;
+		//dont do anything if we disconnected
+		if (m_ConnectionStatus == Disconnected) return;
 
 		//since we are fully connected, lets handle messages
 		HandleMessages();
@@ -384,43 +324,10 @@ namespace Pyxis
 
 	void GameLayer::OnImGuiRender()
 	{
+		if (m_ConnectionStatus != Connected) return;
+
+
 		auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-
-		if (m_InMainMenu)
-		{
-			//display main menu 
-			if (!m_Connecting)
-			{
-				//we aren't connecting so show main menu
-				ImGui::SetNextWindowDockID(dock);
-				std::string text = "Connecting To Server...";
-				if (ImGui::Begin("Main Menu", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
-				{
-					ImGui::Text("Pyxis");
-
-					ImGui::InputText("IP Address", m_InputAddress, 22);
-					if (ImGui::Button("Connect"))
-					{
-						m_Connecting = ConnectToServer();;
-					}
-
-				}
-				ImGui::End();
-			}
-			else
-			{
-				//show that we are connecting
-				ImGui::SetNextWindowDockID(dock);
-				std::string text = "Connecting To Server...";
-				if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
-				{
-					TextCentered(text);
-				}
-				ImGui::End();
-			}
-			return;
-		}
-
 		
 		//ImGui::ShowDemoWindow();
 		
@@ -681,23 +588,81 @@ namespace Pyxis
 		dispatcher.Dispatch<MouseScrolledEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseScrolledEvent));
 	}
 
-	bool GameLayer::ConnectToServer()
+	bool GameLayer::ConnectToServer(const std::string& AddressAndPort)
 	{
+		
 		//Connect to the server:
-		std::string fullAddress = std::string(m_InputAddress);
-		size_t split = fullAddress.find_first_of(":");
-		size_t restLength = (fullAddress.size() - split) - 1;
-		std::string address = fullAddress.substr(0, split);
-		std::string port = fullAddress.substr(split + 1, restLength);
+		size_t split = AddressAndPort.find_first_of(":");
+		size_t restLength = (AddressAndPort.size() - split) - 1;
+		std::string address = AddressAndPort.substr(0, split);
+		std::string port = AddressAndPort.substr(split + 1, restLength);
 		PX_TRACE("Connecting to address {0}:{1}", address, port);
 		if (m_ClientInterface.Connect(address, port)) {
 			PX_TRACE("Connecting To Server...");
+			m_ConnectionStatus = Connecting;
 			return true;
 		}
 		else
 		{
 			PX_ERROR("Failed to connect to the server...");
+			m_ConnectionStatus = FailedToConnect;
 			return false;
+		}
+	}
+
+	void GameLayer::ConnectionUpdate()
+	{
+		//still connecting...
+
+		//make sure the socket is still open, and if it isn't then return to main menu
+		if (!m_ClientInterface.IsConnected())
+		{
+			m_ConnectionStatus = FailedToConnect;
+			return;
+		}
+
+		//since we know we are connected still, call handle messages.
+		//cant be called before since we aren't always connected to something
+		HandleMessages();
+
+		//while we are connecting, if we have the world data, it is still our
+		//job to catch up to the server, which means 
+		if (!m_WaitForWorldData)
+		{
+			//we are no longer waiting on the world data, so its time to catch up
+			//all the ticks we missed while getting game data
+			if (m_MTCQueue.size() > 0)
+			{
+				//as the client, i now need to remove the input actions from the 
+				//latency queue for the tick i recieved, but not
+				//in this section where i'm not sending any ticks
+
+
+				if (m_MTCQueue.front().m_Tick < m_InputTick)
+				{
+					//we were sent a merged tick closure before we requested data, so ignore this since
+					//the world state we recieved already had this tick applied
+					m_MTCQueue.pop_front();
+					return;
+				}
+				m_LatencyStateReset = true;
+				PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World->m_SimulationTick);
+				HandleTickClosure(m_MTCQueue.front());
+				m_MTCQueue.pop_front();
+				m_InputTick++;
+			}
+			if (m_InputTick == m_TickToEnter)
+			{
+				PX_TRACE("Reached Tick: {0}, I'm caught up!", m_TickToEnter);
+				//we loaded the world, and we are caught up to what the
+				//server has sent, since we reached the tick to enter
+
+				//begin the game and start sending ticks! 
+				//the server is waiting for us!
+				m_ConnectionStatus = Connected;
+				m_SimulationRunning = true;
+			}
+
 		}
 	}
 
@@ -821,8 +786,7 @@ namespace Pyxis
 		{
 			//lost connection
 			PX_WARN("Lost connection to server.");
-			//Application::Get().Sleep(2000);
-			Application::Get().Close();
+			m_ConnectionStatus = Disconnected;
 		}
 	}
 

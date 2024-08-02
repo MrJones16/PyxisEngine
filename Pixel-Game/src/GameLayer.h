@@ -13,6 +13,7 @@
 
 namespace Pyxis
 {
+
 	class GameLayer : public Layer
 	{
 	public:
@@ -33,7 +34,8 @@ namespace Pyxis
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
 		//game functions
-		bool ConnectToServer();
+		bool ConnectToServer(const std::string& AddressAndPort);
+		void ConnectionUpdate();
 		void HandleMessages();
 		void HandleTickClosure(MergedTickClosure& tc);
 		bool CreateWorld();
@@ -44,10 +46,15 @@ namespace Pyxis
 	public:
 		void PaintBrushHologram();
 
+	public:
+		//things for the main menu to use to connect game world to server
+		enum ConnectionStatus
+		{
+			NotConnected, Connecting, FailedToConnect, Disconnected, Connected
+		};
+		ConnectionStatus m_ConnectionStatus = NotConnected;
+		std::string m_ConnectionErrorMessage = "";
 	private:
-		//UI things
-		bool m_InMainMenu = true;
-		char m_InputAddress[22] = "127.0.0.1:21218";
 
 		//game things
 		Ref<World> m_World;
@@ -66,8 +73,7 @@ namespace Pyxis
 		bool m_WaitingForOthers = false;
 
 		//multiplayer connecting things
-		bool m_Connecting = false;
-		bool m_ConnectionFailure = false;
+		
 		bool m_WaitForWorldData = true;
 		uint64_t m_TickToEnter = -1; // set to max value
 		uint64_t m_TickToResetBox2D = -1; // set to max value

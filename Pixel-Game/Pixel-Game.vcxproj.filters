@@ -40,6 +40,7 @@
     <ClInclude Include="src\common\World.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="src\MenuLayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\GameLayer.cpp" />
@@ -60,6 +61,7 @@
       <Filter>common</Filter>
     </ClCompile>
     <ClCompile Include="src\common\VectorHash.h" />
+    <ClCompile Include="src\MenuLayer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="assets\data\CellData.xml" />

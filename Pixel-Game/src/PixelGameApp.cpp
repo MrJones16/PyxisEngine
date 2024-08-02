@@ -3,7 +3,8 @@
 //---------- Entry Point ----------//
 #include <Pyxis/Core/EntryPoint.h>
 
-#include "GameLayer.h"
+#include "MenuLayer.h"
+//#include "GameLayer.h"
 
 /// <summary>
 /// The basic things to work on in order:
@@ -91,7 +92,8 @@ namespace Pyxis
 		PixelGame()
 			: Application("Pixel Game", 1280, 720)
 		{
-			PushLayer(new GameLayer());
+			//overlay instead of layer so it is on top
+			PushOverlay(new MenuLayer());
 		}
 		~PixelGame()
 		{

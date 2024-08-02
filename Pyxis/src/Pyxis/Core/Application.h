@@ -15,6 +15,8 @@
 
 #include "Pyxis/Core/Timestep.h"
 
+#include <queue>
+
 namespace Pyxis
 {
 
@@ -36,6 +38,8 @@ namespace Pyxis
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
+		void PopLayer(Layer* layer);
+
 		inline Window& GetWindow() { return *m_Window; }
 
 		inline ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
@@ -51,6 +55,8 @@ namespace Pyxis
 		bool m_Running = true;
 		bool m_Minimized = false;
 		LayerStack m_LayerStack;
+		std::queue<Layer*> m_LayersToAdd;
+		std::queue<Layer*> m_LayersToRemove;
 		float m_LastFrameTime = 0.0f;
 	private:
 		static Application* s_Instance;
