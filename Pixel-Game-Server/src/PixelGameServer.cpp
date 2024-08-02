@@ -118,7 +118,7 @@ namespace Pyxis
 			msg << mtc.m_Tick;
 
 			
-			MessageAllClientsUDP(msg);
+			MessageAllClientsUDP(msg);//skip messages sometimes
 			
 			//copy the tick closure into storage
 			m_TickRequestStorage.push_back(MergedTickClosure());

@@ -25,16 +25,16 @@ namespace Pyxis
 			}
 		public:
 			// Connect to server with hostname/ip-address and port
-			inline bool Connect(const std::string& host, const uint16_t port)
+			inline bool Connect(const std::string& host, const std::string& port)
 			{
 				try
 				{
 					//resolve hostname/ip address into tangible physical address
 					asio::ip::tcp::resolver resolver(m_Context);
-					asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, std::to_string(port));
+					asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, port);
 
 					asio::ip::udp::resolver resolverUDP(m_Context);
-					asio::ip::udp::resolver::results_type endpointsUDP = resolverUDP.resolve(host, std::to_string(port));
+					asio::ip::udp::resolver::results_type endpointsUDP = resolverUDP.resolve(host, port);
 
 					//create connection
 					m_Connection = std::make_unique<Connection<T>>(
@@ -107,7 +107,7 @@ namespace Pyxis
 				//mainly doing this instead of ip/port since testing on my own machine
 
 				msg << m_ID;
-				PX_TRACE("Sending UDP message: Size:{0} | ID: {1}", msg.header.size, m_ID);
+				//PX_TRACE("Sending UDP message: Size:{0} | ID: {1}", msg.header.size, m_ID);
 				m_Connection->SendUDP(msg);
 			}
 

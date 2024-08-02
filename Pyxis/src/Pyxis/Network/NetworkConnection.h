@@ -66,6 +66,7 @@ namespace Pyxis
 				{
 					if (m_Socket.is_open())
 					{
+						//point created udp port to the client
 						m_ID = uid;
 						//was: ReadHeader();
 
@@ -81,6 +82,12 @@ namespace Pyxis
 				}
 			}
 
+			/// <summary>
+			/// 
+			/// </summary>
+			/// <param name="endpoints"></param>
+			/// <param name="endpointsUDP"></param>
+			/// <param name="Connecting">If there is an error, this will be made to false</param>
 			inline void ConnectToServer(const asio::ip::tcp::resolver::results_type& endpoints, const asio::ip::udp::resolver::results_type& endpointsUDP)
 			{
 				//only clients can connect to servers
@@ -92,15 +99,19 @@ namespace Pyxis
 						{
 							if (!ec)
 							{
+								//create a UDP socket listening to the same port used by TCP.
+								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
+								PX_TRACE("Created UDP Socket, listening to port {0}", m_Socket.local_endpoint().port());
 								ReadValidation();
 							}
 							else
 							{
 								PX_CORE_ERROR("Client Error: {0}", ec.message());
+								m_Socket.close();
 							}
 						});
 					//request asio attempts to connect to an endpoint for UDP as well
-					asio::async_connect(*m_UDPSocket, endpointsUDP,
+					/*asio::async_connect(*m_UDPSocket, endpointsUDP,
 						[this](std::error_code ec, asio::ip::udp::endpoint endpoint)
 						{
 							if (!ec)
@@ -111,7 +122,7 @@ namespace Pyxis
 							{
 								PX_CORE_ERROR("Client UDP Error: {0}", ec.message());
 							}
-						});
+						});*/
 				}
 			}
 			
@@ -179,17 +190,18 @@ namespace Pyxis
 					});
 			}
 
+
 			void ReadUDPMessage()
 			{
 				m_UDPSocket->async_receive(asio::buffer(m_ReceiveBuffer, 1024),
 					[this](std::error_code ec, std::size_t length)
 					{
-						PX_TRACE("Recieved UDP Header, of length {0}", length);
+						//PX_TRACE("Recieved UDP Header, of length {0}", length);
 						if (!ec)
 						{
 							if (length < sizeof(MessageHeader<T>))
 							{
-								PX_TRACE("didn't recieve enough information for header");
+								PX_ERROR("didn't recieve enough information for header");
 							}
 							else
 							{
@@ -220,36 +232,6 @@ namespace Pyxis
 					});
 			}
 
-			//ASYNC - prime context ready to read a message header on UDP
-			void ReadHeaderUDP()
-			{
-				//client just recieves in general, no need to specify from who!
-				//server doesn't listen in connections!
-				m_UDPSocket->async_receive(asio::buffer(&m_msgTemporaryInUDP.header, sizeof(MessageHeader<T>)),
-					[this](std::error_code ec, std::size_t length)
-					{
-						PX_TRACE("Recieved UDP Header");
-						if (!ec)
-						{
-							if (m_msgTemporaryInUDP.header.size > 0)
-							{
-								m_msgTemporaryInUDP.body.resize(m_msgTemporaryInUDP.header.size);
-								ReadBodyUDP();
-							}
-							else
-							{
-								AddToIncomingMessageQueueUDP();
-							}
-						}
-						else
-						{
-							PX_CORE_ERROR("[{0}] Read Header UDP Fail: {1}", m_ID, ec.message());
-
-							m_Socket.close();
-							m_UDPSocket->close();
-						}
-					});
-			}
 
 			//ASYNC - prime context ready to read a message body
 			void ReadBody()
@@ -272,27 +254,6 @@ namespace Pyxis
 					});
 			}
 
-			//ASYNC - prime context ready to read a message body on UDP
-			void ReadBodyUDP()
-			{
-				//client only
-				m_UDPSocket->async_receive(asio::buffer(m_msgTemporaryInUDP.body.data(), m_msgTemporaryInUDP.body.size()),
-					[this](std::error_code ec, std::size_t length)
-					{
-						PX_TRACE("Recieved UDP Body");
-						if (!ec)
-						{
-							AddToIncomingMessageQueueUDP();
-						}
-						else
-						{
-							//as above
-							PX_CORE_ERROR("[{0}] Read Body UDP Fail: {1}", m_ID, ec.message());
-							m_Socket.close();
-							m_UDPSocket->close();
-						}
-					});
-			}
 
 			//ASYNC - prime context ready to write a message header
 			void WriteHeader()
@@ -329,7 +290,8 @@ namespace Pyxis
 				std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
 				memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
 				memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
-				PX_TRACE("Sending UDP message to address: {0}:{1}", m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
+				//PX_TRACE("Sending UDP message to address: {0}:{1}", m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
+				//the sending sends to the same address as TCP
 				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()),
 					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
 
@@ -411,6 +373,7 @@ namespace Pyxis
 							if (m_OwnerType == Owner::client)
 							{
 								ReadHeader();
+								ReadUDPMessage();
 							}
 							//no else needed, because the next command
 							//for server is handled in ConnectToClient
@@ -479,7 +442,7 @@ namespace Pyxis
 			// each connection has a unique socket to a remote
 			asio::ip::tcp::socket m_Socket;
 
-			// accompanied with a UDP socket
+			// accompanied with a UDP socket, created based on the TCP socket
 			std::shared_ptr<asio::ip::udp::socket> m_UDPSocket;
 
 			//this context is shared with the whole asio instance

@@ -33,6 +33,7 @@ namespace Pyxis
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
 		//game functions
+		bool ConnectToServer();
 		void HandleMessages();
 		void HandleTickClosure(MergedTickClosure& tc);
 		bool CreateWorld();
@@ -44,6 +45,10 @@ namespace Pyxis
 		void PaintBrushHologram();
 
 	private:
+		//UI things
+		bool m_InMainMenu = true;
+		char m_InputAddress[22] = "127.0.0.1:21218";
+
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
@@ -61,7 +66,8 @@ namespace Pyxis
 		bool m_WaitingForOthers = false;
 
 		//multiplayer connecting things
-		bool m_Connecting = true;
+		bool m_Connecting = false;
+		bool m_ConnectionFailure = false;
 		bool m_WaitForWorldData = true;
 		uint64_t m_TickToEnter = -1; // set to max value
 		uint64_t m_TickToResetBox2D = -1; // set to max value

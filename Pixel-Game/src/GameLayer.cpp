@@ -65,14 +65,6 @@ namespace Pyxis
 
 	void GameLayer::OnAttach()
 	{
-		//Connect to the server:
-		if (!m_ClientInterface.Connect("127.0.0.1", 21218)) {
-			PX_ERROR("Failed to connect to the server...");
-			Application::Get().Sleep(2000);
-			Application::Get().Close();
-			return;
-		}
-
 
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
 		Renderer2D::Init();
@@ -99,12 +91,23 @@ namespace Pyxis
 	void GameLayer::OnUpdate(Timestep ts)
 	{
 		//PROFILE_SCOPE("GameLayer::OnUpdate");
-
-		HandleMessages();
+		
 
 		if (m_Connecting)
 		{
 			//still connecting...
+
+			//make sure the socket is still open, and if it isn't then return to main menu
+			if (!m_ClientInterface.IsConnected())
+			{
+				m_Connecting = false;
+				m_InMainMenu = true;
+				return;
+			}
+
+			//since we know we are connected still, call handle messages.
+			//cant be called before since we aren't always connected to something
+			HandleMessages();
 
 			//while we are connecting, if we have the world data, it is still our
 			//job to catch up to the server, which means 
@@ -141,12 +144,19 @@ namespace Pyxis
 					//begin the game and start sending ticks! 
 					//the server is waiting for us!
 					m_Connecting = false;
+					m_InMainMenu = false;
 					m_SimulationRunning = true;
 				}
 				
 			}
 			return;
 		}
+
+		//don't do anything if we are in the main menu
+		if (m_InMainMenu) return;
+
+		//since we are fully connected, lets handle messages
+		HandleMessages();
 
 		//go through all the recieved merged tick closures and resolve them
 		while (m_MTCQueue.size() > 0)
@@ -376,18 +386,42 @@ namespace Pyxis
 	{
 		auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 
-		if (m_Connecting)
+		if (m_InMainMenu)
 		{
-			//show that we are connecting
-			ImGui::SetNextWindowDockID(dock);
-			std::string text = "Connecting To Server...";
-			if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
+			//display main menu 
+			if (!m_Connecting)
 			{
-				TextCentered(text);
+				//we aren't connecting so show main menu
+				ImGui::SetNextWindowDockID(dock);
+				std::string text = "Connecting To Server...";
+				if (ImGui::Begin("Main Menu", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
+				{
+					ImGui::Text("Pyxis");
+
+					ImGui::InputText("IP Address", m_InputAddress, 22);
+					if (ImGui::Button("Connect"))
+					{
+						m_Connecting = ConnectToServer();;
+					}
+
+				}
+				ImGui::End();
 			}
-			ImGui::End();
+			else
+			{
+				//show that we are connecting
+				ImGui::SetNextWindowDockID(dock);
+				std::string text = "Connecting To Server...";
+				if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
+				{
+					TextCentered(text);
+				}
+				ImGui::End();
+			}
 			return;
 		}
+
+		
 		//ImGui::ShowDemoWindow();
 		
 		m_Hovering = ImGui::IsWindowHovered();
@@ -645,6 +679,26 @@ namespace Pyxis
 		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
 		dispatcher.Dispatch<MouseScrolledEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseScrolledEvent));
+	}
+
+	bool GameLayer::ConnectToServer()
+	{
+		//Connect to the server:
+		std::string fullAddress = std::string(m_InputAddress);
+		size_t split = fullAddress.find_first_of(":");
+		size_t restLength = (fullAddress.size() - split) - 1;
+		std::string address = fullAddress.substr(0, split);
+		std::string port = fullAddress.substr(split + 1, restLength);
+		PX_TRACE("Connecting to address {0}:{1}", address, port);
+		if (m_ClientInterface.Connect(address, port)) {
+			PX_TRACE("Connecting To Server...");
+			return true;
+		}
+		else
+		{
+			PX_ERROR("Failed to connect to the server...");
+			return false;
+		}
 	}
 
 	void GameLayer::HandleMessages()
