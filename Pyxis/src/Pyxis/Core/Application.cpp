@@ -47,12 +47,12 @@ namespace Pyxis
 	void Application::Close()
 	{
 		m_Running = false;
-		while (m_LayerStack.begin() != m_LayerStack.end())
+		/*while (m_LayerStack.begin() != m_LayerStack.end())
 		{
 			Layer* layer = *(m_LayerStack.end() - 1);
 			m_LayerStack.PopLayer(layer);
 			delete layer;
-		}
+		}*/
 		//Sleep(5000);
 	}
 

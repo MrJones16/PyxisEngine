@@ -46,6 +46,8 @@ namespace Pyxis
 		int m_PlayerCount = 0;
 		std::unordered_set<uint64_t> m_ClientsNeededForTick;
 		std::deque<MergedTickClosure> m_MTCDeque;
+
+		std::deque<MergedTickClosure> m_TickRequestStorage;
 		//std::unordered_map<uint64_t, MergedTickClosure> m_TickClosureMap;
 
 	};

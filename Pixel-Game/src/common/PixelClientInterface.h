@@ -12,9 +12,11 @@ namespace Pyxis
 		Server_ClientDisconnected,
 		Server_ClientAccepted,
 		Server_ClientAssignID,
+		Server_ClientDesynced,
 
 		Client_RegisterWithServer,
 		Client_UnregisterWithServer,
+		Client_RequestMergedTick,
 
 		Game_RequestGameData,
 		Game_GameData,

@@ -47,7 +47,7 @@ namespace Pyxis
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
-		float m_UpdatesPerSecond = 20;
+		float m_UpdatesPerSecond = 60;
 
 		//core multiplayer things
 		PixelClientInterface m_ClientInterface;
@@ -57,7 +57,7 @@ namespace Pyxis
 		TickClosure m_CurrentTickClosure;
 		std::deque<TickClosure> m_LatencyInputQueue;
 		const int m_LatencyQueueLimit = 200; // this value should represent 1/60th the seconds server round trip delay
-		uint64_t latestMergedTick = 0;//temp?
+		uint64_t m_LatestMergedTick = 0;//temp?
 		bool m_WaitingForOthers = false;
 
 		//multiplayer connecting things

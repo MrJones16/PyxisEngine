@@ -104,9 +104,7 @@ namespace Pyxis
 			{
 				//when a client sends a UDP message, it needs to send it's ID so the server knows
 				//who it is coming from.
-
 				//mainly doing this instead of ip/port since testing on my own machine
-
 
 				msg << m_ID;
 				PX_TRACE("Sending UDP message: Size:{0} | ID: {1}", msg.header.size, m_ID);

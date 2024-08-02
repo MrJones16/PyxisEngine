@@ -92,7 +92,7 @@ namespace Pyxis
 
 	void GameLayer::OnDetach()
 	{
-		PX_TRACE("Detatched game layer");
+		PX_TRACE("Detached game layer");
 	}
 
 
@@ -147,22 +147,41 @@ namespace Pyxis
 			}
 			return;
 		}
+
 		//go through all the recieved merged tick closures and resolve them
 		while (m_MTCQueue.size() > 0)
 		{
 			//TODO
 			//as the client, i now need to remove the input actions from the 
 			//latency queue for the tick i recieved
-
 			m_LatencyStateReset = true;
+
+			//skip any tick closures we have already finished, since we might get duplicates
+			if (m_MTCQueue.front().m_Tick <= m_LatestMergedTick) {
+				m_MTCQueue.pop_front();
+				continue;
+			}
+
+			//if the tick closure we are doing is one for the future, we need to ask
+			//the server to re-send the missing closure
+			if (m_MTCQueue.front().m_Tick > m_LatestMergedTick + 1) {
+				//ask the server for the missing tick...
+				Network::Message<GameMessage> msg;
+				msg.header.id = GameMessage::Client_RequestMergedTick;
+				msg << m_LatestMergedTick + uint64_t(1);
+				m_ClientInterface.SendUDP(msg);
+				break; // we need to break out of while loop to recieve the new message
+			}
+
 			//reset world, then apply the tick closure
 			if (m_World->m_SimulationTick == m_TickToResetBox2D)
 			{
 				m_World->ResetBox2D();
 				m_TickToResetBox2D = -1;
 			}
+			
 			HandleTickClosure(m_MTCQueue.front());
-			latestMergedTick = m_MTCQueue.front().m_Tick;
+			m_LatestMergedTick = m_MTCQueue.front().m_Tick;
 			//PX_TRACE("Handling a tick closure for tick: {0}!", m_MTCQueue.front().m_Tick);
 			m_MTCQueue.pop_front();
 			//dont increment game tick, because that is the "heartbeat" of constant input messages to align
@@ -173,7 +192,7 @@ namespace Pyxis
 		//TODO: replace this with actual input queue, and expected ping time.
 		{
 			//just using the latency queue limit, as that will replace this in the future
-			if (m_InputTick - latestMergedTick > m_LatencyQueueLimit)
+			if (m_InputTick - m_LatestMergedTick > m_LatencyQueueLimit)
 			{
 
 
@@ -184,7 +203,7 @@ namespace Pyxis
 				m_WaitingForOthers = true;
 			}
 
-			if (m_InputTick - latestMergedTick < m_LatencyQueueLimit / 2)
+			if (m_InputTick - m_LatestMergedTick < m_LatencyQueueLimit / 2)
 			{
 				//we let everyone get caught up at least half way
 				m_WaitingForOthers = false;
@@ -682,7 +701,7 @@ namespace Pyxis
 					CreateWorld();
 					msg >> m_World->m_Running;
 					m_World->LoadWorld(msg);
-					latestMergedTick = m_InputTick;
+					m_LatestMergedTick = m_InputTick;
 					
 					PX_TRACE("loaded game at tick {0}", m_InputTick);
 					PX_TRACE("Game simulation tick is {0}", m_World->m_SimulationTick);
@@ -721,11 +740,21 @@ namespace Pyxis
 				}
 				case GameMessage::Game_MergedTickClosure:
 				{
-					m_MTCQueue.push_back(MergedTickClosure());
-					MergedTickClosure tickClosure;
-					msg >> m_MTCQueue.back().m_Tick;
-					msg >> m_MTCQueue.back().m_InputActionCount;
-					msg >> m_MTCQueue.back().m_Data;
+					MergedTickClosure mtc;
+					msg >> mtc.m_Tick;
+					msg >> mtc.m_InputActionCount;
+					msg >> mtc.m_Data;
+					
+					if (m_MTCQueue.size() > 0 && m_MTCQueue.front().m_Tick > mtc.m_Tick)
+					{
+						m_MTCQueue.push_front(std::move(mtc));
+						//add to the front since we are probably a catch-up tick
+					}
+					else
+					{
+						//throw on the back
+						m_MTCQueue.push_back(std::move(mtc));
+					}
 
 					break;
 				}
@@ -738,7 +767,7 @@ namespace Pyxis
 		{
 			//lost connection
 			PX_WARN("Lost connection to server.");
-			Application::Get().Sleep(2000);
+			//Application::Get().Sleep(2000);
 			Application::Get().Close();
 		}
 	}

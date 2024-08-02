@@ -105,7 +105,7 @@ namespace Pyxis
 						{
 							if (!ec)
 							{
-								ReadHeaderUDP();
+								ReadUDPMessage();
 							}
 							else
 							{
@@ -143,7 +143,7 @@ namespace Pyxis
 			}
 
 			//client and server can both use this to send messages using UDP
-			inline void SendUDP(Message<T>& msg) {
+			inline void SendUDP(const Message<T>& msg) {
 				//clients will send their ID, so the message can be tied to them
 				WriteUDPMessage(msg);
 				//WriteHeaderUDP(msg);
@@ -176,6 +176,47 @@ namespace Pyxis
 							if (m_OwnerType == Owner::client)
 								m_UDPSocket->close();
 						}
+					});
+			}
+
+			void ReadUDPMessage()
+			{
+				m_UDPSocket->async_receive(asio::buffer(m_ReceiveBuffer, 1024),
+					[this](std::error_code ec, std::size_t length)
+					{
+						PX_TRACE("Recieved UDP Header, of length {0}", length);
+						if (!ec)
+						{
+							if (length < sizeof(MessageHeader<T>))
+							{
+								PX_TRACE("didn't recieve enough information for header");
+							}
+							else
+							{
+								//extract header from data
+								memcpy(&m_msgTemporaryInUDP.header, m_ReceiveBuffer, sizeof(MessageHeader<T>));
+
+								//make sure we are only pulling a max amount out of the body so we don't
+								//access unknown memory
+								if (m_msgTemporaryInUDP.header.size < (1024 - sizeof(MessageHeader<T>)))
+								{
+									//extract the length of data into the body
+									m_msgTemporaryInUDP.body.resize(m_msgTemporaryInUDP.header.size);
+									memcpy(m_msgTemporaryInUDP.body.data(), m_ReceiveBuffer + sizeof(MessageHeader<T>), m_msgTemporaryInUDP.header.size);
+									//add it to the message queue
+									m_QueueMessagesIn.push_back({ nullptr, m_msgTemporaryInUDP });
+								}
+							}
+						}
+						else
+						{
+							PX_CORE_ERROR("Read Header UDP Fail: {0}", ec.message());
+
+							m_UDPSocket->close();
+						}
+
+						//continue reading UDP messages
+						ReadUDPMessage();
 					});
 			}
 
@@ -283,11 +324,12 @@ namespace Pyxis
 			}
 
 			//ASYNC - prime context ready to write a message header on UDP
-			void WriteUDPMessage(Message<T>& msg)
+			void WriteUDPMessage(const Message<T>& msg)
 			{
 				std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
 				memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
 				memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
+				PX_TRACE("Sending UDP message to address: {0}:{1}", m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
 				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()),
 					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
 
@@ -455,6 +497,8 @@ namespace Pyxis
 			//as the "owner" of this connection is expected to provide a queue
 			ThreadSafeQueue<OwnedMessage<T>>& m_QueueMessagesIn;
 			Message<T> m_msgTemporaryIn;
+
+			uint8_t m_ReceiveBuffer[1024];
 			Message<T> m_msgTemporaryInUDP;
 
 			// the "owner" decides how some of the context behaves

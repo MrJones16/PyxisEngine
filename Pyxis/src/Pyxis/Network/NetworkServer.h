@@ -221,8 +221,8 @@ namespace Pyxis
 
 			void ReadUDPMessage()
 			{
-				m_UDPSocket->async_receive_from(asio::buffer(m_ReceiveBuffer, 1024),
-					m_RemoteEndpoint,
+				m_UDPSocket->async_receive(asio::buffer(m_ReceiveBuffer, 1024),
+					//m_RemoteEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
 						PX_TRACE("Recieved UDP Header, of length {0}", length);

@@ -117,8 +117,24 @@ namespace Pyxis
 			msg << mtc.m_InputActionCount;
 			msg << mtc.m_Tick;
 
-			MessageAllClients(msg);
+			
+			MessageAllClientsUDP(msg);
+			
+			//copy the tick closure into storage
+			m_TickRequestStorage.push_back(MergedTickClosure());
+			m_TickRequestStorage.back().m_Tick = mtc.m_Tick;
+			m_TickRequestStorage.back().m_InputActionCount = mtc.m_InputActionCount;
+			m_TickRequestStorage.back().m_Data.resize(mtc.m_Data.size());
+			memcpy(m_TickRequestStorage.back().m_Data.data(), mtc.m_Data.data(), mtc.m_Data.size());
+
+			//handling the tick closure extracts all the mtc data!
 			HandleTickClosure(mtc);
+
+			//clear tick storage past size 500
+			if (m_TickRequestStorage.size() > 500)
+			{
+				m_TickRequestStorage.pop_front();
+			}
 			m_MTCDeque.pop_front();
 			m_InputTick++;
 		}
@@ -179,6 +195,35 @@ namespace Pyxis
 			msg << client->GetID();
 			client->Send(msg);
 			break;
+		}
+		case GameMessage::Client_RequestMergedTick:
+		{
+			uint64_t tickRequested;
+			msg >> tickRequested;
+			if (m_TickRequestStorage.size() == 0) return;
+
+			uint64_t oldestTick = m_TickRequestStorage.front().m_Tick;
+			if (tickRequested < oldestTick) 
+			{
+				//client is asking for a tick so old we don't have it anymore!
+				//kick the client out for lagging too far behind...
+				PX_TRACE("Client [{0}] Became Desynced!", client->GetID());
+				Network::Message<GameMessage> kickmsg;
+				kickmsg.header.id = GameMessage::Server_ClientDesynced;
+				MessageClient(client, kickmsg);
+				return;
+			}
+			//if we have the tick, then send it to the client:
+			uint32 diff = tickRequested - oldestTick;
+			Network::Message<GameMessage> tickmsg;
+			tickmsg.header.id = GameMessage::Game_MergedTickClosure;
+			tickmsg << m_TickRequestStorage[diff].m_Data;
+			tickmsg << m_TickRequestStorage[diff].m_InputActionCount;
+			tickmsg << m_TickRequestStorage[diff].m_Tick;
+			PX_TRACE("Sent Client [{0}] a missing Game Tick.", client->GetID());
+			MessageClientUDP(client, tickmsg);
+			break;
+			
 		}
 		case GameMessage::Game_RequestGameData:
 		{
