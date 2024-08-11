@@ -225,8 +225,8 @@ namespace Pyxis
 					m_RemoteEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
-						//PX_TRACE("Recieved UDP Header, of length {0}", length);
-						//PX_TRACE("Endpoint: {0}:{1}", m_RemoteEndpoint.address(), m_RemoteEndpoint.port());
+						PX_TRACE("Recieved UDP Header, of length {0}", length);
+						PX_TRACE("Endpoint: {0}:{1}", m_RemoteEndpoint.address(), m_RemoteEndpoint.port());
 						if (!ec)
 						{
 							if (length < sizeof(MessageHeader<T>)) 
