@@ -154,10 +154,10 @@
     <ClInclude Include="src\common\Element.h" />
     <ClInclude Include="src\common\PixelClientInterface.h" />
     <ClInclude Include="src\common\PixelRigidBody.h" />
+    <ClInclude Include="src\common\VectorHash.h" />
     <ClInclude Include="src\common\World.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\common\VectorHash.h" />
     <ClCompile Include="src\GameLayer.cpp" />
     <ClCompile Include="src\MenuLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
@@ -171,9 +171,6 @@
     <ProjectReference Include="..\Pyxis\Pyxis.vcxproj">
       <Project>{C20EEB0D-2E23-13BF-F7A4-B61E63780FF0}</Project>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

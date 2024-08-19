@@ -30,6 +30,9 @@
     <ClInclude Include="..\Pixel-Game\src\common\PixelRigidBody.h">
       <Filter>Pixel-Game\src\common</Filter>
     </ClInclude>
+    <ClInclude Include="..\Pixel-Game\src\common\VectorHash.h">
+      <Filter>Pixel-Game\src\common</Filter>
+    </ClInclude>
     <ClInclude Include="..\Pixel-Game\src\common\World.h">
       <Filter>Pixel-Game\src\common</Filter>
     </ClInclude>
@@ -59,8 +62,5 @@
     <ClCompile Include="src\PixelGameServerApp.cpp">
       <Filter>src</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
 </Project>

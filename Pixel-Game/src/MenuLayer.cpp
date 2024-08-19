@@ -70,7 +70,7 @@ namespace Pyxis
 		{
 		case GameLayer::NotConnected:
 		{
-			auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show main menu
 			ImGui::SetNextWindowDockID(dock);
 			if (ImGui::Begin("Main Menu", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
@@ -89,7 +89,7 @@ namespace Pyxis
 		}
 		case GameLayer::Connecting:
 		{
-			auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show that we are connecting
 			ImGui::SetNextWindowDockID(dock);
 			if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
@@ -101,7 +101,7 @@ namespace Pyxis
 		}
 		case GameLayer::FailedToConnect:
 		{
-			auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			ImGui::SetNextWindowDockID(dock);
 			if (ImGui::Begin("Connection Failed", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
 			{

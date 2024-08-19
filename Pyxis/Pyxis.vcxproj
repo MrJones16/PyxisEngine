@@ -1216,8 +1216,8 @@
     <ClCompile Include="vendor\tinyxml2\xmltest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="vendor\box2d\box2d.vcxproj">
-      <Project>{E4442B0F-5059-53C0-19DB-F61F85AE4FF1}</Project>
+    <ProjectReference Include="vendor\box2d\box2D.vcxproj">
+      <Project>{C4442B0F-3059-53C0-F9DA-F61F65AE4FF1}</Project>
     </ProjectReference>
     <ProjectReference Include="vendor\GLFW\GLFW.vcxproj">
       <Project>{154B857C-0182-860D-AA6E-6C109684020F}</Project>

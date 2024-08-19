@@ -327,7 +327,7 @@ namespace Pyxis
 		if (m_ConnectionStatus != Connected) return;
 
 
-		auto dock = ImGui::DockSpaceOverViewport((const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 		
 		//ImGui::ShowDemoWindow();
 		

@@ -100,7 +100,11 @@ namespace Pyxis
 							if (!ec)
 							{
 								//create a UDP socket listening to the same port used by TCP.
-								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
+								//m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
+								// 
+								//new test!
+								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext);
+								m_UDPSocket->open(asio::ip::udp::v4());
 								PX_TRACE("Created UDP Socket, listening to port {0}", m_Socket.local_endpoint().port());
 								ReadValidation();
 							}

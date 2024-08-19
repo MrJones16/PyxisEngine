@@ -10,6 +10,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\GameLayer.h" />
+    <ClInclude Include="src\MenuLayer.h" />
     <ClInclude Include="src\Panels\InspectorPanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
@@ -37,13 +38,16 @@
     <ClInclude Include="src\common\PixelRigidBody.h">
       <Filter>common</Filter>
     </ClInclude>
+    <ClInclude Include="src\common\VectorHash.h">
+      <Filter>common</Filter>
+    </ClInclude>
     <ClInclude Include="src\common\World.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="src\MenuLayer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\GameLayer.cpp" />
+    <ClCompile Include="src\MenuLayer.cpp" />
     <ClCompile Include="src\PixelGameApp.cpp" />
     <ClCompile Include="src\common\Chunk.cpp">
       <Filter>common</Filter>
@@ -60,10 +64,5 @@
     <ClCompile Include="src\common\World.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="src\common\VectorHash.h" />
-    <ClCompile Include="src\MenuLayer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Xml Include="assets\data\CellData.xml" />
   </ItemGroup>
 </Project>
