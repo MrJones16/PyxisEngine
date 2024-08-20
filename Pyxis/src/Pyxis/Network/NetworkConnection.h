@@ -58,6 +58,11 @@ namespace Pyxis
 				return m_ID;
 			}
 
+			void SetUDPEndpoint(asio::ip::udp::endpoint ep)
+			{
+				m_RemoteUDPEndpoint = ep;
+			}
+
 		public:
 
 			inline void ConnectToClient(Pyxis::Network::ServerInterface<T>* server, uint64_t uid = 0)
@@ -100,11 +105,8 @@ namespace Pyxis
 							if (!ec)
 							{
 								//create a UDP socket listening to the same port used by TCP.
-								//m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
-								// 
-								//new test!
-								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext);
-								m_UDPSocket->open(asio::ip::udp::v4());
+								m_RemoteUDPEndpoint = asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
+								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
 								PX_TRACE("Created UDP Socket, listening to port {0}", m_Socket.local_endpoint().port());
 								ReadValidation();
 							}
@@ -114,6 +116,7 @@ namespace Pyxis
 								m_Socket.close();
 							}
 						});
+					
 					//request asio attempts to connect to an endpoint for UDP as well
 					/*asio::async_connect(*m_UDPSocket, endpointsUDP,
 						[this](std::error_code ec, asio::ip::udp::endpoint endpoint)
@@ -197,10 +200,12 @@ namespace Pyxis
 
 			void ReadUDPMessage()
 			{
-				m_UDPSocket->async_receive(asio::buffer(m_ReceiveBuffer, 1024),
+				m_UDPSocket->async_receive_from(asio::buffer(m_ReceiveBuffer, 1024),
+					m_RecvEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
 						//PX_TRACE("Recieved UDP Header, of length {0}", length);
+						PX_WARN("Recieved UDP, Endpoint: {0}:{1}", m_RecvEndpoint.address(), m_RecvEndpoint.port());
 						if (!ec)
 						{
 							if (length < sizeof(MessageHeader<T>))
@@ -294,18 +299,16 @@ namespace Pyxis
 				std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
 				memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
 				memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
-				PX_TRACE("Sending UDP message to address: {0}:{1}", m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
+				PX_TRACE("Sending UDP message to address: {0}:{1}", m_RemoteUDPEndpoint.address(), m_RemoteUDPEndpoint.port());
 				//the sending sends to the same address as TCP
-				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()),
-					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
+				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()), m_RemoteUDPEndpoint);
 
 			}
 
 			//ASYNC - prime context ready to write a message header on UDP
 			void WriteHeaderUDP(Message<T>& msg)
 			{
-				m_UDPSocket->send_to(asio::buffer(&msg.header, sizeof(MessageHeader<T>)), 
-					asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port()));
+				m_UDPSocket->send_to(asio::buffer(&msg.header, sizeof(MessageHeader<T>)), m_RemoteUDPEndpoint);
 
 				WriteBodyUDP(msg);
 			}
@@ -372,8 +375,8 @@ namespace Pyxis
 							//validation data sent, clients should sit and wait for a response
 							if (m_OwnerType == Owner::client)
 							{
-								ReadHeader();
-								ReadUDPMessage();
+								ReadID();
+								//ReadHeader();
 							}
 							//no else needed, because the next command
 							//for server is handled in ConnectToClient
@@ -383,6 +386,62 @@ namespace Pyxis
 							m_Socket.close();
 						}
 					});
+			}
+
+			//ASYNC - prime context ready to read a message header
+			void ReadID()
+			{
+				asio::async_read(m_Socket, asio::buffer(&m_ID, sizeof(uint64_t)),
+					[this](std::error_code ec, std::size_t length)
+					{
+						if (!ec)
+						{
+							PX_TRACE("ID obtained from server");
+							//we have obtained the ID from the server, so lets send that udp validation
+							WriteUDPValidation();
+
+							//now sit and listen to any tcp messages
+							ReadHeader();
+						}
+						else
+						{
+							PX_CORE_ERROR("[{0}] Read ID Fail: {1}", m_ID, ec.message());
+
+							m_Socket.close();
+							if (m_OwnerType == Owner::client)
+								m_UDPSocket->close();
+						}
+					});
+			}
+
+			/// <summary>
+			/// Sends the validation to the server using UDP, so the server can setup the client connection's udp address
+			/// </summary>
+			inline void WriteUDPValidation()
+			{
+				std::pair<uint64_t, uint64_t> UDPEstablishing(uint64_t(-1), m_ID);
+				m_UDPSocket->send_to(asio::buffer(&UDPEstablishing, sizeof(std::pair<uint64_t, uint64_t>)), m_RemoteUDPEndpoint);
+				ReadUDPMessage();
+			}
+
+			inline void FinalizeConnection()
+			{
+				//if we are owned by the server, tell the client it's ID and have it send a UDP message
+				if (m_OwnerType == Owner::server)
+				{
+					asio::async_write(m_Socket, asio::buffer(&m_ID, sizeof(uint64_t)),
+						[this](std::error_code ec, std::size_t length)
+						{
+							if (!ec)
+							{
+								//sent the client it's id, so we wait for a udp response to finalize the connection
+							}
+							else
+							{
+								m_Socket.close();
+							}
+						});
+				}
 			}
 
 			inline void ReadValidation(Pyxis::Network::ServerInterface<T>* server = nullptr)
@@ -396,19 +455,19 @@ namespace Pyxis
 							{
 								if (m_HandshakeIn == m_HandshakeCheck)
 								{
-									PX_CORE_INFO("Client Validated");
-									server->OnClientValidated(this->shared_from_this());
+									PX_CORE_INFO("Client Validated, Establishing UDP");
 
+									//server->OnClientValidated(this->shared_from_this());
+
+									//send the client it's ID, and have it respond with a UDP message to set up the correct address
+									FinalizeConnection();
 									//now sit and recieve data
 									ReadHeader();
-
-									//ReadHeaderUDP();
 								}
 								else
 								{
 									PX_CORE_WARN("Client Disconnected (Failed Validation)");
 									m_Socket.close();
-
 								}
 							}
 							else
@@ -418,6 +477,9 @@ namespace Pyxis
 
 								//write the validation
 								WriteValidation();
+
+								//Send a UDP validation as well to establish the servers udp connection to this device
+								//WriteUDPValidation();
 							}
 						}
 						else
@@ -445,6 +507,12 @@ namespace Pyxis
 			// accompanied with a UDP socket, created based on the TCP socket
 			std::shared_ptr<asio::ip::udp::socket> m_UDPSocket;
 
+			//this endpoint either points to the server if you are a client, or client if a server
+			//it is seperate from the udp socket since the server uses a single socket.
+			asio::ip::udp::endpoint m_RemoteUDPEndpoint;
+
+			asio::ip::udp::endpoint m_RecvEndpoint;
+
 			//this context is shared with the whole asio instance
 			asio::io_context& m_AsioContext;
 
@@ -467,13 +535,14 @@ namespace Pyxis
 			// the "owner" decides how some of the context behaves
 			Owner m_OwnerType = Owner::server;
 
-			//the unique identifier of the connection
+			//the unique identifier of the connection, same as the network client
 			uint64_t m_ID = 0;
 
 			//handshake validation
 			uint64_t m_HandshakeOut = 0;
 			uint64_t m_HandshakeIn = 0;
 			uint64_t m_HandshakeCheck = 0;
+			bool m_UDPValidated = false;
 
 		};
 	}

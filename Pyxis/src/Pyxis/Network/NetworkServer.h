@@ -83,13 +83,13 @@ namespace Pyxis
 							if (OnClientConnect(newConn))
 							{
 								//connection allowed, so add to container of new connections
-								m_DeqConnections.push_back(std::move(newConn));
+								m_DeqNewConnections.push_back(std::move(newConn));
 
-								m_DeqConnections.back()->ConnectToClient(this, nIDCounter++);
+								m_DeqNewConnections.back()->ConnectToClient(this, nIDCounter++);
 
-								m_ClientMap[m_DeqConnections.back()->GetID()] = m_DeqConnections.back();
+								m_ClientMap[m_DeqNewConnections.back()->GetID()] = m_DeqNewConnections.back();
 
-								PX_CORE_INFO("[SERVER] Connection [{0}] Approved", m_DeqConnections.back()->GetID());
+								PX_CORE_INFO("[SERVER] Connection [{0}] Approved", m_DeqNewConnections.back()->GetID());
 							}
 							else
 							{
@@ -150,18 +150,20 @@ namespace Pyxis
 				for (auto& client : m_DeqConnections)
 				{
 					if (client != ignoreClient)
-					if (client && client->IsConnected())
 					{
-						
-						client->Send(msg);
-					}
-					else
-					{
-						
-						OnClientDisconnect(client);
-						m_ClientMap.erase(client->GetID());
-						client.reset();
-						InvalidClientExists = true;
+						if (client && client->IsConnected())
+						{
+
+							client->Send(msg);
+						}
+						else
+						{
+
+							OnClientDisconnect(client);
+							m_ClientMap.erase(client->GetID());
+							client.reset();
+							InvalidClientExists = true;
+						}
 					}
 				}
 				 
@@ -225,10 +227,43 @@ namespace Pyxis
 					m_RemoteEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
-						PX_TRACE("Recieved UDP Header, of length {0}", length);
-						PX_TRACE("Endpoint: {0}:{1}", m_RemoteEndpoint.address(), m_RemoteEndpoint.port());
+						PX_WARN("Recieved UDP Header, of length {0}", length);
+						PX_WARN("Endpoint: {0}:{1}", m_RemoteEndpoint.address(), m_RemoteEndpoint.port());
 						if (!ec)
 						{
+							//have to do a check to see if this is a udp message to setup a udp connection
+							if (length == std::size_t(16))
+							{
+								uint64_t UDPHandShake;
+								memcpy(&UDPHandShake, m_ReceiveBuffer, sizeof(uint64_t));
+								if (UDPHandShake == uint64_t(-1))
+								{
+									PX_TRACE("udp message was a handshake");
+									uint64_t ID;
+									memcpy(&ID, m_ReceiveBuffer + sizeof(uint64_t), sizeof(uint64_t));
+									for each (auto & conn in m_DeqNewConnections)
+									{
+										if (conn->GetID() == ID) 
+										{
+											PX_TRACE("found the ID associated");
+											//we have recieved a udp handshake from this client, so lets finalize them.
+											//set the connections endpoint so udp works
+											conn->SetUDPEndpoint(m_RemoteEndpoint);
+											//add the connection to validated deq
+											m_DeqConnections.push_back(m_ClientMap[ID]);
+											//remove it from new connections deq
+											m_DeqNewConnections.erase(
+												std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), conn), m_DeqConnections.end());
+											//validation call
+											OnClientValidated(m_ClientMap[ID]);
+
+											//continue reading messages
+											ReadUDPMessage();
+											return;
+										}
+									}
+								}
+							}
 							if (length < sizeof(MessageHeader<T>)) 
 							{
 								PX_TRACE("didn't recieve enough information for header");
@@ -250,6 +285,16 @@ namespace Pyxis
 									m_msgTemporaryInUDP >> clientID;
 									//PX_TRACE("Header was from client [{0}]", clientID);
 									m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });
+
+									//debug send message straight from source
+									Message<int> msg;
+									std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
+									memcpy(data.data(), &msg.header, sizeof(MessageHeader<int>));
+									memcpy(data.data() + sizeof(MessageHeader<int>), msg.body.data(), msg.body.size());
+								
+									PX_WARN("Sending UDP message to address that sent message");
+									//the sending sends to the same address as TCP
+									m_UDPSocket->send_to(asio::buffer(data.data(), data.size()), m_RemoteEndpoint);
 								}
 							}
 						}
@@ -294,6 +339,9 @@ namespace Pyxis
 		protected:
 			//thread safe queue for incoming message packets
 			ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;
+
+			//container of new connections that need to be validated
+			std::deque<std::shared_ptr<Connection<T>>> m_DeqNewConnections;
 
 			//container of active validated connections
 			std::deque<std::shared_ptr<Connection<T>>> m_DeqConnections;

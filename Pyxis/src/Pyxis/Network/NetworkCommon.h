@@ -15,6 +15,9 @@
 #include <asio/ts/internet.hpp>
 #include <asio/basic_socket_iostream.hpp>
 
+
+const uint64_t UDP_HANDSHAKE = -1;
+
 namespace Pyxis
 {
 	namespace Network

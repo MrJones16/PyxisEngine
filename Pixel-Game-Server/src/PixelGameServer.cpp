@@ -46,6 +46,7 @@ namespace Pyxis
 				clientsToRemove.push_back(client);
 			}
 		}
+
 		//delete the clients after iterating
 		for each (auto client in clientsToRemove)
 		{
@@ -118,7 +119,7 @@ namespace Pyxis
 			msg << mtc.m_Tick;
 
 			
-			MessageAllClientsUDP(msg);//skip messages sometimes
+			MessageAllClientsUDP(msg);
 			
 			//copy the tick closure into storage
 			m_TickRequestStorage.push_back(MergedTickClosure());
