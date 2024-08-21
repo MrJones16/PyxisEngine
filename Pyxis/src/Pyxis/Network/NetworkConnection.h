@@ -105,9 +105,10 @@ namespace Pyxis
 							if (!ec)
 							{
 								//create a UDP socket listening to the same port used by TCP.
-								m_RemoteUDPEndpoint = asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
+								//m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
+								PX_CORE_TRACE("Creating UDP Socket, listening to port {0}", m_Socket.local_endpoint().port());
 								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
-								PX_TRACE("Created UDP Socket, listening to port {0}", m_Socket.local_endpoint().port());
+								m_RemoteUDPEndpoint = asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
 								ReadValidation();
 							}
 							else
@@ -204,8 +205,7 @@ namespace Pyxis
 					m_RecvEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
-						//PX_TRACE("Recieved UDP Header, of length {0}", length);
-						PX_WARN("Recieved UDP, Endpoint: {0}:{1}", m_RecvEndpoint.address(), m_RecvEndpoint.port());
+						//PX_CORE_WARN("Recieved UDP, Endpoint: {0}:{1}", m_RecvEndpoint.address(), m_RecvEndpoint.port());
 						if (!ec)
 						{
 							if (length < sizeof(MessageHeader<T>))
@@ -231,9 +231,10 @@ namespace Pyxis
 						}
 						else
 						{
-							PX_CORE_ERROR("Read Header UDP Fail: {0}", ec.message());
+							PX_CORE_ERROR("Read UDP Message Fail: {0}", ec.message());
 
 							m_UDPSocket->close();
+							m_Socket.close();
 						}
 
 						//continue reading UDP messages
@@ -299,7 +300,6 @@ namespace Pyxis
 				std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
 				memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
 				memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
-				PX_TRACE("Sending UDP message to address: {0}:{1}", m_RemoteUDPEndpoint.address(), m_RemoteUDPEndpoint.port());
 				//the sending sends to the same address as TCP
 				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()), m_RemoteUDPEndpoint);
 

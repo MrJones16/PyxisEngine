@@ -227,8 +227,8 @@ namespace Pyxis
 					m_RemoteEndpoint,
 					[this](std::error_code ec, std::size_t length)
 					{
-						PX_WARN("Recieved UDP Header, of length {0}", length);
-						PX_WARN("Endpoint: {0}:{1}", m_RemoteEndpoint.address(), m_RemoteEndpoint.port());
+						/*PX_CORE_WARN("Recieved UDP Header, of length {0}", length);
+						PX_CORE_WARN("Endpoint: {0}:{1}", m_RemoteEndpoint.address(), m_RemoteEndpoint.port());*/
 						if (!ec)
 						{
 							//have to do a check to see if this is a udp message to setup a udp connection
@@ -238,14 +238,13 @@ namespace Pyxis
 								memcpy(&UDPHandShake, m_ReceiveBuffer, sizeof(uint64_t));
 								if (UDPHandShake == uint64_t(-1))
 								{
-									PX_TRACE("udp message was a handshake");
+									PX_CORE_TRACE("Recieved UDP Handshake");
 									uint64_t ID;
 									memcpy(&ID, m_ReceiveBuffer + sizeof(uint64_t), sizeof(uint64_t));
 									for each (auto & conn in m_DeqNewConnections)
 									{
 										if (conn->GetID() == ID) 
 										{
-											PX_TRACE("found the ID associated");
 											//we have recieved a udp handshake from this client, so lets finalize them.
 											//set the connections endpoint so udp works
 											conn->SetUDPEndpoint(m_RemoteEndpoint);
@@ -253,7 +252,7 @@ namespace Pyxis
 											m_DeqConnections.push_back(m_ClientMap[ID]);
 											//remove it from new connections deq
 											m_DeqNewConnections.erase(
-												std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), conn), m_DeqConnections.end());
+												std::remove(m_DeqNewConnections.begin(), m_DeqNewConnections.end(), conn), m_DeqNewConnections.end());
 											//validation call
 											OnClientValidated(m_ClientMap[ID]);
 
@@ -266,7 +265,7 @@ namespace Pyxis
 							}
 							if (length < sizeof(MessageHeader<T>)) 
 							{
-								PX_TRACE("didn't recieve enough information for header");
+								PX_CORE_WARN("didn't recieve enough information for header");
 							}
 							else
 							{
@@ -283,27 +282,12 @@ namespace Pyxis
 									//pull the client ID from the body, and push the message with the correct client
 									uint64_t clientID;
 									m_msgTemporaryInUDP >> clientID;
-									//PX_TRACE("Header was from client [{0}]", clientID);
-									m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });
-
-									//debug send message straight from source
-									Message<int> msg;
-									std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
-									memcpy(data.data(), &msg.header, sizeof(MessageHeader<int>));
-									memcpy(data.data() + sizeof(MessageHeader<int>), msg.body.data(), msg.body.size());
-								
-									PX_WARN("Sending UDP message to address that sent message");
-									//the sending sends to the same address as TCP
-									m_UDPSocket->send_to(asio::buffer(data.data(), data.size()), m_RemoteEndpoint);
-								}
+									m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });								}
 							}
 						}
 						else
 						{
 							PX_CORE_ERROR("[SERVER] Read Header UDP Fail: {0}", ec.message());
-
-							//gonna skip closing the socket since we are listening for all clients
-							//m_UDPSocket->close();
 						}
 
 						//continue reading UDP messages
