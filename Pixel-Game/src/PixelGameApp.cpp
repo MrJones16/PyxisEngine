@@ -58,7 +58,7 @@
 /// 
 /// 
 /// 
-/// Things to work on:
+/// Feedback / Things to work on:
 /// 
 ///		-	[Done!] Deterministic falling sand updating!
 ///		-	[Done!] Box2d simulation synchronized on multiplayer

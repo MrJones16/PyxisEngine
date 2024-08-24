@@ -83,10 +83,22 @@ namespace Pyxis
 		m_LayerStack.PushOverlay(layer);
 	}
 
-	void Application::PopLayer(Layer* layer)
+	/// <summary>
+	/// Pops the layer before the next update.
+	/// Useful for applications to control the layer stack, as
+	/// popping a layer immediately would cause the stack to
+	/// be altered duing iteration
+	/// </summary>
+	void Application::PopLayerQueue(Layer* layer)
 	{
 		m_LayersToRemove.push(layer);
-		//m_LayerStack.PopLayer(layer);
+	}
+
+	//Use when you need to remove the layer immediately, for use if your layer is not
+	//a pointer that can be deleted. 
+	void Application::PopLayer(Layer* layer)
+	{
+		m_LayerStack.PopLayer(layer);
 	}
 
 	void Application::Run() {

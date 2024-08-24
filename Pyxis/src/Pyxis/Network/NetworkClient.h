@@ -69,7 +69,7 @@ namespace Pyxis
 				}
 
 				//either way. we're also done with the asio context
-				m_Context.stop();
+				//m_Context.stop();
 
 				//and its thread
 				if (m_ContextThread.joinable())

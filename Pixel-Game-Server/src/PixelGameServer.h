@@ -37,18 +37,22 @@ namespace Pyxis
 		/// The authoritative world. 
 		/// </summary>
 		World m_World;
+
 		/// <summary>
 		/// the game tick the server is currently at
 		/// </summary>
 		uint64_t m_InputTick = 0;
-		//PixelServerInterface m_ServerInterface;
+		
 
 		int m_PlayerCount = 0;
 		std::unordered_set<uint64_t> m_ClientsNeededForTick;
 		std::deque<MergedTickClosure> m_MTCDeque;
 
 		std::deque<MergedTickClosure> m_TickRequestStorage;
-		//std::unordered_map<uint64_t, MergedTickClosure> m_TickClosureMap;
+		
+		//delay making the server sleep, so the player count is updated and drawn at start.
+		int m_SleepDelay = 0;
+		int m_SleepDelayMax = 10000;
 
 	};
 }

@@ -87,6 +87,7 @@ namespace Pyxis
 		PX_TRACE("Detached game layer");
 		//when detaching the game layer, it should be reset so the server can be joined again.
 		m_World = nullptr;
+		m_ClientInterface.Disconnect();
 	}
 
 
@@ -118,12 +119,23 @@ namespace Pyxis
 			//the server to re-send the missing closure
 			if (m_MTCQueue.front().m_Tick > m_LatestMergedTick + 1) {
 				//ask the server for the missing tick...
-				Network::Message<GameMessage> msg;
-				msg.header.id = GameMessage::Client_RequestMergedTick;
-				msg << m_LatestMergedTick + uint64_t(1);
-				m_ClientInterface.SendUDP(msg);
-				PX_TRACE("Requesting tick {0} from server.", m_LatestMergedTick + uint64_t(1));
-				break; // we need to break out of while loop to recieve the new message
+				//check if we have already asked for the missing tick:
+				if (m_LastRequestedTick != m_LatestMergedTick + uint64_t(1))
+				{
+					Network::Message<GameMessage> msg;
+					msg.header.id = GameMessage::Client_RequestMergedTick;
+					msg << m_LatestMergedTick + uint64_t(1);
+					m_ClientInterface.Send(msg);
+					PX_TRACE("Requesting tick {0} from server.", m_LatestMergedTick + uint64_t(1));
+					m_LastRequestedTick = m_LatestMergedTick + uint64_t(1);
+					break; // we need to break out of while loop to recieve the new message
+				}
+				else
+				{
+					//we already requested the tick, just wait...
+					break;
+				}
+				
 			}
 
 			//reset world, then apply the tick closure
@@ -607,6 +619,7 @@ namespace Pyxis
 		std::string address = AddressAndPort.substr(0, split);
 		std::string port = AddressAndPort.substr(split + 1, restLength);
 		PX_TRACE("Connecting to address {0}:{1}", address, port);
+		m_ClientInterface.Disconnect();
 		if (m_ClientInterface.Connect(address, port)) {
 			PX_TRACE("Connecting To Server...");
 			m_ConnectionStatus = Connecting;
@@ -721,6 +734,11 @@ namespace Pyxis
 					msg >> id;
 
 					m_PlayerCursors[id] = PlayerCursor(id);
+					break;
+				}
+				case GameMessage::Server_ClientDesynced:
+				{
+					m_ConnectionStatus = Disconnected;
 					break;
 				}
 				//update ping case? for better prediction

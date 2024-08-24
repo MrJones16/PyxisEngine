@@ -140,7 +140,7 @@ namespace Pyxis
 	void MenuLayer::DetachGameLayer()
 	{
 		//Make the menu an active layer and hide the game layer
-		Application::Get().PopLayer(m_GameLayer);
+		Application::Get().PopLayerQueue(m_GameLayer);
 		m_GameLayerAttached = false;
 		//i would like to clear the game state here as well. TODO
 	}

@@ -311,11 +311,14 @@ namespace Pyxis
 			//ASYNC - prime context ready to write a message header on UDP
 			void WriteUDPMessage(const Message<T>& msg)
 			{
-				std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
-				memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
-				memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
-				//the sending sends to the same address as TCP
-				m_UDPSocket->send_to(asio::buffer(data.data(), data.size()), m_RemoteUDPEndpoint);
+				if (m_UDPSocket->is_open())
+				{
+					std::vector<uint8_t> data(sizeof(MessageHeader<T>) + msg.body.size());
+					memcpy(data.data(), &msg.header, sizeof(MessageHeader<T>));
+					memcpy(data.data() + sizeof(MessageHeader<T>), msg.body.data(), msg.body.size());
+					//the sending sends to the same address as TCP
+					m_UDPSocket->send_to(asio::buffer(data.data(), data.size()), m_RemoteUDPEndpoint);
+				}
 
 			}
 

@@ -6,13 +6,14 @@
 
 class PixelGameServerApplication : public Pyxis::Application {
 public:
-	PixelGameServerApplication() : Application("Pyxis Server", 400, 50)
+	PixelGameServerApplication() : Application("Pyxis Server", 350, 200)
 	{
 		PushLayer(&m_ServerLayer);
 	}
 	~PixelGameServerApplication()
 	{
-
+		//different kind of pop layer, for immediate deletion.
+		PopLayer(&m_ServerLayer);
 	}
 public:
 	Pyxis::PixelGameServer m_ServerLayer = Pyxis::PixelGameServer(21218);

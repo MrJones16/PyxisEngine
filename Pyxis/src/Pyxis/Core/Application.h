@@ -38,6 +38,7 @@ namespace Pyxis
 		void PushLayer(Layer* layer);
 		void PushOverlay(Layer* layer);
 
+		void PopLayerQueue(Layer* layer);
 		void PopLayer(Layer* layer);
 
 		inline Window& GetWindow() { return *m_Window; }

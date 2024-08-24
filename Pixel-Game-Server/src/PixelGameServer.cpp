@@ -57,15 +57,23 @@ namespace Pyxis
 				std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), client), m_DeqConnections.end());
 		}
 
-		//server is sending merged closure ticks when first joining the server...
 
 		//server update
 		if (m_PlayerCount <= 0)
 		{
-			Update(-1, true);//i can save on resources when nobody is connected
+			if (m_SleepDelay >= m_SleepDelayMax)
+			{
+				Update(-1, true);//i can save on resources when nobody is connected
+			}
+			else
+			{
+				Update(-1, false);//i can save on resources when nobody is connected
+				m_SleepDelay++;
+			}
 		}
 		else
 		{
+			m_SleepDelay = 0;
 			Update(-1, false);
 		}
 		
@@ -79,8 +87,6 @@ namespace Pyxis
 		}
 
 		///if there are no players, 
-		//todo: if a player joins, could they join in the middle of this?
-		//they would be out of sync!
 		if (m_PlayerCount == 0)
 		{
 			while (m_MTCDeque.size() > 0)
@@ -201,6 +207,8 @@ namespace Pyxis
 		ImGui::SetNextWindowDockID(dock);
 		if (ImGui::Begin("Server"))
 		{
+			ImGui::Text("Sleep Timer");
+			ImGui::ProgressBar(static_cast<float>(m_SleepDelay) / static_cast<float>(m_SleepDelayMax));
 			ImGui::Text(("Players:" + std::to_string(m_PlayerCount)).c_str());
 		}
 		ImGui::End();
@@ -287,7 +295,7 @@ namespace Pyxis
 			tickmsg << m_TickRequestStorage[diff].m_InputActionCount;
 			tickmsg << m_TickRequestStorage[diff].m_Tick;
 			PX_TRACE("Sent Client [{0}] missing Game Tick {1}", client->GetID(), m_TickRequestStorage[diff].m_Tick);
-			MessageClientUDP(client, tickmsg);
+			MessageClient(client, tickmsg);
 			break;
 			
 		}

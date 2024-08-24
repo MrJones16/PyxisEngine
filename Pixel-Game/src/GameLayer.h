@@ -50,7 +50,7 @@ namespace Pyxis
 		//things for the main menu to use to connect game world to server
 		enum ConnectionStatus
 		{
-			NotConnected, Connecting, FailedToConnect, Disconnected, LostConnection, Connected
+			NotConnected, Connecting, FailedToConnect, Disconnected, Connected
 		};
 		ConnectionStatus m_ConnectionStatus = NotConnected;
 		std::string m_ConnectionErrorMessage = "";
@@ -59,7 +59,7 @@ namespace Pyxis
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
-		float m_UpdatesPerSecond = 10.0f;
+		float m_UpdatesPerSecond = 30.0f;
 
 		//core multiplayer things
 		PixelClientInterface m_ClientInterface;
@@ -70,6 +70,7 @@ namespace Pyxis
 		std::deque<TickClosure> m_LatencyInputQueue;
 		const int m_LatencyQueueLimit = 200; // this value should represent 1/60th the seconds server round trip delay
 		uint64_t m_LatestMergedTick = 0;//temp?
+		uint64_t m_LastRequestedTick = 0;
 		bool m_WaitingForOthers = false;
 
 		//multiplayer connecting things
