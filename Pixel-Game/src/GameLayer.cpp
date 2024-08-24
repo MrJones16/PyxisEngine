@@ -144,6 +144,14 @@ namespace Pyxis
 				m_World->ResetBox2D();
 				m_TickToResetBox2D = -1;
 			}
+
+			//sometimes we might slow down compared to others, lose connection for a brief moment,
+			// and our input tick will lag behind, or our
+			//game will stutter. so when that happens, we need to catch up our input ticks
+			if (m_MTCQueue.front().m_Tick > m_InputTick)
+			{
+				m_InputTick = m_MTCQueue.front().m_Tick;
+			}
 			
 			HandleTickClosure(m_MTCQueue.front());
 			m_LatestMergedTick = m_MTCQueue.front().m_Tick;
@@ -554,12 +562,12 @@ namespace Pyxis
 		}
 		ImGui::End();
 
-		/*if (ImGui::Begin("NetworkDebug"))
+		if (ImGui::Begin("NetworkDebug"))
 		{
 			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
 			ImGui::Text(("Last Recieved Merged Tick: " + std::to_string(d_LastRecievedInputTick)).c_str());
 		}
-		ImGui::End();*/
+		ImGui::End();
 
 		for each (auto panel in m_Panels)
 		{

@@ -118,13 +118,13 @@ namespace Pyxis
 				//wait for everyones ticks up to a certain point
 				if (m_MTCDeque.size() <= 10)
 				{
-					PX_CORE_TRACE("Waiting for a client...");
+					//PX_CORE_TRACE("Waiting for a client...");
 					break;
 				}
 			}
 
 			//send empty ticks if we are missing the inputs from clients for too many ticks
-			while (m_MTCDeque.front().m_Tick > m_InputTick && m_MTCDeque.size() > 10)
+			while (m_MTCDeque.front().m_Tick > m_InputTick && m_MTCDeque.size() > 30)
 			{
 				//since we have a few ticks ahead, and we are missing one, send an empty tick 
 
@@ -138,7 +138,7 @@ namespace Pyxis
 				emptymsg << m_TickRequestStorage.back().m_Tick;
 
 				// update the sim with the empty tick, and tell others to as well.
-				MessageAllClients(emptymsg);
+				MessageAllClientsUDP(emptymsg);
 				MergedTickClosure copy = m_TickRequestStorage.back();
 				HandleTickClosure(copy);
 				PX_CORE_TRACE("Sent empty tick closure.");
@@ -212,11 +212,12 @@ namespace Pyxis
 			ImGui::Text(("Players:" + std::to_string(m_PlayerCount)).c_str());
 		}
 		ImGui::End();
-		/*if (ImGui::Begin("NetworkDebug"))
+
+		if (ImGui::Begin("NetworkDebug"))
 		{
 			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
 		}
-		ImGui::End();*/
+		ImGui::End();
 	}
 
 	void PixelGameServer::OnEvent(Pyxis::Event& e)
@@ -350,12 +351,21 @@ namespace Pyxis
 			msg >> tick;
 			msg >> tickClosure.m_InputActionCount;
 			msg >> tickClosure.m_Data;
+			//PX_TRACE("Recieved Tick Closure: {0}", tick);
 
 			if (m_MTCDeque.size() == 0)
 			{
 				//first merged tick closure, so just add it
 				MergedTickClosure mtc;
-				mtc.m_Tick = tick;
+				if (tick < m_InputTick)
+				{
+					//this is an old tick, so update a newer input with the old inputs.
+					mtc.m_Tick = m_InputTick;
+				}
+				else
+				{
+					mtc.m_Tick = tick;
+				}
 				mtc.AddTickClosure(tickClosure, client->GetID());
 				//PX_CORE_TRACE("Created tick closure Deque");
 				m_MTCDeque.push_back(mtc);
