@@ -107,43 +107,108 @@ namespace Pyxis
 					break;
 				}
 			}
-			if (missingClient) break;
-
-			//we have all the clients we need, so send the merged tick!
-			Network::Message<GameMessage> msg;
-			msg.header.id = GameMessage::Game_MergedTickClosure;
-
-			MergedTickClosure& mtc = m_MTCDeque.front();
-			msg << mtc.m_Data;
-			msg << mtc.m_InputActionCount;
-			msg << mtc.m_Tick;
-
-			
-			MessageAllClientsUDP(msg);
-			
-			//copy the tick closure into storage
-			m_TickRequestStorage.push_back(MergedTickClosure());
-			m_TickRequestStorage.back().m_Tick = mtc.m_Tick;
-			m_TickRequestStorage.back().m_InputActionCount = mtc.m_InputActionCount;
-			m_TickRequestStorage.back().m_Data.resize(mtc.m_Data.size());
-			memcpy(m_TickRequestStorage.back().m_Data.data(), mtc.m_Data.data(), mtc.m_Data.size());
-
-			//handling the tick closure extracts all the mtc data!
-			HandleTickClosure(mtc);
-
-			//clear tick storage past size 500
-			if (m_TickRequestStorage.size() > 500)
+			if (missingClient)
 			{
-				m_TickRequestStorage.pop_front();
+				//wait for everyones ticks up to a certain point
+				if (m_MTCDeque.size() <= 10)
+				{
+					PX_CORE_TRACE("Waiting for a client...");
+					break;
+				}
 			}
-			m_MTCDeque.pop_front();
-			m_InputTick++;
+
+			//send empty ticks if we are missing the inputs from clients for too many ticks
+			while (m_MTCDeque.front().m_Tick > m_InputTick && m_MTCDeque.size() > 10)
+			{
+				//since we have a few ticks ahead, and we are missing one, send an empty tick 
+
+				m_TickRequestStorage.push_back(MergedTickClosure());
+				m_TickRequestStorage.back().m_Tick = m_InputTick++;
+
+				Network::Message<GameMessage> emptymsg;
+				emptymsg.header.id = GameMessage::Game_MergedTickClosure;
+				emptymsg << m_TickRequestStorage.back().m_Data;
+				emptymsg << m_TickRequestStorage.back().m_InputActionCount;
+				emptymsg << m_TickRequestStorage.back().m_Tick;
+
+				// update the sim with the empty tick, and tell others to as well.
+				MessageAllClients(emptymsg);
+				MergedTickClosure copy = m_TickRequestStorage.back();
+				HandleTickClosure(copy);
+				PX_CORE_TRACE("Sent empty tick closure.");
+			}
+
+			//we have all the clients we need, so send the merged tick if it is not a future one!
+			if (m_MTCDeque.front().m_Tick <= m_InputTick)
+			{
+				//PX_CORE_TRACE("Sending merged tick {0}", m_MTCDeque.front().m_Tick);
+				Network::Message<GameMessage> msg;
+				msg.header.id = GameMessage::Game_MergedTickClosure;
+
+				MergedTickClosure& mtc = m_MTCDeque.front();
+				msg << mtc.m_Data;
+				msg << mtc.m_InputActionCount;
+				msg << mtc.m_Tick;
+
+
+				MessageAllClientsUDP(msg);
+
+				//copy the tick closure into storage
+				m_TickRequestStorage.push_back(MergedTickClosure());
+				m_TickRequestStorage.back().m_Tick = mtc.m_Tick;
+				m_TickRequestStorage.back().m_InputActionCount = mtc.m_InputActionCount;
+				m_TickRequestStorage.back().m_Data.resize(mtc.m_Data.size());
+				memcpy(m_TickRequestStorage.back().m_Data.data(), mtc.m_Data.data(), mtc.m_Data.size());
+
+				//handling the tick closure extracts all the mtc data! "its volatile"
+				HandleTickClosure(mtc);
+
+				//clear tick storage past size 500
+				if (m_TickRequestStorage.size() > 500)
+				{
+					m_TickRequestStorage.pop_front();
+				}
+				m_MTCDeque.pop_front();
+				m_InputTick++;
+			}
+			else
+			{
+				//break out of loop to read more messages, since we are waiting
+				break;
+			}
 		}
 	}
 
 	void PixelGameServer::OnImGuiRender()
 	{
 		//we are a server, do no imgui rendering!
+		///sike. i wanna debug, or display info
+
+		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+
+		//top menu bar
+		if (ImGui::BeginMainMenuBar())
+		{
+			//ImGui::DockSpaceOverViewport();
+			if (ImGui::BeginMenu("File"))
+			{
+				ImGui::Text("nothing here yet!");
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}
+
+		ImGui::SetNextWindowDockID(dock);
+		if (ImGui::Begin("Server"))
+		{
+			ImGui::Text(("Players:" + std::to_string(m_PlayerCount)).c_str());
+		}
+		ImGui::End();
+		/*if (ImGui::Begin("NetworkDebug"))
+		{
+			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
+		}
+		ImGui::End();*/
 	}
 
 	void PixelGameServer::OnEvent(Pyxis::Event& e)
@@ -221,7 +286,7 @@ namespace Pyxis
 			tickmsg << m_TickRequestStorage[diff].m_Data;
 			tickmsg << m_TickRequestStorage[diff].m_InputActionCount;
 			tickmsg << m_TickRequestStorage[diff].m_Tick;
-			PX_TRACE("Sent Client [{0}] a missing Game Tick.", client->GetID());
+			PX_TRACE("Sent Client [{0}] missing Game Tick {1}", client->GetID(), m_TickRequestStorage[diff].m_Tick);
 			MessageClientUDP(client, tickmsg);
 			break;
 			
@@ -284,26 +349,40 @@ namespace Pyxis
 				MergedTickClosure mtc;
 				mtc.m_Tick = tick;
 				mtc.AddTickClosure(tickClosure, client->GetID());
+				//PX_CORE_TRACE("Created tick closure Deque");
 				m_MTCDeque.push_back(mtc);
 			}
 			else
 			{
 				//there are already tick closures, so find the one to merge with or make
 				uint64_t oldestTick = m_MTCDeque.front().m_Tick;
-				for (int i = 0; i < m_MTCDeque.size(); i++)
+				//see if this is an old tick that can be applied to help "catch it up"
+				if (tick <= oldestTick)
 				{
-					if (tick == m_MTCDeque.at(i).m_Tick)
-					{
-						//found the same tick in the queue, so add it
-						m_MTCDeque.at(i).AddTickClosure(tickClosure, client->GetID());
-						return;
-					}
+					//PX_CORE_TRACE("Merged old tick closure into new");
+					m_MTCDeque.front().AddTickClosure(tickClosure, client->GetID());
 				}
-				//didn't find the tick closure in the queue, so just add it
-				MergedTickClosure mtc;
-				mtc.m_Tick = tick;
-				mtc.AddTickClosure(tickClosure, client->GetID());
-				m_MTCDeque.push_back(mtc);
+				else
+				{
+					//look to see if there is an existing tick that we can merge with
+					for (int i = 0; i < m_MTCDeque.size(); i++)
+					{
+						if (tick == m_MTCDeque.at(i).m_Tick)
+						{
+							//found the same tick in the queue, so add it
+							//PX_CORE_TRACE("Found same input tick closure, merging");
+							m_MTCDeque.at(i).AddTickClosure(tickClosure, client->GetID());
+							return;
+						}
+					}
+					//didn't find the tick closure in the queue, so just add it
+					MergedTickClosure mtc;
+					mtc.m_Tick = tick;
+					mtc.AddTickClosure(tickClosure, client->GetID());
+					//PX_CORE_TRACE("Appended tick closure to end of queue");
+					m_MTCDeque.push_back(mtc);
+				}
+				
 			}
 			break;
 		}
@@ -321,6 +400,10 @@ namespace Pyxis
 		client->Send(msg);
 	}
 	
+	/// <summary>
+	/// Volatile to the merged tick closure.
+	/// </summary>
+	/// <param name="tc"></param>
 	void PixelGameServer::HandleTickClosure(MergedTickClosure& tc)
 	{
 		for (int i = 0; i < tc.m_InputActionCount; i++)

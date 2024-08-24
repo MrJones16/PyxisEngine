@@ -3216,6 +3216,8 @@
     <ClInclude Include="vendor\tinyxml2\tinyxml2.h">
       <Filter>vendor\tinyxml2</Filter>
     </ClInclude>
+    <ClInclude Include="src\Pyxis\Core\Panel.h" />
+    <ClInclude Include="src\Pyxis\Core\ProfilingPanel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Platform\OpenGL\OpenGLBuffer.cpp">

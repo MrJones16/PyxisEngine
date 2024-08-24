@@ -40,6 +40,8 @@ namespace Pyxis
 
 			/// <summary>
 			/// Pushes any "POD" like data into the message buffer
+			/// 
+			/// Not Volatile
 			/// </summary>
 			template<typename DataType>
 			friend Message<T>& operator << (Message<T>& msg, const DataType& data)
@@ -63,6 +65,9 @@ namespace Pyxis
 				return msg;
 			}
 
+			/// <summary>
+			/// Pushes any "POD" storing vector into the message in reverse
+			/// </summary>
 			template<typename DataType>
 			friend Message<T>& operator << (Message<T>& msg, const std::vector<DataType>& data)
 			{
@@ -78,6 +83,10 @@ namespace Pyxis
 				return msg;
 			}
 
+
+			/// <summary>
+			/// Pulls data out of the message. Volatile.
+			/// </summary>
 			template<typename DataType>
 			friend Message<T>& operator >> (Message<T>& msg, DataType& data)
 			{
@@ -101,6 +110,9 @@ namespace Pyxis
 				return msg;
 			}
 
+			/// <summary>
+			/// Pulls vector data out of the message. Volatile.
+			/// </summary>
 			template<typename DataType>
 			friend Message<T>& operator >> (Message<T>& msg, std::vector<DataType>& data)
 			{

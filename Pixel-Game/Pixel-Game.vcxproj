@@ -145,10 +145,7 @@
   <ItemGroup>
     <ClInclude Include="src\GameLayer.h" />
     <ClInclude Include="src\MenuLayer.h" />
-    <ClInclude Include="src\Panels\InspectorPanel.h" />
-    <ClInclude Include="src\Panels\Panel.h" />
-    <ClInclude Include="src\Panels\ProfilingPanel.h" />
-    <ClInclude Include="src\Panels\SceneHierarchyPanel.h" />
+    <ClInclude Include="src\ExamplePanel.h" />
     <ClInclude Include="src\common\Chunk.h" />
     <ClInclude Include="src\common\ChunkWorker.h" />
     <ClInclude Include="src\common\Element.h" />

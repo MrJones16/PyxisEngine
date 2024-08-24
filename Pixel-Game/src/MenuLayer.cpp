@@ -48,6 +48,7 @@ namespace Pyxis
 			{
 				//detach on disconnect
 				DetachGameLayer();
+				m_GameLayer->m_ConnectionStatus = GameLayer::NotConnected;
 			}
 			break;
 		}

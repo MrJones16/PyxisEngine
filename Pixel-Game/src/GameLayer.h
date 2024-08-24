@@ -3,8 +3,8 @@
 #include "Pyxis.h"
 #include "Pyxis/Game/Scene.h"
 #include "Pyxis/Core/OrthographicCameraController.h"
-#include "Panels/Panel.h"
-#include "Panels/ProfilingPanel.h"
+#include "Pyxis/Core/Panel.h"
+#include "Pyxis/Core/ProfilingPanel.h"
 
 #include "common/World.h"
 #include "common/PixelClientInterface.h"
@@ -50,7 +50,7 @@ namespace Pyxis
 		//things for the main menu to use to connect game world to server
 		enum ConnectionStatus
 		{
-			NotConnected, Connecting, FailedToConnect, Disconnected, Connected
+			NotConnected, Connecting, FailedToConnect, Disconnected, LostConnection, Connected
 		};
 		ConnectionStatus m_ConnectionStatus = NotConnected;
 		std::string m_ConnectionErrorMessage = "";
@@ -59,7 +59,7 @@ namespace Pyxis
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
-		float m_UpdatesPerSecond = 60;
+		float m_UpdatesPerSecond = 10.0f;
 
 		//core multiplayer things
 		PixelClientInterface m_ClientInterface;
@@ -128,5 +128,8 @@ namespace Pyxis
 		bool m_SimulationRunning = false;
 		bool m_Hovering = false;
 		float m_DouglasThreshold = 1.0f;
+
+		//debugging
+		int d_LastRecievedInputTick = 0;
 	};
 }

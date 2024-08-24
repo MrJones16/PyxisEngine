@@ -165,7 +165,9 @@
     <ClInclude Include="src\Pyxis\Core\Log.h" />
     <ClInclude Include="src\Pyxis\Core\MathLog.h" />
     <ClInclude Include="src\Pyxis\Core\OrthographicCameraController.h" />
+    <ClInclude Include="src\Pyxis\Core\Panel.h" />
     <ClInclude Include="src\Pyxis\Core\PerspectiveCameraController.h" />
+    <ClInclude Include="src\Pyxis\Core\ProfilingPanel.h" />
     <ClInclude Include="src\Pyxis\Core\Timestep.h" />
     <ClInclude Include="src\Pyxis\Core\Window.h" />
     <ClInclude Include="src\Pyxis\Events\ApplicationEvent.h" />

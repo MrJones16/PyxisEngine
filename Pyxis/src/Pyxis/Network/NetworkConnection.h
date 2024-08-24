@@ -107,7 +107,20 @@ namespace Pyxis
 								//create a UDP socket listening to the same port used by TCP.
 								//m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
 								PX_CORE_TRACE("Creating UDP Socket, listening to port {0}", m_Socket.local_endpoint().port());
-								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext, asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
+								m_UDPSocket = std::make_shared<asio::ip::udp::socket>(m_AsioContext);
+								try
+								{
+									m_UDPSocket->open(asio::ip::udp::v4());
+									//asio::ip::udp::endpoint localEndpoint = asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port());
+									m_UDPSocket->bind(asio::ip::udp::endpoint(asio::ip::udp::v4(), m_Socket.local_endpoint().port()));
+								}
+								catch (std::exception& e)
+								{
+									//something prohibited the server from listening
+									PX_CORE_ERROR("Client UDP Exception: {0}", e.what());
+									return false;
+								}
+
 								m_RemoteUDPEndpoint = asio::ip::udp::endpoint(m_Socket.remote_endpoint().address(), m_Socket.remote_endpoint().port());
 								ReadValidation();
 							}
@@ -228,17 +241,18 @@ namespace Pyxis
 									m_QueueMessagesIn.push_back({ nullptr, m_msgTemporaryInUDP });
 								}
 							}
+							//continue reading UDP messages
+							ReadUDPMessage();
 						}
 						else
 						{
 							PX_CORE_ERROR("Read UDP Message Fail: {0}", ec.message());
 
-							m_UDPSocket->close();
 							m_Socket.close();
+							m_UDPSocket->close();
 						}
 
-						//continue reading UDP messages
-						ReadUDPMessage();
+						
 					});
 			}
 

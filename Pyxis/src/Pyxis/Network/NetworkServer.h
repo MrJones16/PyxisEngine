@@ -243,7 +243,7 @@ namespace Pyxis
 									memcpy(&ID, m_ReceiveBuffer + sizeof(uint64_t), sizeof(uint64_t));
 									for each (auto & conn in m_DeqNewConnections)
 									{
-										if (conn->GetID() == ID) 
+										if (conn->GetID() == ID)
 										{
 											//we have recieved a udp handshake from this client, so lets finalize them.
 											//set the connections endpoint so udp works
@@ -263,7 +263,7 @@ namespace Pyxis
 									}
 								}
 							}
-							if (length < sizeof(MessageHeader<T>)) 
+							if (length < sizeof(MessageHeader<T>))
 							{
 								PX_CORE_WARN("didn't recieve enough information for header");
 							}
@@ -282,7 +282,12 @@ namespace Pyxis
 									//pull the client ID from the body, and push the message with the correct client
 									uint64_t clientID;
 									m_msgTemporaryInUDP >> clientID;
-									m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });								}
+									m_QueueMessagesIn.push_back({ m_ClientMap[clientID], m_msgTemporaryInUDP });
+								}
+								else
+								{
+									PX_CORE_WARN("Recieved too large of a message, ignoring it.");
+								}
 							}
 						}
 						else

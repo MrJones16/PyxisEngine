@@ -11,16 +11,7 @@
   <ItemGroup>
     <ClInclude Include="src\GameLayer.h" />
     <ClInclude Include="src\MenuLayer.h" />
-    <ClInclude Include="src\Panels\InspectorPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Panels\Panel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Panels\ProfilingPanel.h">
-      <Filter>Panels</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Panels\SceneHierarchyPanel.h">
+    <ClInclude Include="src\ExamplePanel.h">
       <Filter>Panels</Filter>
     </ClInclude>
     <ClInclude Include="src\common\Chunk.h">

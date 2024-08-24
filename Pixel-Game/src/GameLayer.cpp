@@ -85,6 +85,8 @@ namespace Pyxis
 	void GameLayer::OnDetach()
 	{
 		PX_TRACE("Detached game layer");
+		//when detaching the game layer, it should be reset so the server can be joined again.
+		m_World = nullptr;
 	}
 
 
@@ -120,6 +122,7 @@ namespace Pyxis
 				msg.header.id = GameMessage::Client_RequestMergedTick;
 				msg << m_LatestMergedTick + uint64_t(1);
 				m_ClientInterface.SendUDP(msg);
+				PX_TRACE("Requesting tick {0} from server.", m_LatestMergedTick + uint64_t(1));
 				break; // we need to break out of while loop to recieve the new message
 			}
 
@@ -539,6 +542,13 @@ namespace Pyxis
 		}
 		ImGui::End();
 
+		/*if (ImGui::Begin("NetworkDebug"))
+		{
+			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
+			ImGui::Text(("Last Recieved Merged Tick: " + std::to_string(d_LastRecievedInputTick)).c_str());
+		}
+		ImGui::End();*/
+
 		for each (auto panel in m_Panels)
 		{
 			panel->OnImGuiRender();
@@ -763,6 +773,7 @@ namespace Pyxis
 					msg >> mtc.m_Tick;
 					msg >> mtc.m_InputActionCount;
 					msg >> mtc.m_Data;
+					d_LastRecievedInputTick = mtc.m_Tick;
 					
 					if (m_MTCQueue.size() > 0 && m_MTCQueue.front().m_Tick > mtc.m_Tick)
 					{
