@@ -118,6 +118,9 @@ namespace Pyxis
 		//player tools
 		int m_SelectedElementIndex = 0;
 		float m_BrushSize = 1;
+		enum BuildMode
+		{Normal, Dynamic, Kinematic};
+		BuildMode m_BuildMode;
 		BrushType m_BrushType = BrushType::circle;
 		Element m_HoveredElement = Element();
 		bool m_BuildingRigidBody = false;

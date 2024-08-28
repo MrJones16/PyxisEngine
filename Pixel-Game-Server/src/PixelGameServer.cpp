@@ -102,6 +102,8 @@ namespace Pyxis
 
 		while (m_MTCDeque.size() > 0)
 		{
+			//if there were no small wait for other players buffer, then old update ticks could progress the
+			//input ticks.
 			bool missingClient = false;
 			for each (uint64_t id in m_ClientsNeededForTick)
 			{
@@ -213,11 +215,11 @@ namespace Pyxis
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("NetworkDebug"))
+		/*if (ImGui::Begin("NetworkDebug"))
 		{
 			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
 		}
-		ImGui::End();
+		ImGui::End();*/
 	}
 
 	void PixelGameServer::OnEvent(Pyxis::Event& e)
@@ -247,6 +249,11 @@ namespace Pyxis
 		PX_TRACE("Removing Client [{0}]", client->GetID());
 		m_PlayerCount--;
 		m_ClientsNeededForTick.erase(client->GetID());
+
+		Network::Message<GameMessage> disconnectMsg;
+		disconnectMsg.header.id = GameMessage::Server_ClientDisconnected;
+		disconnectMsg << client->GetID();
+		MessageAllClients(disconnectMsg, client);
 		return;
 	}
 

@@ -1,4 +1,4 @@
-#include "GameLayer.h"
+﻿#include "GameLayer.h"
 
 #include <ImGui/imgui.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -511,6 +511,24 @@ namespace Pyxis
 			}
 
 			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Building Mode"))
+			{
+				if (ImGui::Selectable("~", m_BuildMode == BuildMode::Normal, 0, ImVec2(25, 25)))
+				{
+					m_BuildMode = BuildMode::Normal;
+				}
+				if (ImGui::Selectable("()", m_BuildMode == BuildMode::Dynamic, 0, ImVec2(25, 25)))
+				{
+					m_BuildMode = BuildMode::Dynamic;
+				}
+				if (ImGui::Selectable("[]", m_BuildMode == BuildMode::Kinematic, 0, ImVec2(25, 25)))
+				{
+					m_BuildMode = BuildMode::Kinematic;
+				}
+				ImGui::TreePop();
+			}
+
+			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Brush Shape"))
 			{
 				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
@@ -562,12 +580,12 @@ namespace Pyxis
 		}
 		ImGui::End();
 
-		if (ImGui::Begin("NetworkDebug"))
+		/*if (ImGui::Begin("NetworkDebug"))
 		{
 			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
 			ImGui::Text(("Last Recieved Merged Tick: " + std::to_string(d_LastRecievedInputTick)).c_str());
 		}
-		ImGui::End();
+		ImGui::End();*/
 
 		for each (auto panel in m_Panels)
 		{
@@ -742,6 +760,14 @@ namespace Pyxis
 					msg >> id;
 
 					m_PlayerCursors[id] = PlayerCursor(id);
+					break;
+				}
+				case GameMessage::Server_ClientDisconnected:
+				{
+					uint64_t id;
+					msg >> id;
+
+					m_PlayerCursors.erase(id);
 					break;
 				}
 				case GameMessage::Server_ClientDesynced:
