@@ -1,12 +1,11 @@
 #include "World.h"
-#include "ChunkWorker.h"
+//#include "ChunkWorker.h"
 #include <random>
 #include <thread>
 #include <mutex>
-
-#include <tinyxml2/tinyxml2.h>
+#include <tinyxml2.h>
 #include <box2d/b2_math.h>
-#include <poly2tri/poly2tri.h>
+#include <poly2tri.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis
@@ -448,14 +447,14 @@ namespace Pyxis
 
 		std::string input0Tag, input1Tag;
 		//loop over each reaction
-		for each (Reaction reaction in m_Reactions)
+		for (Reaction reaction : m_Reactions)
 		{
 			//get the first string, input 0
 			if (StringContainsTag(reaction.input_cell_0))
 			{
 				//contains a tag, so keep track of what the tag is and loop
 				input0Tag = TagFromString(reaction.input_cell_0);
-				for each (uint32_t id0 in m_TagElements[input0Tag])
+				for (uint32_t id0 : m_TagElements[input0Tag])
 				{
 					uint32_t idOut0;
 					if (StringContainsTag(reaction.output_cell_0))
@@ -471,7 +470,7 @@ namespace Pyxis
 					{
 						input1Tag = TagFromString(reaction.input_cell_1);
 						//input 1 has tag, so loop over tag elements again
-						for each (uint32_t id1 in m_TagElements[input1Tag])
+						for (uint32_t id1 : m_TagElements[input1Tag])
 						{
 							uint32_t idOut1;
 							//id0 and 1 obtained
@@ -506,7 +505,7 @@ namespace Pyxis
 				{
 					input1Tag = TagFromString(reaction.input_cell_1);
 					//input 1 has tag, so loop over tag elements again
-					for each (uint32_t id1 in m_TagElements[input1Tag])
+					for (uint32_t id1 : m_TagElements[input1Tag])
 					{
 						//id0 and 1 obtained
 						uint32_t idOut1;
@@ -635,7 +634,7 @@ namespace Pyxis
 
 	void World::GetWorldData(Network::Message<GameMessage>& msg)
 	{
-		for each (auto pair in m_PixelBodyMap)
+		for (auto pair : m_PixelBodyMap)
 		{
 			msg << pair.second->m_B2Body->GetLinearVelocity();
 			msg << pair.second->m_B2Body->GetAngularVelocity();
@@ -644,7 +643,7 @@ namespace Pyxis
 			msg << pair.second->m_B2Body->GetPosition();
 			//msg << pair.second->m_Elements;
 			int elementCount = 0;
-			for each (auto pair in pair.second->m_Elements)
+			for (auto pair : pair.second->m_Elements)
 			{
 				msg << pair.second;
 				msg << pair.first;
@@ -658,13 +657,13 @@ namespace Pyxis
 		msg << uint32_t(m_PixelBodyMap.size());
 		PX_TRACE("Uploaded {0} pixel bodies", m_PixelBodyMap.size());
 
-		for each (auto pair in m_Chunks)
+		for (auto pair : m_Chunks)
 		{
 			for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
 			{
 				msg << pair.second->m_Elements[i];
 			}
-			for each (auto minmax in pair.second->m_DirtyRects)
+			for (auto minmax : pair.second->m_DirtyRects)
 			{
 				msg << minmax;
 			}
@@ -706,13 +705,13 @@ namespace Pyxis
 		PX_TRACE("Deleting World");
 
 		//delete pixel bodies
-		for each (auto pixelBody in m_PixelBodyMap)
+		for (auto pixelBody : m_PixelBodyMap)
 		{
 			delete pixelBody.second;
 		}
 		delete m_Box2DWorld;
 		m_Box2DWorld = nullptr;
-		for each (auto& pair in m_Chunks)
+		for (auto& pair : m_Chunks)
 		{
 			delete(pair.second);
 		}
@@ -808,7 +807,7 @@ namespace Pyxis
 
 	Element World::GetElementByName(std::string elementName, int x, int y)
 	{
-		Element& result = Element();
+		Element result = Element();
 		result.m_ID = m_ElementIDs[elementName];
 		m_ElementData[result.m_ID].UpdateElementData(result, x, y);
 		return result;
@@ -899,7 +898,7 @@ namespace Pyxis
 				chunk->UpdateDirtyRect(index.x, index.y);
 			}
 		}
-		for each (auto chunk in chunksToUpdate)
+		for (auto chunk : chunksToUpdate)
 		{
 			chunk->UpdateTexture();
 		}
@@ -924,7 +923,7 @@ namespace Pyxis
 		std::vector<uint64_t> erasedPixelBodies;
 
 		//pull pixel bodies out of the simulation
-		for each (auto pair in m_PixelBodyMap)
+		for (auto pair : m_PixelBodyMap)
 		{
 			if (!pair.second->m_B2Body->IsAwake()) 
 			{
@@ -935,7 +934,7 @@ namespace Pyxis
 
 
 			std::vector<glm::ivec2> elementsToRemove;
-			for each (auto mappedElement in pair.second->m_Elements)
+			for (auto mappedElement : pair.second->m_Elements)
 			{
 				//the world position of the element is already known
 				Element& worldElement = GetElement(mappedElement.second.worldPos);
@@ -982,7 +981,7 @@ namespace Pyxis
 				//we need to reconstruct!
 
 				//remove the outdated elements
-				for each (auto localPos in elementsToRemove)
+				for (auto localPos : elementsToRemove)
 				{
 					pair.second->m_Elements.erase(localPos);
 				}
@@ -995,7 +994,7 @@ namespace Pyxis
 					//we need to delete the pixel body, since it is now empty!
 					erasedPixelBodies.push_back(pair.first);
 				}
-				for each (auto body in newBodies)
+				for (auto body : newBodies)
 				{
 					newPixelBodies.push_back(body);
 				}
@@ -1003,13 +1002,13 @@ namespace Pyxis
 		}
 		//add the new bodies to the simulation, because they are not in the world and don't
 		//need to be pulled out!
-		for each (auto body in newPixelBodies)
+		for (auto body : newPixelBodies)
 		{
 			m_PixelBodyMap[body->m_ID] = body;
 		}
 
 		//erase the erased bodies
-		for each (auto ID in erasedPixelBodies)
+		for (auto ID : erasedPixelBodies)
 		{
 			delete m_PixelBodyMap[ID];
 			m_PixelBodyMap.erase(ID);
@@ -1020,7 +1019,7 @@ namespace Pyxis
 		m_Box2DWorld->Step(1.0f / 60.0f, velocityIterations, positionIterations);
 
 		//put pixel bodies back into the simulation, and solve collisions
-		for each (auto pair in m_PixelBodyMap)
+		for (auto pair : m_PixelBodyMap)
 		{
 			//skip bodies left in the world that were sleeping
 			if (pair.second->m_InWorld) continue;
@@ -1047,7 +1046,7 @@ namespace Pyxis
 			float B = std::sin(angle);
 			auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1);//0 a
 			auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);// b 0
-			for each (auto mappedElement in pair.second->m_Elements)
+			for (auto mappedElement : pair.second->m_Elements)
 			{
 				//find the element in the world by using the transform of the body and
 				//the position of the element in the array
@@ -1102,7 +1101,7 @@ namespace Pyxis
 		}
 
 
-		for each (auto & pair in m_Chunks)
+		for (auto & pair : m_Chunks)
 		{
 			//BL
 			UpdateChunkBucket(pair.second, 0, 0);
@@ -1123,7 +1122,7 @@ namespace Pyxis
 			UpdateChunkBucket(pair.second, 6, 6);
 		}
 
-		for each (auto & pair in m_Chunks)
+		for (auto & pair : m_Chunks)
 		{
 			//BR
 			UpdateChunkBucket(pair.second, 0 + 1, 0);
@@ -1144,7 +1143,7 @@ namespace Pyxis
 			UpdateChunkBucket(pair.second, 6 + 1, 6);
 		}
 
-		for each (auto & pair in m_Chunks)
+		for (auto & pair : m_Chunks)
 		{
 			//TL
 			UpdateChunkBucket(pair.second, 0, 0 + 1);
@@ -1165,7 +1164,7 @@ namespace Pyxis
 			UpdateChunkBucket(pair.second, 6, 6 + 1);
 		}
 
-		for each (auto & pair in m_Chunks)
+		for (auto & pair : m_Chunks)
 		{
 			//TR
 			UpdateChunkBucket(pair.second, 0 + 1, 0 + 1);
@@ -1189,7 +1188,7 @@ namespace Pyxis
 		
 		if (!m_ServerMode)
 		{
-			for each (auto & pair in m_Chunks)
+			for (auto & pair : m_Chunks)
 			{
 				pair.second->UpdateTexture();
 			}
@@ -1204,7 +1203,7 @@ namespace Pyxis
 
 	void World::UpdateTextures()
 	{
-		for each (auto & pair in m_Chunks)
+		for (auto & pair : m_Chunks)
 		{
 			pair.second->UpdateTexture();
 		}
@@ -2400,14 +2399,14 @@ namespace Pyxis
 	/// </summary>
 	void World::Clear()
 	{
-		for each (auto& pair in m_Chunks)
+		for (auto& pair : m_Chunks)
 		{
 			delete pair.second;
 		}
 		m_Chunks.clear();
 
 		m_Box2DWorld->~b2World();
-		for each (auto pair in m_PixelBodyMap)
+		for (auto pair : m_PixelBodyMap)
 		{
 			delete pair.second;
 		}
@@ -2439,7 +2438,7 @@ namespace Pyxis
 	{
 
 		//PX_TRACE("Rendering world");
-		for each (auto pair in m_Chunks)
+		for (auto pair : m_Chunks)
 		{
 			//PX_TRACE("Drawing chunk {0}, {1}", pair.second->m_ChunkPos.x, pair.second->m_ChunkPos.y);
 			Renderer2D::DrawQuad(glm::vec2(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f), { 1,1 }, pair.second->m_Texture);
@@ -2510,7 +2509,7 @@ namespace Pyxis
 		PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);
 		//struct to hold the data of the b2 bodies
 		std::unordered_map<uint64_t, PixelBodyData> storage;
-		for each (auto pair in m_PixelBodyMap)
+		for (auto pair : m_PixelBodyMap)
 		{
 			//store the data to re-apply later
 			PixelBodyData data;
@@ -2527,7 +2526,7 @@ namespace Pyxis
 		//step is unnecessary but it is nicer like this
 		m_Box2DWorld->~b2World();
 		m_Box2DWorld = new b2World({ 0, -9.8f });
-		for each (auto pair in m_PixelBodyMap)
+		for (auto pair : m_PixelBodyMap)
 		{
 			//recreate the box2d body for each rigid body!
 			pair.second->CreateB2Body(m_Box2DWorld);
@@ -2609,7 +2608,7 @@ namespace Pyxis
 	{
 		glm::ivec2 pixelPosition = glm::ivec2(body.m_B2Body->GetPosition().x * PPU, body.m_B2Body->GetPosition().y * PPU);
 		//PX_TRACE("pixel body put in world at: ({0},{1})", pixelPosition.x, pixelPosition.y);
-		for each (auto mappedElement in body.m_Elements)
+		for (auto mappedElement : body.m_Elements)
 		{
 			SetElement(mappedElement.second.worldPos, mappedElement.second.element);
 		}

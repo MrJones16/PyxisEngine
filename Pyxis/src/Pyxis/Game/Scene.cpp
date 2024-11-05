@@ -30,9 +30,9 @@ namespace Pyxis
 	}
 	void Scene::Update(Timestep ts)
 	{
-		for each (auto entity in m_Entities)
+		for (std::pair<uint32_t, Ref<Entity>> entityPair : m_Entities)
 		{
-			entity.second->OnUpdate(ts);
+			entityPair.second->OnUpdate(ts);
 		}
 	}
 }

@@ -3,8 +3,8 @@
 #include "Pyxis.h"
 #include <Pyxis/Network/Network.h>
 #include "Pyxis/Core/OrthographicCameraController.h"
-#include "common/PixelClientInterface.h"
-#include "common/World.h"
+#include "PixelClientInterface.h"
+#include "World.h"
 
 namespace Pyxis
 {

@@ -15,7 +15,7 @@ namespace Pyxis
 
 	void Entity::OnUpdate(Timestep ts)
 	{
-		for each (auto prototype in m_Children)
+		for (Ref<Entity> prototype : m_Children)
 		{
 			prototype->OnUpdate(ts);
 		}
@@ -57,9 +57,9 @@ namespace Pyxis
 	}
 
 
-	EntityWithSprite::EntityWithSprite(const std::string& name)
+	EntityWithSprite::EntityWithSprite(const std::string& name) : Entity(name)
 	{
-		Entity::Entity(name);
+		//Entity::Entity(name);
 		m_Name = name;
 		m_Transform = glm::mat4(1);
 		m_Texture = nullptr;

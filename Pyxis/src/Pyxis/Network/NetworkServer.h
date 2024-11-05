@@ -241,7 +241,7 @@ namespace Pyxis
 									PX_CORE_TRACE("Recieved UDP Handshake");
 									uint64_t ID;
 									memcpy(&ID, m_ReceiveBuffer + sizeof(uint64_t), sizeof(uint64_t));
-									for each (auto & conn in m_DeqNewConnections)
+									for (auto & conn : m_DeqNewConnections)
 									{
 										if (conn->GetID() == ID)
 										{

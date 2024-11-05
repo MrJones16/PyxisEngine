@@ -1,6 +1,6 @@
 #include "PixelGameServer.h"
 
-#include <ImGui/imgui.h>
+#include <imgui.h>
 //#include <glm/gtc/type_ptr.hpp>
 
 //#include <Platform/OpenGL/OpenGLShader.h>
@@ -39,7 +39,7 @@ namespace Pyxis
 	{
 		//check to make sure all the players are still connected
 		std::vector< std::shared_ptr<Network::Connection<GameMessage>>> clientsToRemove;
-		for each (std::shared_ptr<Network::Connection<GameMessage>> client in m_DeqConnections)
+		for (std::shared_ptr<Network::Connection<GameMessage>> client : m_DeqConnections)
 		{
 			if (!client->IsConnected())
 			{
@@ -48,7 +48,7 @@ namespace Pyxis
 		}
 
 		//delete the clients after iterating
-		for each (auto client in clientsToRemove)
+		for (auto client : clientsToRemove)
 		{
 			//client is no longer connected, so remove them
 			OnClientDisconnect(client);
@@ -105,7 +105,7 @@ namespace Pyxis
 			//if there were no small wait for other players buffer, then old update ticks could progress the
 			//input ticks.
 			bool missingClient = false;
-			for each (uint64_t id in m_ClientsNeededForTick)
+			for (uint64_t id : m_ClientsNeededForTick)
 			{
 				if (m_MTCDeque.front().m_Clients.find(id) == m_MTCDeque.front().m_Clients.end())
 				{
@@ -555,12 +555,12 @@ namespace Pyxis
 			case Pyxis::InputAction::Input_Place:
 			{
 				//PX_TRACE("input action: Input_Place");
-				uint64_t id;
+				bool rigid;
 				glm::ivec2 pixelPos;
 				uint32_t elementID;
 				BrushType brush;
 				uint8_t brushSize;
-				tc >> id >> pixelPos >> elementID >> brush >> brushSize;
+				tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
 
 				m_World.PaintBrushElement(pixelPos, elementID, brush, brushSize);
 				break;

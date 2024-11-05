@@ -1,6 +1,7 @@
 #include "pxpch.h"
 #include "LayerStack.h"
 
+
 namespace Pyxis
 {
 	LayerStack::LayerStack()

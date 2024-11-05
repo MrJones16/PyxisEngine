@@ -11,8 +11,8 @@ namespace Pyxis
 	public:
 		virtual ~Shader() = default;
 
-		static Ref<Shader> Shader::Create(const std::string& filePath);
-		static Ref<Shader> Shader::Create(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource);
+		static Ref<Shader> Create(const std::string& filePath);
+		static Ref<Shader> Create(const std::string& name, const std::string& vertexSource, const std::string& fragmentSource);
 
 		virtual const std::string& GetName() const = 0;
 

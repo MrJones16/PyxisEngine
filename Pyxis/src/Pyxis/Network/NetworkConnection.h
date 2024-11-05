@@ -379,7 +379,7 @@ namespace Pyxis
 				else
 					m_QueueMessagesIn.push_back({ nullptr, m_msgTemporaryInUDP });
 
-				ReadHeaderUDP();
+				this->ReadHeaderUDP();
 			}
 
 			inline void WriteValidation()

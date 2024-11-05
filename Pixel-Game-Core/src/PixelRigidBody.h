@@ -7,7 +7,7 @@
 #include <box2d/b2_fixture.h>
 #include <box2d/b2_polygon_shape.h>
 #include <box2d/b2_math.h>
-#include <poly2tri/poly2tri.h>
+#include <poly2tri.h>
 #include <box2d/b2_world.h>
 
 namespace Pyxis
@@ -67,7 +67,7 @@ namespace Pyxis
 	public:
 		//algorithms for creating a box2d body
 		std::vector<p2t::Point> GetContourPoints();
-		std::vector<p2t::Point> PixelRigidBody::SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold);
+		std::vector<p2t::Point> SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold);
 		int GetMarchingSquareCase(glm::ivec2 position);
 
 		std::vector<glm::ivec2> PullContinuousElements(std::unordered_map<glm::ivec2, RigidBodyElement, HashVector>& elements);

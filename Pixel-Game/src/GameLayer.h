@@ -6,8 +6,8 @@
 #include "Pyxis/Core/Panel.h"
 #include "Pyxis/Core/ProfilingPanel.h"
 
-#include "common/World.h"
-#include "common/PixelClientInterface.h"
+#include "World.h"
+#include "PixelClientInterface.h"
 
 
 
@@ -58,7 +58,7 @@ namespace Pyxis
 
 		//game things
 		Ref<World> m_World;
-		std::chrono::time_point<std::chrono::steady_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
+		std::chrono::time_point<std::chrono::high_resolution_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
 		float m_UpdatesPerSecond = 30.0f;
 
 		//core multiplayer things

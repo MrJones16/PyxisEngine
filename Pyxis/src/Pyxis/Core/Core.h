@@ -13,7 +13,7 @@
 		#define PYXIS_API
 	#endif
 #else
-	#error Pyxis only supprts Windows at the moment
+	#error Pyxis only supports Windows at the moment
 #endif // !PX_PLATFORM_WINDOWS
 
 #ifdef PX_DEBUG

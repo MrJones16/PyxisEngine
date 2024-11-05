@@ -104,7 +104,7 @@ namespace Pyxis
 		}
 	};
 
-	Pyxis::Application* Pyxis::CreateApplication() {
+	Pyxis::Application* CreateApplication() {
 		return new PixelGame();
 	}
 }

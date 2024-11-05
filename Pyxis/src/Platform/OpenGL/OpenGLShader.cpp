@@ -20,7 +20,7 @@ namespace Pyxis
     OpenGLShader::OpenGLShader(const std::string& filePath)
     {
         std::string source = ReadFile(filePath);
-        auto shaderSources = PreProcess(source);
+        std::unordered_map<GLenum, std::string> shaderSources = PreProcess(source);
         Compile(shaderSources);
 
         // Extract name from filepath

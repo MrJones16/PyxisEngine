@@ -1,6 +1,6 @@
 ﻿#include "GameLayer.h"
 
-#include <ImGui/imgui.h>
+#include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <Platform/OpenGL/OpenGLShader.h>
@@ -276,7 +276,7 @@ namespace Pyxis
 						(uint16_t)m_BrushType,
 						(uint32_t)m_SelectedElementIndex,
 						pixelPos, 
-						m_ClientInterface.GetID());
+						false);
 				}
 			}
 
@@ -329,7 +329,7 @@ namespace Pyxis
 			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMin.x, worldMax.y});
 			Renderer2D::DrawLine({ worldMax.x, worldMin.y }, { worldMax.x, worldMax.y});
 
-			for each (auto playerCursor in m_PlayerCursors)
+			for (auto playerCursor : m_PlayerCursors)
 			{
 				//skip your own mouse pos
 				if (playerCursor.first == m_ClientInterface.GetID()) continue;
@@ -587,7 +587,7 @@ namespace Pyxis
 		}
 		ImGui::End();*/
 
-		for each (auto panel in m_Panels)
+		for (auto panel : m_Panels)
 		{
 			panel->OnImGuiRender();
 		}
@@ -979,12 +979,12 @@ namespace Pyxis
 			case Pyxis::InputAction::Input_Place:
 			{
 				//PX_TRACE("input action: Input_Place");
-				uint64_t id;
+				bool rigid;
 				glm::ivec2 pixelPos;
 				uint32_t elementID;
 				BrushType brush;
 				uint8_t brushSize;
-				tc >> id >> pixelPos >> elementID >> brush >> brushSize;
+				tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
 
 				m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
 				break;

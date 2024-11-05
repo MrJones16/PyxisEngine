@@ -69,7 +69,7 @@ namespace Pyxis
 
 		//run triangulation algorithm to create the needed triangles/fixtures
 		std::vector<p2t::Point*> polyLine;
-		for each (auto point in contourVector)
+		for (auto point : contourVector)
 		{
 			polyLine.push_back(new p2t::Point(point));
 		}
@@ -78,7 +78,7 @@ namespace Pyxis
 		p2t::CDT* cdt = new p2t::CDT(polyLine);
 		cdt->Triangulate();
 		auto triangles = cdt->GetTriangles();
-		for each (auto triangle in triangles)
+		for (auto triangle : triangles)
 		{
 			b2PolygonShape triangleShape;
 			b2Vec2 points[3] = {
