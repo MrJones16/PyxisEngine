@@ -6,6 +6,8 @@
 #include "PixelClientInterface.h"
 #include "World.h"
 
+#include <Pyxis/Network/SteamNetworkServer.h>
+
 namespace Pyxis
 {
 
@@ -17,8 +19,9 @@ namespace Pyxis
 
 		virtual void OnAttach();
 		virtual void OnDetatch();
-
 		virtual void OnUpdate(Pyxis::Timestep ts) override;
+
+		virtual void OnUpdateOld(Pyxis::Timestep ts);
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Pyxis::Event& e) override;
 		bool OnWindowResizeEvent(Pyxis::WindowResizeEvent& event);
@@ -53,6 +56,12 @@ namespace Pyxis
 		//delay making the server sleep, so the player count is updated and drawn at start.
 		int m_SleepDelay = 0;
 		int m_SleepDelayMax = 10000;
+
+		//STEAMTESTING
+		GameServer m_GameServer;
+		uint16_t m_SteamPort;
+		void SteamStart();
+		void SteamClose();
 
 	};
 }

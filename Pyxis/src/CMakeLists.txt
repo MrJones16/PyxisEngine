@@ -124,4 +124,4 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
     
-)
+ "Pyxis/Network/SteamNetworkClient.cpp" "Pyxis/Network/SteamNetworkClient.h" "Pyxis/Network/SteamNetworkServer.cpp" "Pyxis/Network/SteamNetworkServer.h")
