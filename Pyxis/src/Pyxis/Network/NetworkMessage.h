@@ -1,7 +1,5 @@
 #pragma once
 
-#include "NetworkCommon.h"
-
 //following guidance on asio from OLC "javix9"
 
 namespace Pyxis

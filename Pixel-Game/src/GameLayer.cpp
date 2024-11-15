@@ -378,7 +378,7 @@ namespace Pyxis
 			auto sceneViewSize = ImGui::GetContentRegionAvail();
 			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
 			ImGui::Image(
-				(ImTextureID)m_SceneFrameBuffer->GetColorAttachmentRendererID(),
+				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID()),
 				sceneViewSize,
 				ImVec2(0, 1),
 				ImVec2(1, 0),

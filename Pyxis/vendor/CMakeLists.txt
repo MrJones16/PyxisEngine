@@ -24,12 +24,6 @@ add_subdirectory(box2d)
 # Poly2Tri
 add_subdirectory(poly2tri)
 
-#Game Networking Sockets
-#add_subdirectory(GameNetworkingSockets)
-target_link_directories(PyxisEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/build/bin/Debug)
-target_link_libraries (PyxisEngine PUBLIC GameNetworkingSockets)
-#target_link_libraries(PyxisEngine ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/build/bin/Debug/GameNetworkingSockets.dll)
-
 # Include directories for vendor libraries
 target_include_directories(PyxisEngine
     PUBLIC
@@ -50,4 +44,15 @@ target_include_directories(PyxisEngine
 target_sources(PyxisEngine PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/stb_image/stb_image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/tinyxml2/tinyxml2.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/isteamnetworkingmessages.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/isteamnetworkingsockets.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/isteamnetworkingutils.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steam_api_common.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamclientpublic.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamnetworkingcustomsignaling.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamnetworkingsockets.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamnetworkingsockets_flat.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamnetworkingtypes.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamtypes.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/GameNetworkingSockets/include/steam/steamuniverse.h
 )

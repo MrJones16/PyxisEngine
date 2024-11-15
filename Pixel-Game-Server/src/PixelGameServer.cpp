@@ -15,10 +15,6 @@ namespace Pyxis
 		m_World()//m_World("../Pixel-Game/assets")
 	{
 		m_World.m_ServerMode = true;
-
-		//STEAMTESTING
-		m_GameServer.Start(port + 10);
-
 	}
 
 	void PixelGameServer::OnAttach()
@@ -30,20 +26,19 @@ namespace Pyxis
 		// TODO: setup logs / sinks for spdlog
 		//Pyxis::Log::GetClientLogger() ...
 
-		//Start();
-		SteamStart();
+		//STEAMTESTING
+		Start();
 	}
 
 	void PixelGameServer::OnDetatch()
 	{
 		//stop the server
-		//Stop();
-		SteamClose();
+		Stop();
 	}
 
 	void PixelGameServer::OnUpdate(Pyxis::Timestep ts)
 	{
-		m_GameServer.Update();
+		
 	}
 	void PixelGameServer::OnUpdateOld(Pyxis::Timestep ts)
 	{
@@ -610,16 +605,6 @@ namespace Pyxis
 		{
 			m_World.UpdateTextures();
 		}
-	}
-
-	void PixelGameServer::SteamStart()
-	{
-		m_GameServer.Start(m_SteamPort);
-	}
-
-	void PixelGameServer::SteamClose()
-	{
-		m_GameServer.Close();
 	}
 
 }

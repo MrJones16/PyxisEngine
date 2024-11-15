@@ -1,6 +1,20 @@
 # Define the Core library
 add_library(PyxisEngine)
 
+target_compile_definitions(PyxisEngine PUBLIC STEAMNETWORKINGSOCKETS_STATIC_LINK)
+
+
+#set(VCPKG_CRT_LINKAGE static)
+#set(VCPKG_LIBRARY_LINKAGE static)
+find_package(GameNetworkingSockets CONFIG REQUIRED)
+
+# GameNetworkingSockets static library requires both static and GameNetworkingSockets::GameNetworkingSockets targets
+target_link_libraries(PyxisEngine 
+    PRIVATE 
+    GameNetworkingSockets::static
+    GameNetworkingSockets::GameNetworkingSockets
+)
+
 target_link_libraries(PyxisEngine
     PUBLIC
     #asio
@@ -12,6 +26,7 @@ target_link_libraries(PyxisEngine
     box2d
     poly2tri
 )
+
 
 # Set the include directory to current directory.
 target_include_directories(PyxisEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -88,10 +103,6 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Network/Network.h
     Pyxis/Network/NetworkClient.cpp
     Pyxis/Network/NetworkClient.h
-    Pyxis/Network/NetworkCommon.cpp
-    Pyxis/Network/NetworkCommon.h
-    Pyxis/Network/NetworkConnection.cpp
-    Pyxis/Network/NetworkConnection.h
     Pyxis/Network/NetworkMessage.h
     Pyxis/Network/NetworkServer.cpp
     Pyxis/Network/NetworkServer.h
@@ -123,5 +134,5 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/Texture.h
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
-    
- "Pyxis/Network/SteamNetworkClient.cpp" "Pyxis/Network/SteamNetworkClient.h" "Pyxis/Network/SteamNetworkServer.cpp" "Pyxis/Network/SteamNetworkServer.h")
+
+    )
