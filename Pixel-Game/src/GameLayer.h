@@ -5,16 +5,16 @@
 #include "Pyxis/Core/OrthographicCameraController.h"
 #include "Pyxis/Core/Panel.h"
 #include "Pyxis/Core/ProfilingPanel.h"
+#include <Pyxis/Network/NetworkClient.h>
 
 #include "World.h"
-#include "PixelClientInterface.h"
 
 
 
 namespace Pyxis
 {
 
-	class GameLayer : public Layer
+	class GameLayer : public Layer, public Network::ClientInterface
 	{
 	public:
 		GameLayer();
@@ -33,12 +33,16 @@ namespace Pyxis
 		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
-		//game functions
+		//networking
+		//steamfix, get rid of init var?
+		bool m_GNSInitialized = false;
 		bool ConnectToServer(const std::string& AddressAndPort);
-		void ConnectionUpdate();
-		void HandleMessages();
-		void HandleTickClosure(MergedTickClosure& tc);
-		bool CreateWorld();
+
+		//game functions
+		//void ConnectionUpdate();
+		//void HandleMessages();
+		//void HandleTickClosure(MergedTickClosure& tc);
+		//bool CreateWorld();
 		void TextCentered(std::string text);
 		std::pair<float, float> GetMousePositionScene();
 		
@@ -62,7 +66,7 @@ namespace Pyxis
 		float m_UpdatesPerSecond = 30.0f;
 
 		//core multiplayer things
-		PixelClientInterface m_ClientInterface;
+		Network::ClientInterface m_ClientInterface;
 		std::deque<MergedTickClosure> m_MTCQueue;
 		bool m_LatencyStateReset = false;
 		uint64_t m_InputTick = 0;

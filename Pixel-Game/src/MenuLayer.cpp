@@ -25,12 +25,13 @@ namespace Pyxis
 
 	void MenuLayer::OnUpdate(Timestep ts)
 	{
+		if (m_GameLayer->m_GNSInitialized) m_GameLayer->UpdateInterface();
 		//while we are connecting and there are no failures, run the update connection function
 		switch (m_GameLayer->m_ConnectionStatus)
 		{
 		case GameLayer::Connecting:
 		{
-			m_GameLayer->ConnectionUpdate();
+			//m_GameLayer->ConnectionUpdate();
 			break;
 		}
 		case GameLayer::Connected:

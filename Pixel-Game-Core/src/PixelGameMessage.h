@@ -30,8 +30,4 @@ namespace Pyxis
 		Server_Message,
 	};
 
-	class PixelClientInterface : public Network::ClientInterface<GameMessage>
-	{
-	public:
-	};
 }

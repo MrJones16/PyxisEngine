@@ -4,8 +4,7 @@ target_sources(Pixel-Game-Core PRIVATE
 	src/Chunk.cpp
 	src/Chunk.h
 	src/Element.h
-	src/PixelClientInterface.cpp
-	src/PixelClientInterface.h
+	src/PixelGameMessage.h
 	src/PixelRigidBody.cpp
 	src/PixelRigidBody.h
 	src/VectorHash.h

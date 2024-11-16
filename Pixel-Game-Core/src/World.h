@@ -8,7 +8,7 @@
 #include <box2d/b2_world.h>
 #include "PixelRigidBody.h"
 #include <box2d/b2_math.h>
-#include "PixelClientInterface.h"
+#include "PixelGameMessage.h"
 
 
 namespace Pyxis

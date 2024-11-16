@@ -12,11 +12,10 @@ namespace Pyxis
 	namespace Network
 	{
 
-		template<typename T>
 		class ServerInterface
 		{
 		public:
-			ServerInterface(uint16_t port);
+			ServerInterface();
 
 			virtual ~ServerInterface();
 
@@ -25,12 +24,12 @@ namespace Pyxis
 			/// and listens to the port set at instantiation. 
 			/// </summary>
 			/// <returns>True if successful</returns>
-			bool Start();
+			bool Start(uint16_t port);
 
 			/// <summary>
 			/// The main update loop for the server. It polls incoming messages, connection changes, and waits
 			/// </summary>
-			void Update();
+			void UpdateInterface();
 			void Stop();
 
 			// send a message to a specific client
@@ -44,16 +43,17 @@ namespace Pyxis
 			//void MessageClient(std::shared_ptr<Connection<T>> client, const Message<T>& msg);
 		protected:
 			//called when a client connects to the server
-			inline virtual bool OnClientConnect(std::shared_ptr<Connection<T>> client);
+			inline virtual bool OnClientConnect(HSteamNetConnection client);
 			//called when a client appears to have disconnected
-			inline virtual void OnClientDisconnect(std::shared_ptr<Connection<T>> client);
+			inline virtual void OnClientDisconnect(HSteamNetConnection client);
 			//called when a message arrives
-			virtual void OnMessage(std::shared_ptr<Connection<T>> client, Message<T>& msg);
+			//virtual void OnMessage(HSteamNetConnection client, Message<T>& msg);
 
 		protected:
 
 			static ServerInterface* s_pCallbackInstance;
 
+			SteamNetworkingIPAddr m_hLocalAddress;
 			HSteamListenSocket m_hListenSock;
 			HSteamNetPollGroup m_hPollGroup;
 			ISteamNetworkingSockets* m_pInterface;
@@ -67,7 +67,7 @@ namespace Pyxis
 			std::map<HSteamNetConnection, Client_t > m_mapClients;
 
 			//thread safe queue for incoming message packets
-			ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;
+			//ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;
 
 			// clients will be identified in the "wider system" via an ID
 			uint64_t m_IDCounter = 10000;

@@ -140,7 +140,7 @@ namespace Pyxis
 		template <typename T>
 		class Connection;
 
-		template<typename T>
+		/*template<typename T>
 		struct OwnedMessage
 		{
 			std::shared_ptr<Connection<T>> remote = nullptr;
@@ -154,6 +154,6 @@ namespace Pyxis
 				os << msg.msg;
 				return os;
 			}
-		};
+		};*/
 	}
 }

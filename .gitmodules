@@ -20,6 +20,3 @@
 [submodule "Pyxis/vendor/asio"]
 	path = Pyxis/vendor/asio
 	url = https://github.com/chriskohlhoff/asio
-[submodule "Pyxis/vendor/GameNetworkingSockets"]
-	path = Pyxis/vendor/GameNetworkingSockets
-	url = https://github.com/ValveSoftware/GameNetworkingSockets.git

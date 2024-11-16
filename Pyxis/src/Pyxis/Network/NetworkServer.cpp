@@ -6,22 +6,25 @@ namespace Pyxis
 {
 	namespace Network
 	{
-		template<typename T>
-		ServerInterface<T>::ServerInterface(uint16_t port)
+		
+		ServerInterface::ServerInterface()
+		{
+			
+		}
+
+		
+		ServerInterface::~ServerInterface()
 		{
 
 		}
 
-		template<typename T>
-		ServerInterface<T>::~ServerInterface()
+		
+		bool ServerInterface::Start(uint16_t port)
 		{
-
-		}
-
-		template<typename T>
-		bool ServerInterface<T>::Start()
-		{
+			m_hLocalAddress.Clear();
+			m_hLocalAddress.m_port = port;
 			//initialize the networking sockets
+			//steamfix todo: move initialization into an application? like more of an engine-init than 
 			SteamDatagramErrMsg errMsg;
 			if (!GameNetworkingSockets_Init(nullptr, errMsg))
 			{
@@ -34,38 +37,35 @@ namespace Pyxis
 			m_pInterface = SteamNetworkingSockets();
 
 			// Start listening
-			SteamNetworkingIPAddr serverLocalAddr;
-			serverLocalAddr.Clear();
-			serverLocalAddr.m_port = nPort;
 			SteamNetworkingConfigValue_t opt;
 
 			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
-			m_hListenSock = m_pInterface->CreateListenSocketIP(serverLocalAddr, 1, &opt);
+			m_hListenSock = m_pInterface->CreateListenSocketIP(m_hLocalAddress, 1, &opt);
 			if (m_hListenSock == k_HSteamListenSocket_Invalid)
 			{
-				PX_CORE_ERROR("Failed to listen on port {0}", nPort);
+				PX_CORE_ERROR("Failed to listen on port {0}", m_hLocalAddress.m_port);
 				return false;
 			}
 			m_hPollGroup = m_pInterface->CreatePollGroup();
 			if (m_hPollGroup == k_HSteamNetPollGroup_Invalid)
 			{
-				PX_CORE_ERROR("Failed to listen on port {0}", nPort);
+				PX_CORE_ERROR("Failed to listen on port {0}", m_hLocalAddress.m_port);
 				return false;
 			}
-			PX_INFO("Steam Server listening on port {0}", nPort);
+			PX_INFO("Steam Server listening on port {0}", m_hLocalAddress.m_port);
 			return true;
 		}
 
-		template<typename T>
-		void ServerInterface<T>::Update()
+		
+		void ServerInterface::UpdateInterface()
 		{
 			PollIncomingMessages();
 			PollConnectionStateChanges();
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
 
-		template<typename T>
-		void ServerInterface<T>::Stop()
+		
+		void ServerInterface::Stop()
 		{
 			// Close all the connections
 			PX_CORE_TRACE("Closing connections...");
@@ -93,14 +93,14 @@ namespace Pyxis
 
 		}
 
-		template<typename T>
-		void ServerInterface<T>::SendStringToClient(HSteamNetConnection conn, const char* str)
+		
+		void ServerInterface::SendStringToClient(HSteamNetConnection conn, const char* str)
 		{
 			m_pInterface->SendMessageToConnection(conn, str, (uint32)strlen(str), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
-		template<typename T>
-		void ServerInterface<T>::SendStringToAllClients(const char* str, HSteamNetConnection except)
+		
+		void ServerInterface::SendStringToAllClients(const char* str, HSteamNetConnection except)
 		{
 			for (auto& c : m_mapClients)
 			{
@@ -109,8 +109,8 @@ namespace Pyxis
 			}
 		}
 
-		template<typename T>
-		void ServerInterface<T>::PollIncomingMessages()
+		
+		void ServerInterface::PollIncomingMessages()
 		{
 			char temp[1024];
 
@@ -162,8 +162,8 @@ namespace Pyxis
 			}
 		}
 
-		template<typename T>
-		void ServerInterface<T>::SetClientNick(HSteamNetConnection hConn, const char* nick)
+		
+		void ServerInterface::SetClientNick(HSteamNetConnection hConn, const char* nick)
 		{
 			// Remember their nick
 			m_mapClients[hConn].m_sNick = nick;
@@ -172,8 +172,8 @@ namespace Pyxis
 			m_pInterface->SetConnectionName(hConn, nick);
 		}
 
-		template<typename T>
-		void ServerInterface<T>::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
+		
+		void ServerInterface::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 		{
 			char temp[1024];
 
@@ -316,41 +316,43 @@ namespace Pyxis
 			}
 		}
 
-		template<typename T>
-		void ServerInterface<T>::SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
+
+		ServerInterface* ServerInterface::s_pCallbackInstance = nullptr;
+		
+		void ServerInterface::SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo)
 		{
 			s_pCallbackInstance->OnSteamNetConnectionStatusChanged(pInfo);
 		}
 
-		template<typename T>
-		void ServerInterface<T>::PollConnectionStateChanges()
+		
+		void ServerInterface::PollConnectionStateChanges()
 		{
 			s_pCallbackInstance = this;
 			m_pInterface->RunCallbacks();
 		}
 
-		template<typename T>
-		inline bool ServerInterface<T>::OnClientConnect(std::shared_ptr<Connection<T>> client)
+		
+		inline bool ServerInterface::OnClientConnect(HSteamNetConnection client)
 		{
 			return false;
 		}
 
-		template<typename T>
-		inline void ServerInterface<T>::OnClientDisconnect(std::shared_ptr<Connection<T>> client)
+		
+		inline void ServerInterface::OnClientDisconnect(HSteamNetConnection client)
 		{
 
 		}
 
-		template<typename T>
-		void ServerInterface<T>::OnMessage(std::shared_ptr<Connection<T>> client, Message<T>& msg)
+		
+		/*void ServerInterface::OnMessage(HSteamNetConnection client, Message& msg)
 		{
 
-		}
+		}*/
 
 
 
-		/*template<typename T>
-		void ServerInterface<T>::MessageClient(std::shared_ptr<Connection<T>> client, const Message<T>& msg)
+		/*
+		void ServerInterface::MessageClient(std::shared_ptr<Connection> client, const Message& msg)
 		{
 			if (client && client->IsConnected())
 			{
