@@ -686,6 +686,8 @@ namespace Pyxis
 			if (!serverAddr.ParseString(AddressAndPort.c_str()))
 			{
 				PX_CORE_ERROR("Invalid server address '{0}'", AddressAndPort);
+				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+				m_ConnectionStatusMessage = "Invalid Server Address";
 				return false;
 			}
 			if (serverAddr.m_port == 0)
@@ -698,18 +700,7 @@ namespace Pyxis
 		serverAddr.ToString(serverAddrCString, sizeof(serverAddrCString), true);
 		PX_TRACE("Connecting to address {0}", serverAddrCString);
 		//m_ClientInterface.Disconnect();
-		if (Connect(serverAddr)) {
-			PX_TRACE("Connecting To Server...");
-			m_ConnectionStatus = Connecting;
-			m_GNSInitialized = true;
-			return true;
-		}
-		else
-		{
-			PX_ERROR("Failed to connect to the server...");
-			m_ConnectionStatus = FailedToConnect;
-			return false;
-		}
+		return Connect(serverAddr);
 	}
 
 	//void GameLayer::ConnectionUpdate()

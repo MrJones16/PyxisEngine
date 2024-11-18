@@ -2,9 +2,8 @@
 
 #include "Pyxis.h"
 #include "Pyxis/Network/NetworkServer.h"
-#include "Pyxis/Network/NetworkClient.h"
+#include "PixelNetworking.h"
 #include "Pyxis/Core/OrthographicCameraController.h"
-#include "PixelGameMessage.h"
 #include "World.h"
 
 namespace Pyxis

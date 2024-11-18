@@ -4,6 +4,7 @@
 #include "Input.h"
 #include <GLFW/glfw3.h>
 #include "Pyxis/Renderer/Renderer.h"
+#include "Pyxis/Network/Network.h"
 
 #include <GLFW/glfw3.h>//temp for time
 
@@ -23,7 +24,10 @@ namespace Pyxis
 		m_Window->SetVSync(true);
 
 		Renderer::Init(m_Window->GetWidth(), m_Window->GetHeight());
-
+		if (!Pyxis::Network::Network_Init())
+		{
+			m_Running = false;
+		}
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 	}

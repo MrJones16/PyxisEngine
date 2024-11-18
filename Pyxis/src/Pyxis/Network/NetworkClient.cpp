@@ -9,51 +9,112 @@ namespace Pyxis
 		
 		bool ClientInterface::Connect(const SteamNetworkingIPAddr& serverAddr)
 		{
-			//steamfix, maybe move init to a higher level?
-			SteamDatagramErrMsg errMsg;
-			if (!GameNetworkingSockets_Init(nullptr, errMsg))
-			{
-				PX_CORE_ERROR("SteamServer::Start->GameNetworkingSockets_Init failed.  {0}", errMsg);
-				return false;
-			}
 			// Select instance to use.  For now we'll always use the default.
 			m_pInterface = SteamNetworkingSockets();
 
-			// Start connecting
+
+			//Start Connecting
 			char szAddr[SteamNetworkingIPAddr::k_cchMaxString];
 			serverAddr.ToString(szAddr, sizeof(szAddr), true);
-			PX_CORE_INFO("Connecting to chat server at {0}", szAddr);
+			PX_CORE_INFO("Connecting to server at {0}", szAddr);
 			SteamNetworkingConfigValue_t opt;
 			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
 			m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
 			if (m_hConnection == k_HSteamNetConnection_Invalid)
 			{
 				PX_CORE_ERROR("Failed to create connection");
+				m_ConnectionStatusMessage = "Failed to create connection";
+				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+				OnConnectionFailure(m_ConnectionStatusMessage);
 				return false;
 			}
+
+			//Currently Connecting
+			m_ConnectionStatusMessage = "Connecting";
+			m_ConnectionStatus = Connecting;
+			return true;
+		}
+
+		bool ClientInterface::Connect(const std::string& serverAddrString)
+		{
+			// Select instance to use.  For now we'll always use the default.
+			m_pInterface = SteamNetworkingSockets();
+
+			//Parse the string into a server address
+			SteamNetworkingIPAddr serverAddr; serverAddr.Clear();
+			if (serverAddr.IsIPv6AllZeros())
+			{
+				if (!serverAddr.ParseString(serverAddrString.c_str()))
+				{
+					m_ConnectionStatusMessage = "Invalid Server Address: " + serverAddrString;
+					PX_CORE_ERROR(m_ConnectionStatusMessage);
+					m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+					OnConnectionFailure(m_ConnectionStatusMessage);
+					return false;
+				}
+				if (serverAddr.m_port == 0)
+					serverAddr.m_port = 21228;
+			}
+
+			//Start Connecting
+			PX_CORE_INFO("Connecting to server at {0}", serverAddrString);
+			SteamNetworkingConfigValue_t opt;
+			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
+			m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
+			if (m_hConnection == k_HSteamNetConnection_Invalid)
+			{
+				PX_CORE_ERROR("Failed to create connection");
+				m_ConnectionStatusMessage = "Failed to create connection";
+				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+				OnConnectionFailure(m_ConnectionStatusMessage);
+				return false;
+			}
+
+			//Currently Connecting
+			m_ConnectionStatusMessage = "Connecting";
+			m_ConnectionStatus = Connecting;
 			return true;
 		}
 
 		
 		void ClientInterface::UpdateInterface()
 		{
-			PollIncomingMessages();
-			PollConnectionStateChanges();
+			if (m_ConnectionStatus == Connected)
+			{
+				PollIncomingMessages();
+				PollConnectionStateChanges();
+			}
 		}
 
 		
 		void ClientInterface::Disconnect()
 		{
-			PX_CORE_TRACE("Disconnecting from chat server");
+			//Only disconnect if we are connected
+			if (m_ConnectionStatus != ConnectionStatus::Connected) return;
+
+			//Set our state to disconnected
+			m_ConnectionStatus = ConnectionStatus::Disconnected;
+
 
 			// Close the connection gracefully.
 			// We use linger mode to ask for any remaining reliable data
 			// to be flushed out.  But remember this is an application
 			// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
+			PX_CORE_TRACE("Disconnecting from chat server");
 			m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
 		}
 
 		
+		void ClientInterface::OnConnectionLost(const std::string& reasonText)
+		{
+
+		}
+
+		void ClientInterface::OnConnectionFailure(const std::string& reasonText)
+		{
+
+		}
+
 		void ClientInterface::SendStringToServer(const std::string& stringMessage)
 		{
 			m_pInterface->SendMessageToConnection(m_hConnection, stringMessage.c_str(), (uint32)stringMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
@@ -92,27 +153,40 @@ namespace Pyxis
 			{
 			case k_ESteamNetworkingConnectionState_None:
 				// NOTE: We will get callbacks here when we destroy connections.  You can ignore these.
+				m_ConnectionStatus = ConnectionStatus::Disconnected;
+				m_ConnectionStatusMessage = "We closed the connection";
 				break;
 
 			case k_ESteamNetworkingConnectionState_ClosedByPeer:
 			case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
 			{
-				//quit
+				//quit?
 
 				// Print an appropriate message
+
+				//We were connecting when we encountered a problem
 				if (pInfo->m_eOldState == k_ESteamNetworkingConnectionState_Connecting)
 				{
 					// Note: we could distinguish between a timeout, a rejected connection,
 					// or some other transport problem.
-					PX_CORE_TRACE("We sought the remote host, yet our efforts were met with defeat.  ({0})", pInfo->m_info.m_szEndDebug);
+					m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+					m_ConnectionStatusMessage = "We sought the remote host, yet our efforts were met with defeat.  (" + (std::string)(pInfo->m_info.m_szEndDebug) + ")";
+					PX_CORE_TRACE("{0}", m_ConnectionStatusMessage);
+					OnConnectionFailure(m_ConnectionStatusMessage);
 				}
 				else if (pInfo->m_info.m_eState == k_ESteamNetworkingConnectionState_ProblemDetectedLocally)
 				{
-					PX_CORE_TRACE("Alas, troubles beset us; we have lost contact with the host.  ({0})", pInfo->m_info.m_szEndDebug);
+					m_ConnectionStatus = ConnectionStatus::LostConnection;
+					m_ConnectionStatusMessage = "Alas, troubles beset us; we have lost contact with the host. (" + (std::string)(pInfo->m_info.m_szEndDebug) + ")";
+					PX_CORE_TRACE("{0}", m_ConnectionStatusMessage);
+					OnConnectionLost(m_ConnectionStatusMessage);
 				}
 				else
 				{
 					// NOTE: We could check the reason code for a normal disconnection
+					//NOTE?? is this case even possible to reach? i don't think so
+					m_ConnectionStatus = ConnectionStatus::Disconnected;
+					m_ConnectionStatusMessage = "The host hath bidden us farewell.";
 					PX_CORE_TRACE("The host hath bidden us farewell.  ({0})", pInfo->m_info.m_szEndDebug);
 				}
 
@@ -133,6 +207,8 @@ namespace Pyxis
 				break;
 
 			case k_ESteamNetworkingConnectionState_Connected:
+				m_ConnectionStatus = ConnectionStatus::Connected;
+				m_ConnectionStatusMessage = "Connected";
 				PX_CORE_INFO("Connected to server OK");
 				break;
 

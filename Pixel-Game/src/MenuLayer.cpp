@@ -25,16 +25,16 @@ namespace Pyxis
 
 	void MenuLayer::OnUpdate(Timestep ts)
 	{
-		if (m_GameLayer->m_GNSInitialized) m_GameLayer->UpdateInterface();
+		m_GameLayer->UpdateInterface();
 		//while we are connecting and there are no failures, run the update connection function
-		switch (m_GameLayer->m_ConnectionStatus)
+		switch (m_GameLayer->GetConnectionStatus())
 		{
-		case GameLayer::Connecting:
+		case Network::ClientInterface::ConnectionStatus::Connecting:
 		{
 			//m_GameLayer->ConnectionUpdate();
 			break;
 		}
-		case GameLayer::Connected:
+		case Network::ClientInterface::ConnectionStatus::Connected:
 		{
 			if (!m_GameLayerAttached)
 			{
@@ -43,19 +43,19 @@ namespace Pyxis
 			}
 			break;
 		}
-		case GameLayer::Disconnected:
+		case Network::ClientInterface::ConnectionStatus::NotConnected:
 		{
 			if (m_GameLayerAttached)
 			{
 				//detach on disconnect
 				DetachGameLayer();
-				m_GameLayer->m_ConnectionStatus = GameLayer::NotConnected;
+				//m_GameLayer->GetConnectionStatus() = GameLayer::NotConnected;
 			}
 			break;
 		}
 		default:
 		{
-			//do nothing
+			//Do nothing.
 			break;
 		}
 
@@ -68,9 +68,9 @@ namespace Pyxis
 	void MenuLayer::OnImGuiRender()
 	{
 
-		switch (m_GameLayer->m_ConnectionStatus)
+		switch (m_GameLayer->GetConnectionStatus())
 		{
-		case GameLayer::NotConnected:
+		case Network::ClientInterface::ConnectionStatus::NotConnected:
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show main menu
@@ -89,7 +89,7 @@ namespace Pyxis
 			ImGui::End();
 			break;
 		}
-		case GameLayer::Connecting:
+		case Network::ClientInterface::ConnectionStatus::Connecting:
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show that we are connecting
@@ -101,7 +101,7 @@ namespace Pyxis
 			ImGui::End();
 			break;
 		}
-		case GameLayer::FailedToConnect:
+		case Network::ClientInterface::ConnectionStatus::FailedToConnect:
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			ImGui::SetNextWindowDockID(dock);
@@ -112,7 +112,7 @@ namespace Pyxis
 				ImGui::Text(m_GameLayer->m_ConnectionErrorMessage.c_str());
 				if (ImGui::Button("Okay"))
 				{
-					m_GameLayer->m_ConnectionStatus = GameLayer::NotConnected;
+					m_GameLayer->Disconnect();
 				}
 			}
 			ImGui::End();

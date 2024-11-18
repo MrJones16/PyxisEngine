@@ -2,6 +2,10 @@
 
 #include "NetworkServer.h"
 
+#ifndef PX_DEFAULT_PORT
+#define PX_DEFAULT_PORT 21218
+#endif
+
 namespace Pyxis
 {
 	namespace Network
@@ -21,16 +25,9 @@ namespace Pyxis
 		
 		bool ServerInterface::Start(uint16_t port)
 		{
+			if (port == 0) port = PX_DEFAULT_PORT;
 			m_hLocalAddress.Clear();
 			m_hLocalAddress.m_port = port;
-			//initialize the networking sockets
-			//steamfix todo: move initialization into an application? like more of an engine-init than 
-			SteamDatagramErrMsg errMsg;
-			if (!GameNetworkingSockets_Init(nullptr, errMsg))
-			{
-				PX_CORE_ERROR("SteamServer::Start->GameNetworkingSockets_Init failed.  {0}", errMsg);
-				return false;
-			}
 
 			// Select instance to use.  For now we'll always use the default.
 			// But we could use SteamGameServerNetworkingSockets() on Steam.

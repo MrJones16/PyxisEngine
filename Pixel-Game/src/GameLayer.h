@@ -34,8 +34,6 @@ namespace Pyxis
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
 		//networking
-		//steamfix, get rid of init var?
-		bool m_GNSInitialized = false;
 		bool ConnectToServer(const std::string& AddressAndPort);
 
 		//game functions
@@ -52,11 +50,7 @@ namespace Pyxis
 
 	public:
 		//things for the main menu to use to connect game world to server
-		enum ConnectionStatus
-		{
-			NotConnected, Connecting, FailedToConnect, Disconnected, Connected
-		};
-		ConnectionStatus m_ConnectionStatus = NotConnected;
+		
 		std::string m_ConnectionErrorMessage = "";
 	private:
 

@@ -24,7 +24,7 @@ namespace Pyxis
 			/// and listens to the port set at instantiation. 
 			/// </summary>
 			/// <returns>True if successful</returns>
-			bool Start(uint16_t port);
+			bool Start(uint16_t port = 0);
 
 			/// <summary>
 			/// The main update loop for the server. It polls incoming messages, connection changes, and waits
