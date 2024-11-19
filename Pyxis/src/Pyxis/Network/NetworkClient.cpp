@@ -9,7 +9,21 @@ namespace Pyxis
 		
 		bool ClientInterface::Connect(const SteamNetworkingIPAddr& serverAddr)
 		{
+
+			if (m_ConnectionStatus == Connected) return true;
 			// Select instance to use.  For now we'll always use the default.
+
+			//initialze steam sockets
+			SteamDatagramErrMsg errMsg;
+			if (!GameNetworkingSockets_Init(nullptr, errMsg))
+			{
+				PX_CORE_ERROR("ClientInterface::Connect->GameNetworkingSockets_Init failed.  {0}", errMsg);
+				m_ConnectionStatusMessage = "GNS_Init Failed.";
+				m_ConnectionStatus = FailedToConnect;
+				return false;
+			}
+
+
 			m_pInterface = SteamNetworkingSockets();
 
 
@@ -37,6 +51,18 @@ namespace Pyxis
 
 		bool ClientInterface::Connect(const std::string& serverAddrString)
 		{
+			if (m_ConnectionStatus == Connected) return true;
+
+			//initialze steam sockets
+			SteamDatagramErrMsg errMsg;
+			if (!GameNetworkingSockets_Init(nullptr, errMsg))
+			{
+				PX_CORE_ERROR("ClientInterface::Connect->GameNetworkingSockets_Init failed.  {0}", errMsg);
+				m_ConnectionStatusMessage = "GNS_Init Failed.";
+				m_ConnectionStatus = FailedToConnect;
+				return false;
+			}
+
 			// Select instance to use.  For now we'll always use the default.
 			m_pInterface = SteamNetworkingSockets();
 
@@ -49,6 +75,7 @@ namespace Pyxis
 					m_ConnectionStatusMessage = "Invalid Server Address: " + serverAddrString;
 					PX_CORE_ERROR(m_ConnectionStatusMessage);
 					m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+					GameNetworkingSockets_Kill();
 					OnConnectionFailure(m_ConnectionStatusMessage);
 					return false;
 				}
@@ -66,6 +93,7 @@ namespace Pyxis
 				PX_CORE_ERROR("Failed to create connection");
 				m_ConnectionStatusMessage = "Failed to create connection";
 				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
+				GameNetworkingSockets_Kill();
 				OnConnectionFailure(m_ConnectionStatusMessage);
 				return false;
 			}
@@ -79,7 +107,7 @@ namespace Pyxis
 		
 		void ClientInterface::UpdateInterface()
 		{
-			if (m_ConnectionStatus == Connected)
+			if (m_ConnectionStatus == Connected || m_ConnectionStatus == Connecting)
 			{
 				PollIncomingMessages();
 				PollConnectionStateChanges();
@@ -90,8 +118,11 @@ namespace Pyxis
 		void ClientInterface::Disconnect()
 		{
 			//Only disconnect if we are connected
-			if (m_ConnectionStatus != ConnectionStatus::Connected) return;
-
+			if (m_ConnectionStatus != ConnectionStatus::Connected)
+			{
+				m_ConnectionStatus = ConnectionStatus::Disconnected;
+				return;
+			}
 			//Set our state to disconnected
 			m_ConnectionStatus = ConnectionStatus::Disconnected;
 
@@ -104,6 +135,10 @@ namespace Pyxis
 			m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
 		}
 
+		void ClientInterface::OnConnectionSuccess()
+		{
+
+		}
 		
 		void ClientInterface::OnConnectionLost(const std::string& reasonText)
 		{
@@ -118,6 +153,8 @@ namespace Pyxis
 		void ClientInterface::SendStringToServer(const std::string& stringMessage)
 		{
 			m_pInterface->SendMessageToConnection(m_hConnection, stringMessage.c_str(), (uint32)stringMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
+			//ISteamNetworkingUtils::AllocateMessage
+			
 		}
 
 		
@@ -153,8 +190,8 @@ namespace Pyxis
 			{
 			case k_ESteamNetworkingConnectionState_None:
 				// NOTE: We will get callbacks here when we destroy connections.  You can ignore these.
-				m_ConnectionStatus = ConnectionStatus::Disconnected;
-				m_ConnectionStatusMessage = "We closed the connection";
+				//m_ConnectionStatus = ConnectionStatus::Disconnected;
+				//m_ConnectionStatusMessage = "We closed the connection";
 				break;
 
 			case k_ESteamNetworkingConnectionState_ClosedByPeer:
@@ -178,7 +215,7 @@ namespace Pyxis
 				{
 					m_ConnectionStatus = ConnectionStatus::LostConnection;
 					m_ConnectionStatusMessage = "Alas, troubles beset us; we have lost contact with the host. (" + (std::string)(pInfo->m_info.m_szEndDebug) + ")";
-					PX_CORE_TRACE("{0}", m_ConnectionStatusMessage);
+					PX_CORE_TRACE(m_ConnectionStatusMessage);
 					OnConnectionLost(m_ConnectionStatusMessage);
 				}
 				else
@@ -186,8 +223,8 @@ namespace Pyxis
 					// NOTE: We could check the reason code for a normal disconnection
 					//NOTE?? is this case even possible to reach? i don't think so
 					m_ConnectionStatus = ConnectionStatus::Disconnected;
-					m_ConnectionStatusMessage = "The host hath bidden us farewell.";
-					PX_CORE_TRACE("The host hath bidden us farewell.  ({0})", pInfo->m_info.m_szEndDebug);
+					m_ConnectionStatusMessage = "The host hath bidden us farewell: (" + (std::string)(pInfo->m_info.m_szEndDebug) + ")";
+					PX_CORE_TRACE(m_ConnectionStatusMessage);
 				}
 
 				// Clean up the connection.  This is important!
@@ -198,6 +235,9 @@ namespace Pyxis
 				// so we just pass 0's.
 				m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 				m_hConnection = k_HSteamNetConnection_Invalid;
+
+				GameNetworkingSockets_Kill();
+
 				break;
 			}
 
@@ -208,8 +248,9 @@ namespace Pyxis
 
 			case k_ESteamNetworkingConnectionState_Connected:
 				m_ConnectionStatus = ConnectionStatus::Connected;
-				m_ConnectionStatusMessage = "Connected";
-				PX_CORE_INFO("Connected to server OK");
+				m_ConnectionStatusMessage = "Connected to server";
+				OnConnectionSuccess();
+				PX_CORE_INFO("Connected to server");
 				break;
 
 			default:

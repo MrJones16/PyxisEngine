@@ -24,10 +24,10 @@ namespace Pyxis
 		m_Window->SetVSync(true);
 
 		Renderer::Init(m_Window->GetWidth(), m_Window->GetHeight());
-		if (!Pyxis::Network::Network_Init())
+		/*if (!Pyxis::Network::Network_Init())
 		{
 			m_Running = false;
-		}
+		}*/
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 	}
@@ -40,7 +40,7 @@ namespace Pyxis
 	}
 
 	Application::~Application() {
-		
+		//Pyxis::Network::Network_Shutdown();
 	}
 
 	void Application::Sleep(int milliseconds) {

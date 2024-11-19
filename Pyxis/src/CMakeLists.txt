@@ -100,7 +100,7 @@ target_sources(PyxisEngine PRIVATE
 
     ## Network
     Pyxis/Network/Network.cpp
-    Pyxis/Network/Network.h
+    
     Pyxis/Network/NetworkClient.cpp
     Pyxis/Network/NetworkClient.h
     Pyxis/Network/NetworkMessage.h

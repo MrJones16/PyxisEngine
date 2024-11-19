@@ -25,6 +25,15 @@ namespace Pyxis
 		
 		bool ServerInterface::Start(uint16_t port)
 		{
+			//initialze steam sockets
+			SteamDatagramErrMsg errMsg;
+			if (!GameNetworkingSockets_Init(nullptr, errMsg))
+			{
+				PX_CORE_ERROR("SteamServer::Start->GameNetworkingSockets_Init failed.  {0}", errMsg);
+				return false;
+			}
+
+
 			if (port == 0) port = PX_DEFAULT_PORT;
 			m_hLocalAddress.Clear();
 			m_hLocalAddress.m_port = port;
@@ -85,6 +94,8 @@ namespace Pyxis
 
 			m_pInterface->DestroyPollGroup(m_hPollGroup);
 			m_hPollGroup = k_HSteamNetPollGroup_Invalid;
+
+			GameNetworkingSockets_Kill();
 
 			PX_CORE_INFO("[SERVER] Stopped!");
 

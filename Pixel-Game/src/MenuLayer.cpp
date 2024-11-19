@@ -25,42 +25,33 @@ namespace Pyxis
 
 	void MenuLayer::OnUpdate(Timestep ts)
 	{
-		m_GameLayer->UpdateInterface();
-		//while we are connecting and there are no failures, run the update connection function
-		switch (m_GameLayer->GetConnectionStatus())
+		//if the game layer isn't attached, then we need to be running the network update for it
+		if (!m_GameLayerAttached)
 		{
-		case Network::ClientInterface::ConnectionStatus::Connecting:
-		{
-			//m_GameLayer->ConnectionUpdate();
-			break;
+			m_GameLayer->UpdateInterface();
 		}
-		case Network::ClientInterface::ConnectionStatus::Connected:
+
+
+		//Attach / detach game depending on connection state
+		if (m_GameLayer->GetConnectionStatus() == Network::ClientInterface::ConnectionStatus::Connected)
 		{
+			//if we are connected to the server, then lets make sure the game is attached
 			if (!m_GameLayerAttached)
 			{
 				//attach the game layer if it isnt yet
 				AttachGameLayer();
 			}
-			break;
 		}
-		case Network::ClientInterface::ConnectionStatus::NotConnected:
+		else
 		{
+			//we aren't connected to the server, so lets make sure the game is detached
 			if (m_GameLayerAttached)
 			{
 				//detach on disconnect
 				DetachGameLayer();
 				//m_GameLayer->GetConnectionStatus() = GameLayer::NotConnected;
 			}
-			break;
 		}
-		default:
-		{
-			//Do nothing.
-			break;
-		}
-
-		}
-
 	}
 
 	
@@ -70,7 +61,7 @@ namespace Pyxis
 
 		switch (m_GameLayer->GetConnectionStatus())
 		{
-		case Network::ClientInterface::ConnectionStatus::NotConnected:
+		case Network::ClientInterface::ConnectionStatus::Disconnected:
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show main menu
@@ -101,6 +92,7 @@ namespace Pyxis
 			ImGui::End();
 			break;
 		}
+		case Network::ClientInterface::ConnectionStatus::LostConnection:
 		case Network::ClientInterface::ConnectionStatus::FailedToConnect:
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
@@ -121,6 +113,13 @@ namespace Pyxis
 		default:
 		{
 			//do nothing
+			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+			ImGui::SetNextWindowDockID(dock);
+			if (ImGui::Begin("Connected", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
+			{
+				ImGui::Text("Connected");
+			}
+			ImGui::End();
 			break;
 		}
 

@@ -47,18 +47,6 @@ namespace Pyxis
 			/// </summary>
 			void Disconnect();
 
-			/// <summary>
-			/// Called when an active connection is interrupted
-			/// </summary>
-			virtual void OnConnectionLost(const std::string& reasonText);
-
-			/// <summary>
-			/// Called when there is an issue connecting to a server
-			/// 
-			/// Could be a timeout, incorrect address, or any issue regaring calling Connect()
-			/// </summary>
-			virtual void OnConnectionFailure(const std::string& reasonText);
-
 			void SendStringToServer(const std::string& stringMessage);
 
 		public:
@@ -66,7 +54,7 @@ namespace Pyxis
 
 			enum ConnectionStatus
 			{
-				NotConnected, Connecting, Connected, FailedToConnect, Disconnected, LostConnection
+				Connecting, Connected, FailedToConnect, Disconnected, LostConnection
 			};
 			inline ConnectionStatus GetConnectionStatus() { return m_ConnectionStatus; };
 
@@ -97,10 +85,27 @@ namespace Pyxis
 			/// and recieves the callback
 			/// </summary>
 			void PollConnectionStateChanges();
+
+			/// <summary>
+			/// Called when the client successfully connects to a server
+			/// </summary>
+			virtual void OnConnectionSuccess();
+
+			/// <summary>
+			/// Called when an active connection is interrupted
+			/// </summary>
+			virtual void OnConnectionLost(const std::string& reasonText);
+
+			/// <summary>
+			/// Called when there is an issue connecting to a server
+			/// 
+			/// Could be a timeout, incorrect address, or any issue regaring calling Connect()
+			/// </summary>
+			virtual void OnConnectionFailure(const std::string& reasonText);
 			
 		protected:
 			
-			ConnectionStatus m_ConnectionStatus = NotConnected;
+			ConnectionStatus m_ConnectionStatus = ConnectionStatus::Disconnected;
 			std::string m_ConnectionStatusMessage = "";
 			uint64_t m_ID = 0;
 			HSteamNetConnection m_hConnection;
