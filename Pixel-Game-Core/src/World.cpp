@@ -555,7 +555,7 @@ namespace Pyxis
 	///			linear velocity
 	/// </summary>
 	/// <param name="msg"></param>
-	void World::LoadWorld(Network::Message<GameMessage>& msg)
+	void World::LoadWorld(Network::Message& msg)
 	{
 
 		//things still to synchronize:
@@ -632,7 +632,7 @@ namespace Pyxis
 		}
 	}
 
-	void World::GetWorldData(Network::Message<GameMessage>& msg)
+	void World::GetWorldData(Network::Message& msg)
 	{
 		for (auto pair : m_PixelBodyMap)
 		{

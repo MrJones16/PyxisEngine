@@ -48,6 +48,7 @@ namespace Pyxis
 			void Disconnect();
 
 			void SendStringToServer(const std::string& stringMessage);
+			void SendMessageToServer(Message& message);
 
 		public:
 			inline uint64_t GetID() { return m_ID; };
@@ -110,6 +111,7 @@ namespace Pyxis
 			uint64_t m_ID = 0;
 			HSteamNetConnection m_hConnection;
 			ISteamNetworkingSockets* m_pInterface;
+			ISteamNetworkingUtils* m_pUtils;
 
 		};
 		//uint64_t m_ID = 0;

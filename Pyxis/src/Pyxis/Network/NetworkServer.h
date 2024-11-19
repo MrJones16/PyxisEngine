@@ -35,6 +35,7 @@ namespace Pyxis
 			// send a message to a specific client
 			void SendStringToClient(HSteamNetConnection conn, const char* str);
 			void SendStringToAllClients(const char* str, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
+			void SendMessageToClient(HSteamNetConnection conn, Message& message);
 			void PollIncomingMessages();
 			void SetClientNick(HSteamNetConnection hConn, const char* nick);
 			void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo);
@@ -57,6 +58,7 @@ namespace Pyxis
 			HSteamListenSocket m_hListenSock;
 			HSteamNetPollGroup m_hPollGroup;
 			ISteamNetworkingSockets* m_pInterface;
+			ISteamNetworkingUtils* m_pUtils;
 
 			struct Client_t
 			{
@@ -64,7 +66,7 @@ namespace Pyxis
 				std::string m_sNick;
 			};
 
-			std::map<HSteamNetConnection, Client_t > m_mapClients;
+			std::map<HSteamNetConnection, Client_t> m_mapClients;
 
 			//thread safe queue for incoming message packets
 			//ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;

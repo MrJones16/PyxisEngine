@@ -4,7 +4,6 @@
 #include "Input.h"
 #include <GLFW/glfw3.h>
 #include "Pyxis/Renderer/Renderer.h"
-#include "Pyxis/Network/Network.h"
 
 #include <GLFW/glfw3.h>//temp for time
 
@@ -138,6 +137,8 @@ namespace Pyxis
 
 			m_Window->OnUpdate();
 		}
+
+
 	}
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)

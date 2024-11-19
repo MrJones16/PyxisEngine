@@ -42,6 +42,8 @@ namespace Pyxis
 			// But we could use SteamGameServerNetworkingSockets() on Steam.
 			m_pInterface = SteamNetworkingSockets();
 
+			m_pUtils = SteamNetworkingUtils();
+
 			// Start listening
 			SteamNetworkingConfigValue_t opt;
 
@@ -117,6 +119,12 @@ namespace Pyxis
 			}
 		}
 
+		void ServerInterface::SendMessageToClient(HSteamNetConnection conn, Message& message)
+		{
+			message << message.header.id;
+			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+		}
+
 		
 		void ServerInterface::PollIncomingMessages()
 		{
@@ -135,38 +143,33 @@ namespace Pyxis
 				assert(itClient != m_mapClients.end());
 
 				// '\0'-terminate it to make it easier to parse
+				Message px_msg(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
 				std::string sCmd;
 				sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
 				const char* cmd = sCmd.c_str();
+				
+				px_msg >> px_msg.header.id;
+				if (px_msg.header.id == 0)
+				{
+					std::string px_str = "";
+					px_str.assign((const char*)px_msg.body.data(), px_msg.size());
+					PX_CORE_TRACE("Message Recieved. ID: {0}, Message: {1}", px_msg.header.id, px_str);
+				}else if (px_msg.header.id == 1)
+				{
+					
+					PX_CORE_TRACE("Message Recieved. ID: {0}", px_msg.header.id);
+					std::vector<int> resultOfTest;
+					px_msg >> resultOfTest;
+					PX_TRACE("Here's the vector: ");
+					for (int x : resultOfTest)
+					{
+						PX_TRACE(x);
+					}
+				}
+				
 
 				// We don't need this anymore.
 				pIncomingMsg->Release();
-
-				// Check for known commands.  None of this example code is secure or robust.
-				// Don't write a real server like this, please.
-
-				if (strncmp(cmd, "/nick", 5) == 0)
-				{
-					const char* nick = cmd + 5;
-					while (isspace(*nick))
-						++nick;
-
-					// Let everybody else know they changed their name
-					sprintf(temp, "%s shall henceforth be known as %s", itClient->second.m_sNick.c_str(), nick);
-					SendStringToAllClients(temp, itClient->first);
-
-					// Respond to client
-					sprintf(temp, "Ye shall henceforth be known as %s", nick);
-					SendStringToClient(itClient->first, temp);
-
-					// Actually change their name
-					SetClientNick(itClient->first, nick);
-					continue;
-				}
-
-				// Assume it's just a ordinary chat message, dispatch to everybody else
-				sprintf(temp, "%s: %s", itClient->second.m_sNick.c_str(), cmd);
-				SendStringToAllClients(temp, itClient->first);
 			}
 		}
 

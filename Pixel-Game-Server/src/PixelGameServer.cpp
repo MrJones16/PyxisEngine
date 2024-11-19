@@ -17,6 +17,12 @@ namespace Pyxis
 		m_World.m_ServerMode = true;
 	}
 
+	PixelGameServer::~PixelGameServer()
+	{
+		//stop the server
+		Stop();
+	}
+
 	void PixelGameServer::OnAttach()
 	{
 		//m_ProfileResults = std::vector<ProfileResult>();
@@ -32,8 +38,6 @@ namespace Pyxis
 
 	void PixelGameServer::OnDetatch()
 	{
-		//stop the server
-		Stop();
 	}
 
 	void PixelGameServer::OnUpdate(Pyxis::Timestep ts)

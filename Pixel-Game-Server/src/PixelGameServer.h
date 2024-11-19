@@ -13,7 +13,7 @@ namespace Pyxis
 	{
 	public:
 		PixelGameServer(uint16_t port);
-		virtual ~PixelGameServer() = default;
+		virtual ~PixelGameServer();
 
 		virtual void OnAttach();
 		virtual void OnDetatch();

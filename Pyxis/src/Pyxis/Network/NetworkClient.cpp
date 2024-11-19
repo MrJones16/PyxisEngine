@@ -26,6 +26,8 @@ namespace Pyxis
 
 			m_pInterface = SteamNetworkingSockets();
 
+			m_pUtils = SteamNetworkingUtils();
+
 
 			//Start Connecting
 			char szAddr[SteamNetworkingIPAddr::k_cchMaxString];
@@ -155,6 +157,12 @@ namespace Pyxis
 			m_pInterface->SendMessageToConnection(m_hConnection, stringMessage.c_str(), (uint32)stringMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
 			//ISteamNetworkingUtils::AllocateMessage
 			
+		}
+
+		void ClientInterface::SendMessageToServer(Message& message)
+		{
+			message << message.header.id;
+			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
 		

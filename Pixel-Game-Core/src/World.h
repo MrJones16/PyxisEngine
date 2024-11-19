@@ -41,8 +41,8 @@ namespace Pyxis
 		void Initialize(int worldSeed);
 		bool LoadElementData(std::string assetPath);
 		void BuildReactionTable();
-		void LoadWorld(Network::Message<GameMessage>& msg);
-		void GetWorldData(Network::Message<GameMessage>& msg);
+		void LoadWorld(Network::Message& msg);
+		void GetWorldData(Network::Message& msg);
 		~World();
 
 		void AddChunk(const glm::ivec2& chunkPos);

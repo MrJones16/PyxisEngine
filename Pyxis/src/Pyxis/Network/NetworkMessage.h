@@ -6,18 +6,36 @@ namespace Pyxis
 {
 	namespace Network
 	{
-		template<typename T>
+		
 		struct MessageHeader
 		{
-			T id{};
+			uint32_t id = 0;
 			uint32_t size = 0;
 		};
 
-		template<typename T>
+		
 		struct Message
 		{
-			MessageHeader<T> header{};
+			MessageHeader header{};
 			std::vector<uint8_t> body;
+
+			Message()
+			{
+
+			}
+
+			/// <summary>
+			/// Copies data using memcpy into a new message object
+			/// </summary>
+			/// <param name="data"></param>
+			/// <param name="size"></param>
+			Message(void* data, uint32_t size)
+			{
+				body = std::vector<uint8_t>(size);
+				//body.resize(size); might do the same?
+				memcpy(body.data(), data, size);
+				header.size = size;
+			}
 
 			/// <summary>
 			/// returns the size of the entire message packet in bytes
@@ -28,9 +46,49 @@ namespace Pyxis
 			}
 
 			/// <summary>
+			/// Pushes any arbitrary data into the message buffer using a pointer and size
+			/// 
+			/// Not Volatile
+			/// </summary>
+			void PushData(const void* data, uint32_t size)
+			{
+				//cache current vector size, as this is where we will add the data
+				size_t i = body.size();
+
+				//resize the vector by the size of the data being pushed
+				body.resize(body.size() + size);
+
+				//physically copy the data into the newly allocated vector space
+				std::memcpy(body.data() + i, data, size);
+
+				//recalculate the message size
+				header.size = body.size();
+			}
+
+			/// <summary>
+			/// Pushes any arbitrary data into the message buffer using a pointer and size
+			/// 
+			/// Not Volatile
+			/// </summary>
+			void PullData(void* dst, uint32_t size)
+			{
+				//cache the location towards the end of the vector where the pulled data starts
+				size_t i = body.size() - size;
+
+				//physically copy the memory to the DataType variable
+				std::memcpy(dst, body.data() + i, size);
+
+				//shrink the vector;
+				body.resize(i);
+
+				//recalculate message size
+				header.size = body.size();
+			}
+
+			/// <summary>
 			/// override for std::cout compatibility -- produces friendly description of message
 			/// </summary>
-			friend std::ostream& operator << (std::ostream& os, const Message<T>& msg)
+			friend std::ostream& operator << (std::ostream& os, const Message& msg)
 			{
 				os << "ID:" << int(msg.header.id) << " Size:" << msg.header.size;
 				return os;
@@ -42,7 +100,7 @@ namespace Pyxis
 			/// Not Volatile
 			/// </summary>
 			template<typename DataType>
-			friend Message<T>& operator << (Message<T>& msg, const DataType& data)
+			friend Message& operator << (Message& msg, const DataType& data)
 			{
 				//check that the type of the data being pushed is trivially copyable
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into message body vector");
@@ -67,7 +125,7 @@ namespace Pyxis
 			/// Pushes any "POD" storing vector into the message in reverse
 			/// </summary>
 			template<typename DataType>
-			friend Message<T>& operator << (Message<T>& msg, const std::vector<DataType>& data)
+			friend Message& operator << (Message& msg, const std::vector<DataType>& data)
 			{
 				//check that the data is easily copyable
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into message body vector");
@@ -86,7 +144,7 @@ namespace Pyxis
 			/// Pulls data out of the message. Volatile.
 			/// </summary>
 			template<typename DataType>
-			friend Message<T>& operator >> (Message<T>& msg, DataType& data)
+			friend Message& operator >> (Message& msg, DataType& data)
 			{
 				//check that the data is easily copyable
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to have been in a body vector");
@@ -112,7 +170,7 @@ namespace Pyxis
 			/// Pulls vector data out of the message. Volatile.
 			/// </summary>
 			template<typename DataType>
-			friend Message<T>& operator >> (Message<T>& msg, std::vector<DataType>& data)
+			friend Message& operator >> (Message& msg, std::vector<DataType>& data)
 			{
 				//check that the data is easily copyable
 				static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to have been in a body vector");
@@ -136,24 +194,5 @@ namespace Pyxis
 			}
 
 		};
-
-		template <typename T>
-		class Connection;
-
-		/*template<typename T>
-		struct OwnedMessage
-		{
-			std::shared_ptr<Connection<T>> remote = nullptr;
-			Message<T> msg;
-
-			/// <summary>
-			/// override for std::cout compatibility -- produces friendly description of message -- again for 
-			/// </summary>
-			friend std::ostream& operator << (std::ostream& os, const OwnedMessage<T>& msg)
-			{
-				os << msg.msg;
-				return os;
-			}
-		};*/
 	}
 }

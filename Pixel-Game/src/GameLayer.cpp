@@ -66,6 +66,8 @@ namespace Pyxis
 	void GameLayer::OnAttach()
 	{
 
+		PX_TRACE("Attached game layer");
+
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
 		Renderer2D::Init();
 
@@ -382,7 +384,34 @@ namespace Pyxis
 
 	void GameLayer::OnImGuiRender()
 	{
+		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		
+		if (ImGui::Begin("NetTest"))
+		{
+			if (ImGui::Button("Pay Respects"))
+			{
+				SendStringToServer("Respects Paid!");
+			}
+			if (ImGui::Button("Pay Respects with Message"))
+			{
+				Network::Message msg;
+				msg.header.id = 0;
+				msg << "Respects paid... easily!";
+				SendMessageToServer(msg);
+			}
+			if (ImGui::Button("Pay a vector! of... 100110011"))
+			{
+				Network::Message msg;
+				msg.header.id = 1;
+				std::vector<int> test
+				{
+					1,0,0,1,1,0,0,1,1
+				};
+				msg << test;
+				SendMessageToServer(msg);
+			}
 
+		}ImGui::End();
 	}
 
 //	void GameLayer::OnImGuiRender()

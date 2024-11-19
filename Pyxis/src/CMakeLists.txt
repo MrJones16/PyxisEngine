@@ -99,7 +99,7 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/ImGui/ImGuiLayer.h
 
     ## Network
-    Pyxis/Network/Network.cpp
+    
     
     Pyxis/Network/NetworkClient.cpp
     Pyxis/Network/NetworkClient.h
