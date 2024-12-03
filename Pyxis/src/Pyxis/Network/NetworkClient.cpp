@@ -154,15 +154,22 @@ namespace Pyxis
 
 		void ClientInterface::SendStringToServer(const std::string& stringMessage)
 		{
-			m_pInterface->SendMessageToConnection(m_hConnection, stringMessage.c_str(), (uint32)stringMessage.length(), k_nSteamNetworkingSend_Reliable, nullptr);
-			//ISteamNetworkingUtils::AllocateMessage
-			
+			Network::Message msg;
+			msg.header.id = 0;
+			msg.PushData(stringMessage.c_str(), stringMessage.size());
+			SendMessageToServer(msg);
 		}
 
 		void ClientInterface::SendMessageToServer(Message& message)
 		{
 			message << message.header.id;
 			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+		}
+
+		void ClientInterface::SendUnreliableMessageToServer(Message& message)
+		{
+			message << message.header.id;
+			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 
 		

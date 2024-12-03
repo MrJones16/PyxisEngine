@@ -38,11 +38,35 @@ namespace Pyxis
 
 	void PixelGameServer::OnDetatch()
 	{
+
 	}
 
 	void PixelGameServer::OnUpdate(Pyxis::Timestep ts)
 	{
 		UpdateInterface();
+		Ref<Network::Message> msg;
+		while (PollMessage(msg))
+		{
+			//we read a message, so lets do something with it
+			if (msg->header.id == 0)
+			{
+				std::string px_str = "";
+				px_str.assign((const char*)msg->body.data(), msg->size());
+				PX_CORE_TRACE("Message Recieved. ID: {0}, Message: {1}", msg->header.id, px_str);
+			}
+			else if (msg->header.id == 1)
+			{
+
+				PX_CORE_TRACE("Message Recieved. ID: {0}", msg->header.id);
+				std::vector<int> resultOfTest;
+				*msg >> resultOfTest;
+				PX_TRACE("Here's the vector: ");
+				for (int x : resultOfTest)
+				{
+					PX_TRACE(x);
+				}
+			}
+		}
 	}
 	//void PixelGameServer::OnUpdateOld(Pyxis::Timestep ts)
 	//{

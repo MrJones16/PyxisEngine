@@ -67,7 +67,7 @@ namespace Pyxis
 		
 		void ServerInterface::UpdateInterface()
 		{
-			PollIncomingMessages();
+			//PollIncomingMessages();
 			PollConnectionStateChanges();
 			std::this_thread::sleep_for(std::chrono::milliseconds(10));
 		}
@@ -103,19 +103,23 @@ namespace Pyxis
 
 		}
 
-		
-		void ServerInterface::SendStringToClient(HSteamNetConnection conn, const char* str)
+		void ServerInterface::SendStringToClient(HSteamNetConnection conn, const std::string& str)
 		{
-			m_pInterface->SendMessageToConnection(conn, str, (uint32)strlen(str), k_nSteamNetworkingSend_Reliable, nullptr);
+			Network::Message msg;
+			msg.header.id = 0;
+			msg.PushData(str.c_str(), str.size());
+			SendMessageToClient(conn, msg);
 		}
 
-		
-		void ServerInterface::SendStringToAllClients(const char* str, HSteamNetConnection except)
+		void ServerInterface::SendStringToAllClients(const std::string& str, HSteamNetConnection except)
 		{
+			Network::Message msg;
+			msg.header.id = 0;
+			msg.PushData(str.c_str(), str.size());
 			for (auto& c : m_mapClients)
 			{
 				if (c.first != except)
-					SendStringToClient(c.first, str);
+					SendMessageToClient(c.first, msg);
 			}
 		}
 
@@ -125,11 +129,53 @@ namespace Pyxis
 			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
+		void ServerInterface::SendMessageToAllClients(Message& message, HSteamNetConnection except)
+		{
+			for (auto& c : m_mapClients)
+			{
+				if (c.first != except)
+					SendMessageToClient(c.first, message);
+			}
+		}
+
+		void ServerInterface::SendUnreliableMessageToClient(HSteamNetConnection conn, Message& message)
+		{
+			message << message.header.id;
+			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Unreliable, nullptr);
+		}
+
+		void ServerInterface::SendUnreliableMessageToAllClients(Message& message, HSteamNetConnection except)
+		{
+			for (auto& c : m_mapClients)
+			{
+				if (c.first != except)
+					SendUnreliableMessageToClient(c.first, message);
+			}
+		}
+
+		bool ServerInterface::PollMessage(Ref<Message>& MessageOut)
+		{
+			ISteamNetworkingMessage* pIncomingMsg = nullptr;
+			int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
+			if (numMsgs == 0) return false;
+			if (numMsgs < 0)
+			{
+				PX_CORE_ERROR("Error checking for messages");
+				return false;
+			}
+			assert(numMsgs == 1 && pIncomingMsg);
+			auto itClient = m_mapClients.find(pIncomingMsg->m_conn);
+			assert(itClient != m_mapClients.end());
+
+			MessageOut = CreateRef<Message>(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+			*MessageOut >> MessageOut->header.id;
+			MessageOut->clientID = itClient->second;
+			pIncomingMsg->Release();
+			return true;
+		}
 		
 		void ServerInterface::PollIncomingMessages()
 		{
-			char temp[1024];
-
 			while (true)
 			{
 				ISteamNetworkingMessage* pIncomingMsg = nullptr;
@@ -174,16 +220,6 @@ namespace Pyxis
 		}
 
 		
-		void ServerInterface::SetClientNick(HSteamNetConnection hConn, const char* nick)
-		{
-			// Remember their nick
-			m_mapClients[hConn].m_sNick = nick;
-
-			// Set the connection name, too, which is useful for debugging
-			m_pInterface->SetConnectionName(hConn, nick);
-		}
-
-		
 		void ServerInterface::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 		{
 			char temp[1024];
@@ -214,14 +250,14 @@ namespace Pyxis
 					if (pInfo->m_info.m_eState == k_ESteamNetworkingConnectionState_ProblemDetectedLocally)
 					{
 						pszDebugLogAction = "problem detected locally";
-						sprintf(temp, "Alas, %s hath fallen into shadow.  (%s)", itClient->second.m_sNick.c_str(), pInfo->m_info.m_szEndDebug);
+						PX_CORE_WARN("Alas, {0} hath fallen into shadow. ({1})", itClient->second, pInfo->m_info.m_szEndDebug);
 					}
 					else
 					{
 						// Note that here we could check the reason code to see if
 						// it was a "usual" connection or an "unusual" one.
 						pszDebugLogAction = "closed by peer";
-						sprintf(temp, "%s hath departed", itClient->second.m_sNick.c_str());
+						PX_CORE_WARN("{0} hath departed", itClient->second);
 					}
 
 					// Spew something to our own log.  Note that because we put their nick
@@ -291,8 +327,9 @@ namespace Pyxis
 				sprintf(nick, "BraveWarrior%d", 10000 + (rand() % 100000));
 
 				// Send them a welcome message
-				sprintf(temp, "Welcome, stranger.  Thou art known to us for now as '%s'; upon thine command '/nick' we shall know thee otherwise.", nick);
-				SendStringToClient(pInfo->m_hConn, temp);
+				std::string wlcm = std::format("Welcome, stranger.Thou art known to us for now as '{}'; upon thine command '/nick' we shall know thee otherwise.", nick);
+				SendStringToClient(pInfo->m_hConn, wlcm);
+				
 
 				// Also send them a list of everybody who is already connected
 				if (m_mapClients.empty())
@@ -303,7 +340,7 @@ namespace Pyxis
 				{
 					sprintf(temp, "%d companions greet you:", (int)m_mapClients.size());
 					for (auto& c : m_mapClients)
-						SendStringToClient(pInfo->m_hConn, c.second.m_sNick.c_str());
+						SendStringToClient(pInfo->m_hConn, std::to_string(c.second).c_str());
 				}
 
 				// Let everybody else know who they are for now
@@ -311,8 +348,7 @@ namespace Pyxis
 				SendStringToAllClients(temp, pInfo->m_hConn);
 
 				// Add them to the client list, using std::map wacky syntax
-				m_mapClients[pInfo->m_hConn];
-				SetClientNick(pInfo->m_hConn, nick);
+				m_mapClients[pInfo->m_hConn] = m_IDCounter++;
 				break;
 			}
 

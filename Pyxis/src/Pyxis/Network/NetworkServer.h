@@ -32,16 +32,20 @@ namespace Pyxis
 			void UpdateInterface();
 			void Stop();
 
-			// send a message to a specific client
-			void SendStringToClient(HSteamNetConnection conn, const char* str);
-			void SendStringToAllClients(const char* str, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
+
+			void SendStringToClient(HSteamNetConnection conn, const std::string& str);
+			void SendStringToAllClients(const std::string& str, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
 			void SendMessageToClient(HSteamNetConnection conn, Message& message);
+			void SendMessageToAllClients(Message& message, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
+			void SendUnreliableMessageToClient(HSteamNetConnection conn, Message& message);
+			void SendUnreliableMessageToAllClients(Message& message, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
+			bool PollMessage(Ref<Message>& MessageOut);
 			void PollIncomingMessages();
-			void SetClientNick(HSteamNetConnection hConn, const char* nick);
 			void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo);
 			static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo);
 			void PollConnectionStateChanges();
-			//void MessageClient(std::shared_ptr<Connection<T>> client, const Message<T>& msg);
+			
+
 		protected:
 			//called when a client connects to the server
 			inline virtual bool OnClientConnect(HSteamNetConnection client);
@@ -60,13 +64,7 @@ namespace Pyxis
 			ISteamNetworkingSockets* m_pInterface;
 			ISteamNetworkingUtils* m_pUtils;
 
-			struct Client_t
-			{
-				uint64_t m_ID;
-				std::string m_sNick;
-			};
-
-			std::map<HSteamNetConnection, Client_t> m_mapClients;
+			std::map<HSteamNetConnection, uint64_t> m_mapClients;
 
 			//thread safe queue for incoming message packets
 			//ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;

@@ -53,7 +53,7 @@ namespace Pyxis
 
 	GameLayer::GameLayer()
 		: Layer("GameLayer"),
-		m_OrthographicCameraController(2, 1 / 1, -100, 100), m_CurrentTickClosure()
+		m_OrthographicCameraController(2, 1 / 1, -100, 100)//, m_CurrentTickClosure()
 	{
 		
 	}
@@ -1142,7 +1142,7 @@ namespace Pyxis
 	bool GameLayer::OnKeyPressedEvent(KeyPressedEvent& event) {
 		if (event.GetKeyCode() == PX_KEY_F)
 		{
-			m_ClientInterface.SendStringToServer("Respects Paid!");
+			SendStringToServer("Respects Paid!");
 		}
 		//if (event.GetKeyCode() == PX_KEY_SPACE)
 		//{

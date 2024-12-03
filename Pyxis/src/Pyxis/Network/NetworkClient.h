@@ -49,6 +49,7 @@ namespace Pyxis
 
 			void SendStringToServer(const std::string& stringMessage);
 			void SendMessageToServer(Message& message);
+			void SendUnreliableMessageToServer(Message& message);
 
 		public:
 			inline uint64_t GetID() { return m_ID; };

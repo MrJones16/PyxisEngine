@@ -18,6 +18,7 @@ namespace Pyxis
 		{
 			MessageHeader header{};
 			std::vector<uint8_t> body;
+			uint64_t clientID = 0;
 
 			Message()
 			{

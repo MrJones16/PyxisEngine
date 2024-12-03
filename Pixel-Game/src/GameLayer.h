@@ -60,22 +60,9 @@ namespace Pyxis
 		float m_UpdatesPerSecond = 30.0f;
 
 		//core multiplayer things
-		Network::ClientInterface m_ClientInterface;
-		std::deque<MergedTickClosure> m_MTCQueue;
-		bool m_LatencyStateReset = false;
-		uint64_t m_InputTick = 0;
-		TickClosure m_CurrentTickClosure;
-		std::deque<TickClosure> m_LatencyInputQueue;
-		const int m_LatencyQueueLimit = 60; // this value should represent 1/60th the seconds server round trip delay
-		uint64_t m_LatestMergedTick = 0;//temp?
-		uint64_t m_LastRequestedTick = 0;
-		bool m_WaitingForOthers = false;
-
 		//multiplayer connecting things
-		
 		bool m_WaitForWorldData = true;
-		uint64_t m_TickToEnter = -1; // set to max value
-		uint64_t m_TickToResetBox2D = -1; // set to max value
+
 
 		struct PlayerCursor
 		{
