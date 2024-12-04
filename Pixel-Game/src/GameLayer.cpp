@@ -116,16 +116,133 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Game Update");
+
+			auto [x, y] = GetMousePositionScene();
+			auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+					
+			glm::ivec2 mousePixelPos = m_World->WorldToPixel(vec);
+
+			auto chunkPos = m_World->PixelToChunk(mousePixelPos);
+			auto it = m_World->m_Chunks.find(chunkPos);
+			if (it != m_World->m_Chunks.end())
+			{
+				auto index = m_World->PixelToIndex(mousePixelPos);
+				m_HoveredElement = it->second->m_Elements[index.x + index.y * CHUNKSIZE];
+				if (m_HoveredElement.m_ID >= m_World->m_TotalElements)
+				{
+					//something went wrong? how?
+					m_HoveredElement = Element();
+				}
+			}
+			else
+			{
+				m_HoveredElement = Element();
+			}
+					
+
+			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
+			{
+				auto [x, y] = GetMousePositionScene();
+				int max_width = Application::Get().GetWindow().GetWidth();
+				int max_height = Application::Get().GetWindow().GetHeight();
+				if (x > max_width || x < 0 || y > max_height || y < 0) return;
+				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+				if (m_BuildingRigidBody)
+				{
+					if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
+					if (pixelPos.x > m_RigidMax.x) m_RigidMax.x = pixelPos.x;
+					if (pixelPos.y < m_RigidMin.y) m_RigidMin.y = pixelPos.y;
+					if (pixelPos.y > m_RigidMax.y) m_RigidMax.y = pixelPos.y;
+				}
+				else
+				{
+					m_CurrentTickClosure.AddInputAction(
+						InputAction::Input_Place, 
+						(uint8_t)m_BrushSize,
+						(uint16_t)m_BrushType,
+						(uint32_t)m_SelectedElementIndex,
+						pixelPos, 
+						false);
+				}
+			}
+
+			
 		}
 
 		{
+			PROFILE_SCOPE("Network Update");
+			if (m_MultiplayerState == Singleplayer)
+			{
+				//skip sending an input tick and just update immediately
+				auto time = std::chrono::high_resolution_clock::now();
+				if (m_UpdatesPerSecond > 0 &&
+					std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
+					-
+					std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
+					>= (1.0f / m_UpdatesPerSecond) * 1000000.0f)
+				{
+					//m_InputTick++;
+					MergedTickClosure tc;
+					tc.AddTickClosure(m_CurrentTickClosure, 0);
+
+					{
+						PROFILE_SCOPE("Simulation Update");
+						HandleTickClosure(tc);
+					}
+
+					//reset tick closure
+					m_CurrentTickClosure = TickClosure();
+					//m_CurrentTickClosure.m_Tick = m_InputTick;
+					m_UpdateTime = time;
+				}
+			}
+		}
+
+		
+
+		{
 			PROFILE_SCOPE("Renderer Draw");
+			m_World->RenderWorld();
+			PaintBrushHologram();
+			//draw rigid body outline
+			//horizontals
+			glm::vec2 worldMin = glm::vec2((float)m_RigidMin.x / (float)CHUNKSIZE, (float)m_RigidMin.y / (float)CHUNKSIZE);
+			glm::vec2 worldMax = glm::vec2((float)m_RigidMax.x / (float)CHUNKSIZE, (float)m_RigidMax.y / (float)CHUNKSIZE);
+			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMax.x, worldMin.y});
+			Renderer2D::DrawLine({ worldMin.x, worldMax.y }, { worldMax.x, worldMax.y});
+			//vertical lines
+			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMin.x, worldMax.y});
+			Renderer2D::DrawLine({ worldMax.x, worldMin.y }, { worldMax.x, worldMax.y});
+
+			for (auto clientPair : m_ClientMap)
+			{
+				//skip your own mouse pos
+				//if (IDAndClient.first == m_ClientInterface.GetID()) continue;
+				//draw the 3x3 square for each players cursor
+				glm::vec3 worldPos = glm::vec3((float)clientPair.second.m_CurosrPixelPosition.x / CHUNKSIZE, (float)clientPair.second.m_CurosrPixelPosition.y / CHUNKSIZE, 5);
+				glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
+				Renderer2D::DrawQuad(worldPos, size, clientPair.second.m_Color);
+			}
 		}
 
 		Renderer2D::EndScene();
 
 		m_SceneFrameBuffer->Unbind();
 		
+	}
+
+	void GameLayer::OnConnectionSuccess()
+	{
+		Network::Message clientDataMsg;
+		clientDataMsg.header.id = static_cast<uint32_t>(GameMessage::Client_ClientData);
+		clientDataMsg << m_ClientData;
+		SendMessageToServer(clientDataMsg);
+
+		m_MultiplayerState = MultiplayerState::GatheringPlayerData;
+		Network::Message msg;
+		msg.header.id = static_cast<uint32_t>(GameMessage::Client_RequestPlayerData);
+		SendMessageToServer(msg);
 	}
 
 	//void GameLayer::OnUpdate(Timestep ts)
@@ -385,293 +502,305 @@ namespace Pyxis
 	void GameLayer::OnImGuiRender()
 	{
 		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-		
-		if (ImGui::Begin("NetTest"))
-		{
-			if (ImGui::Button("Pay Respects"))
-			{
-				SendStringToServer("Respects Paid!");
-			}
-			if (ImGui::Button("Pay Respects with Message"))
-			{
-				Network::Message msg;
-				msg.header.id = 0;
-				msg << "Respects paid... easily!";
-				SendMessageToServer(msg);
-			}
-			if (ImGui::Button("Pay a vector! of... 100110011"))
-			{
-				Network::Message msg;
-				msg.header.id = 1;
-				std::vector<int> test
-				{
-					1,0,0,1,1,0,0,1,1
-				};
-				msg << test;
-				SendMessageToServer(msg);
-			}
+	
+		//ImGui::ShowDemoWindow();
+		m_Hovering = ImGui::IsWindowHovered();
 
-		}ImGui::End();
+
+		if (ImGui::BeginMainMenuBar())
+		{
+			//ImGui::DockSpaceOverViewport();
+			if (ImGui::BeginMenu("File"))
+			{
+				ImGui::Text("nothing here yet!");
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}
+
+		if (m_MultiplayerState != Singleplayer)
+		{
+			//we are playing multiplayer,
+			switch (m_ConnectionStatus)
+			{
+			case ConnectionStatus::Connecting:
+			{
+				//we are still connecting
+				ImGui::SetNextWindowDockID(dock);
+				if (ImGui::Begin("Connecting"))
+				{
+					ImGui::Text(m_ConnectionStatusMessage.c_str());
+					ImGui::End();
+				}
+				break;
+			}
+			case ConnectionStatus::LostConnection:
+			case ConnectionStatus::FailedToConnect:
+			{
+				ImGui::SetNextWindowDockID(dock);
+				if (ImGui::Begin("Connection Failed", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
+				{
+					ImGui::Text("Connection Failed");
+
+					ImGui::Text(m_ConnectionStatusMessage.c_str());
+					if (ImGui::Button("Okay"))
+					{
+						Disconnect();
+					}
+				}
+				ImGui::End();
+				break;
+			}
+			
+			}
+		}
+		else
+		{
+			//we are playing singleplayer!
+		}
+
+		if (!(m_MultiplayerState == Singleplayer || m_MultiplayerState == MultiplayerState::Connected))
+		{
+			//don't show game and controls if we are still connecting or catching up, ect.
+			return;
+		}
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
+		ImGui::SetNextWindowDockID(dock);
+		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
+		{
+			m_SceneViewIsFocused = ImGui::IsWindowFocused();
+			Application::Get().GetImGuiLayer()->BlockEvents(false);
+			auto sceneViewSize = ImGui::GetContentRegionAvail();
+			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
+			ImGui::Image(
+				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID()),
+				sceneViewSize,
+				ImVec2(0, 1),
+				ImVec2(1, 0),
+				ImVec4(1, 1, 1, 1)
+				//ImVec4(1, 1, 1, 1) border color
+			);
+			m_ViewportOffset = ImGui::GetItemRectMin();
+					
+		
+			if (m_ViewportSize.x != sceneViewSize.x || m_ViewportSize.y != sceneViewSize.y)
+			{
+				m_OrthographicCameraController.SetAspect(sceneViewSize.y / sceneViewSize.x);
+				m_SceneFrameBuffer->Resize((uint32_t)sceneViewSize.x, (uint32_t)sceneViewSize.y);
+				m_ViewportSize = { sceneViewSize.x, sceneViewSize.y };
+			}
+		
+			ImGui::End();
+		}
+		ImGui::PopStyleVar();
+
+		if (ImGui::Begin("Settings"))
+		{
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Simulation"))
+			{
+				//ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
+				//ImGui::SetItemTooltip("Default: 60");
+				if (m_World->m_Running)
+				{
+					if (ImGui::Button("Pause"))
+					{
+						m_CurrentTickClosure.AddInputAction(InputAction::PauseGame);
+					}
+					ImGui::SetItemTooltip("Shortcut: Space");
+				}
+				else
+				{
+					if (ImGui::Button("Play"))
+					{
+						m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame);
+					}
+					ImGui::SetItemTooltip("Shortcut: Space");
+					//ImGui::EndTooltip();
+				}
+			
+				if (ImGui::Button("Clear"))
+				{
+					m_CurrentTickClosure.AddInputAction(InputAction::ClearWorld);
+				}
+			
+				if (ImGui::Button("Toggle Collider View"))
+				{
+					m_World->m_DebugDrawColliders = !m_World->m_DebugDrawColliders;
+				}
+							
+				if (m_BuildingRigidBody)
+				{
+					if (ImGui::Button("Build Rigid Body"))
+					{
+						srand(time(0));
+						uint64_t uuid = std::rand();
+						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
+						{
+							srand(time(0));
+							uint64_t uuid = std::rand();
+						}
+						if (m_RigidMin.x < m_RigidMax.x)
+							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, uuid);
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+					}
+					if (ImGui::Button("Build Kinematic Rigid Body"))
+					{
+						srand(time(0));
+						uint64_t uuid = std::rand();
+						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
+						{
+							srand(time(0));
+							uint64_t uuid = std::rand();
+						}
+						if (m_RigidMin.x < m_RigidMax.x)
+							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_kinematicBody, m_RigidMin, m_RigidMax, uuid);
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+					}
+			
+					if (ImGui::Button("Stop Building Rigid Body"))
+					{
+						m_RigidMin = { 9999999, 9999999 };
+						m_RigidMax = { -9999999, -9999999 };
+						m_BuildingRigidBody = false;
+					}
+				}
+				else
+				{
+					if (ImGui::Button("Start Building Rigid Body"))
+					{
+						m_BuildingRigidBody = true;
+					}
+				}
+			
+				/*ImGui::SliderFloat("Douglas-Peucker Threshold", &m_DouglasThreshold, 0, 2);
+			
+				if (ImGui::Button("UpdateOutline"))
+				{
+					for each (auto body in m_World->m_PixelBodies)
+					{
+						auto contour = body->GetContourPoints();
+						body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, m_DouglasThreshold);
+					}
+				}*/
+							
+							
+				ImGui::TreePop();
+			}
+			
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Hovered Element Properties"))
+			{
+				auto [x, y] = GetMousePositionScene();
+				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+				ImGui::Text(("(" + std::to_string(pixelPos.x) + ", " + std::to_string(pixelPos.y) + ")").c_str());
+				ElementData& elementData = m_World->m_ElementData[m_HoveredElement.m_ID];
+				ImGui::Text("Element: %s", elementData.name.c_str());
+				ImGui::Text("- Temperature: %f", m_HoveredElement.m_Temperature);
+			
+				ImGui::TreePop();
+			}
+			
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Building Mode"))
+			{
+				if (ImGui::Selectable("~", m_BuildMode == BuildMode::Normal, 0, ImVec2(25, 25)))
+				{
+					m_BuildMode = BuildMode::Normal;
+				}
+				if (ImGui::Selectable("()", m_BuildMode == BuildMode::Dynamic, 0, ImVec2(25, 25)))
+				{
+					m_BuildMode = BuildMode::Dynamic;
+				}
+				if (ImGui::Selectable("[]", m_BuildMode == BuildMode::Kinematic, 0, ImVec2(25, 25)))
+				{
+					m_BuildMode = BuildMode::Kinematic;
+				}
+				ImGui::TreePop();
+			}
+			
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Brush Shape"))
+			{
+				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
+				{
+					m_BrushType = BrushType::circle;
+				}
+				if (ImGui::Selectable("Square", m_BrushType == BrushType::square))
+				{
+					m_BrushType = BrushType::square;
+				}
+				ImGui::TreePop();
+			}
+						
+			
+			ImGui::DragFloat("Brush Size", &m_BrushSize, 1.0f, 1.0f, 10.0f);
+			
+			
+			ImGui::SetNextItemOpen(true);
+			if (ImGui::TreeNode("Element Type"))
+			{
+				float width = ImGui::GetContentRegionAvail().x / 5;
+				for (int y = 0; y < (m_World->m_TotalElements / 4) + 1; y++)
+					for (int x = 0; x < 4; x++)
+					{
+						if (x > 0)
+							ImGui::SameLine();
+						int index = y * 4 + x;
+						if (index >= m_World->m_TotalElements) continue;
+						ImGui::PushID(index);
+						auto color = m_World->m_ElementData[index].color;
+						int r = (color & 0x000000FF) >> 0;
+						int g = (color & 0x0000FF00) >> 8;
+						int b = (color & 0x00FF0000) >> 16;
+						int a = (color & 0xFF000000) >> 24;
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
+						std::string name = (m_World->m_ElementData[index].name);
+						;
+						if (ImGui::Selectable(name.c_str(), m_SelectedElementIndex == index, 0, ImVec2(width, 25)))
+						{
+							// Toggle clicked cell
+							m_SelectedElementIndex = index;
+						}
+						ImGui::PopStyleColor();
+						ImGui::PopID();
+					}
+				ImGui::TreePop();
+			}
+						
+		}
+		ImGui::End();
+			
+		/*if (ImGui::Begin("NetworkDebug"))
+		{
+			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
+			ImGui::Text(("Last Recieved Merged Tick: " + std::to_string(d_LastRecievedInputTick)).c_str());
+		}
+		ImGui::End();*/
+			
+		for (auto panel : m_Panels)
+		{
+			panel->OnImGuiRender();
+		}
+			
+			
+#if STATISTICS
+		Renderer2D::Statistics stats = Renderer2D::GetStats();
+		ImGui::Begin("Rendering Statistics");
+		ImGui::Text("Draw Calls: %d", stats.DrawCalls);
+		ImGui::Text("Quads: %d", stats.QuadCount);
+		ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
+		ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
+		ImGui::End();
+#endif
+
+		
 	}
 
-//	void GameLayer::OnImGuiRender()
-//	{
-//		if (m_ConnectionStatus != Connected) return;
-//
-//
-//		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-//		
-//		//ImGui::ShowDemoWindow();
-//		
-//		m_Hovering = ImGui::IsWindowHovered();
-//		
-//
-//		if (ImGui::BeginMainMenuBar())
-//		{
-//			//ImGui::DockSpaceOverViewport();
-//			if (ImGui::BeginMenu("File"))
-//			{
-//				ImGui::Text("nothing here yet!");
-//				ImGui::EndMenu();
-//			}
-//			ImGui::EndMainMenuBar();
-//		}
-//		
-//		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
-//		
-//		ImGui::SetNextWindowDockID(dock);
-//		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
-//		{
-//			m_SceneViewIsFocused = ImGui::IsWindowFocused();
-//			Application::Get().GetImGuiLayer()->BlockEvents(false);
-//			auto sceneViewSize = ImGui::GetContentRegionAvail();
-//			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
-//			ImGui::Image(
-//				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID()),
-//				sceneViewSize,
-//				ImVec2(0, 1),
-//				ImVec2(1, 0),
-//				ImVec4(1, 1, 1, 1)
-//				//ImVec4(1, 1, 1, 1) border color
-//			);
-//			m_ViewportOffset = ImGui::GetItemRectMin();
-//			
-//
-//			if (m_ViewportSize.x != sceneViewSize.x || m_ViewportSize.y != sceneViewSize.y)
-//			{
-//				m_OrthographicCameraController.SetAspect(sceneViewSize.y / sceneViewSize.x);
-//				m_SceneFrameBuffer->Resize((uint32_t)sceneViewSize.x, (uint32_t)sceneViewSize.y);
-//				m_ViewportSize = { sceneViewSize.x, sceneViewSize.y };
-//			}
-//
-//			ImGui::End();
-//		}
-//		ImGui::PopStyleVar();
-//
-//		
-//		if (ImGui::Begin("Settings"))
-//		{
-//			ImGui::SetNextItemOpen(true);
-//			if (ImGui::TreeNode("Simulation"))
-//			{
-//				//ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
-//				//ImGui::SetItemTooltip("Default: 60");
-//				if (m_World->m_Running)
-//				{
-//					if (ImGui::Button("Pause"))
-//					{
-//						m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.GetID());
-//					}
-//					ImGui::SetItemTooltip("Shortcut: Space");
-//				}
-//				else
-//				{
-//					if (ImGui::Button("Play"))
-//					{
-//						m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.GetID());
-//					}
-//					ImGui::SetItemTooltip("Shortcut: Space");
-//					//ImGui::EndTooltip();
-//				}
-//
-//				if (ImGui::Button("Clear"))
-//				{
-//					m_CurrentTickClosure.AddInputAction(InputAction::ClearWorld);
-//				}
-//
-//				if (ImGui::Button("Toggle Collider View"))
-//				{
-//					m_World->m_DebugDrawColliders = !m_World->m_DebugDrawColliders;
-//				}
-//				
-//				if (m_BuildingRigidBody)
-//				{
-//					if (ImGui::Button("Build Rigid Body"))
-//					{
-//						srand(time(0));
-//						uint64_t uuid = std::rand();
-//						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
-//						{
-//							srand(time(0));
-//							uint64_t uuid = std::rand();
-//						}
-//						if (m_RigidMin.x < m_RigidMax.x)
-//							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, uuid);
-//						m_RigidMin = { 9999999, 9999999 };
-//						m_RigidMax = { -9999999, -9999999 };
-//					}
-//					if (ImGui::Button("Build Kinematic Rigid Body"))
-//					{
-//						srand(time(0));
-//						uint64_t uuid = std::rand();
-//						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
-//						{
-//							srand(time(0));
-//							uint64_t uuid = std::rand();
-//						}
-//						if (m_RigidMin.x < m_RigidMax.x)
-//							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_kinematicBody, m_RigidMin, m_RigidMax, uuid);
-//						m_RigidMin = { 9999999, 9999999 };
-//						m_RigidMax = { -9999999, -9999999 };
-//					}
-//
-//					if (ImGui::Button("Stop Building Rigid Body"))
-//					{
-//						m_RigidMin = { 9999999, 9999999 };
-//						m_RigidMax = { -9999999, -9999999 };
-//						m_BuildingRigidBody = false;
-//					}
-//				}
-//				else
-//				{
-//					if (ImGui::Button("Start Building Rigid Body"))
-//					{
-//						m_BuildingRigidBody = true;
-//					}
-//				}
-//
-//				/*ImGui::SliderFloat("Douglas-Peucker Threshold", &m_DouglasThreshold, 0, 2);
-//
-//				if (ImGui::Button("UpdateOutline"))
-//				{
-//					for each (auto body in m_World->m_PixelBodies)
-//					{
-//						auto contour = body->GetContourPoints();
-//						body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, m_DouglasThreshold);
-//					}
-//				}*/
-//				
-//				
-//				ImGui::TreePop();
-//			}
-//
-//			ImGui::SetNextItemOpen(true);
-//			if (ImGui::TreeNode("Hovered Element Properties"))
-//			{
-//				auto [x, y] = GetMousePositionScene();
-//				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-//				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
-//				ImGui::Text(("(" + std::to_string(pixelPos.x) + ", " + std::to_string(pixelPos.y) + ")").c_str());
-//				ElementData& elementData = m_World->m_ElementData[m_HoveredElement.m_ID];
-//				ImGui::Text("Element: %s", elementData.name.c_str());
-//				ImGui::Text("- Temperature: %f", m_HoveredElement.m_Temperature);
-//
-//				ImGui::TreePop();
-//			}
-//
-//			ImGui::SetNextItemOpen(true);
-//			if (ImGui::TreeNode("Building Mode"))
-//			{
-//				if (ImGui::Selectable("~", m_BuildMode == BuildMode::Normal, 0, ImVec2(25, 25)))
-//				{
-//					m_BuildMode = BuildMode::Normal;
-//				}
-//				if (ImGui::Selectable("()", m_BuildMode == BuildMode::Dynamic, 0, ImVec2(25, 25)))
-//				{
-//					m_BuildMode = BuildMode::Dynamic;
-//				}
-//				if (ImGui::Selectable("[]", m_BuildMode == BuildMode::Kinematic, 0, ImVec2(25, 25)))
-//				{
-//					m_BuildMode = BuildMode::Kinematic;
-//				}
-//				ImGui::TreePop();
-//			}
-//
-//			ImGui::SetNextItemOpen(true);
-//			if (ImGui::TreeNode("Brush Shape"))
-//			{
-//				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
-//				{
-//					m_BrushType = BrushType::circle;
-//				}
-//				if (ImGui::Selectable("Square", m_BrushType == BrushType::square))
-//				{
-//					m_BrushType = BrushType::square;
-//				}
-//				ImGui::TreePop();
-//			}
-//			
-//
-//			ImGui::DragFloat("Brush Size", &m_BrushSize, 1.0f, 1.0f, 10.0f);
-//
-//
-//			ImGui::SetNextItemOpen(true);
-//			if (ImGui::TreeNode("Element Type"))
-//			{
-//				float width = ImGui::GetContentRegionAvail().x / 5;
-//				for (int y = 0; y < (m_World->m_TotalElements / 4) + 1; y++)
-//					for (int x = 0; x < 4; x++)
-//					{
-//						if (x > 0)
-//							ImGui::SameLine();
-//						int index = y * 4 + x;
-//						if (index >= m_World->m_TotalElements) continue;
-//						ImGui::PushID(index);
-//						auto color = m_World->m_ElementData[index].color;
-//						int r = (color & 0x000000FF) >> 0;
-//						int g = (color & 0x0000FF00) >> 8;
-//						int b = (color & 0x00FF0000) >> 16;
-//						int a = (color & 0xFF000000) >> 24;
-//						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
-//						std::string name = (m_World->m_ElementData[index].name);
-//						;
-//						if (ImGui::Selectable(name.c_str(), m_SelectedElementIndex == index, 0, ImVec2(width, 25)))
-//						{
-//							// Toggle clicked cell
-//							m_SelectedElementIndex = index;
-//						}
-//						ImGui::PopStyleColor();
-//						ImGui::PopID();
-//					}
-//				ImGui::TreePop();
-//			}
-//			
-//		}
-//		ImGui::End();
-//
-//		/*if (ImGui::Begin("NetworkDebug"))
-//		{
-//			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
-//			ImGui::Text(("Last Recieved Merged Tick: " + std::to_string(d_LastRecievedInputTick)).c_str());
-//		}
-//		ImGui::End();*/
-//
-//		for (auto panel : m_Panels)
-//		{
-//			panel->OnImGuiRender();
-//		}
-//
-//
-//#if STATISTICS
-//		Renderer2D::Statistics stats = Renderer2D::GetStats();
-//		ImGui::Begin("Rendering Statistics");
-//		ImGui::Text("Draw Calls: %d", stats.DrawCalls);
-//		ImGui::Text("Quads: %d", stats.QuadCount);
-//		ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
-//		ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
-//		ImGui::End();
-//#endif
-//	}
 
 	void GameLayer::TextCentered(std::string text)
 	{
@@ -703,33 +832,6 @@ namespace Pyxis
 		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
 		dispatcher.Dispatch<MouseScrolledEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseScrolledEvent));
-	}
-
-	bool GameLayer::ConnectToServer(const std::string& AddressAndPort)
-	{
-		
-		SteamNetworkingIPAddr serverAddr; serverAddr.Clear();
-		// Anything else, must be server address to connect to
-		if (serverAddr.IsIPv6AllZeros())
-		{
-			if (!serverAddr.ParseString(AddressAndPort.c_str()))
-			{
-				PX_CORE_ERROR("Invalid server address '{0}'", AddressAndPort);
-				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
-				m_ConnectionStatusMessage = "Invalid Server Address";
-				return false;
-			}
-			if (serverAddr.m_port == 0)
-				serverAddr.m_port = 21228;
-		}
-
-		
-		//Connect to the server:
-		char serverAddrCString[SteamNetworkingIPAddr::k_cchMaxString];
-		serverAddr.ToString(serverAddrCString, sizeof(serverAddrCString), true);
-		PX_TRACE("Connecting to address {0}", serverAddrCString);
-		//m_ClientInterface.Disconnect();
-		return Connect(serverAddr);
 	}
 
 	//void GameLayer::ConnectionUpdate()
@@ -787,6 +889,49 @@ namespace Pyxis
 
 	//	}
 	//}
+
+	void GameLayer::HandleMessages()
+	{
+		Ref<Network::Message> msg;
+		while (PollMessage(msg))
+		{
+			switch (static_cast<GameMessage>(msg->header.id))
+			{
+			case GameMessage::Server_ClientData:
+			{
+				uint64_t clientID;
+				*msg >> clientID;
+				m_ClientMap[clientID];
+				*msg >> m_ClientMap[clientID];
+				break;
+			}
+			case GameMessage::Server_AllClientData:
+			{
+				uint64_t numClients;
+				*msg >> numClients;
+				for (int i = 0; i < numClients; i++)
+				{
+					uint64_t clientID;
+					*msg >> clientID;
+					m_ClientMap[clientID];
+					*msg >> m_ClientMap[clientID];
+				}
+				break;
+			}
+			case GameMessage::Server_ClientDisconnected:
+			{
+				uint64_t clientID;
+				*msg >> clientID;
+
+				m_ClientMap.erase(clientID);
+				break;
+			}
+
+			default:
+				break;
+			}
+		}
+	}
 
 	//void GameLayer::HandleMessages()
 	//{
@@ -926,193 +1071,193 @@ namespace Pyxis
 	//	}
 	//}
 
-	//void GameLayer::HandleTickClosure(MergedTickClosure& tc)
-	//{
-	//	for (int i = 0; i < tc.m_InputActionCount; i++)
-	//	{
-	//		InputAction IA;
-	//		tc >> IA;
-	//		switch (IA)
-	//		{
-	//		case InputAction::Add_Player:
-	//		{
-	//			uint64_t ID;
-	//			tc >> ID;
+	void GameLayer::HandleTickClosure(MergedTickClosure& tc)
+	{
+		for (int i = 0; i < tc.m_InputActionCount; i++)
+		{
+			InputAction IA;
+			tc >> IA;
+			switch (IA)
+			{
+			case InputAction::Add_Player:
+			{
+				uint64_t ID;
+				tc >> ID;
 
-	//			glm::ivec2 pixelPos;
-	//			tc >> pixelPos;
+				glm::ivec2 pixelPos;
+				tc >> pixelPos;
 
-	//			m_World->CreatePlayer(ID, pixelPos);
-	//			break;
-	//		}
-	//		case InputAction::PauseGame:
-	//		{
-	//			uint64_t ID;
-	//			tc >> ID;
-	//			m_World->m_Running = false;
-	//			break;
-	//		}
-	//		case InputAction::ResumeGame:
-	//		{
-	//			uint64_t ID;
-	//			tc >> ID;
-	//			m_World->m_Running = true;
-	//			break;
-	//		}
-	//		case InputAction::TransformRegionToRigidBody:
-	//		{
-	//			uint64_t ID;
-	//			tc >> ID;
+				m_World->CreatePlayer(ID, pixelPos);
+				break;
+			}
+			case InputAction::PauseGame:
+			{
+				uint64_t ID;
+				tc >> ID;
+				m_World->m_Running = false;
+				break;
+			}
+			case InputAction::ResumeGame:
+			{
+				uint64_t ID;
+				tc >> ID;
+				m_World->m_Running = true;
+				break;
+			}
+			case InputAction::TransformRegionToRigidBody:
+			{
+				uint64_t ID;
+				tc >> ID;
 
-	//			glm::ivec2 maximum;
-	//			tc >> maximum;
+				glm::ivec2 maximum;
+				tc >> maximum;
 
-	//			glm::ivec2 minimum;
-	//			tc >> minimum;
+				glm::ivec2 minimum;
+				tc >> minimum;
 
-	//			b2BodyType type;
-	//			tc >> type;
+				b2BodyType type;
+				tc >> type;
 
-	//			int width = (maximum.x - minimum.x) + 1;
-	//			int height = (maximum.y - minimum.y) + 1;
-	//			if (width * height <= 0) break;
-	//			glm::ivec2 newMin = maximum;
-	//			glm::ivec2 newMax = minimum;
-	//			//iterate over section and find the width, height, center, ect
-	//			int mass = 0;
-	//			for (int x = 0; x < width; x++)
-	//			{
-	//				for (int y = 0; y < height; y++)
-	//				{
-	//					glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-	//					auto& element = m_World->GetElement(pixelPos);
-	//					auto& elementData = m_World->m_ElementData[element.m_ID];
-	//					if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-	//					{
-	//						if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-	//						if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-	//						if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-	//						if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-	//						mass++;
-	//					}
-	//				}
-	//			}
-	//			if (mass < 2) continue;//skip if we are 1 element or 0
-	//			PX_TRACE("transforming {0} elements to a rigid body", mass);
+				int width = (maximum.x - minimum.x) + 1;
+				int height = (maximum.y - minimum.y) + 1;
+				if (width * height <= 0) break;
+				glm::ivec2 newMin = maximum;
+				glm::ivec2 newMax = minimum;
+				//iterate over section and find the width, height, center, ect
+				int mass = 0;
+				for (int x = 0; x < width; x++)
+				{
+					for (int y = 0; y < height; y++)
+					{
+						glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
+						auto& element = m_World->GetElement(pixelPos);
+						auto& elementData = m_World->m_ElementData[element.m_ID];
+						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+						{
+							if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
+							if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
+							if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
+							if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
+							mass++;
+						}
+					}
+				}
+				if (mass < 2) continue;//skip if we are 1 element or 0
+				PX_TRACE("transforming {0} elements to a rigid body", mass);
 
-	//			width = (newMax.x - newMin.x) + 1;
-	//			height = (newMax.y - newMin.y) + 1;
+				width = (newMax.x - newMin.x) + 1;
+				height = (newMax.y - newMin.y) + 1;
 
-	//			glm::ivec2 origin = { width / 2, height / 2 };
-	//			std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-	//			for (int x = 0; x < width; x++)
-	//			{
-	//				for (int y = 0; y < height; y++)
-	//				{
-	//					glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
+				glm::ivec2 origin = { width / 2, height / 2 };
+				std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
+				for (int x = 0; x < width; x++)
+				{
+					for (int y = 0; y < height; y++)
+					{
+						glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
 
-	//					//loop over every element, grab it, and make it rigid if it is a movable Solid
-	//					auto& element = m_World->GetElement(pixelPos);
-	//					auto& elementData = m_World->m_ElementData[element.m_ID];
-	//					if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-	//					{
-	//						element.m_Rigid = true;
-	//						//set the elements at the local position to be the element pulled from world
-	//						elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-	//						m_World->SetElement(pixelPos, Element());
-	//					}
-	//				}
-	//			}
-	//			glm::ivec2 size = newMax - newMin;
-	//			PX_TRACE("Mass is: {0}", mass);
-	//			PixelRigidBody* body = new PixelRigidBody(ID, size, elements, type, m_World->m_Box2DWorld);
-	//			if (body->m_B2Body == nullptr)
-	//			{
-	//				PX_TRACE("Failed to create rigid body");
-	//				continue;
-	//			}
-	//			else
-	//			{
-	//				m_World->m_PixelBodyMap[body->m_ID] = body;
-	//				auto pixelPos = (newMin + newMax) / 2;
-	//				if (width % 2 == 0) pixelPos.x += 1;
-	//				if (height % 2 == 0) pixelPos.y += 1;
-	//				body->SetPixelPosition(pixelPos);
-	//				m_World->PutPixelBodyInWorld(*body);
-	//			}
+						//loop over every element, grab it, and make it rigid if it is a movable Solid
+						auto& element = m_World->GetElement(pixelPos);
+						auto& elementData = m_World->m_ElementData[element.m_ID];
+						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+						{
+							element.m_Rigid = true;
+							//set the elements at the local position to be the element pulled from world
+							elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
+							m_World->SetElement(pixelPos, Element());
+						}
+					}
+				}
+				glm::ivec2 size = newMax - newMin;
+				PX_TRACE("Mass is: {0}", mass);
+				PixelRigidBody* body = new PixelRigidBody(ID, size, elements, type, m_World->m_Box2DWorld);
+				if (body->m_B2Body == nullptr)
+				{
+					PX_TRACE("Failed to create rigid body");
+					continue;
+				}
+				else
+				{
+					m_World->m_PixelBodyMap[body->m_ID] = body;
+					auto pixelPos = (newMin + newMax) / 2;
+					if (width % 2 == 0) pixelPos.x += 1;
+					if (height % 2 == 0) pixelPos.y += 1;
+					body->SetPixelPosition(pixelPos);
+					m_World->PutPixelBodyInWorld(*body);
+				}
 
 
-	//			break;
-	//		}
-	//		case Pyxis::InputAction::Input_Move:
-	//		{
-	//			//PX_TRACE("input action: Input_Move");
-	//			break;
-	//		}
-	//		case Pyxis::InputAction::Input_Place:
-	//		{
-	//			//PX_TRACE("input action: Input_Place");
-	//			bool rigid;
-	//			glm::ivec2 pixelPos;
-	//			uint32_t elementID;
-	//			BrushType brush;
-	//			uint8_t brushSize;
-	//			tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
+				break;
+			}
+			case Pyxis::InputAction::Input_Move:
+			{
+				//PX_TRACE("input action: Input_Move");
+				break;
+			}
+			case Pyxis::InputAction::Input_Place:
+			{
+				//PX_TRACE("input action: Input_Place");
+				bool rigid;
+				glm::ivec2 pixelPos;
+				uint32_t elementID;
+				BrushType brush;
+				uint8_t brushSize;
+				tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
 
-	//			m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
-	//			break;
-	//		}
-	//		case Pyxis::InputAction::Input_StepSimulation:
-	//		{
-	//			PX_TRACE("input action: Input_StepSimulation");
-	//			m_World->UpdateWorld();
-	//			break;
-	//		}
-	//		case InputAction::Input_MousePosition:
-	//		{
-	//			glm::ivec2 mousePos;
-	//			uint64_t ID;
-	//			tc >> mousePos >> ID;
-	//			if (mousePos.x < -2000000000) break;
+				m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
+				break;
+			}
+			case Pyxis::InputAction::Input_StepSimulation:
+			{
+				PX_TRACE("input action: Input_StepSimulation");
+				m_World->UpdateWorld();
+				break;
+			}
+			/*case InputAction::Input_MousePosition:
+			{
+				glm::ivec2 mousePos;
+				uint64_t ID;
+				tc >> mousePos >> ID;
+				if (mousePos.x < -2000000000) break;
 
-	//			m_PlayerCursors[ID].pixelPosition = mousePos;
-	//			break;
-	//		}
-	//		case InputAction::ClearWorld:
-	//		{
-	//			m_World->Clear();
-	//			break;
-	//		}
-	//		default:
-	//		{
-	//			PX_TRACE("input action: default?");
-	//			break;
-	//		}
-	//		}
-	//	}
-	//	if (m_World->m_Running)
-	//	{
-	//		m_World->UpdateWorld();
-	//	}
-	//	else
-	//	{
-	//		m_World->UpdateTextures();
-	//	}
-	//}
+				m_PlayerCursors[ID].pixelPosition = mousePos;
+				break;
+			}*/
+			case InputAction::ClearWorld:
+			{
+				m_World->Clear();
+				break;
+			}
+			default:
+			{
+				PX_TRACE("input action: default?");
+				break;
+			}
+			}
+		}
+		if (m_World->m_Running)
+		{
+			m_World->UpdateWorld();
+		}
+		else
+		{
+			m_World->UpdateTextures();
+		}
+	}
 
-	//bool GameLayer::CreateWorld()
-	//{
-	//	//create the world
-	//	m_World = CreateRef<World>();
-	//	if (m_World->m_Error)
-	//	{
-	//		PX_ERROR("Failed to create the world");
-	//		Application::Get().Sleep(2000);
-	//		Application::Get().Close();
-	//		return false;
-	//	}
-	//	return true;
-	//}
+	bool GameLayer::CreateWorld()
+	{
+		//create the world
+		m_World = CreateRef<World>();
+		if (m_World->m_Error)
+		{
+			PX_ERROR("Failed to create the world");
+			Application::Get().Sleep(2000);
+			Application::Get().Close();
+			return false;
+		}
+		return true;
+	}
 
 	std::pair<float, float> GameLayer::GetMousePositionScene()
 	{
@@ -1142,7 +1287,7 @@ namespace Pyxis
 	bool GameLayer::OnKeyPressedEvent(KeyPressedEvent& event) {
 		if (event.GetKeyCode() == PX_KEY_F)
 		{
-			SendStringToServer("Respects Paid!");
+			//SendStringToServer("Respects Paid!");
 		}
 		//if (event.GetKeyCode() == PX_KEY_SPACE)
 		//{
@@ -1220,6 +1365,22 @@ namespace Pyxis
 		}
 		
 		return false;
+	}
+
+	void GameLayer::StartSingleplayer()
+	{
+		m_MultiplayerState = MultiplayerState::Singleplayer;
+		if (!CreateWorld())
+		{
+			m_ConnectionStatusMessage = "Failed To Create a world!";
+			m_ConnectionStatus = FailedToConnect;
+		}
+	}
+
+	void GameLayer::StartMultiplayer(const std::string& AddressAndPort)
+	{
+		m_MultiplayerState = MultiplayerState::Connecting;
+		Connect(AddressAndPort);
 	}
 
 	void GameLayer::PaintBrushHologram()

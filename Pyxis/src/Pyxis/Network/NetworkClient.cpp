@@ -111,7 +111,7 @@ namespace Pyxis
 		{
 			if (m_ConnectionStatus == Connected || m_ConnectionStatus == Connecting)
 			{
-				PollIncomingMessages();
+				//PollIncomingMessages();
 				PollConnectionStateChanges();
 			}
 		}
@@ -172,27 +172,25 @@ namespace Pyxis
 			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 
-		
-		void ClientInterface::PollIncomingMessages()
+		bool ClientInterface::PollMessage(Ref<Message>& MessageOut)
 		{
-			while (true)
+			
+			ISteamNetworkingMessage* pIncomingMsg = nullptr;
+			int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+			if (numMsgs == 0) return false;
+			if (numMsgs < 0)
 			{
-				ISteamNetworkingMessage* pIncomingMsg = nullptr;
-				int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
-				if (numMsgs == 0)
-					break;
-				if (numMsgs < 0)
-					PX_CORE_ERROR("Error checking for messages");
-				
-				// Just echo anything we get from the server
-				//fwrite(pIncomingMsg->m_pData, 1, pIncomingMsg->m_cbSize, stdout);
-				std::string message(reinterpret_cast<const char*>(pIncomingMsg->m_pData), pIncomingMsg->m_cbSize);
-				PX_CORE_TRACE("{0}", message);
-				fputc('\n', stdout);
-
-				// We don't need this anymore.
-				pIncomingMsg->Release();
+				PX_CORE_ERROR("Error checking for messages");
+				return false;
 			}
+			assert(numMsgs == 1 && pIncomingMsg);
+
+			MessageOut = CreateRef<Message>(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+			*MessageOut >> MessageOut->header.id;
+			MessageOut->clientID = 0;
+			pIncomingMsg->Release();
+			return true;
+	
 		}
 
 		

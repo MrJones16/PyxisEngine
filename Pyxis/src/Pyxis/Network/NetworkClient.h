@@ -67,9 +67,11 @@ namespace Pyxis
 			inline static ClientInterface* s_pCallbackInstance = nullptr;
 			
 			/// <summary>
-			/// Writes incoming messages to stdout
+			/// Grabs a message and returns true if there was one.
+			/// Create a message to fill with Ref<Network::Message> msg;
 			/// </summary>
-			void PollIncomingMessages();
+			bool PollMessage(Ref<Message>& MessageOut);
+
 			/// <summary>
 			/// Function that will delegate connection changes
 			/// </summary>

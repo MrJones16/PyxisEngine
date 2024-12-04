@@ -173,51 +173,6 @@ namespace Pyxis
 			pIncomingMsg->Release();
 			return true;
 		}
-		
-		void ServerInterface::PollIncomingMessages()
-		{
-			while (true)
-			{
-				ISteamNetworkingMessage* pIncomingMsg = nullptr;
-				int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
-				if (numMsgs == 0)
-					break;
-				if (numMsgs < 0)
-					PX_CORE_ERROR("Error checking for messages");
-				assert(numMsgs == 1 && pIncomingMsg);
-				auto itClient = m_mapClients.find(pIncomingMsg->m_conn);
-				assert(itClient != m_mapClients.end());
-
-				// '\0'-terminate it to make it easier to parse
-				Message px_msg(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
-				std::string sCmd;
-				sCmd.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
-				const char* cmd = sCmd.c_str();
-				
-				px_msg >> px_msg.header.id;
-				if (px_msg.header.id == 0)
-				{
-					std::string px_str = "";
-					px_str.assign((const char*)px_msg.body.data(), px_msg.size());
-					PX_CORE_TRACE("Message Recieved. ID: {0}, Message: {1}", px_msg.header.id, px_str);
-				}else if (px_msg.header.id == 1)
-				{
-					
-					PX_CORE_TRACE("Message Recieved. ID: {0}", px_msg.header.id);
-					std::vector<int> resultOfTest;
-					px_msg >> resultOfTest;
-					PX_TRACE("Here's the vector: ");
-					for (int x : resultOfTest)
-					{
-						PX_TRACE(x);
-					}
-				}
-				
-
-				// We don't need this anymore.
-				pIncomingMsg->Release();
-			}
-		}
 
 		
 		void ServerInterface::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)

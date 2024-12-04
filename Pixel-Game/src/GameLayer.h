@@ -33,25 +33,22 @@ namespace Pyxis
 		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
-		//networking
-		bool ConnectToServer(const std::string& AddressAndPort);
-
 		//game functions
+		// 
+		void StartSingleplayer();
+		void StartMultiplayer(const std::string& AddressAndPort);
+		void OnConnectionSuccess() override;
 		//void ConnectionUpdate();
-		//void HandleMessages();
-		//void HandleTickClosure(MergedTickClosure& tc);
-		//bool CreateWorld();
+		void HandleMessages();
+		void HandleTickClosure(MergedTickClosure& tc);
+		bool CreateWorld();
 		void TextCentered(std::string text);
 		std::pair<float, float> GetMousePositionScene();
 		
 
 	public:
 		void PaintBrushHologram();
-
-	public:
-		//things for the main menu to use to connect game world to server
 		
-		std::string m_ConnectionErrorMessage = "";
 	private:
 
 		//game things
@@ -61,32 +58,23 @@ namespace Pyxis
 
 		//core multiplayer things
 		//multiplayer connecting things
-		bool m_WaitForWorldData = true;
-
-
-		struct PlayerCursor
+		enum MultiplayerState
 		{
-			PlayerCursor() = default;
-			PlayerCursor(uint64_t id)
-			{
-				std::vector<glm::vec4> colorOptions =
-				{
-					glm::vec4(1,0,0,1),//red
-					glm::vec4(1,0.5f,0,1),//orange
-					glm::vec4(1,1,0,1),//yellow
-					glm::vec4(0,1,0,1),//green
-					glm::vec4(0,0,1,1),//blue
-					glm::vec4(1,0,0.2f,1),//indigo
-					glm::vec4(1,0,0.8f,1),//violet
-				};
-				color = colorOptions[id % colorOptions.size()];
-			}
-			glm::ivec2 pixelPosition = {0,0};
-			glm::vec4 color = {1,1,1,1};
-		};
+			Singleplayer,
+			Connecting,
+			GatheringPlayerData,
+			DownloadingWorld,
+			CatchingUp,
+			Connected,
 
-		//multiplayer functionality
-		std::unordered_map<uint64_t, PlayerCursor> m_PlayerCursors;
+		};
+		MultiplayerState m_MultiplayerState = Singleplayer;
+		TickClosure m_CurrentTickClosure;
+
+		//my client data
+		ClientData m_ClientData;
+		//map of other clients data based on their ID's
+		std::unordered_map<uint64_t, ClientData> m_ClientMap;
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;

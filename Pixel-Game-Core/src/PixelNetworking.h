@@ -8,19 +8,48 @@
 
 namespace Pyxis
 {
+	struct ClientData
+	{
+		uint64_t m_ID = 0;
+		char m_Name[64] = "PyxisEnjoyer";
+		glm::ivec2 m_CurosrPixelPosition = { 0,0 };
+		glm::vec4 m_Color = { 1,1,1,1 };
+
+
+		ClientData() = default;
+		ClientData(uint64_t id)
+		{
+			m_ID = id;
+			std::vector<glm::vec4> colorOptions =
+			{
+				glm::vec4(1,0,0,1),//red
+				glm::vec4(1,0.5f,0,1),//orange
+				glm::vec4(1,1,0,1),//yellow
+				glm::vec4(0,1,0,1),//green
+				glm::vec4(0,0,1,1),//blue
+				glm::vec4(1,0,0.2f,1),//indigo
+				glm::vec4(1,0,0.8f,1),//violet
+			};
+			m_Color = colorOptions[id % colorOptions.size()];
+		}
+
+	};
+
 	enum class GameMessage : uint32_t
 	{
-		Ping,
+		String,
+		StringToAll,
 
-		Server_ClientConnected,
-		Server_ClientDisconnected,
-		Server_ClientAccepted,
-		Server_ClientAssignID,
-		Server_ClientDesynced,
-
-		Client_RegisterWithServer,
-		Client_UnregisterWithServer,
+		Client_ClientData,
 		Client_RequestMergedTick,
+		Client_RequestPlayerData,
+
+		Server_ClientData,
+		Server_AllClientData,
+		Server_ClientDisconnected,
+
+		Server_Message,
+		Message_All,
 
 		Game_RequestGameData,
 		Game_GameData,
@@ -30,8 +59,6 @@ namespace Pyxis
 		Game_TickClosure,
 		Game_MergedTickClosure,
 
-		Message_All,
-		Server_Message,
 	};
 
 	enum class InputAction : uint32_t
