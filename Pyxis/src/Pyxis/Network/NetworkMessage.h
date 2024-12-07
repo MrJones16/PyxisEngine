@@ -1,6 +1,9 @@
 #pragma once
+//following guidance on asio from OLC "javix9" for messages
 
-//following guidance on asio from OLC "javix9"
+#include <GameNetworkingSockets/steam/isteamnetworkingutils.h>
+
+#include <snappy.h>
 
 namespace Pyxis
 {
@@ -18,7 +21,7 @@ namespace Pyxis
 		{
 			MessageHeader header{};
 			std::vector<uint8_t> body;
-			uint64_t clientID = 0;
+			HSteamNetConnection clientHConnection;
 
 			Message()
 			{

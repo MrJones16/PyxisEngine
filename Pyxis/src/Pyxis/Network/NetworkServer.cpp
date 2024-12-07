@@ -13,7 +13,6 @@ namespace Pyxis
 		
 		ServerInterface::ServerInterface()
 		{
-			
 		}
 
 		
@@ -77,19 +76,19 @@ namespace Pyxis
 		{
 			// Close all the connections
 			PX_CORE_TRACE("Closing connections...");
-			for (auto it : m_mapClients)
+			for (auto& client : m_ClientsSet)
 			{
 				// Send them one more goodbye message.  Note that we also have the
 				// connection close reason as a place to send final data.  However,
 				// that's usually best left for more diagnostic/debug text not actual
 				// protocol strings.
-				SendStringToClient(it.first, "Server is shutting down.  Goodbye.");
+				SendStringToClient(client, "Server is shutting down.  Goodbye.");
 
 				// Close the connection.  We use "linger mode" to ask SteamNetworkingSockets
 				// to flush this out and close gracefully.
-				m_pInterface->CloseConnection(it.first, 0, "Server Shutdown", true);
+				m_pInterface->CloseConnection(client, 0, "Server Shutdown", true);
 			}
-			m_mapClients.clear();
+			m_ClientsSet.clear();
 
 			m_pInterface->CloseListenSocket(m_hListenSock);
 			m_hListenSock = k_HSteamListenSocket_Invalid;
@@ -113,28 +112,72 @@ namespace Pyxis
 
 		void ServerInterface::SendStringToAllClients(const std::string& str, HSteamNetConnection except)
 		{
-			Network::Message msg;
+			/*Network::Message msg;
 			msg.header.id = 0;
 			msg.PushData(str.c_str(), str.size());
-			for (auto& c : m_mapClients)
+			for (auto& c : m_ClientsSet)
 			{
-				if (c.first != except)
-					SendMessageToClient(c.first, msg);
+				if (c != except)
+					SendMessageToClient(c, msg);
+			}*/
+
+			Network::Message message;
+			message.header.id = 0;
+			message.PushData(str.c_str(), str.size());
+			message << message.header.id;
+
+			std::string inString(message.body.begin(), message.body.end());
+			std::string compressedString;
+			snappy::Compress(inString.data(), inString.size(), &compressedString);
+
+			Network::Message compressedMsg;
+			compressedMsg.PushData(compressedString.data(), compressedString.size());
+
+			for (auto& c : m_ClientsSet)
+			{
+				if (c != except)
+					m_pInterface->SendMessageToConnection(c, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+					
 			}
 		}
 
 		void ServerInterface::SendMessageToClient(HSteamNetConnection conn, Message& message)
 		{
+			/*message << message.header.id;
+			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);*/
+
 			message << message.header.id;
-			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+
+			std::string inString(message.body.begin(), message.body.end());
+			std::string compressedString;
+			snappy::Compress(inString.data(), inString.size(), &compressedString);
+
+
+			Network::Message compressedMsg;
+			compressedMsg.PushData(compressedString.data(), compressedString.size());
+			m_pInterface->SendMessageToConnection(conn, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
 		void ServerInterface::SendMessageToAllClients(Message& message, HSteamNetConnection except)
 		{
-			for (auto& c : m_mapClients)
+			/*for (auto& c : m_ClientsSet)
 			{
-				if (c.first != except)
-					SendMessageToClient(c.first, message);
+				if (c != except)
+					SendMessageToClient(c, message);
+			}*/
+			message << message.header.id;
+
+			std::string inString(message.body.begin(), message.body.end());
+			std::string compressedString;
+			snappy::Compress(inString.data(), inString.size(), &compressedString);
+
+
+			Network::Message compressedMsg;
+			compressedMsg.PushData(compressedString.data(), compressedString.size());
+			for (auto& c : m_ClientsSet)
+			{
+				if (c != except)
+					m_pInterface->SendMessageToConnection(c, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 			}
 		}
 
@@ -146,15 +189,31 @@ namespace Pyxis
 
 		void ServerInterface::SendUnreliableMessageToAllClients(Message& message, HSteamNetConnection except)
 		{
-			for (auto& c : m_mapClients)
+			for (auto& c : m_ClientsSet)
 			{
-				if (c.first != except)
-					SendUnreliableMessageToClient(c.first, message);
+				if (c != except)
+					SendUnreliableMessageToClient(c, message);
 			}
 		}
 
 		bool ServerInterface::PollMessage(Ref<Message>& MessageOut)
 		{
+			/*ISteamNetworkingMessage* pIncomingMsg = nullptr;
+			int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
+			if (numMsgs == 0) return false;
+			if (numMsgs < 0)
+			{
+				PX_CORE_ERROR("Error checking for messages");
+				return false;
+			}
+			assert(numMsgs == 1 && pIncomingMsg);
+			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn, "Message was from unknown client"));
+
+			MessageOut = CreateRef<Message>(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+			*MessageOut >> MessageOut->header.id;
+			MessageOut->clientHConnection = pIncomingMsg->m_conn;
+			pIncomingMsg->Release();
+			return true;*/
 			ISteamNetworkingMessage* pIncomingMsg = nullptr;
 			int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
 			if (numMsgs == 0) return false;
@@ -164,12 +223,18 @@ namespace Pyxis
 				return false;
 			}
 			assert(numMsgs == 1 && pIncomingMsg);
-			auto itClient = m_mapClients.find(pIncomingMsg->m_conn);
-			assert(itClient != m_mapClients.end());
+			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn, "Message was from unknown client"));
 
-			MessageOut = CreateRef<Message>(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+			// '\0'-terminate it to make it easier to parse
+			std::string stringCompressed;
+			stringCompressed.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+			
+
+			std::string uncompressed;
+			snappy::Uncompress(stringCompressed.data(), stringCompressed.size(), &uncompressed);
+			MessageOut = CreateRef<Message>(uncompressed.data(), uncompressed.size());
 			*MessageOut >> MessageOut->header.id;
-			MessageOut->clientID = itClient->second;
+			MessageOut->clientHConnection = pIncomingMsg->m_conn;
 			pIncomingMsg->Release();
 			return true;
 		}
@@ -197,22 +262,21 @@ namespace Pyxis
 					// Locate the client.  Note that it should have been found, because this
 					// is the only codepath where we remove clients (except on shutdown),
 					// and connection change callbacks are dispatched in queue order.
-					auto itClient = m_mapClients.find(pInfo->m_hConn);
-					assert(itClient != m_mapClients.end());
+					PX_ASSERT(m_ClientsSet.contains(pInfo->m_hConn), "Client Not Found");
 
 					// Select appropriate log messages
 					const char* pszDebugLogAction;
 					if (pInfo->m_info.m_eState == k_ESteamNetworkingConnectionState_ProblemDetectedLocally)
 					{
 						pszDebugLogAction = "problem detected locally";
-						PX_CORE_WARN("Alas, {0} hath fallen into shadow. ({1})", itClient->second, pInfo->m_info.m_szEndDebug);
+						PX_CORE_WARN("Alas, {0} hath fallen into shadow. ({1})", pInfo->m_hConn, pInfo->m_info.m_szEndDebug);
 					}
 					else
 					{
 						// Note that here we could check the reason code to see if
 						// it was a "usual" connection or an "unusual" one.
 						pszDebugLogAction = "closed by peer";
-						PX_CORE_WARN("{0} hath departed", itClient->second);
+						PX_CORE_WARN("{0} hath departed", pInfo->m_hConn);
 					}
 
 					// Spew something to our own log.  Note that because we put their nick
@@ -225,10 +289,10 @@ namespace Pyxis
 						pInfo->m_info.m_szEndDebug
 					);
 
-					m_mapClients.erase(itClient);
+					m_ClientsSet.erase(pInfo->m_hConn);
 
 					// Send a message so everybody else knows what happened
-					SendStringToAllClients(temp);
+					SendStringToAllClients(pszDebugLogAction);
 				}
 				else
 				{
@@ -241,6 +305,7 @@ namespace Pyxis
 				// to finish up.  The reason information do not matter in this case,
 				// and we cannot linger because it's already closed on the other end,
 				// so we just pass 0's.
+				OnClientDisconnect(pInfo->m_hConn);
 				m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 				break;
 			}
@@ -248,7 +313,7 @@ namespace Pyxis
 			case k_ESteamNetworkingConnectionState_Connecting:
 			{
 				// This must be a new connection
-				assert(m_mapClients.find(pInfo->m_hConn) == m_mapClients.end());
+				assert(!m_ClientsSet.contains(pInfo->m_hConn));
 
 				PX_CORE_INFO("Connection request from {0}", pInfo->m_info.m_szConnectionDescription);
 
@@ -272,38 +337,9 @@ namespace Pyxis
 					break;
 				}
 
-				// Generate a random nick.  A random temporary nick
-				// is really dumb and not how you would write a real chat server.
-				// You would want them to have some sort of signon message,
-				// and you would keep their client in a state of limbo (connected,
-				// but not logged on) until them.  I'm trying to keep this example
-				// code really simple.
-				char nick[64];
-				sprintf(nick, "BraveWarrior%d", 10000 + (rand() % 100000));
-
-				// Send them a welcome message
-				std::string wlcm = std::format("Welcome, stranger.Thou art known to us for now as '{}'; upon thine command '/nick' we shall know thee otherwise.", nick);
-				SendStringToClient(pInfo->m_hConn, wlcm);
-				
-
-				// Also send them a list of everybody who is already connected
-				if (m_mapClients.empty())
-				{
-					SendStringToClient(pInfo->m_hConn, "Thou art utterly alone.");
-				}
-				else
-				{
-					sprintf(temp, "%d companions greet you:", (int)m_mapClients.size());
-					for (auto& c : m_mapClients)
-						SendStringToClient(pInfo->m_hConn, std::to_string(c.second).c_str());
-				}
-
-				// Let everybody else know who they are for now
-				sprintf(temp, "Hark!  A stranger hath joined this merry host.  For now we shall call them '%s'", nick);
-				SendStringToAllClients(temp, pInfo->m_hConn);
-
 				// Add them to the client list, using std::map wacky syntax
-				m_mapClients[pInfo->m_hConn] = m_IDCounter++;
+				m_ClientsSet.insert(pInfo->m_hConn);
+				
 				break;
 			}
 

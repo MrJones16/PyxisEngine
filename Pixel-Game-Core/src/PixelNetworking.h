@@ -10,16 +10,13 @@ namespace Pyxis
 {
 	struct ClientData
 	{
-		uint64_t m_ID = 0;
 		char m_Name[64] = "PyxisEnjoyer";
 		glm::ivec2 m_CurosrPixelPosition = { 0,0 };
 		glm::vec4 m_Color = { 1,1,1,1 };
 
 
-		ClientData() = default;
-		ClientData(uint64_t id)
+		ClientData()
 		{
-			m_ID = id;
 			std::vector<glm::vec4> colorOptions =
 			{
 				glm::vec4(1,0,0,1),//red
@@ -30,7 +27,7 @@ namespace Pyxis
 				glm::vec4(1,0,0.2f,1),//indigo
 				glm::vec4(1,0,0.8f,1),//violet
 			};
-			m_Color = colorOptions[id % colorOptions.size()];
+			m_Color = colorOptions[std::rand() % colorOptions.size()];
 		}
 
 	};
@@ -42,17 +39,17 @@ namespace Pyxis
 
 		Client_ClientData,
 		Client_RequestMergedTick,
-		Client_RequestPlayerData,
+		Client_RequestAllClientData,
+		Client_RequestGameData,
 
 		Server_ClientData,
 		Server_AllClientData,
 		Server_ClientDisconnected,
+		Server_GameData,
 
 		Server_Message,
 		Message_All,
 
-		Game_RequestGameData,
-		Game_GameData,
 		Game_ResetBox2D,
 		Game_Loaded,
 		Game_TickToEnter,
@@ -169,12 +166,17 @@ namespace Pyxis
 		uint64_t m_Tick = 0;
 
 		std::unordered_set<uint64_t> m_Clients;
-		inline void AddTickClosure(TickClosure& tickClosure, uint64_t clientID)
+		uint32_t m_ClientCount = 0;
+		inline void AddTickClosure(TickClosure& tickClosure, HSteamNetConnection clientID)
 		{
+			
 			size_t i = m_Data.size(); // get current end point of data
 			m_Data.resize(m_Data.size() + tickClosure.m_Data.size());
 			memcpy(m_Data.data() + i, tickClosure.m_Data.data(), tickClosure.m_Data.size());
-			m_InputActionCount += tickClosure.m_InputActionCount;
+			*(this) << tickClosure.m_InputActionCount;
+			*(this) << clientID;
+			//keep track of clients / closure count for later
+			m_ClientCount++;
 			m_Clients.insert(clientID);
 		}
 	};

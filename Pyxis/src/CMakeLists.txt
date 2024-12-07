@@ -8,11 +8,14 @@ target_compile_definitions(PyxisEngine PUBLIC STEAMNETWORKINGSOCKETS_STATIC_LINK
 #set(VCPKG_LIBRARY_LINKAGE static)
 find_package(GameNetworkingSockets CONFIG REQUIRED)
 
+find_package(Snappy CONFIG REQUIRED)
+
 # GameNetworkingSockets static library requires both static and GameNetworkingSockets::GameNetworkingSockets targets
 target_link_libraries(PyxisEngine 
-    PRIVATE 
+    PUBLIC 
     GameNetworkingSockets::static
     GameNetworkingSockets::GameNetworkingSockets
+    Snappy::snappy
 )
 
 target_link_libraries(PyxisEngine
@@ -26,6 +29,7 @@ target_link_libraries(PyxisEngine
     box2d
     poly2tri
 )
+
 
 
 # Set the include directory to current directory.

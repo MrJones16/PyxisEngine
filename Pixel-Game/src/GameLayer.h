@@ -25,6 +25,7 @@ namespace Pyxis
 		virtual void OnDetach() override;
 
 		virtual void OnUpdate(Timestep ts) override;
+		//void GameUpdate(Timestep ts);
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
@@ -54,7 +55,7 @@ namespace Pyxis
 		//game things
 		Ref<World> m_World;
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
-		float m_UpdatesPerSecond = 30.0f;
+		float m_TickRate = 30.0f;
 
 		//core multiplayer things
 		//multiplayer connecting things
@@ -70,11 +71,16 @@ namespace Pyxis
 		};
 		MultiplayerState m_MultiplayerState = Singleplayer;
 		TickClosure m_CurrentTickClosure;
-
+		//the current input tick we are at
+		//starts at -1 or "max value", so when connecting, if we recieve mtc's from 
+		//before the world data, we discard them.
+		uint64_t m_InputTick = -1;
 		//my client data
 		ClientData m_ClientData;
 		//map of other clients data based on their ID's
-		std::unordered_map<uint64_t, ClientData> m_ClientMap;
+		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;
+		//simulation tick to reset world at, for when other players join the same server as you.
+		uint64_t m_TickToResetBox2D = -1;
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;

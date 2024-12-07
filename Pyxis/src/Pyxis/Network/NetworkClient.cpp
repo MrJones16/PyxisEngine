@@ -162,8 +162,33 @@ namespace Pyxis
 
 		void ClientInterface::SendMessageToServer(Message& message)
 		{
+			/*message << message.header.id;
+			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);*/
+
 			message << message.header.id;
-			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+
+			std::string inString(message.body.begin(), message.body.end());
+			std::string compressedString;
+			snappy::Compress(inString.data(), inString.size(), &compressedString);
+
+
+			Network::Message compressedMsg;
+			compressedMsg.PushData(compressedString.data(), compressedString.size());
+			m_pInterface->SendMessageToConnection(m_hConnection, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+		}
+
+		void ClientInterface::SendCompressedMessageToServer(Message& message)
+		{
+			message << message.header.id;
+			
+			std::string inString(message.body.begin(), message.body.end());
+			std::string compressedString;
+			snappy::Compress(inString.data(), inString.size(), &compressedString);
+
+
+			Network::Message compressedMsg;
+			compressedMsg.PushData(compressedString.data(), compressedString.size());
+			m_pInterface->SendMessageToConnection(m_hConnection, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
 		void ClientInterface::SendUnreliableMessageToServer(Message& message)
@@ -175,7 +200,7 @@ namespace Pyxis
 		bool ClientInterface::PollMessage(Ref<Message>& MessageOut)
 		{
 			
-			ISteamNetworkingMessage* pIncomingMsg = nullptr;
+			/*ISteamNetworkingMessage* pIncomingMsg = nullptr;
 			int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
 			if (numMsgs == 0) return false;
 			if (numMsgs < 0)
@@ -187,7 +212,30 @@ namespace Pyxis
 
 			MessageOut = CreateRef<Message>(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
 			*MessageOut >> MessageOut->header.id;
-			MessageOut->clientID = 0;
+			MessageOut->clientHConnection = k_HSteamNetConnection_Invalid;
+			pIncomingMsg->Release();
+			return true;*/
+			ISteamNetworkingMessage* pIncomingMsg = nullptr;
+			int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+			if (numMsgs == 0) return false;
+			if (numMsgs < 0)
+			{
+				PX_CORE_ERROR("Error checking for messages");
+				return false;
+			}
+			assert(numMsgs == 1 && pIncomingMsg);
+			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn, "Message was from unknown client"));
+
+			// '\0'-terminate it to make it easier to parse
+			std::string stringCompressed;
+			stringCompressed.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
+
+
+			std::string uncompressed;
+			snappy::Uncompress(stringCompressed.data(), stringCompressed.size(), &uncompressed);
+			MessageOut = CreateRef<Message>(uncompressed.data(), uncompressed.size());
+			*MessageOut >> MessageOut->header.id;
+			MessageOut->clientHConnection = pIncomingMsg->m_conn;
 			pIncomingMsg->Release();
 			return true;
 	
@@ -262,8 +310,8 @@ namespace Pyxis
 			case k_ESteamNetworkingConnectionState_Connected:
 				m_ConnectionStatus = ConnectionStatus::Connected;
 				m_ConnectionStatusMessage = "Connected to server";
-				OnConnectionSuccess();
 				PX_CORE_INFO("Connected to server");
+				OnConnectionSuccess();
 				break;
 
 			default:

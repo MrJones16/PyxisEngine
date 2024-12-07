@@ -40,7 +40,7 @@ namespace Pyxis
 			void SendUnreliableMessageToClient(HSteamNetConnection conn, Message& message);
 			void SendUnreliableMessageToAllClients(Message& message, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
 			bool PollMessage(Ref<Message>& MessageOut);
-			void PollIncomingMessages();
+			
 			void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo);
 			static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo);
 			void PollConnectionStateChanges();
@@ -58,19 +58,16 @@ namespace Pyxis
 
 			static ServerInterface* s_pCallbackInstance;
 
+			std::unordered_set<HSteamNetConnection> m_ClientsSet;
+
 			SteamNetworkingIPAddr m_hLocalAddress;
 			HSteamListenSocket m_hListenSock;
 			HSteamNetPollGroup m_hPollGroup;
 			ISteamNetworkingSockets* m_pInterface;
 			ISteamNetworkingUtils* m_pUtils;
 
-			std::map<HSteamNetConnection, uint64_t> m_mapClients;
-
 			//thread safe queue for incoming message packets
 			//ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;
-
-			// clients will be identified in the "wider system" via an ID
-			uint64_t m_IDCounter = 10000;
 
 			
 

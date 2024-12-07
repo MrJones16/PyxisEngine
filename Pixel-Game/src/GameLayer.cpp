@@ -96,10 +96,14 @@ namespace Pyxis
 
 	void GameLayer::OnUpdate(Timestep ts)
 	{
+		PROFILE_SCOPE("GameLayer::OnUpdate");
 		UpdateInterface();
-		//PROFILE_SCOPE("GameLayer::OnUpdate");
+		HandleMessages();
+		
 
 		m_OrthographicCameraController.OnUpdate(ts);
+
+		
 
 		//rendering
 		#if STATISTICS
@@ -114,12 +118,13 @@ namespace Pyxis
 			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
 		}
 
+		//make sure to not run game updates when we are still connecting
+		if (m_MultiplayerState == Singleplayer || m_MultiplayerState == MultiplayerState::Connected)
 		{
 			PROFILE_SCOPE("Game Update");
-
 			auto [x, y] = GetMousePositionScene();
 			auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-					
+
 			glm::ivec2 mousePixelPos = m_World->WorldToPixel(vec);
 
 			auto chunkPos = m_World->PixelToChunk(mousePixelPos);
@@ -138,7 +143,7 @@ namespace Pyxis
 			{
 				m_HoveredElement = Element();
 			}
-					
+
 
 			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
 			{
@@ -158,49 +163,67 @@ namespace Pyxis
 				else
 				{
 					m_CurrentTickClosure.AddInputAction(
-						InputAction::Input_Place, 
+						InputAction::Input_Place,
 						(uint8_t)m_BrushSize,
 						(uint16_t)m_BrushType,
 						(uint32_t)m_SelectedElementIndex,
-						pixelPos, 
+						pixelPos,
 						false);
 				}
 			}
-
-			
 		}
 
+		//make sure to not run Simulation updates when we are still connecting
+		if (m_MultiplayerState == Singleplayer || m_MultiplayerState == MultiplayerState::Connected)
 		{
 			PROFILE_SCOPE("Network Update");
-			if (m_MultiplayerState == Singleplayer)
+			//only run per tick rate
+			auto time = std::chrono::high_resolution_clock::now();
+			if (m_TickRate > 0 &&
+				std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
+				-
+				std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
+				>= (1.0f / m_TickRate) * 1000000.0f)
 			{
-				//skip sending an input tick and just update immediately
-				auto time = std::chrono::high_resolution_clock::now();
-				if (m_UpdatesPerSecond > 0 &&
-					std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
-					-
-					std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
-					>= (1.0f / m_UpdatesPerSecond) * 1000000.0f)
+				PROFILE_SCOPE("Simulation Update");
+
+				//reset world, then apply the tick closure
+				if (m_World->m_SimulationTick == m_TickToResetBox2D)
 				{
-					//m_InputTick++;
+					m_World->ResetBox2D();
+					m_TickToResetBox2D = -1;
+				}
+
+				m_UpdateTime = time;
+				m_InputTick++;
+
+				if (m_MultiplayerState == Singleplayer)
+				{
+					//for singleplayer, just construct your own merged tick and 
+					//handle it
 					MergedTickClosure tc;
 					tc.AddTickClosure(m_CurrentTickClosure, 0);
-
-					{
-						PROFILE_SCOPE("Simulation Update");
-						HandleTickClosure(tc);
-					}
-
-					//reset tick closure
-					m_CurrentTickClosure = TickClosure();
-					//m_CurrentTickClosure.m_Tick = m_InputTick;
-					m_UpdateTime = time;
+					HandleTickClosure(tc);
 				}
+				else
+				{
+					//for multiplayer, just send off your tick closure
+					//(basically just your input shoved into a message)
+					Network::Message msg;
+					msg.header.id = static_cast<uint32_t>(GameMessage::Game_TickClosure);
+					msg << m_CurrentTickClosure.m_Data;
+					msg << m_CurrentTickClosure.m_InputActionCount;
+					SendMessageToServer(msg);
+				}
+
+				//reset tick closure
+				m_CurrentTickClosure = TickClosure();
+
 			}
 		}
 
-		
-
+		//make sure to not run rendering updates when we are still connecting
+		if (m_MultiplayerState == Singleplayer || m_MultiplayerState == MultiplayerState::Connected)
 		{
 			PROFILE_SCOPE("Renderer Draw");
 			m_World->RenderWorld();
@@ -215,10 +238,8 @@ namespace Pyxis
 			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMin.x, worldMax.y});
 			Renderer2D::DrawLine({ worldMax.x, worldMin.y }, { worldMax.x, worldMax.y});
 
-			for (auto clientPair : m_ClientMap)
+			for (auto& clientPair : m_ClientDataMap)
 			{
-				//skip your own mouse pos
-				//if (IDAndClient.first == m_ClientInterface.GetID()) continue;
 				//draw the 3x3 square for each players cursor
 				glm::vec3 worldPos = glm::vec3((float)clientPair.second.m_CurosrPixelPosition.x / CHUNKSIZE, (float)clientPair.second.m_CurosrPixelPosition.y / CHUNKSIZE, 5);
 				glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
@@ -237,11 +258,13 @@ namespace Pyxis
 		Network::Message clientDataMsg;
 		clientDataMsg.header.id = static_cast<uint32_t>(GameMessage::Client_ClientData);
 		clientDataMsg << m_ClientData;
+		PX_TRACE("Sending my client data to server");
 		SendMessageToServer(clientDataMsg);
 
 		m_MultiplayerState = MultiplayerState::GatheringPlayerData;
 		Network::Message msg;
-		msg.header.id = static_cast<uint32_t>(GameMessage::Client_RequestPlayerData);
+		msg.header.id = static_cast<uint32_t>(GameMessage::Client_RequestAllClientData);
+		PX_TRACE("Requesting all client data");
 		SendMessageToServer(msg);
 	}
 
@@ -446,7 +469,7 @@ namespace Pyxis
 	//			{
 	//				//add the current mouse pos as a input action, to show other players
 	//				//where you are looking
-	//				m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, m_ClientInterface.GetID(), mousePixelPos);
+	//				m_CurrentTickClosure.AddInputAction(InputAction::Input_MousePosition, mousePixelPos);
 
 
 	//				Network::Message<GameMessage> msg;
@@ -895,35 +918,100 @@ namespace Pyxis
 		Ref<Network::Message> msg;
 		while (PollMessage(msg))
 		{
+			//PX_TRACE("Recieved message from Server");
 			switch (static_cast<GameMessage>(msg->header.id))
 			{
 			case GameMessage::Server_ClientData:
 			{
-				uint64_t clientID;
+				HSteamNetConnection clientID;
 				*msg >> clientID;
-				m_ClientMap[clientID];
-				*msg >> m_ClientMap[clientID];
+				PX_TRACE("Recieved client Data for client {0}", clientID);
+				m_ClientDataMap[clientID];
+				*msg >> m_ClientDataMap[clientID];
 				break;
 			}
 			case GameMessage::Server_AllClientData:
 			{
-				uint64_t numClients;
+				uint32_t numClients;
 				*msg >> numClients;
+				PX_TRACE("Recieved all client Data. Player count: {0}", numClients);
 				for (int i = 0; i < numClients; i++)
 				{
-					uint64_t clientID;
+					HSteamNetConnection clientID;
 					*msg >> clientID;
-					m_ClientMap[clientID];
-					*msg >> m_ClientMap[clientID];
+					m_ClientDataMap[clientID];
+					*msg >> m_ClientDataMap[clientID];
 				}
+				//now that we recieved the other player data, lets request the game data
+				Network::Message requestGameDataMsg;
+				requestGameDataMsg.header.id = static_cast<uint32_t>(GameMessage::Client_RequestGameData);
+				SendMessageToServer(requestGameDataMsg);
+				PX_TRACE("Requesting Game Data");
+				m_MultiplayerState = MultiplayerState::DownloadingWorld;
 				break;
 			}
 			case GameMessage::Server_ClientDisconnected:
 			{
-				uint64_t clientID;
+				HSteamNetConnection clientID;
 				*msg >> clientID;
 
-				m_ClientMap.erase(clientID);
+				m_ClientDataMap.erase(clientID);
+				break;
+			}
+			case GameMessage::Server_GameData:
+			{
+				PX_TRACE("Recieved Game Data");
+				*msg >> m_InputTick;
+				CreateWorld();
+				
+				*msg >> m_World->m_Running;
+				m_World->LoadWorld(*msg);
+				//m_LatestMergedTick = m_InputTick;
+								
+				PX_TRACE("loaded game at tick {0}", m_InputTick);
+				PX_TRACE("Game simulation tick is {0}", m_World->m_SimulationTick);
+
+
+				//now that i have finished downloading the world
+				// (which might have taken a while)
+				// tell the server i am done
+				//now that i caught up on all the messages, be finished connecting
+				//and start sending my own ticks, and make others wait
+				/*Network::Message msg;
+				msg.header.id = static_cast<uint32_t>(GameMessage::Game_Loaded);
+				SendMessageToServer(msg);*/
+
+
+				//now that we have finished recieving the game data and loading the world, start the game!
+				m_MultiplayerState = MultiplayerState::Connected;
+
+				break;
+			}
+			case GameMessage::Game_MergedTickClosure:
+			{
+				MergedTickClosure mtc;
+				*msg >> mtc.m_Tick;
+				*msg >> mtc.m_ClientCount;
+				*msg >> mtc.m_Data;
+				d_LastRecievedInputTick = mtc.m_Tick;
+
+				//TODO FIX: right now we are sending reliable messages. if I want to use unreliable, then
+				//i need to keep a queue of messages and ask for any missing ones when needed!
+
+				if (mtc.m_Tick >= m_InputTick)
+				HandleTickClosure(mtc);
+
+				break;
+			}
+			case GameMessage::Game_ResetBox2D:
+			{
+				//gather all rigid body data, store it, and reload it!
+				//this has to be done once we are finished with all the previously
+				//collected mtc's, so we will mark when we are supposed to
+				//reset, and do it then!
+				*msg >> m_TickToResetBox2D;
+				PX_TRACE("Sim Tick to reset at: {0}", m_TickToResetBox2D);
+				PX_TRACE("current sim tick: {0}", m_World->m_SimulationTick);
 				break;
 			}
 
@@ -1073,168 +1161,172 @@ namespace Pyxis
 
 	void GameLayer::HandleTickClosure(MergedTickClosure& tc)
 	{
-		for (int i = 0; i < tc.m_InputActionCount; i++)
+		for (int i = 0; i < tc.m_ClientCount; i++)
 		{
-			InputAction IA;
-			tc >> IA;
-			switch (IA)
+			HSteamNetConnection clientID;
+			tc >> clientID;
+			uint32_t inputActionCount;
+			tc >> inputActionCount;
+			for (int i = 0; i < inputActionCount; i++)
 			{
-			case InputAction::Add_Player:
-			{
-				uint64_t ID;
-				tc >> ID;
-
-				glm::ivec2 pixelPos;
-				tc >> pixelPos;
-
-				m_World->CreatePlayer(ID, pixelPos);
-				break;
-			}
-			case InputAction::PauseGame:
-			{
-				uint64_t ID;
-				tc >> ID;
-				m_World->m_Running = false;
-				break;
-			}
-			case InputAction::ResumeGame:
-			{
-				uint64_t ID;
-				tc >> ID;
-				m_World->m_Running = true;
-				break;
-			}
-			case InputAction::TransformRegionToRigidBody:
-			{
-				uint64_t ID;
-				tc >> ID;
-
-				glm::ivec2 maximum;
-				tc >> maximum;
-
-				glm::ivec2 minimum;
-				tc >> minimum;
-
-				b2BodyType type;
-				tc >> type;
-
-				int width = (maximum.x - minimum.x) + 1;
-				int height = (maximum.y - minimum.y) + 1;
-				if (width * height <= 0) break;
-				glm::ivec2 newMin = maximum;
-				glm::ivec2 newMax = minimum;
-				//iterate over section and find the width, height, center, ect
-				int mass = 0;
-				for (int x = 0; x < width; x++)
+				InputAction IA;
+				tc >> IA;
+				switch (IA)
 				{
-					for (int y = 0; y < height; y++)
+				/*case InputAction::Add_Player:
+				{
+					uint64_t ID;
+					tc >> ID;
+
+					glm::ivec2 pixelPos;
+					tc >> pixelPos;
+
+					m_World->CreatePlayer(ID, pixelPos);
+					break;
+				}*/
+				case InputAction::PauseGame:
+				{
+					m_World->m_Running = false;
+					break;
+				}
+				case InputAction::ResumeGame:
+				{
+					m_World->m_Running = true;
+					break;
+				}
+				case InputAction::TransformRegionToRigidBody:
+				{
+					uint64_t UUID;
+					tc >> UUID;
+
+					glm::ivec2 maximum;
+					tc >> maximum;
+
+					glm::ivec2 minimum;
+					tc >> minimum;
+
+					b2BodyType type;
+					tc >> type;
+
+					int width = (maximum.x - minimum.x) + 1;
+					int height = (maximum.y - minimum.y) + 1;
+					if (width * height <= 0) break;
+					glm::ivec2 newMin = maximum;
+					glm::ivec2 newMax = minimum;
+					//iterate over section and find the width, height, center, ect
+					int mass = 0;
+					for (int x = 0; x < width; x++)
 					{
-						glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-						auto& element = m_World->GetElement(pixelPos);
-						auto& elementData = m_World->m_ElementData[element.m_ID];
-						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+						for (int y = 0; y < height; y++)
 						{
-							if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-							if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-							if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-							if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-							mass++;
+							glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
+							auto& element = m_World->GetElement(pixelPos);
+							auto& elementData = m_World->m_ElementData[element.m_ID];
+							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+							{
+								if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
+								if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
+								if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
+								if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
+								mass++;
+							}
 						}
 					}
-				}
-				if (mass < 2) continue;//skip if we are 1 element or 0
-				PX_TRACE("transforming {0} elements to a rigid body", mass);
+					if (mass < 2) continue;//skip if we are 1 element or 0
+					PX_TRACE("transforming {0} elements to a rigid body", mass);
 
-				width = (newMax.x - newMin.x) + 1;
-				height = (newMax.y - newMin.y) + 1;
+					width = (newMax.x - newMin.x) + 1;
+					height = (newMax.y - newMin.y) + 1;
 
-				glm::ivec2 origin = { width / 2, height / 2 };
-				std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-				for (int x = 0; x < width; x++)
-				{
-					for (int y = 0; y < height; y++)
+					glm::ivec2 origin = { width / 2, height / 2 };
+					std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
+					for (int x = 0; x < width; x++)
 					{
-						glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
-
-						//loop over every element, grab it, and make it rigid if it is a movable Solid
-						auto& element = m_World->GetElement(pixelPos);
-						auto& elementData = m_World->m_ElementData[element.m_ID];
-						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+						for (int y = 0; y < height; y++)
 						{
-							element.m_Rigid = true;
-							//set the elements at the local position to be the element pulled from world
-							elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-							m_World->SetElement(pixelPos, Element());
+							glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
+
+							//loop over every element, grab it, and make it rigid if it is a movable Solid
+							auto& element = m_World->GetElement(pixelPos);
+							auto& elementData = m_World->m_ElementData[element.m_ID];
+							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+							{
+								element.m_Rigid = true;
+								//set the elements at the local position to be the element pulled from world
+								elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
+								m_World->SetElement(pixelPos, Element());
+							}
 						}
 					}
+					glm::ivec2 size = newMax - newMin;
+					PX_TRACE("Mass is: {0}", mass);
+					PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World->m_Box2DWorld);
+					if (body->m_B2Body == nullptr)
+					{
+						PX_TRACE("Failed to create rigid body");
+						continue;
+					}
+					else
+					{
+						m_World->m_PixelBodyMap[body->m_ID] = body;
+						auto pixelPos = (newMin + newMax) / 2;
+						if (width % 2 == 0) pixelPos.x += 1;
+						if (height % 2 == 0) pixelPos.y += 1;
+						body->SetPixelPosition(pixelPos);
+						m_World->PutPixelBodyInWorld(*body);
+					}
+
+
+					break;
 				}
-				glm::ivec2 size = newMax - newMin;
-				PX_TRACE("Mass is: {0}", mass);
-				PixelRigidBody* body = new PixelRigidBody(ID, size, elements, type, m_World->m_Box2DWorld);
-				if (body->m_B2Body == nullptr)
+				case Pyxis::InputAction::Input_Move:
 				{
-					PX_TRACE("Failed to create rigid body");
-					continue;
+					//PX_TRACE("input action: Input_Move");
+					break;
 				}
-				else
+				case Pyxis::InputAction::Input_Place:
 				{
-					m_World->m_PixelBodyMap[body->m_ID] = body;
-					auto pixelPos = (newMin + newMax) / 2;
-					if (width % 2 == 0) pixelPos.x += 1;
-					if (height % 2 == 0) pixelPos.y += 1;
-					body->SetPixelPosition(pixelPos);
-					m_World->PutPixelBodyInWorld(*body);
+					//PX_TRACE("input action: Input_Place");
+					bool rigid;
+					glm::ivec2 pixelPos;
+					uint32_t elementID;
+					BrushType brush;
+					uint8_t brushSize;
+					tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
+
+					m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
+					break;
 				}
-
-
-				break;
-			}
-			case Pyxis::InputAction::Input_Move:
-			{
-				//PX_TRACE("input action: Input_Move");
-				break;
-			}
-			case Pyxis::InputAction::Input_Place:
-			{
-				//PX_TRACE("input action: Input_Place");
-				bool rigid;
-				glm::ivec2 pixelPos;
-				uint32_t elementID;
-				BrushType brush;
-				uint8_t brushSize;
-				tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
-
-				m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
-				break;
-			}
-			case Pyxis::InputAction::Input_StepSimulation:
-			{
-				PX_TRACE("input action: Input_StepSimulation");
-				m_World->UpdateWorld();
-				break;
-			}
-			/*case InputAction::Input_MousePosition:
-			{
-				glm::ivec2 mousePos;
-				uint64_t ID;
-				tc >> mousePos >> ID;
-				if (mousePos.x < -2000000000) break;
-
-				m_PlayerCursors[ID].pixelPosition = mousePos;
-				break;
-			}*/
-			case InputAction::ClearWorld:
-			{
-				m_World->Clear();
-				break;
-			}
-			default:
-			{
-				PX_TRACE("input action: default?");
-				break;
-			}
+				case Pyxis::InputAction::Input_StepSimulation:
+				{
+					PX_TRACE("input action: Input_StepSimulation");
+					m_World->UpdateWorld();
+					break;
+					break;
+				}
+				case InputAction::Input_MousePosition:
+				{
+					//add new mouse position to data
+					glm::ivec2 mousePos;
+					HSteamNetConnection clientID;
+					tc >> mousePos >> clientID;
+					m_ClientDataMap[clientID].m_CurosrPixelPosition = mousePos;
+					break;
+				}
+				case InputAction::ClearWorld:
+				{
+					m_World->Clear();
+					break;
+				}
+				default:
+				{
+					PX_TRACE("input action: default?");
+					break;
+				}
+				}
 			}
 		}
+		
 		if (m_World->m_Running)
 		{
 			m_World->UpdateWorld();
@@ -1289,44 +1381,44 @@ namespace Pyxis
 		{
 			//SendStringToServer("Respects Paid!");
 		}
-		//if (event.GetKeyCode() == PX_KEY_SPACE)
-		//{
-		//	if (m_World->m_Running)
-		//	{
-		//		m_CurrentTickClosure.AddInputAction(InputAction::PauseGame, m_ClientInterface.GetID());
-		//	}
-		//	else 
-		//	{
-		//		m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame, m_ClientInterface.GetID());
-		//	}
-		//}
-		//if (event.GetKeyCode() == PX_KEY_RIGHT)
-		//{
-		//	m_CurrentTickClosure.AddInputAction(InputAction::Input_StepSimulation);
-		//}
-		//if (event.GetKeyCode() == PX_KEY_C)
-		//{
-		//	///m_World->Clear();
-		//	//m_Chunk->Clear();
-		//}
-		//if (event.GetKeyCode() == PX_KEY_V)
-		//{
-		//	Window& window = Application::Get().GetWindow();
-		//	window.SetVSync(!window.IsVSync());
-		//}
-		////switching brushes
-		//if (event.GetKeyCode() == PX_KEY_Z)
-		//{
-		//	int type = ((int)m_BrushType) - 1;
-		//	if (type < 0) type = 0;
-		//	m_BrushType = (BrushType)type;
-		//}
-		//if (event.GetKeyCode() == PX_KEY_C)
-		//{
-		//	int type = ((int)m_BrushType) + 1;
-		//	if (type >= (int)BrushType::end) type = (int)BrushType::end - 1;
-		//	m_BrushType = BrushType(type);
-		//}
+		if (event.GetKeyCode() == PX_KEY_SPACE)
+		{
+			if (m_World->m_Running)
+			{
+				m_CurrentTickClosure.AddInputAction(InputAction::PauseGame);
+			}
+			else 
+			{
+				m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame);
+			}
+		}
+		if (event.GetKeyCode() == PX_KEY_RIGHT)
+		{
+			m_CurrentTickClosure.AddInputAction(InputAction::Input_StepSimulation);
+		}
+		if (event.GetKeyCode() == PX_KEY_C)
+		{
+			///m_World->Clear();
+			//m_Chunk->Clear();
+		}
+		if (event.GetKeyCode() == PX_KEY_V)
+		{
+			Window& window = Application::Get().GetWindow();
+			window.SetVSync(!window.IsVSync());
+		}
+		//switching brushes
+		if (event.GetKeyCode() == PX_KEY_Z)
+		{
+			int type = ((int)m_BrushType) - 1;
+			if (type < 0) type = 0;
+			m_BrushType = (BrushType)type;
+		}
+		if (event.GetKeyCode() == PX_KEY_C)
+		{
+			int type = ((int)m_BrushType) + 1;
+			if (type >= (int)BrushType::end) type = (int)BrushType::end - 1;
+			m_BrushType = BrushType(type);
+		}
 
 		return false;
 	}
@@ -1379,8 +1471,11 @@ namespace Pyxis
 
 	void GameLayer::StartMultiplayer(const std::string& AddressAndPort)
 	{
+		//max out input tick so we can discard early sent mtc's
+		m_InputTick = -1;
 		m_MultiplayerState = MultiplayerState::Connecting;
 		Connect(AddressAndPort);
+		
 	}
 
 	void GameLayer::PaintBrushHologram()

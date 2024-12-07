@@ -560,7 +560,6 @@ namespace Pyxis
 
 		//things still to synchronize:
 		//
-		// pixel body velocity
 		// chunk dirty rects
 		// 
 		//
