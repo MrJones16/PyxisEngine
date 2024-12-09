@@ -148,11 +148,12 @@ namespace Pyxis
 
 			message << message.header.id;
 
-			std::string inString(message.body.begin(), message.body.end());
+			//std::string inString(message.body.begin(), message.body.end());
 			std::string compressedString;
-			snappy::Compress(inString.data(), inString.size(), &compressedString);
+			//snappy::Compress(inString.data(), inString.size(), &compressedString);
+			snappy::Compress((const char *)message.body.data(), message.size(), &compressedString);
 
-
+			PX_TRACE("Compressed Message. Compression: {0}%, [{1}]->[{2}]", ((float)compressedString.size() / (float)message.size()), (float)message.size() * 8.0f, (float)compressedString.size() * 8.0f);
 			Network::Message compressedMsg;
 			compressedMsg.PushData(compressedString.data(), compressedString.size());
 			m_pInterface->SendMessageToConnection(conn, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);

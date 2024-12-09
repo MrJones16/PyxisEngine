@@ -28,6 +28,7 @@ namespace Pyxis
 
 			}
 
+
 			/// <summary>
 			/// Copies data using memcpy into a new message object
 			/// </summary>
@@ -41,6 +42,7 @@ namespace Pyxis
 				header.size = size;
 			}
 
+
 			/// <summary>
 			/// returns the size of the entire message packet in bytes
 			/// </summary>
@@ -48,6 +50,7 @@ namespace Pyxis
 			{
 				return body.size();
 			}
+
 
 			/// <summary>
 			/// Pushes any arbitrary data into the message buffer using a pointer and size
