@@ -15,7 +15,6 @@
 
 namespace Pyxis
 {
-	
 
 	class WakeUpQueryCallback : public b2QueryCallback
 	{
@@ -30,9 +29,6 @@ namespace Pyxis
 		}
 	};
 
-	
-	static const int CHUNKSIZE = 512;
-
 	class World
 	{
 	public:
@@ -41,8 +37,14 @@ namespace Pyxis
 		void Initialize(int worldSeed);
 		bool LoadElementData(std::string assetPath);
 		void BuildReactionTable();
-		void LoadWorld(Network::Message& msg);
+
+		enum class GameDataMsgType : uint8_t { pixelbody, chunk };
+		void DownloadWorldInit(Network::Message& msg);
+		void DownloadWorld(Network::Message& msg);
+		void GetGameDataInit(Network::Message& msg);
+		void GetGameData(std::vector<Network::Message>& messages);
 		void GetWorldData(Network::Message& msg);
+
 		~World();
 
 		void AddChunk(const glm::ivec2& chunkPos);

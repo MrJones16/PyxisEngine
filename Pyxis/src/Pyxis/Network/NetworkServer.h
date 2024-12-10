@@ -35,10 +35,15 @@ namespace Pyxis
 
 			void SendStringToClient(HSteamNetConnection conn, const std::string& str);
 			void SendStringToAllClients(const std::string& str, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
-			void SendMessageToClient(HSteamNetConnection conn, Message& message);
-			void SendMessageToAllClients(Message& message, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
-			void SendUnreliableMessageToClient(HSteamNetConnection conn, Message& message);
-			void SendUnreliableMessageToAllClients(Message& message, HSteamNetConnection except = k_HSteamNetConnection_Invalid);
+			//Sending messages is volatile! it adds the ID to the message when sending
+			//k_nSteamNetworkingSend_
+			void SendMessageToClient(HSteamNetConnection conn, Message& message, int nSendFlags = k_nSteamNetworkingSend_Reliable);
+			//k_nSteamNetworkingSend_
+			void SendMessageToAllClients(Message& message, HSteamNetConnection except = k_HSteamNetConnection_Invalid, int nSendFlags = k_nSteamNetworkingSend_Reliable);
+			//k_nSteamNetworkingSend_
+			void SendCompressedStringToClient(HSteamNetConnection conn, std::string& compressedStr, int nSendFlags = k_nSteamNetworkingSend_Reliable);
+			//k_nSteamNetworkingSend_
+			void SendCompressedStringToAllClients(std::string& compressedStr, HSteamNetConnection except = k_HSteamNetConnection_Invalid, int nSendFlags = k_nSteamNetworkingSend_Reliable);
 			bool PollMessage(Ref<Message>& MessageOut);
 			
 			void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo);

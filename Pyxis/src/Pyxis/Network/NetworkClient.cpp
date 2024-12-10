@@ -232,7 +232,11 @@ namespace Pyxis
 
 
 			std::string uncompressed;
-			snappy::Uncompress(stringCompressed.data(), stringCompressed.size(), &uncompressed);
+			if (!snappy::Uncompress(stringCompressed.data(), stringCompressed.size(), &uncompressed))
+			{
+				//message failed to uncompress!
+				PX_CORE_ERROR("Message failed to uncompress!");
+			}
 			MessageOut = CreateRef<Message>(uncompressed.data(), uncompressed.size());
 			*MessageOut >> MessageOut->header.id;
 			MessageOut->clientHConnection = pIncomingMsg->m_conn;

@@ -39,6 +39,7 @@ namespace Pyxis
 		void StartSingleplayer();
 		void StartMultiplayer(const std::string& AddressAndPort);
 		void OnConnectionSuccess() override;
+		void OnConnectionLost(const std::string& reasonText) override;
 		//void ConnectionUpdate();
 		void HandleMessages();
 		void HandleTickClosure(MergedTickClosure& tc);
@@ -62,6 +63,7 @@ namespace Pyxis
 		enum MultiplayerState
 		{
 			Singleplayer,
+			Disconnected,
 			Connecting,
 			GatheringPlayerData,
 			DownloadingWorld,
@@ -69,18 +71,27 @@ namespace Pyxis
 			Connected,
 
 		};
-		MultiplayerState m_MultiplayerState = Singleplayer;
+		MultiplayerState m_MultiplayerState = Disconnected;
 		TickClosure m_CurrentTickClosure;
 		//the current input tick we are at
 		//starts at -1 or "max value", so when connecting, if we recieve mtc's from 
 		//before the world data, we discard them.
 		uint64_t m_InputTick = -1;
+		//used for limiting requests for missing ticks
+		uint64_t m_LastRequestedTick = -1;
+		std::deque<MergedTickClosure> m_MTCBuffer;
+
 		//my client data
 		ClientData m_ClientData;
 		//map of other clients data based on their ID's
 		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;
 		//simulation tick to reset world at, for when other players join the same server as you.
 		uint64_t m_TickToResetBox2D = -1;
+
+		uint64_t m_DownloadCount = 0;
+		uint64_t m_DownloadTotal = 0;
+
+
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;

@@ -6,6 +6,8 @@
 //#include <Platform/OpenGL/OpenGLShader.h>
 #include <chrono>
 
+static const int MaxTickStorage = 500;
+
 
 namespace Pyxis
 {
@@ -46,8 +48,6 @@ namespace Pyxis
 		UpdateInterface();
 		HandleMessages();
 
-
-
 		auto time = std::chrono::high_resolution_clock::now();
 		//only update if there are players
 		if (m_ClientDataMap.size() > 0)
@@ -57,19 +57,33 @@ namespace Pyxis
 			std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
 			>= (1.0f / m_TickRate) * 1000000.0f)
 		{
-			//pack the merged tick into a message and send to all clients
-			Network::Message msg;
-			msg.header.id = static_cast<uint32_t>(GameMessage::Game_MergedTickClosure);
-			msg << m_CurrentMergedTickClosure.m_Data;
-			msg << m_CurrentMergedTickClosure.m_ClientCount;
-			msg << m_InputTick;
-			SendMessageToAllClients(msg);
-			HandleTickClosure(m_CurrentMergedTickClosure);
+			m_UpdateTime = time;
 
-			m_InputTick++;
+			//skip sending the message if we are waiting for a client to connect!
+			if (m_HaltingClients.empty())
+			{
+				//pack the merged tick into a message and send to all clients
+				Network::Message msg(static_cast<uint32_t>(GameMessage::Game_MergedTickClosure));
+				msg << m_CurrentMergedTickClosure.m_Data;
+				msg << m_CurrentMergedTickClosure.m_ClientCount;
+				msg << m_InputTick;
+				//send the messages unreliably, since i have mtc recovery set up already!
+				SendMessageToAllClients(msg, 0, k_nSteamNetworkingSend_Unreliable);
 
-			//reset the merged tick
-			m_CurrentMergedTickClosure = MergedTickClosure();
+				//add the compressed message into the tick storage
+				m_TickRequestStorage.emplace_back();
+				msg.Compressed(m_TickRequestStorage.back());
+
+				if (m_TickRequestStorage.size() > MaxTickStorage) m_TickRequestStorage.pop_front();
+
+				//process the mtc on the server side
+				HandleTickClosure(m_CurrentMergedTickClosure);
+				m_InputTick++;
+
+				//reset the merged tick
+				m_CurrentMergedTickClosure = MergedTickClosure();
+			}
+			
 		}
 		
 	}
@@ -109,20 +123,67 @@ namespace Pyxis
 				PX_TRACE("Sent All Client Data to {0}", msg->clientHConnection);
 				break;
 			}
+			case GameMessage::Client_RequestMergedTick:
+			{
+				//assuming there are 66 mtc's stored
+				//m_inputtick is then 67
+				//if tick 65 was requested, then that would be located at position 64
+				//which is 66 - (67 - 65)
+				//         66 -  2 = 64
+				//that is the reasoning for the calculation below
+				//basically, the difference between the current tick and how far back
+				//the request is, is how far back from the end of the storage to grab from
+				
+				
+				uint64_t tick;
+				*msg >> tick;
+				int diff = m_InputTick - tick;
+				int position = m_TickRequestStorage.size() - diff;
+				if (position < 0 || position > m_TickRequestStorage.size())
+				{
+					//Requested tick does not exist!
+					PX_WARN("Requested Tick Not Found, setting client to be out of sync!");
+					DisconnectClient(msg->clientHConnection, "Client Became Desynced (Requested a tick we no longer had!)");
+				}
+				else
+					SendCompressedStringToClient(msg->clientHConnection, m_TickRequestStorage.at(position));				
+
+				break;
+			}
 			case GameMessage::Client_RequestGameData:
 			{
-				//client is requesting the world data, so send it!
-				//send the world and rigid body data
-				Network::Message gameDataMsg;
-				gameDataMsg.header.id = static_cast<uint32_t>(GameMessage::Server_GameData);
-				//in order to send the game data, i'll pause the game for now while its sending?
-				//or maybe not, and ill just keep updating and sending the client the 
-				//merged ticks so it can catch up afterwards
-				m_World.GetWorldData(gameDataMsg);
-				gameDataMsg << m_World.m_Running;
-				gameDataMsg << m_InputTick;
-				PX_TRACE("Client Requested world Data. Size: {0}", gameDataMsg.size());
-				SendMessageToClient(msg->clientHConnection, gameDataMsg);
+				//TODO: 
+				//maybe send some info to other clients? so their game doesn't just randomly stop...
+
+
+				// begin by halting the game for this client to join the world
+				// then, send the initializing message, saying how many chunks need
+				// to be sent, and how many rigid bodies?
+				// then send all the chunks individually and send pixel bodies in groups as well? or maybe individually.
+				
+				//first, lets halt the game by adding this client to the halting list
+				m_HaltingClients.insert(msg->clientHConnection);
+
+				//now, lets send that initial message describing how many chunks we will send
+				//and how many pixel bodies there are.
+				Network::Message gameDataInitMsg;
+				m_World.GetGameDataInit(gameDataInitMsg);
+				gameDataInitMsg << m_InputTick;
+				SendMessageToClient(msg->clientHConnection, gameDataInitMsg);
+
+				//now lets populate a vector of messages to be sent,
+				//being the chunks and pixel bodies
+				std::vector<Network::Message> v_GameDataMessages;
+				m_DownloadingClients[msg->clientHConnection];
+				m_World.GetGameData(m_DownloadingClients[msg->clientHConnection]);
+				//send the first and wait for it to be acknowledged
+				
+				if (!m_DownloadingClients[msg->clientHConnection].empty())
+				{
+					PX_TRACE("Sent GameDataMsg: ID[{0}], Size[{1}]", m_DownloadingClients[msg->clientHConnection].back().header.id, m_DownloadingClients[msg->clientHConnection].back().size());
+					SendMessageToClient(msg->clientHConnection, m_DownloadingClients[msg->clientHConnection].back());
+					m_DownloadingClients[msg->clientHConnection].pop_back();
+				}
 
 				//as soon as a new client joins the game,
 				//we have to reset everyones box2d simulation, so send that now so everyone stays in sync!
@@ -131,6 +192,20 @@ namespace Pyxis
 				m_World.ResetBox2D();
 				b2ResetMsg << m_World.m_SimulationTick;
 				SendMessageToAllClients(b2ResetMsg, msg->clientHConnection);
+				break;
+			}
+			case GameMessage::Client_GameDataRecieved:
+			{
+				PX_TRACE("Sent GameDataMsg: ID[{0}], Size[{1}]", m_DownloadingClients[msg->clientHConnection].back().header.id, m_DownloadingClients[msg->clientHConnection].back().size());
+				SendMessageToClient(msg->clientHConnection, m_DownloadingClients[msg->clientHConnection].back());
+				m_DownloadingClients[msg->clientHConnection].pop_back();
+				break;
+			}
+			case GameMessage::Client_GameDataComplete:
+			{
+				//the connecting client finished loading the world, so lets resume! 
+				m_HaltingClients.erase(msg->clientHConnection);
+				if (m_DownloadingClients[msg->clientHConnection].empty()) m_DownloadingClients.erase(msg->clientHConnection);
 				break;
 			}
 			case GameMessage::Game_TickClosure:
@@ -197,6 +272,12 @@ namespace Pyxis
 		return false;
 	}
 
+	void PixelGameServer::DisconnectClient(HSteamNetConnection client, std::string Reason)
+	{
+		OnClientDisconnect(client);
+		m_pInterface->CloseConnection(client, 0, Reason.c_str(), true);
+	}
+
 	//bool PixelGameServer::OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client)
 	//{
 	//	//I am able to block the incoming connection if i desire here
@@ -223,6 +304,15 @@ namespace Pyxis
 	{
 		//remove client from map
 		m_ClientDataMap.erase(client);
+
+		if (m_HaltingClients.contains(client))
+		{
+			m_HaltingClients.erase(client);
+		}
+		if (m_DownloadingClients.contains(client))
+		{
+			m_DownloadingClients.erase(client);
+		}
 	}
 
 	/// <summary>

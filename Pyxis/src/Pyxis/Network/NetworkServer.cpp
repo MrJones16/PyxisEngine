@@ -104,117 +104,63 @@ namespace Pyxis
 
 		void ServerInterface::SendStringToClient(HSteamNetConnection conn, const std::string& str)
 		{
-			Network::Message msg;
-			msg.header.id = 0;
-			msg.PushData(str.c_str(), str.size());
+			Network::Message msg(0);
+			msg.PushData(str.data(), str.size());
 			SendMessageToClient(conn, msg);
 		}
 
 		void ServerInterface::SendStringToAllClients(const std::string& str, HSteamNetConnection except)
 		{
-			/*Network::Message msg;
-			msg.header.id = 0;
-			msg.PushData(str.c_str(), str.size());
-			for (auto& c : m_ClientsSet)
-			{
-				if (c != except)
-					SendMessageToClient(c, msg);
-			}*/
-
-			Network::Message message;
-			message.header.id = 0;
-			message.PushData(str.c_str(), str.size());
-			message << message.header.id;
-
-			std::string inString(message.body.begin(), message.body.end());
-			std::string compressedString;
-			snappy::Compress(inString.data(), inString.size(), &compressedString);
-
-			Network::Message compressedMsg;
-			compressedMsg.PushData(compressedString.data(), compressedString.size());
-
-			for (auto& c : m_ClientsSet)
-			{
-				if (c != except)
-					m_pInterface->SendMessageToConnection(c, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
-					
-			}
+			Network::Message msg(0);
+			msg.PushData(str.data(), str.size());
+			SendMessageToAllClients(msg, except);
 		}
 
-		void ServerInterface::SendMessageToClient(HSteamNetConnection conn, Message& message)
+		void ServerInterface::SendMessageToClient(HSteamNetConnection conn, Message& message, int nSendFlags)
 		{
-			/*message << message.header.id;
-			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);*/
-
-			message << message.header.id;
-
 			//std::string inString(message.body.begin(), message.body.end());
-			std::string compressedString;
-			//snappy::Compress(inString.data(), inString.size(), &compressedString);
-			snappy::Compress((const char *)message.body.data(), message.size(), &compressedString);
-
-			PX_TRACE("Compressed Message. Compression: {0}%, [{1}]->[{2}]", ((float)compressedString.size() / (float)message.size()), (float)message.size() * 8.0f, (float)compressedString.size() * 8.0f);
-			Network::Message compressedMsg;
-			compressedMsg.PushData(compressedString.data(), compressedString.size());
-			m_pInterface->SendMessageToConnection(conn, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+			std::string compressedStr;
+			message.Compressed(compressedStr);
+			if ((uint32_t)compressedStr.size() > k_cbMaxSteamNetworkingSocketsMessageSizeSend)
+			{
+				PX_TRACE("Message sent was too big! [{0}] > [{1}]", (uint32_t)compressedStr.size(), k_cbMaxSteamNetworkingSocketsMessageSizeSend);
+			}
+			m_pInterface->SendMessageToConnection(conn, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
 		}
 
-		void ServerInterface::SendMessageToAllClients(Message& message, HSteamNetConnection except)
+		void ServerInterface::SendMessageToAllClients(Message& message, HSteamNetConnection except, int nSendFlags)
 		{
-			/*for (auto& c : m_ClientsSet)
+
+			std::string compressedStr;
+			message.Compressed(compressedStr);
+			if ((uint32_t)compressedStr.size() > k_cbMaxSteamNetworkingSocketsMessageSizeSend)
 			{
-				if (c != except)
-					SendMessageToClient(c, message);
-			}*/
-			message << message.header.id;
+				PX_TRACE("Message sent was too big! [{0}] > [{1}]", (uint32_t)compressedStr.size(), k_cbMaxSteamNetworkingSocketsMessageSizeSend);
+			}
 
-			std::string inString(message.body.begin(), message.body.end());
-			std::string compressedString;
-			snappy::Compress(inString.data(), inString.size(), &compressedString);
-
-
-			Network::Message compressedMsg;
-			compressedMsg.PushData(compressedString.data(), compressedString.size());
 			for (auto& c : m_ClientsSet)
 			{
 				if (c != except)
-					m_pInterface->SendMessageToConnection(c, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+					m_pInterface->SendMessageToConnection(c, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
 			}
 		}
 
-		void ServerInterface::SendUnreliableMessageToClient(HSteamNetConnection conn, Message& message)
+		void ServerInterface::SendCompressedStringToClient(HSteamNetConnection conn, std::string& compressedStr, int nSendFlags)
 		{
-			message << message.header.id;
-			m_pInterface->SendMessageToConnection(conn, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Unreliable, nullptr);
+			m_pInterface->SendMessageToConnection(conn, compressedStr.data(), (uint32)compressedStr.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
-		void ServerInterface::SendUnreliableMessageToAllClients(Message& message, HSteamNetConnection except)
+		void ServerInterface::SendCompressedStringToAllClients(std::string& compressedStr, HSteamNetConnection except, int nSendFlags)
 		{
 			for (auto& c : m_ClientsSet)
 			{
 				if (c != except)
-					SendUnreliableMessageToClient(c, message);
+					m_pInterface->SendMessageToConnection(c, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
 			}
 		}
 
 		bool ServerInterface::PollMessage(Ref<Message>& MessageOut)
 		{
-			/*ISteamNetworkingMessage* pIncomingMsg = nullptr;
-			int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
-			if (numMsgs == 0) return false;
-			if (numMsgs < 0)
-			{
-				PX_CORE_ERROR("Error checking for messages");
-				return false;
-			}
-			assert(numMsgs == 1 && pIncomingMsg);
-			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn, "Message was from unknown client"));
-
-			MessageOut = CreateRef<Message>(pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
-			*MessageOut >> MessageOut->header.id;
-			MessageOut->clientHConnection = pIncomingMsg->m_conn;
-			pIncomingMsg->Release();
-			return true;*/
 			ISteamNetworkingMessage* pIncomingMsg = nullptr;
 			int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
 			if (numMsgs == 0) return false;
@@ -229,14 +175,10 @@ namespace Pyxis
 			// '\0'-terminate it to make it easier to parse
 			std::string stringCompressed;
 			stringCompressed.assign((const char*)pIncomingMsg->m_pData, pIncomingMsg->m_cbSize);
-			
-
-			std::string uncompressed;
-			snappy::Uncompress(stringCompressed.data(), stringCompressed.size(), &uncompressed);
-			MessageOut = CreateRef<Message>(uncompressed.data(), uncompressed.size());
-			*MessageOut >> MessageOut->header.id;
+			MessageOut = CreateRef<Message>(stringCompressed);
 			MessageOut->clientHConnection = pIncomingMsg->m_conn;
 			pIncomingMsg->Release();
+
 			return true;
 		}
 

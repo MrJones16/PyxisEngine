@@ -42,6 +42,37 @@ namespace Pyxis
 				header.size = size;
 			}
 
+			Message(uint32_t headerID)
+			{
+				header.id = headerID;
+			}
+
+			Message(const std::string& compressedStr)
+			{
+				std::string uncompressed;
+				snappy::Uncompress(compressedStr.data(), compressedStr.size(), &uncompressed);
+				PushData(uncompressed.data(), uncompressed.size());
+				*this >> header.id;
+			}
+
+
+			/// <summary>
+			/// Returns the string of the message compressed, with the message
+			/// header ID appended to the end (also compressed)
+			/// </summary>
+			/// <returns>The message compressed into a string </returns>
+			void Compressed(std::string& compressedStrOut)
+			{
+				*this << header.id;
+
+				std::string inString(body.begin(), body.end());
+				snappy::Compress(inString.data(), inString.size(), &compressedStrOut);
+				//we need to pull the ID out so it doesn't mess with the message unintentionally.
+				uint32_t revertID;
+				*this >> revertID;
+				//PX_TRACE("Compressed Message. Compression: {0}%, [{1}]->[{2}]", ((float)compressedStrOut.size() / (float)inString.size()) * 100.0f, (float)inString.size(), (float)compressedStrOut.size());
+			}
+
 
 			/// <summary>
 			/// returns the size of the entire message packet in bytes

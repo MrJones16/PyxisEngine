@@ -41,11 +41,17 @@ namespace Pyxis
 		Client_RequestMergedTick,
 		Client_RequestAllClientData,
 		Client_RequestGameData,
+		Client_GameDataRecieved,
+		Client_GameDataComplete,
+		Client_Disconnect,
 
 		Server_ClientData,
 		Server_AllClientData,
 		Server_ClientDisconnected,
-		Server_GameData,
+		Server_GameDataInit,
+		Server_GameDataPixelBody,
+		Server_GameDataChunk,
+		Server_ClientDesynced,
 
 		Server_Message,
 		Message_All,
@@ -166,7 +172,7 @@ namespace Pyxis
 		uint64_t m_Tick = 0;
 
 		std::unordered_set<uint64_t> m_Clients;
-		uint32_t m_ClientCount = 0;
+		uint16_t m_ClientCount = 0;
 		inline void AddTickClosure(TickClosure& tickClosure, HSteamNetConnection clientID)
 		{
 			

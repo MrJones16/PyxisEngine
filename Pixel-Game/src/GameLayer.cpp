@@ -61,6 +61,10 @@ namespace Pyxis
 	GameLayer::~GameLayer()
 	{
 		PX_TRACE("Game Layer Deleted");
+		if (m_ConnectionStatus == Connected)
+		{
+			Disconnect();
+		}
 	}
 
 	void GameLayer::OnAttach()
@@ -98,7 +102,9 @@ namespace Pyxis
 	{
 		PROFILE_SCOPE("GameLayer::OnUpdate");
 		UpdateInterface();
-		HandleMessages();
+
+		if (m_ConnectionStatus == ConnectionStatus::Connecting || m_ConnectionStatus == ConnectionStatus::Connected)
+			HandleMessages();
 		
 
 		m_OrthographicCameraController.OnUpdate(ts);
@@ -195,7 +201,7 @@ namespace Pyxis
 				}
 
 				m_UpdateTime = time;
-				m_InputTick++;
+				
 
 				if (m_MultiplayerState == Singleplayer)
 				{
@@ -219,6 +225,39 @@ namespace Pyxis
 				//reset tick closure
 				m_CurrentTickClosure = TickClosure();
 
+			}
+		}
+
+		if (m_MultiplayerState == MultiplayerState::Connected)
+		{
+			while (!m_MTCBuffer.empty())
+			{
+				if (m_MTCBuffer.front().m_Tick == m_InputTick)
+				{
+					//the front tick is what we want, so let's just handle it
+					HandleTickClosure(m_MTCBuffer.front());
+					m_MTCBuffer.pop_front();
+					m_InputTick++;
+				}
+				else if (m_MTCBuffer.front().m_Tick < m_InputTick)
+				{
+					//this tick is old, so discard it
+					m_MTCBuffer.pop_front();
+				}
+				else
+				{
+					//this tick must be for the future,
+					// so lets request the missing one and wait
+					if (m_LastRequestedTick != m_InputTick)
+					{
+						Network::Message requestMsg(static_cast<uint32_t>(GameMessage::Client_RequestMergedTick));
+						requestMsg << m_InputTick;
+						SendMessageToServer(requestMsg);
+						PX_TRACE("MTC Skipped, Requesting Missing Tick");
+					}
+					break;
+				}
+				
 			}
 		}
 
@@ -266,6 +305,12 @@ namespace Pyxis
 		msg.header.id = static_cast<uint32_t>(GameMessage::Client_RequestAllClientData);
 		PX_TRACE("Requesting all client data");
 		SendMessageToServer(msg);
+	}
+
+	void GameLayer::OnConnectionLost(const std::string& reasonText)
+	{
+		//m_ConnectionStatus = ConnectionStatus::Disconnected;
+		m_MultiplayerState = MultiplayerState::Disconnected;
 	}
 
 	//void GameLayer::OnUpdate(Timestep ts)
@@ -569,6 +614,8 @@ namespace Pyxis
 					if (ImGui::Button("Okay"))
 					{
 						Disconnect();
+						Application::Get().PopLayerQueue(this);
+
 					}
 				}
 				ImGui::End();
@@ -958,33 +1005,61 @@ namespace Pyxis
 				m_ClientDataMap.erase(clientID);
 				break;
 			}
-			case GameMessage::Server_GameData:
+			case GameMessage::Server_GameDataInit:
 			{
 				PX_TRACE("Recieved Game Data");
 				*msg >> m_InputTick;
 				CreateWorld();
 				
-				*msg >> m_World->m_Running;
-				m_World->LoadWorld(*msg);
-				//m_LatestMergedTick = m_InputTick;
-								
-				PX_TRACE("loaded game at tick {0}", m_InputTick);
-				PX_TRACE("Game simulation tick is {0}", m_World->m_SimulationTick);
+				m_World->DownloadWorldInit(*msg);
+				uint32_t numPixelBodies;
+				uint32_t numChunks;
+				*msg >> numPixelBodies >> numChunks;
 
+				m_DownloadTotal = static_cast<uint64_t>(numPixelBodies) + static_cast<uint64_t>(numChunks);
 
-				//now that i have finished downloading the world
-				// (which might have taken a while)
-				// tell the server i am done
-				//now that i caught up on all the messages, be finished connecting
-				//and start sending my own ticks, and make others wait
-				/*Network::Message msg;
-				msg.header.id = static_cast<uint32_t>(GameMessage::Game_Loaded);
-				SendMessageToServer(msg);*/
+				PX_TRACE("Downloading game at tick [{0}], simulation tick [{1}]", m_InputTick, m_World->m_SimulationTick);
+				if (m_DownloadTotal == 0)
+				{
+					PX_TRACE("The world is empty! hop on in!");
+					//tell the server we are finished, so it can resume the game
+					Network::Message finishedDownloadMsg;
+					finishedDownloadMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataComplete);
+					SendMessageToServer(finishedDownloadMsg);
+					//we are connected!
+					m_MultiplayerState = MultiplayerState::Connected;
+				}
+				else
+				{
+					PX_TRACE("Expecting {0} PixelBodies and {1} Chunks totalling {2} messages", numPixelBodies, numChunks, m_DownloadTotal);
+				}
+				break;
+			}
+			case GameMessage::Server_GameDataPixelBody:
+			case GameMessage::Server_GameDataChunk:
+			{
+				
+				//we recieved a pixel body, so lets count it, and add it to the world
+				m_DownloadCount++;
+				m_World->DownloadWorld(*msg);
+				if (m_DownloadCount == m_DownloadTotal)
+				{
+					PX_INFO("Downloading World: [100%]");
+					//tell the server we are finished, so it can resume the game
+					Network::Message gameDataCompleteMsg;
+					gameDataCompleteMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataComplete);
+					SendMessageToServer(gameDataCompleteMsg);
 
-
-				//now that we have finished recieving the game data and loading the world, start the game!
-				m_MultiplayerState = MultiplayerState::Connected;
-
+					//now that we have finished recieving the game data and loading the world, start the game!
+					m_MultiplayerState = MultiplayerState::Connected;
+				}
+				else
+				{
+					Network::Message gameDataRecievedMsg;
+					gameDataRecievedMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataRecieved);
+					SendMessageToServer(gameDataRecievedMsg);
+					PX_INFO("Downloading World: [{0}%]", (double)m_DownloadCount / (double)m_DownloadTotal);
+				}
 				break;
 			}
 			case GameMessage::Game_MergedTickClosure:
@@ -995,11 +1070,23 @@ namespace Pyxis
 				*msg >> mtc.m_Data;
 				d_LastRecievedInputTick = mtc.m_Tick;
 
-				//TODO FIX: right now we are sending reliable messages. if I want to use unreliable, then
-				//i need to keep a queue of messages and ask for any missing ones when needed!
-
-				if (mtc.m_Tick >= m_InputTick)
-				HandleTickClosure(mtc);
+				//if this tick is the current one, handle it immediately,
+				// don't need to push it to the front of the buffer
+				if (mtc.m_Tick == m_InputTick)
+				{
+					HandleTickClosure(mtc);
+					m_InputTick++;
+				}
+				else if (mtc.m_Tick == m_InputTick)
+				{
+					//also, if the tick is old just discard it.
+					//we only want to hand onto new ones.
+				}
+				else
+				{
+					//this is a future tick, so lets throw it on the stack
+					m_MTCBuffer.push_back(mtc);
+				}
 
 				break;
 			}

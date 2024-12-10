@@ -25,6 +25,8 @@ namespace Pyxis
 		bool OnWindowResizeEvent(Pyxis::WindowResizeEvent& event);
 
 	protected:
+		void DisconnectClient(HSteamNetConnection client, std::string Reason);
+
 		//bool OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
 		void OnClientDisconnect(HSteamNetConnection client) override;
 		//void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
@@ -53,9 +55,9 @@ namespace Pyxis
 		/// Map of clients and their client data to keep track of
 		/// </summary>
 		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;
-		//specifically for the use case of server side merged tick closures. uses the ID given to 
-		std::unordered_map<uint64_t, HSteamNetConnection> m_ClientIDToHandleMap;
-
+		
+		std::unordered_set<HSteamNetConnection> m_HaltingClients;
+		std::unordered_map < HSteamNetConnection, std::vector<Network::Message>> m_DownloadingClients;
 		///The current tick closure for the server.
 		MergedTickClosure m_CurrentMergedTickClosure;
 
@@ -63,13 +65,14 @@ namespace Pyxis
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
 		float m_TickRate = 30.0f;
 
-
+		//a deque of the compressed mtc messages! allows for a smaller storage of the tick closures
+		//and so they can be requested by a client if one goes missing
+		std::deque<std::string> m_TickRequestStorage;
 
 
 		//std::unordered_set<uint64_t> m_ClientsNeededForTick;
 		//std::deque<MergedTickClosure> m_MTCDeque;
 
-		//std::deque<MergedTickClosure> m_TickRequestStorage;
 		//
 		////delay making the server sleep, so the player count is updated and drawn at start.
 		//int m_SleepDelay = 0;
