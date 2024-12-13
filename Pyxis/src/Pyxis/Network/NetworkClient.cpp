@@ -6,42 +6,50 @@ namespace Pyxis
 {
 	namespace Network
 	{
-		
+		ClientInterface::ClientInterface()
+		{
+			m_SteamNetworkingSockets = SteamNetworkingSockets();
+			m_SteamNetworkingUtils = SteamNetworkingUtils();
+			m_hConnection = k_HSteamNetConnection_Invalid;
+		}
+
+		ClientInterface::~ClientInterface()
+		{
+			//SteamAPI_Shutdown();
+		}
+
 		bool ClientInterface::Connect(const SteamNetworkingIPAddr& serverAddr)
 		{
 
 			if (m_ConnectionStatus == Connected) return true;
 			// Select instance to use.  For now we'll always use the default.
 
-			//initialze steam sockets
-			SteamDatagramErrMsg errMsg;
-			if (!GameNetworkingSockets_Init(nullptr, errMsg))
-			{
-				PX_CORE_ERROR("ClientInterface::Connect->GameNetworkingSockets_Init failed.  {0}", errMsg);
-				m_ConnectionStatusMessage = "GNS_Init Failed.";
-				m_ConnectionStatus = FailedToConnect;
-				return false;
-			}
+			////initialze steam sockets
+			//SteamDatagramErrMsg errMsg;
+			//if (!GameNetworkingSockets_Init(nullptr, errMsg))
+			//{
+			//	PX_CORE_ERROR("ClientInterface::Connect->GameNetworkingSockets_Init failed.  {0}", errMsg);
+			//	m_ConnectionStatusMessage = "GNS_Init Failed.";
+			//	m_ConnectionStatus = FailedToConnect;
+			//	return false;
+			//}
 
 
-			m_pInterface = SteamNetworkingSockets();
-
-			m_pUtils = SteamNetworkingUtils();
-
-
+			m_SteamNetworkingSockets = SteamNetworkingSockets();
 			//Start Connecting
 			char szAddr[SteamNetworkingIPAddr::k_cchMaxString];
 			serverAddr.ToString(szAddr, sizeof(szAddr), true);
 			PX_CORE_INFO("Connecting to server at {0}", szAddr);
 			SteamNetworkingConfigValue_t opt;
 			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
-			m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
+			m_hConnection = m_SteamNetworkingSockets->ConnectByIPAddress(serverAddr, 1, &opt);
 			if (m_hConnection == k_HSteamNetConnection_Invalid)
 			{
 				PX_CORE_ERROR("Failed to create connection");
 				m_ConnectionStatusMessage = "Failed to create connection";
 				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
 				OnConnectionFailure(m_ConnectionStatusMessage);
+				//GameNetworkingSockets_Kill();
 				return false;
 			}
 
@@ -53,21 +61,10 @@ namespace Pyxis
 
 		bool ClientInterface::Connect(const std::string& serverAddrString)
 		{
-			if (m_ConnectionStatus == Connected) return true;
-
-			//initialze steam sockets
-			SteamDatagramErrMsg errMsg;
-			if (!GameNetworkingSockets_Init(nullptr, errMsg))
-			{
-				PX_CORE_ERROR("ClientInterface::Connect->GameNetworkingSockets_Init failed.  {0}", errMsg);
-				m_ConnectionStatusMessage = "GNS_Init Failed.";
-				m_ConnectionStatus = FailedToConnect;
-				return false;
-			}
+			if (m_ConnectionStatus == Connected) return true;		
 
 			// Select instance to use.  For now we'll always use the default.
-			m_pInterface = SteamNetworkingSockets();
-
+			
 			//Parse the string into a server address
 			SteamNetworkingIPAddr serverAddr; serverAddr.Clear();
 			if (serverAddr.IsIPv6AllZeros())
@@ -77,8 +74,8 @@ namespace Pyxis
 					m_ConnectionStatusMessage = "Invalid Server Address: " + serverAddrString;
 					PX_CORE_ERROR(m_ConnectionStatusMessage);
 					m_ConnectionStatus = ConnectionStatus::FailedToConnect;
-					GameNetworkingSockets_Kill();
 					OnConnectionFailure(m_ConnectionStatusMessage);
+					//GameNetworkingSockets_Kill();
 					return false;
 				}
 				if (serverAddr.m_port == 0)
@@ -89,13 +86,42 @@ namespace Pyxis
 			PX_CORE_INFO("Connecting to server at {0}", serverAddrString);
 			SteamNetworkingConfigValue_t opt;
 			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
-			m_hConnection = m_pInterface->ConnectByIPAddress(serverAddr, 1, &opt);
+			m_hConnection = m_SteamNetworkingSockets->ConnectByIPAddress(serverAddr, 1, &opt);
 			if (m_hConnection == k_HSteamNetConnection_Invalid)
 			{
 				PX_CORE_ERROR("Failed to create connection");
 				m_ConnectionStatusMessage = "Failed to create connection";
 				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
-				GameNetworkingSockets_Kill();
+				//GameNetworkingSockets_Kill();
+				OnConnectionFailure(m_ConnectionStatusMessage);
+				return false;
+			}
+
+			//Currently Connecting
+			m_ConnectionStatusMessage = "Connecting";
+			m_ConnectionStatus = Connecting;
+			return true;
+		}
+
+		bool ClientInterface::ConnectP2P(SteamNetworkingIdentity& identity, int virtualPort)
+		{
+			if (m_ConnectionStatus == Connected) return true;
+
+			// Select instance to use.  For now we'll always use the default.
+			m_SteamNetworkingSockets = SteamNetworkingSockets();
+			m_SteamNetworkingUtils = SteamNetworkingUtils();
+
+			//configureoptions
+			SteamNetworkingConfigValue_t opt;
+			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
+
+			//Start Connecting
+			m_hConnection = m_SteamNetworkingSockets->ConnectP2P(identity, virtualPort, 1, &opt);
+			if (m_hConnection == k_HSteamNetConnection_Invalid)
+			{
+				PX_CORE_ERROR("Failed to create connection");
+				m_ConnectionStatusMessage = "Failed to create connection";
+				m_ConnectionStatus = ConnectionStatus::FailedToConnect;
 				OnConnectionFailure(m_ConnectionStatusMessage);
 				return false;
 			}
@@ -134,7 +160,9 @@ namespace Pyxis
 			// to be flushed out.  But remember this is an application
 			// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
 			PX_CORE_TRACE("Disconnecting from chat server");
-			m_pInterface->CloseConnection(m_hConnection, 0, "Goodbye", true);
+			m_SteamNetworkingSockets->CloseConnection(m_hConnection, 0, "Goodbye", false);
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			//GameNetworkingSockets_Kill();
 		}
 
 		void ClientInterface::OnConnectionSuccess()
@@ -163,7 +191,7 @@ namespace Pyxis
 		void ClientInterface::SendMessageToServer(Message& message)
 		{
 			/*message << message.header.id;
-			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);*/
+			m_SteamNetworkingSockets->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Reliable, nullptr);*/
 
 			message << message.header.id;
 
@@ -174,7 +202,7 @@ namespace Pyxis
 
 			Network::Message compressedMsg;
 			compressedMsg.PushData(compressedString.data(), compressedString.size());
-			m_pInterface->SendMessageToConnection(m_hConnection, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+			m_SteamNetworkingSockets->SendMessageToConnection(m_hConnection, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
 		void ClientInterface::SendCompressedMessageToServer(Message& message)
@@ -188,20 +216,20 @@ namespace Pyxis
 
 			Network::Message compressedMsg;
 			compressedMsg.PushData(compressedString.data(), compressedString.size());
-			m_pInterface->SendMessageToConnection(m_hConnection, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+			m_SteamNetworkingSockets->SendMessageToConnection(m_hConnection, compressedMsg.body.data(), (uint32)compressedMsg.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
 		void ClientInterface::SendUnreliableMessageToServer(Message& message)
 		{
 			message << message.header.id;
-			m_pInterface->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Unreliable, nullptr);
+			m_SteamNetworkingSockets->SendMessageToConnection(m_hConnection, message.body.data(), (uint32)message.size(), k_nSteamNetworkingSend_Unreliable, nullptr);
 		}
 
 		bool ClientInterface::PollMessage(Ref<Message>& MessageOut)
 		{
 			
 			/*ISteamNetworkingMessage* pIncomingMsg = nullptr;
-			int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+			int numMsgs = m_SteamNetworkingSockets->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
 			if (numMsgs == 0) return false;
 			if (numMsgs < 0)
 			{
@@ -216,7 +244,7 @@ namespace Pyxis
 			pIncomingMsg->Release();
 			return true;*/
 			ISteamNetworkingMessage* pIncomingMsg = nullptr;
-			int numMsgs = m_pInterface->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
+			int numMsgs = m_SteamNetworkingSockets->ReceiveMessagesOnConnection(m_hConnection, &pIncomingMsg, 1);
 			if (numMsgs == 0) return false;
 			if (numMsgs < 0)
 			{
@@ -224,7 +252,6 @@ namespace Pyxis
 				return false;
 			}
 			assert(numMsgs == 1 && pIncomingMsg);
-			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn, "Message was from unknown client"));
 
 			// '\0'-terminate it to make it easier to parse
 			std::string stringCompressed;
@@ -248,6 +275,11 @@ namespace Pyxis
 		
 		void ClientInterface::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 		{
+			if (!(pInfo->m_hConn == m_hConnection || m_hConnection == k_HSteamNetConnection_Invalid))
+			{
+				//the callback was for a previos
+				return;
+			}
 			assert(pInfo->m_hConn == m_hConnection || m_hConnection == k_HSteamNetConnection_Invalid);
 
 			// What's the state of the connection?
@@ -298,10 +330,10 @@ namespace Pyxis
 				// to finish up.  The reason information do not matter in this case,
 				// and we cannot linger because it's already closed on the other end,
 				// so we just pass 0's.
-				m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+				m_SteamNetworkingSockets->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 				m_hConnection = k_HSteamNetConnection_Invalid;
 
-				GameNetworkingSockets_Kill();
+				//GameNetworkingSockets_Kill();
 
 				break;
 			}
@@ -334,7 +366,7 @@ namespace Pyxis
 		void ClientInterface::PollConnectionStateChanges()
 		{
 			s_pCallbackInstance = this;
-			m_pInterface->RunCallbacks();
+			m_SteamNetworkingSockets->RunCallbacks();
 		}
 	}
 }

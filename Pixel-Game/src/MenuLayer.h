@@ -1,6 +1,9 @@
 #pragma once
 
 #include "GameLayer.h"
+#include "SingleplayerGameLayer.h"
+#include "MultiplayerGameLayer.h"
+#include "HostingGameLayer.h"
 
 
 namespace Pyxis
@@ -19,9 +22,6 @@ namespace Pyxis
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
-		void AttachGameLayer();
-		void DetachGameLayer();
-
 		void FailedToConnect();
 		//bool OnWindowResizeEvent(WindowResizeEvent& event);
 		//bool OnKeyPressedEvent(KeyPressedEvent& event);
@@ -32,8 +32,11 @@ namespace Pyxis
 
 	private:
 
-		GameLayer* m_GameLayer = new GameLayer();
-		bool m_GameLayerAttached = false;
+		std::weak_ptr<SingleplayerGameLayer> m_SinglePlayerLayer;
+		std::weak_ptr<MultiplayerGameLayer> m_MultiplayerLayer;
+		std::weak_ptr<HostingGameLayer> m_HostingLayer;
+
+		bool m_AnyGameLayerAttached = false;
 
 		//UI things
 		bool m_InMainMenu = true;

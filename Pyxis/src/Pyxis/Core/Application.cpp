@@ -27,7 +27,7 @@ namespace Pyxis
 		{
 			m_Running = false;
 		}*/
-		m_ImGuiLayer = new ImGuiLayer();
+		m_ImGuiLayer = CreateRef<ImGuiLayer>();
 		PushOverlay(m_ImGuiLayer);
 	}
 
@@ -75,13 +75,13 @@ namespace Pyxis
 
 	}
 
-	void Application::PushLayer(Layer* layer)
+	void Application::PushLayer(Ref<Layer> layer)
 	{
 		m_LayersToAdd.push(layer);
 		//m_LayerStack.PushLayer(layer);
 	}
 
-	void Application::PushOverlay(Layer* layer)
+	void Application::PushOverlay(Ref<Layer> layer)
 	{
 		m_LayerStack.PushOverlay(layer);
 	}
@@ -92,14 +92,14 @@ namespace Pyxis
 	/// popping a layer immediately would cause the stack to
 	/// be altered duing iteration
 	/// </summary>
-	void Application::PopLayerQueue(Layer* layer)
+	void Application::PopLayerQueue(Ref<Layer> layer)
 	{
 		m_LayersToRemove.push(layer);
 	}
 
 	//Use when you need to remove the layer immediately, for use if your layer is not
 	//a pointer that can be deleted. 
-	void Application::PopLayer(Layer* layer)
+	void Application::PopLayer(Ref<Layer> layer)
 	{
 		m_LayerStack.PopLayer(layer);
 	}
@@ -125,12 +125,12 @@ namespace Pyxis
 
 
 			if (!m_Minimized) {
-				for (Layer* layer : m_LayerStack)
+				for (Ref<Layer>& layer : m_LayerStack)
 					layer->OnUpdate(timestep);
 			}
 
 			m_ImGuiLayer->Begin();
-			for (Layer* layer : m_LayerStack)
+			for (Ref<Layer>& layer : m_LayerStack)
 				layer->OnImGuiRender();
 			m_ImGuiLayer->End();
 

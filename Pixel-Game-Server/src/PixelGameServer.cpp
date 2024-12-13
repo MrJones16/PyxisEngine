@@ -1,17 +1,13 @@
 #include "PixelGameServer.h"
 
 #include <imgui.h>
-//#include <glm/gtc/type_ptr.hpp>
-
-//#include <Platform/OpenGL/OpenGLShader.h>
-#include <chrono>
 
 static const int MaxTickStorage = 500;
 
 
 namespace Pyxis
 {
-	PixelGameServer::PixelGameServer(uint16_t port) : Layer("Pyxis Server"),
+	PixelGameServer::PixelGameServer(uint16_t port) : HostingGameLayer("Pyxis Server"),
 		m_OrthographicCameraController(5, 9.0f / 16.0f, -100, 100),
 		m_World()//m_World("../Pixel-Game/assets")
 	{
@@ -35,7 +31,7 @@ namespace Pyxis
 		//Pyxis::Log::GetClientLogger() ...
 
 		//STEAMTESTING
-		Start(m_SteamPort);
+		HostIP(m_SteamPort);
 	}
 
 	void PixelGameServer::OnDetatch()
@@ -60,7 +56,7 @@ namespace Pyxis
 			m_UpdateTime = time;
 
 			//skip sending the message if we are waiting for a client to connect!
-			if (m_HaltingClients.empty())
+			if (m_DownloadingClients.empty())
 			{
 				//pack the merged tick into a message and send to all clients
 				Network::Message msg(static_cast<uint32_t>(GameMessage::Game_MergedTickClosure));
@@ -139,7 +135,7 @@ namespace Pyxis
 				*msg >> tick;
 				int diff = m_InputTick - tick;
 				int position = m_TickRequestStorage.size() - diff;
-				if (position < 0 || position > m_TickRequestStorage.size())
+				if (position < 0 || position >= m_TickRequestStorage.size())
 				{
 					//Requested tick does not exist!
 					PX_WARN("Requested Tick Not Found, setting client to be out of sync!");
@@ -161,8 +157,6 @@ namespace Pyxis
 				// to be sent, and how many rigid bodies?
 				// then send all the chunks individually and send pixel bodies in groups as well? or maybe individually.
 				
-				//first, lets halt the game by adding this client to the halting list
-				m_HaltingClients.insert(msg->clientHConnection);
 
 				//now, lets send that initial message describing how many chunks we will send
 				//and how many pixel bodies there are.
@@ -173,8 +167,8 @@ namespace Pyxis
 
 				//now lets populate a vector of messages to be sent,
 				//being the chunks and pixel bodies
-				std::vector<Network::Message> v_GameDataMessages;
-				m_DownloadingClients[msg->clientHConnection];
+				m_DownloadingClients[msg->clientHConnection] = std::vector<Network::Message>();
+				PX_WARN("Created a vector of messages for client");
 				m_World.GetGameData(m_DownloadingClients[msg->clientHConnection]);
 				//send the first and wait for it to be acknowledged
 				
@@ -199,13 +193,17 @@ namespace Pyxis
 				PX_TRACE("Sent GameDataMsg: ID[{0}], Size[{1}]", m_DownloadingClients[msg->clientHConnection].back().header.id, m_DownloadingClients[msg->clientHConnection].back().size());
 				SendMessageToClient(msg->clientHConnection, m_DownloadingClients[msg->clientHConnection].back());
 				m_DownloadingClients[msg->clientHConnection].pop_back();
+				PX_WARN("Sent GameDataPacket. Remaining: {0}", m_DownloadingClients[msg->clientHConnection].size());
 				break;
 			}
 			case GameMessage::Client_GameDataComplete:
 			{
 				//the connecting client finished loading the world, so lets resume! 
-				m_HaltingClients.erase(msg->clientHConnection);
-				if (m_DownloadingClients[msg->clientHConnection].empty()) m_DownloadingClients.erase(msg->clientHConnection);
+				if (m_DownloadingClients[msg->clientHConnection].empty())
+				{
+					PX_WARN("Erased Client. DLCL Size: {0}", m_DownloadingClients.size());
+					m_DownloadingClients.erase(msg->clientHConnection);
+				}
 				break;
 			}
 			case GameMessage::Game_TickClosure:
@@ -251,11 +249,6 @@ namespace Pyxis
 		}
 		ImGui::End();
 
-		/*if (ImGui::Begin("NetworkDebug"))
-		{
-			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
-		}
-		ImGui::End();*/
 	}
 
 	void PixelGameServer::OnEvent(Pyxis::Event& e)
@@ -275,7 +268,7 @@ namespace Pyxis
 	void PixelGameServer::DisconnectClient(HSteamNetConnection client, std::string Reason)
 	{
 		OnClientDisconnect(client);
-		m_pInterface->CloseConnection(client, 0, Reason.c_str(), true);
+		m_SteamNetworkingSockets->CloseConnection(client, 0, Reason.c_str(), true);
 	}
 
 	//bool PixelGameServer::OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client)
@@ -305,193 +298,10 @@ namespace Pyxis
 		//remove client from map
 		m_ClientDataMap.erase(client);
 
-		if (m_HaltingClients.contains(client))
-		{
-			m_HaltingClients.erase(client);
-		}
 		if (m_DownloadingClients.contains(client))
 		{
+			PX_WARN("Popped DLCL Back. Size: {0}", m_DownloadingClients.size());
 			m_DownloadingClients.erase(client);
-		}
-	}
-
-	/// <summary>
-	/// Volatile to the merged tick closure.
-	/// </summary>
-	/// <param name="tc"></param>
-	void PixelGameServer::HandleTickClosure(MergedTickClosure& tc)
-	{
-		for (int i = 0; i < tc.m_ClientCount; i++)
-		{
-			HSteamNetConnection clientID;
-			tc >> clientID;
-			uint32_t inputActionCount;
-			tc >> inputActionCount;
-			for (int i = 0; i < inputActionCount; i++)
-			{
-				InputAction IA;
-				tc >> IA;
-				switch (IA)
-				{
-				/*case InputAction::Add_Player:
-				{
-					uint64_t ID;
-					tc >> ID;
-
-					glm::ivec2 pixelPos;
-					tc >> pixelPos;
-
-					m_World.CreatePlayer(ID, pixelPos);
-					break;
-				}*/
-				case InputAction::PauseGame:
-				{
-					m_World.m_Running = false;
-					break;
-				}
-				case InputAction::ResumeGame:
-				{
-					m_World.m_Running = true;
-					break;
-				}
-				case InputAction::TransformRegionToRigidBody:
-				{
-					uint64_t UUID;
-					tc >> UUID;
-
-					glm::ivec2 maximum;
-					tc >> maximum;
-
-					glm::ivec2 minimum;
-					tc >> minimum;
-
-					b2BodyType type;
-					tc >> type;
-
-					int width = (maximum.x - minimum.x) + 1;
-					int height = (maximum.y - minimum.y) + 1;
-					if (width * height <= 0) break;
-					glm::ivec2 newMin = maximum;
-					glm::ivec2 newMax = minimum;
-					//iterate over section and find the width, height, center, ect
-					int mass = 0;
-					for (int x = 0; x < width; x++)
-					{
-						for (int y = 0; y < height; y++)
-						{
-							glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-							auto& element = m_World.GetElement(pixelPos);
-							auto& elementData = m_World.m_ElementData[element.m_ID];
-							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-							{
-								if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-								if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-								if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-								if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-								mass++;
-							}
-						}
-					}
-					if (mass < 2) continue;//skip if we are 1 element or 0
-					PX_TRACE("transforming {0} elements to a rigid body", mass);
-
-					width = (newMax.x - newMin.x) + 1;
-					height = (newMax.y - newMin.y) + 1;
-
-					glm::ivec2 origin = { width / 2, height / 2 };
-					std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-					for (int x = 0; x < width; x++)
-					{
-						for (int y = 0; y < height; y++)
-						{
-							glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
-
-							//loop over every element, grab it, and make it rigid if it is a movable Solid
-							auto& element = m_World.GetElement(pixelPos);
-							auto& elementData = m_World.m_ElementData[element.m_ID];
-							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-							{
-								element.m_Rigid = true;
-								//set the elements at the local position to be the element pulled from world
-								elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-								m_World.SetElement(pixelPos, Element());
-							}
-						}
-					}
-					glm::ivec2 size = newMax - newMin;
-					PX_TRACE("Mass is: {0}", mass);
-					PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World.m_Box2DWorld);
-					if (body->m_B2Body == nullptr)
-					{
-						PX_TRACE("Failed to create rigid body");
-						continue;
-					}
-					else
-					{
-						m_World.m_PixelBodyMap[body->m_ID] = body;
-						auto pixelPos = (newMin + newMax) / 2;
-						if (width % 2 == 0) pixelPos.x += 1;
-						if (height % 2 == 0) pixelPos.y += 1;
-						body->SetPixelPosition(pixelPos);
-						m_World.PutPixelBodyInWorld(*body);
-					}
-
-
-					break;
-				}
-				case Pyxis::InputAction::Input_Move:
-				{
-					//PX_TRACE("input action: Input_Move");
-					break;
-				}
-				case Pyxis::InputAction::Input_Place:
-				{
-					//PX_TRACE("input action: Input_Place");
-					bool rigid;
-					glm::ivec2 pixelPos;
-					uint32_t elementID;
-					BrushType brush;
-					uint8_t brushSize;
-					tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
-
-					m_World.PaintBrushElement(pixelPos, elementID, brush, brushSize);
-					break;
-				}
-				case Pyxis::InputAction::Input_StepSimulation:
-				{
-					PX_TRACE("input action: Input_StepSimulation");
-					m_World.UpdateWorld();
-					break;
-				}
-				case InputAction::Input_MousePosition:
-				{
-					//add new mouse position to data
-					glm::ivec2 mousePos;
-					HSteamNetConnection clientID;
-					tc >> mousePos >> clientID;
-					m_ClientDataMap[clientID].m_CurosrPixelPosition = mousePos;
-					break;
-				}
-				case InputAction::ClearWorld:
-				{
-					m_World.Clear();
-					break;
-				}
-				default:
-				{
-					PX_TRACE("Input Action Error. You have probably mis-aligned the data");
-					break;
-				}
-				}
-			}
-		}
-		if (m_World.m_Running)
-		{
-			m_World.UpdateWorld();
-		}
-		else
-		{
-			m_World.UpdateTextures();
 		}
 	}
 

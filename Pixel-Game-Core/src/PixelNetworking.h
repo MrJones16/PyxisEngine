@@ -8,29 +8,6 @@
 
 namespace Pyxis
 {
-	struct ClientData
-	{
-		char m_Name[64] = "PyxisEnjoyer";
-		glm::ivec2 m_CurosrPixelPosition = { 0,0 };
-		glm::vec4 m_Color = { 1,1,1,1 };
-
-
-		ClientData()
-		{
-			std::vector<glm::vec4> colorOptions =
-			{
-				glm::vec4(1,0,0,1),//red
-				glm::vec4(1,0.5f,0,1),//orange
-				glm::vec4(1,1,0,1),//yellow
-				glm::vec4(0,1,0,1),//green
-				glm::vec4(0,0,1,1),//blue
-				glm::vec4(1,0,0.2f,1),//indigo
-				glm::vec4(1,0,0.8f,1),//violet
-			};
-			m_Color = colorOptions[std::rand() % colorOptions.size()];
-		}
-
-	};
 
 	enum class GameMessage : uint32_t
 	{

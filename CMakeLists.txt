@@ -12,6 +12,10 @@ project("PyxisWorkspace")
     add_subdirectory("Pixel-Game-Core")
     add_subdirectory("Pixel-Game-server")
 
+    if (PX_DEBUG)
+        target_compile_definitions(PyxisEngine PUBLIC PX_DEBUG)
+    endif()
+
     
     #Specify that this is for windows
     target_compile_definitions(PyxisEngine PRIVATE PX_PLATFORM_WINDOWS)

@@ -2,10 +2,6 @@
 
 #include "NetworkServer.h"
 
-#ifndef PX_DEFAULT_PORT
-#define PX_DEFAULT_PORT 21218
-#endif
-
 namespace Pyxis
 {
 	namespace Network
@@ -13,6 +9,7 @@ namespace Pyxis
 		
 		ServerInterface::ServerInterface()
 		{
+
 		}
 
 		
@@ -22,39 +19,31 @@ namespace Pyxis
 		}
 
 		
-		bool ServerInterface::Start(uint16_t port)
+		bool ServerInterface::HostIP(uint16_t port)
 		{
-			//initialze steam sockets
-			SteamDatagramErrMsg errMsg;
-			if (!GameNetworkingSockets_Init(nullptr, errMsg))
-			{
-				PX_CORE_ERROR("SteamServer::Start->GameNetworkingSockets_Init failed.  {0}", errMsg);
-				return false;
-			}
-
-
 			if (port == 0) port = PX_DEFAULT_PORT;
 			m_hLocalAddress.Clear();
 			m_hLocalAddress.m_port = port;
 
 			// Select instance to use.  For now we'll always use the default.
 			// But we could use SteamGameServerNetworkingSockets() on Steam.
-			m_pInterface = SteamNetworkingSockets();
+			m_SteamNetworkingSockets = SteamNetworkingSockets();
 
-			m_pUtils = SteamNetworkingUtils();
+			m_SteamNetworkingUtils = SteamNetworkingUtils();
 
 			// Start listening
 			SteamNetworkingConfigValue_t opt;
 
 			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
-			m_hListenSock = m_pInterface->CreateListenSocketIP(m_hLocalAddress, 1, &opt);
-			if (m_hListenSock == k_HSteamListenSocket_Invalid)
+			m_ListeningSocket = m_SteamNetworkingSockets->CreateListenSocketIP(m_hLocalAddress, 1, &opt);
+			//m_ListeningSockets = m_SteamNetworkingSockets->CreateListenSocketIP(m_hLocalAddress, 1, &opt);
+			if (m_ListeningSocket == k_HSteamListenSocket_Invalid)
 			{
 				PX_CORE_ERROR("Failed to listen on port {0}", m_hLocalAddress.m_port);
 				return false;
 			}
-			m_hPollGroup = m_pInterface->CreatePollGroup();
-			if (m_hPollGroup == k_HSteamNetPollGroup_Invalid)
+			m_PollGroup = m_SteamNetworkingSockets->CreatePollGroup();
+			if (m_PollGroup == k_HSteamNetPollGroup_Invalid)
 			{
 				PX_CORE_ERROR("Failed to listen on port {0}", m_hLocalAddress.m_port);
 				return false;
@@ -64,6 +53,33 @@ namespace Pyxis
 		}
 
 		
+		bool ServerInterface::HostP2P(int virtualPort)
+		{
+			//initialize instances for steam SDK features
+			m_SteamNetworkingSockets = SteamNetworkingSockets();
+			m_SteamNetworkingUtils = SteamNetworkingUtils();
+
+			//configure listening options
+			SteamNetworkingConfigValue_t opt;
+			opt.SetPtr(k_ESteamNetworkingConfig_Callback_ConnectionStatusChanged, (void*)SteamNetConnectionStatusChangedCallback);
+			// Start listening
+			m_ListeningSocket = m_SteamNetworkingSockets->CreateListenSocketP2P(virtualPort, 1, &opt);
+			if (m_ListeningSocket == k_HSteamListenSocket_Invalid)
+			{
+				PX_CORE_ERROR("Failed to listen on port {0}", m_hLocalAddress.m_port);
+				return false;
+			}
+			m_PollGroup = m_SteamNetworkingSockets->CreatePollGroup();
+			if (m_PollGroup == k_HSteamNetPollGroup_Invalid)
+			{
+				PX_CORE_ERROR("Failed to listen on port {0}", m_hLocalAddress.m_port);
+				return false;
+			}
+			PX_INFO("Steam Server listening on port {0}", m_hLocalAddress.m_port);
+			return true;
+			return false;
+		}
+
 		void ServerInterface::UpdateInterface()
 		{
 			//PollIncomingMessages();
@@ -86,17 +102,17 @@ namespace Pyxis
 
 				// Close the connection.  We use "linger mode" to ask SteamNetworkingSockets
 				// to flush this out and close gracefully.
-				m_pInterface->CloseConnection(client, 0, "Server Shutdown", true);
+				m_SteamNetworkingSockets->CloseConnection(client, 0, "Server Shutdown", true);
 			}
 			m_ClientsSet.clear();
 
-			m_pInterface->CloseListenSocket(m_hListenSock);
-			m_hListenSock = k_HSteamListenSocket_Invalid;
+			m_SteamNetworkingSockets->CloseListenSocket(m_ListeningSocket);
+			m_ListeningSocket = k_HSteamListenSocket_Invalid;
 
-			m_pInterface->DestroyPollGroup(m_hPollGroup);
-			m_hPollGroup = k_HSteamNetPollGroup_Invalid;
+			m_SteamNetworkingSockets->DestroyPollGroup(m_PollGroup);
+			m_PollGroup = k_HSteamNetPollGroup_Invalid;
 
-			GameNetworkingSockets_Kill();
+			//GameNetworkingSockets_Kill();
 
 			PX_CORE_INFO("[SERVER] Stopped!");
 
@@ -125,7 +141,7 @@ namespace Pyxis
 			{
 				PX_TRACE("Message sent was too big! [{0}] > [{1}]", (uint32_t)compressedStr.size(), k_cbMaxSteamNetworkingSocketsMessageSizeSend);
 			}
-			m_pInterface->SendMessageToConnection(conn, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
+			m_SteamNetworkingSockets->SendMessageToConnection(conn, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
 		}
 
 		void ServerInterface::SendMessageToAllClients(Message& message, HSteamNetConnection except, int nSendFlags)
@@ -141,13 +157,13 @@ namespace Pyxis
 			for (auto& c : m_ClientsSet)
 			{
 				if (c != except)
-					m_pInterface->SendMessageToConnection(c, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
+					m_SteamNetworkingSockets->SendMessageToConnection(c, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
 			}
 		}
 
 		void ServerInterface::SendCompressedStringToClient(HSteamNetConnection conn, std::string& compressedStr, int nSendFlags)
 		{
-			m_pInterface->SendMessageToConnection(conn, compressedStr.data(), (uint32)compressedStr.size(), k_nSteamNetworkingSend_Reliable, nullptr);
+			m_SteamNetworkingSockets->SendMessageToConnection(conn, compressedStr.data(), (uint32)compressedStr.size(), k_nSteamNetworkingSend_Reliable, nullptr);
 		}
 
 		void ServerInterface::SendCompressedStringToAllClients(std::string& compressedStr, HSteamNetConnection except, int nSendFlags)
@@ -155,14 +171,14 @@ namespace Pyxis
 			for (auto& c : m_ClientsSet)
 			{
 				if (c != except)
-					m_pInterface->SendMessageToConnection(c, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
+					m_SteamNetworkingSockets->SendMessageToConnection(c, compressedStr.data(), (uint32)compressedStr.size(), nSendFlags, nullptr);
 			}
 		}
 
 		bool ServerInterface::PollMessage(Ref<Message>& MessageOut)
 		{
 			ISteamNetworkingMessage* pIncomingMsg = nullptr;
-			int numMsgs = m_pInterface->ReceiveMessagesOnPollGroup(m_hPollGroup, &pIncomingMsg, 1);
+			int numMsgs = m_SteamNetworkingSockets->ReceiveMessagesOnPollGroup(m_PollGroup, &pIncomingMsg, 1);
 			if (numMsgs == 0) return false;
 			if (numMsgs < 0)
 			{
@@ -170,7 +186,7 @@ namespace Pyxis
 				return false;
 			}
 			assert(numMsgs == 1 && pIncomingMsg);
-			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn, "Message was from unknown client"));
+			PX_CORE_ASSERT(m_ClientsSet.contains(pIncomingMsg->m_conn), "Message was from unknown client");
 
 			// '\0'-terminate it to make it easier to parse
 			std::string stringCompressed;
@@ -185,6 +201,7 @@ namespace Pyxis
 		
 		void ServerInterface::OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo)
 		{
+			PX_CORE_TRACE("Connection Attempted");
 			char temp[1024];
 
 			// What's the state of the connection?
@@ -249,7 +266,7 @@ namespace Pyxis
 				// and we cannot linger because it's already closed on the other end,
 				// so we just pass 0's.
 				OnClientDisconnect(pInfo->m_hConn);
-				m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+				m_SteamNetworkingSockets->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 				break;
 			}
 
@@ -262,20 +279,20 @@ namespace Pyxis
 
 				// A client is attempting to connect
 				// Try to accept the connection.
-				if (m_pInterface->AcceptConnection(pInfo->m_hConn) != k_EResultOK)
+				if (m_SteamNetworkingSockets->AcceptConnection(pInfo->m_hConn) != k_EResultOK)
 				{
 					// This could fail.  If the remote host tried to connect, but then
 					// disconnected, the connection may already be half closed.  Just
 					// destroy whatever we have on our side.
-					m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+					m_SteamNetworkingSockets->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 					PX_CORE_WARN("Can't accept connection.  (It was already closed?)");
 					break;
 				}
 
 				// Assign the poll group
-				if (!m_pInterface->SetConnectionPollGroup(pInfo->m_hConn, m_hPollGroup))
+				if (!m_SteamNetworkingSockets->SetConnectionPollGroup(pInfo->m_hConn, m_PollGroup))
 				{
-					m_pInterface->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
+					m_SteamNetworkingSockets->CloseConnection(pInfo->m_hConn, 0, nullptr, false);
 					PX_CORE_WARN("Failed to set poll group?");
 					break;
 				}
@@ -309,7 +326,14 @@ namespace Pyxis
 		void ServerInterface::PollConnectionStateChanges()
 		{
 			s_pCallbackInstance = this;
-			m_pInterface->RunCallbacks();
+			m_SteamNetworkingSockets->RunCallbacks();
+		}
+
+		void ServerInterface::DisconnectClient(HSteamNetConnection client, std::string Reason)
+		{
+			OnClientDisconnect(client);
+			m_SteamNetworkingSockets->CloseConnection(client, 0, Reason.c_str(), true);
+			
 		}
 
 		

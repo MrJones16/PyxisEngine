@@ -1,18 +1,14 @@
 #pragma once
 
-#include "Pyxis.h"
-#include "Pyxis/Network/NetworkServer.h"
-#include "PixelNetworking.h"
-#include "Pyxis/Core/OrthographicCameraController.h"
-#include "World.h"
+#include "HostingGameLayer.h"
 
 namespace Pyxis
 {
 
-	class PixelGameServer : public Pyxis::Layer, public Network::ServerInterface
+	class PixelGameServer : public HostingGameLayer
 	{
 	public:
-		PixelGameServer(uint16_t port);
+		PixelGameServer(uint16_t port = PX_DEFAULT_PORT);
 		virtual ~PixelGameServer();
 
 		virtual void OnAttach();
@@ -31,7 +27,6 @@ namespace Pyxis
 		void OnClientDisconnect(HSteamNetConnection client) override;
 		//void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
 		//void OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client) override;
-		void HandleTickClosure(MergedTickClosure& tc);
 		void HandleMessages();
 
 	private:
@@ -56,7 +51,6 @@ namespace Pyxis
 		/// </summary>
 		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;
 		
-		std::unordered_set<HSteamNetConnection> m_HaltingClients;
 		std::unordered_map < HSteamNetConnection, std::vector<Network::Message>> m_DownloadingClients;
 		///The current tick closure for the server.
 		MergedTickClosure m_CurrentMergedTickClosure;
@@ -68,15 +62,6 @@ namespace Pyxis
 		//a deque of the compressed mtc messages! allows for a smaller storage of the tick closures
 		//and so they can be requested by a client if one goes missing
 		std::deque<std::string> m_TickRequestStorage;
-
-
-		//std::unordered_set<uint64_t> m_ClientsNeededForTick;
-		//std::deque<MergedTickClosure> m_MTCDeque;
-
-		//
-		////delay making the server sleep, so the player count is updated and drawn at start.
-		//int m_SleepDelay = 0;
-		//int m_SleepDelayMax = 10000;
 
 		
 

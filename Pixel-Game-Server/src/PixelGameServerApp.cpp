@@ -1,5 +1,6 @@
 #include <Pyxis.h>
 #include "PixelGameServer.h"
+#include <steam/steam_api.h>
 
 
 
@@ -8,15 +9,19 @@ class PixelGameServerApplication : public Pyxis::Application {
 public:
 	PixelGameServerApplication() : Application("Pyxis Server", 350, 200)
 	{
-		PushLayer(&m_ServerLayer);
+		bool success = SteamAPI_Init();
+		PX_CORE_ASSERT(success, "Failed to init steam api!");
+
+		Pyxis::Ref<Pyxis::PixelGameServer> ref = Pyxis::CreateRef<Pyxis::PixelGameServer>();
+		PushLayer(ref);
+		m_ServerLayer = ref;
 	}
 	~PixelGameServerApplication()
 	{
-		//different kind of pop layer, for immediate deletion.
-		PopLayer(&m_ServerLayer);
+		SteamAPI_Shutdown();
 	}
 public:
-	Pyxis::PixelGameServer m_ServerLayer = Pyxis::PixelGameServer(21218);
+	std::weak_ptr<Pyxis::PixelGameServer> m_ServerLayer;
 };
 
 /*Application* Pyxis::CreateApplication() {

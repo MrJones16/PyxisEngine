@@ -1,10 +1,18 @@
 #pragma once
 
 //#include "NetworkThreadSafeQueue.h"
-#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
 #include "NetworkMessage.h"
 #include <Pyxis/Core/Log.h>
+
+#ifndef PX_DEFAULT_PORT
+#define PX_DEFAULT_PORT 21218
+#endif
+
+#ifndef PX_DEFAULT_VIRTUAL_PORT
+#define PX_DEFAULT_VIRTUAL_PORT 0
+#endif
 
 
 namespace Pyxis
@@ -20,11 +28,20 @@ namespace Pyxis
 			virtual ~ServerInterface();
 
 			/// <summary>
-			/// Starts the server. It initializes the SteamNetworkingSockets, 
-			/// and listens to the port set at instantiation. 
+			/// Starts the server, and listens to the port set at instantiation.
+			/// NOT P2P
 			/// </summary>
 			/// <returns>True if successful</returns>
-			bool Start(uint16_t port = 0);
+			bool HostIP(uint16_t port = PX_DEFAULT_PORT);
+
+
+			/// <summary>
+			/// Starts a P2P Listening Server
+			/// </summary>
+			/// <param name="port">The virtual port for the P2P server</param>
+			/// <returns></returns>
+			bool HostP2P(int virtualPort = PX_DEFAULT_VIRTUAL_PORT);
+
 
 			/// <summary>
 			/// The main update loop for the server. It polls incoming messages, connection changes, and waits
@@ -49,6 +66,9 @@ namespace Pyxis
 			void OnSteamNetConnectionStatusChanged(SteamNetConnectionStatusChangedCallback_t* pInfo);
 			static void SteamNetConnectionStatusChangedCallback(SteamNetConnectionStatusChangedCallback_t* pInfo);
 			void PollConnectionStateChanges();
+
+			
+			void DisconnectClient(HSteamNetConnection client, std::string Reason = "You were disconnected by the host");
 			
 
 		protected:
@@ -66,10 +86,10 @@ namespace Pyxis
 			std::unordered_set<HSteamNetConnection> m_ClientsSet;
 
 			SteamNetworkingIPAddr m_hLocalAddress;
-			HSteamListenSocket m_hListenSock;
-			HSteamNetPollGroup m_hPollGroup;
-			ISteamNetworkingSockets* m_pInterface;
-			ISteamNetworkingUtils* m_pUtils;
+			HSteamListenSocket m_ListeningSocket;
+			HSteamNetPollGroup m_PollGroup;
+			ISteamNetworkingSockets* m_SteamNetworkingSockets;
+			ISteamNetworkingUtils* m_SteamNetworkingUtils;
 
 			//thread safe queue for incoming message packets
 			//ThreadSafeQueue<OwnedMessage<T>> m_QueueMessagesIn;

@@ -8,10 +8,7 @@ namespace Pyxis
 
 	MenuLayer::~MenuLayer()
 	{
-		if (!m_GameLayerAttached)
-		{
-			delete m_GameLayer;
-		}
+
 	}
 
 	void MenuLayer::OnAttach()
@@ -20,24 +17,22 @@ namespace Pyxis
 
 	void MenuLayer::OnDetach()
 	{
-
 	}
+
 
 	void MenuLayer::OnUpdate(Timestep ts)
 	{
-		//if the game layer isn't attached, then we need to be running the network update for it
-		if (!m_GameLayerAttached)
+		if (m_SinglePlayerLayer.expired() && m_MultiplayerLayer.expired() && m_HostingLayer.expired())
 		{
-			m_GameLayer->UpdateInterface();
+			m_AnyGameLayerAttached = false;
 		}
-
 	}
 
 	
 
 	void MenuLayer::OnImGuiRender()
 	{
-		if (m_GameLayer->GetConnectionStatus() == Network::ClientInterface::ConnectionStatus::Disconnected)
+		if (!m_AnyGameLayerAttached)
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show main menu
@@ -48,15 +43,47 @@ namespace Pyxis
 
 				if (ImGui::Button("Start Singleplayer"))
 				{
-					m_GameLayer->StartSingleplayer();
-					AttachGameLayer();
+					Ref<SingleplayerGameLayer> ref = CreateRef<SingleplayerGameLayer>();
+					ref->Start();
+					
+					Application::Get().PushLayer(ref);
+					m_SinglePlayerLayer = ref;
+					m_AnyGameLayerAttached = true;
 				}
 
 				ImGui::InputText("IP Address", m_InputAddress, 22);
 				if (ImGui::Button("Connect"))
 				{
-					m_GameLayer->StartMultiplayer(std::string(m_InputAddress));
-					AttachGameLayer();
+					Ref<MultiplayerGameLayer> ref = CreateRef<MultiplayerGameLayer>();
+					PX_CORE_TRACE("References to Layer: {0}", ref.use_count());
+					ref->ConnectIP(std::string(m_InputAddress));
+					Application::Get().PushLayer(ref);
+					m_MultiplayerLayer = ref;
+					PX_CORE_TRACE("References to Layer: {0}", ref.use_count());
+					m_AnyGameLayerAttached = true;
+				}
+
+				if (ImGui::Button("Host over Steam"))
+				{
+					Ref<HostingGameLayer> ref = CreateRef<HostingGameLayer>();
+					ref->StartP2P(0);
+					Application::Get().PushLayer(ref);
+					m_HostingLayer = ref;
+					m_AnyGameLayerAttached = true;
+				}
+
+				if (ImGui::Button("Host by IP"))
+				{
+					Ref<HostingGameLayer> ref = CreateRef<HostingGameLayer>();
+					ref->StartIP(0);
+					Application::Get().PushLayer(ref);
+					m_HostingLayer = ref;
+					m_AnyGameLayerAttached = true;
+				}
+
+				if (ImGui::Button("Quit Game"))
+				{
+					Application::Get().Close();
 				}
 
 			}
@@ -69,19 +96,6 @@ namespace Pyxis
 	void MenuLayer::OnEvent(Event& e)
 	{
 
-	}
-	void MenuLayer::AttachGameLayer()
-	{
-		//stops displaying the main menu and play game
-		Application::Get().PushLayer(m_GameLayer);
-		m_GameLayerAttached = true;
-	}
-	void MenuLayer::DetachGameLayer()
-	{
-		//Make the menu an active layer and hide the game layer
-		Application::Get().PopLayerQueue(m_GameLayer);
-		m_GameLayerAttached = false;
-		//i would like to clear the game state here as well. TODO
 	}
 
 	void MenuLayer::FailedToConnect()

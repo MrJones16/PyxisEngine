@@ -1,7 +1,9 @@
 #pragma once
 
-#include <steam/steamnetworkingsockets.h>
+#include <steam/isteamnetworkingsockets.h>
 #include <steam/isteamnetworkingutils.h>
+#include <steam/steamnetworkingtypes.h>
+
 #include "NetworkMessage.h"
 #include "NetworkThreadSafeQueue.h"
 
@@ -16,6 +18,8 @@ namespace Pyxis
 		class ClientInterface
 		{
 		public:
+			ClientInterface();
+			~ClientInterface();
 
 			/// <summary>
 			/// Starts the client.
@@ -33,8 +37,9 @@ namespace Pyxis
 			/// <returns>True if successful</returns>
 			bool Connect(const std::string& serverAddr);
 
-			//STEAMFIX TODO
-			//connect function!
+
+			bool ConnectP2P(SteamNetworkingIdentity& identity, int virtualPort = 0);
+
 
 			/// <summary>
 			/// Main update loop for the client interface.
@@ -60,6 +65,7 @@ namespace Pyxis
 				Connecting, Connected, FailedToConnect, Disconnected, LostConnection
 			};
 			inline ConnectionStatus GetConnectionStatus() { return m_ConnectionStatus; };
+			inline std::string GetConnectionStatusMessage() { return m_ConnectionStatusMessage; };
 
 			
 
@@ -114,8 +120,8 @@ namespace Pyxis
 			std::string m_ConnectionStatusMessage = "";
 			uint64_t m_ID = 0;
 			HSteamNetConnection m_hConnection;
-			ISteamNetworkingSockets* m_pInterface;
-			ISteamNetworkingUtils* m_pUtils;
+			ISteamNetworkingSockets* m_SteamNetworkingSockets;
+			ISteamNetworkingUtils* m_SteamNetworkingUtils;
 
 		};
 		//uint64_t m_ID = 0;

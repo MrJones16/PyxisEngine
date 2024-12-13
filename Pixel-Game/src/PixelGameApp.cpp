@@ -1,5 +1,8 @@
 #include <Pyxis.h>
 
+#include <steam/steam_api.h>
+#include <steam/isteamnetworkingutils.h>
+
 //---------- Entry Point ----------//
 #include <Pyxis/Core/EntryPoint.h>
 
@@ -95,12 +98,19 @@ namespace Pyxis
 		PixelGame()
 			: Application("Pixel Game", 1280, 720)
 		{
+			bool success = SteamAPI_Init();
+			PX_CORE_ASSERT(success, "Failed to init steam api!");
+			SteamNetworkingUtils()->InitRelayNetworkAccess();
+
 			//overlay instead of layer so it is on top
-			PushOverlay(new MenuLayer());
+			PushOverlay(CreateRef<MenuLayer>());
+			
+
 		}
 		~PixelGame()
 		{
-			
+			SteamAPI_Shutdown();
+
 		}
 	};
 
