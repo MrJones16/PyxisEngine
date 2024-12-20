@@ -7,6 +7,8 @@
 #include <chrono>
 #include <variant>
 
+#include "Pyxis/Game/UI.h"
+
 namespace Pyxis
 {
 
@@ -29,12 +31,20 @@ namespace Pyxis
 
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
 		Renderer2D::Init();
-
-		//m_ActiveScene = CreateRef<Scene>();
+		m_Scene = CreateRef<Scene>();
+		m_Scene->m_ActiveCamera = m_OrthographicCameraController.GetCamera();
 
 		//Create panels to add
-		m_ProfilingPanel = CreateRef<ProfilingPanel>();
-		m_Panels.push_back(m_ProfilingPanel);
+		m_Panels.push_back(CreateRef<ProfilingPanel>());
+		Ref<SceneHierarchyPanel> sceneHeirarchyPanel = CreateRef<SceneHierarchyPanel>(m_Scene);
+		m_Panels.push_back(sceneHeirarchyPanel);
+		m_Panels.push_back(CreateRef<InspectorPanel>(sceneHeirarchyPanel));
+
+		Ref<UINode> UI = CreateRef<UINode>();
+		m_Scene->AddNode(UI);
+		UI->AddChild(CreateRef<UIRect>(glm::vec4(1)));
+
+
 		FrameBufferSpecification fbspec;
 		fbspec.Width = m_ViewportSize.x;
 		fbspec.Height = m_ViewportSize.y;
@@ -111,14 +121,6 @@ namespace Pyxis
 						false);
 				}
 			}
-		}
-
-		for (auto& clientPair : m_ClientDataMap)
-		{
-			//draw the 3x3 square for each players cursor
-			glm::vec3 worldPos = glm::vec3((float)clientPair.second.m_CursorPixelPosition.x / CHUNKSIZE, (float)clientPair.second.m_CursorPixelPosition.y / CHUNKSIZE, 5);
-			glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
-			Renderer2D::DrawQuad(worldPos, size, clientPair.second.m_Color);
 		}
 
 		{
@@ -363,7 +365,7 @@ namespace Pyxis
 		}
 		ImGui::End();*/
 			
-		for (auto panel : m_Panels)
+		for (Ref<Panel> panel : m_Panels)
 		{
 			panel->OnImGuiRender();
 		}
@@ -769,10 +771,10 @@ namespace Pyxis
 				case InputAction::Input_MousePosition:
 				{
 					//add new mouse position to data
-					glm::ivec2 mousePos;
+					glm::vec2 mousePos;
 					HSteamNetConnection clientID;
 					tc >> mousePos >> clientID;
-					m_ClientDataMap[clientID].m_CursorPixelPosition = mousePos;
+					m_ClientDataMap[clientID].m_CursorWorldPosition = mousePos;
 					break;
 				}
 				case InputAction::ClearWorld:
@@ -944,12 +946,13 @@ namespace Pyxis
 				}
 
 				uint32_t color = m_World->m_ElementData[m_SelectedElementIndex].color;
+
 				
 				float r = float(color & 0x000000FF) / 255.0f;
 				float g = float((color & 0x0000FF00) >> 8) / 255.0f;
 				float b = float((color & 0x00FF0000) >> 16) / 255.0f;
 				float a = float((color & 0xFF000000) >> 24) / 255.0f;
-				glm::vec4 vecColor = glm::vec4(r,g,b,a * 0.5f);
+				glm::vec4 vecColor = glm::vec4(r,g,b,std::fmax(a * 0.5f, 0.25f));
 				
 				//draw square at that pixel
 				float pixelSize = 1.0f / (float)CHUNKSIZE;

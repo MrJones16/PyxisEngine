@@ -897,7 +897,18 @@ namespace Pyxis
 				elementData.UpdateElementData(element, index.x, index.y);
 
 				//set the element
-				chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+				if (element.m_ID == m_ElementIDs["debug_heat"])
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+				}
+				else if (element.m_ID == m_ElementIDs["debug_cool"])
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+				}
+				else
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+				}
 				chunk->UpdateDirtyRect(index.x, index.y);
 			}
 		}
@@ -2483,8 +2494,8 @@ namespace Pyxis
 						auto e = shape->m_vertices[i + 1];
 						float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 						float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-						glm::vec2 start = glm::vec2(x1, y1) / (PPU * 2.0f);
-						glm::vec2 end = glm::vec2(x2, y2) / (PPU * 2.0f);
+						glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
+						glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
 
 						Renderer2D::DrawLine(start, end);
 					}
@@ -2496,8 +2507,8 @@ namespace Pyxis
 					auto e = shape->m_vertices[0];
 					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec2 start = glm::vec2(x1, y1) / (PPU * 2.0f);
-					glm::vec2 end = glm::vec2(x2, y2) / (PPU * 2.0f);
+					glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
+					glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
 
 					Renderer2D::DrawLine(start, end);
 				}

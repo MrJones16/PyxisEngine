@@ -15,6 +15,7 @@ namespace Pyxis
 		StringToAll,
 
 		Client_ClientData,
+		Client_ClientDataMousePosition,
 		Client_RequestMergedTick,
 		Client_RequestAllClientData,
 		Client_RequestGameData,
@@ -23,6 +24,7 @@ namespace Pyxis
 		Client_Disconnect,
 
 		Server_ClientData,
+		Server_ClientDataMousePosition,
 		Server_AllClientData,
 		Server_ClientDisconnected,
 		Server_GameDataInit,

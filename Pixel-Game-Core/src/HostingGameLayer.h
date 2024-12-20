@@ -1,6 +1,7 @@
 #pragma once
 #include "GameLayer.h"
 #include <Pyxis/Network/NetworkServer.h>
+#include <steam/isteamfriends.h>
 
 
 namespace Pyxis
@@ -23,8 +24,13 @@ namespace Pyxis
 		/// Game / Multiplayer Functions
 		//////////////////////////////////////
 		void StartP2P(int virtualPort = 0);
-		void StartIP(uint16_t port = 21218);
+		void StartIP(uint16_t port = PX_DEFAULT_PORT);
 		void HandleMessages();
+
+		//////////////////////////////////////
+		/// Server Function Overrides
+		//////////////////////////////////////
+		void OnClientDisconnect(HSteamNetConnection& client) override;
 
 	public:
 

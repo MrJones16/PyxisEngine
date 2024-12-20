@@ -12,7 +12,7 @@ namespace Pyxis
 		static void Init();
 		static void Shutdown();
 
-		static void BeginScene(const Pyxis::OrthographicCamera& camera);
+		static void BeginScene(const Ref<Pyxis::OrthographicCamera> camera);
 		static void EndScene();
 		static void Flush();
 

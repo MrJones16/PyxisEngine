@@ -19,6 +19,7 @@ namespace Pyxis
 	{
 		PROFILE_SCOPE("GameLayer::OnUpdate");
 		m_OrthographicCameraController.OnUpdate(ts);
+		m_Scene->Update(ts);
 
 		UpdateInterface();
 
@@ -83,22 +84,45 @@ namespace Pyxis
 
 					//reset tick closure
 					m_CurrentTickClosure = TickClosure();
+
+					
 				}
 
-				
+				if (m_TickRateSlow > 0 &&
+					std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
+					-
+					std::chrono::time_point_cast<std::chrono::microseconds>(m_SlowUpdateTime).time_since_epoch().count()
+					>= (1.0f / m_TickRateSlow) * 1000000.0f)
+				{
+					PROFILE_SCOPE("Slow Update");
+					m_SlowUpdateTime = time;
 
+					Network::Message mousePosMsg;
+					mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Server_ClientDataMousePosition);
+					auto [x, y] = GetMousePositionScene();
+					glm::vec2 vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+					m_ClientData.m_CursorWorldPosition = vec;
+					//invalid for the server
+					HSteamNetConnection serverConn = k_HSteamNetConnection_Invalid;
+					mousePosMsg << vec;
+					mousePosMsg << serverConn;
+					SendMessageToAllClients(mousePosMsg);
+				}
 			}
 		}
 
 		for (auto& clientPair : m_ClientDataMap)
 		{
+			if (clientPair.first == 0) continue;
 			//draw the 3x3 square for each players cursor
-			glm::vec3 worldPos = glm::vec3((float)clientPair.second.m_CursorPixelPosition.x / CHUNKSIZE, (float)clientPair.second.m_CursorPixelPosition.y / CHUNKSIZE, 5);
+			glm::vec3 worldPos = glm::vec3(clientPair.second.m_CursorWorldPosition.x, clientPair.second.m_CursorWorldPosition.y, 5);
 			glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
 			Renderer2D::DrawQuad(worldPos, size, clientPair.second.m_Color);
 		}
 
 		GameUpdate(ts);
+
+		m_Scene->Render();
 
 		Renderer2D::EndScene();
 
@@ -118,6 +142,8 @@ namespace Pyxis
 	void HostingGameLayer::StartP2P(int virtualPort)
 	{
 		CreateWorld();
+		SteamFriends()->SetRichPresence("status", "Hosting a game of Pyxis!");
+		SteamFriends()->SetRichPresence("connect", "gameinfo");
 		HostP2P(virtualPort);
 	}
 
@@ -146,12 +172,27 @@ namespace Pyxis
 				*msg >> m_ClientDataMap[msg->clientHConnection];
 				break;
 			}
+			case GameMessage::Client_ClientDataMousePosition:
+			{
+				//when sent to clients, we include the HSteamNetConnection, and when clients send to us it is just the world position
+				
+				//Update the position on our end, and send it as unreliable to other clients
+				m_ClientDataMap[msg->clientHConnection];
+				*msg >> m_ClientDataMap[msg->clientHConnection].m_CursorWorldPosition;
+				Network::Message mousePosMsg;
+				mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Server_ClientDataMousePosition);
+				mousePosMsg << m_ClientDataMap[msg->clientHConnection].m_CursorWorldPosition;
+				mousePosMsg << msg->clientHConnection;
+				SendMessageToAllClients(mousePosMsg, msg->clientHConnection, k_nSteamNetworkingSend_Unreliable);
+				break;
+			}
 			case GameMessage::Client_RequestAllClientData:
 			{
 				PX_TRACE("Recieved request for client data from: [{0}]:{1}", msg->clientHConnection, m_ClientDataMap[msg->clientHConnection].m_Name);
 				Network::Message clientDataMsg;
 				clientDataMsg.header.id = static_cast<uint32_t>(GameMessage::Server_AllClientData);
 				uint32_t numClients = 0;
+				m_ClientDataMap[0] = m_ClientData;
 				for (auto& clientPair : m_ClientDataMap)
 				{
 					if (clientPair.first != msg->clientHConnection)
@@ -269,5 +310,13 @@ namespace Pyxis
 
 		}
 	}
+
+	void HostingGameLayer::OnClientDisconnect(HSteamNetConnection& client)
+	{
+		if (m_ClientDataMap.contains(client))
+			m_ClientDataMap.erase(client);
+	}
+
+	
 
 }

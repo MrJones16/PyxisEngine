@@ -18,7 +18,7 @@ namespace Pyxis
 			//SteamAPI_Shutdown();
 		}
 
-		bool ClientInterface::Connect(const SteamNetworkingIPAddr& serverAddr)
+		bool ClientInterface::ConnectIP(const SteamNetworkingIPAddr& serverAddr)
 		{
 
 			if (m_ConnectionStatus == Connected) return true;
@@ -59,7 +59,7 @@ namespace Pyxis
 			return true;
 		}
 
-		bool ClientInterface::Connect(const std::string& serverAddrString)
+		bool ClientInterface::ConnectIP(const std::string& serverAddrString)
 		{
 			if (m_ConnectionStatus == Connected) return true;		
 

@@ -17,6 +17,7 @@ namespace Pyxis
 
 		PROFILE_SCOPE("GameLayer::OnUpdate");
 		m_OrthographicCameraController.OnUpdate(ts);
+		m_Scene->Update(ts);
 
 		UpdateInterface();
 
@@ -37,6 +38,7 @@ namespace Pyxis
 			RenderCommand::Clear();
 			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
 		}
+		
 
 		if (m_MultiplayerState == MultiplayerState::Connected)
 		{
@@ -72,6 +74,24 @@ namespace Pyxis
 				//reset tick closure
 				m_CurrentTickClosure = TickClosure();
 
+			}
+
+			if (m_TickRateSlow > 0 &&
+				std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
+				-
+				std::chrono::time_point_cast<std::chrono::microseconds>(m_SlowUpdateTime).time_since_epoch().count()
+				>= (1.0f / m_TickRateSlow) * 1000000.0f)
+			{
+				PROFILE_SCOPE("Slow Update");
+				m_SlowUpdateTime = time;
+
+				Network::Message mousePosMsg;
+				mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Client_ClientDataMousePosition);
+				auto [x, y] = GetMousePositionScene();
+				glm::vec2 vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				m_ClientData.m_CursorWorldPosition = vec;
+				mousePosMsg << vec;
+				SendMessageToServer(mousePosMsg);
 			}
 		}
 
@@ -109,7 +129,18 @@ namespace Pyxis
 		}
 
 		if (m_MultiplayerState == MultiplayerState::Connected && m_ConnectionStatus == ConnectionStatus::Connected)
+		{
 			GameUpdate(ts);
+
+			for (auto& clientPair : m_ClientDataMap)
+			{
+				//draw the 3x3 square for each players cursor
+				glm::vec3 worldPos = glm::vec3(clientPair.second.m_CursorWorldPosition.x, clientPair.second.m_CursorWorldPosition.y, 5);
+				glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
+				Renderer2D::DrawQuad(worldPos, size, clientPair.second.m_Color);
+			}
+
+		}
 
 		Renderer2D::EndScene();
 
@@ -200,17 +231,20 @@ namespace Pyxis
 		}
 	}
 
-	void MultiplayerGameLayer::ConnectIP(const std::string& AddressAndPort)
+	void MultiplayerGameLayer::Connect(const std::string& AddressAndPort)
 	{
 		//max out input tick so we can discard early sent mtc's
 		m_InputTick = -1;
 		m_MultiplayerState = MultiplayerState::Connecting;
-		Connect(AddressAndPort);
+		ConnectIP(AddressAndPort);
 	}
 
-	void MultiplayerGameLayer::ConnectP2P()
+	void MultiplayerGameLayer::Connect(SteamNetworkingIdentity& identity, int virtualPort)
 	{
-
+		//max out input tick so we can discard early sent mtc's
+		m_InputTick = -1;
+		m_MultiplayerState = MultiplayerState::Connecting;
+		ConnectP2P(identity, virtualPort);
 	}
 
 	void MultiplayerGameLayer::OnConnectionSuccess()
@@ -249,6 +283,26 @@ namespace Pyxis
 				PX_TRACE("Recieved client Data for client {0}", clientID);
 				m_ClientDataMap[clientID];
 				*msg >> m_ClientDataMap[clientID];
+				break;
+			}
+			case GameMessage::Server_ClientDataMousePosition:
+			{
+				//Update the position on our end
+				HSteamNetConnection otherClient;
+				*msg >> otherClient;
+				//we will use Invalid connection handle as the server's handle
+				if (otherClient == k_HSteamNetConnection_Invalid)
+				{
+					m_ClientDataMap[k_HSteamNetConnection_Invalid];
+					*msg >> m_ClientDataMap[k_HSteamNetConnection_Invalid].m_CursorWorldPosition;
+				}
+				else
+				{
+					//we know it is another player's
+					m_ClientDataMap[otherClient];
+					*msg >> m_ClientDataMap[otherClient].m_CursorWorldPosition;
+				}
+				
 				break;
 			}
 			case GameMessage::Server_AllClientData:
@@ -382,4 +436,5 @@ namespace Pyxis
 			}
 		}
 	}
+	
 }

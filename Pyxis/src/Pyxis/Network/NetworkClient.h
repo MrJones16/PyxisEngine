@@ -27,7 +27,7 @@ namespace Pyxis
 			/// If there was a failure, the output reason would be written in m_ConnectionStatusMessage
 			/// </summary>
 			/// <returns>True if successful</returns>
-			bool Connect(const SteamNetworkingIPAddr& serverAddr);
+			bool ConnectIP(const SteamNetworkingIPAddr& serverAddr);
 
 			/// <summary>
 			/// Starts the client. Converts the string input to a GNS server address
@@ -35,7 +35,7 @@ namespace Pyxis
 			/// If there was a failure, the output reason would be written in m_ConnectionStatusMessage
 			/// </summary>
 			/// <returns>True if successful</returns>
-			bool Connect(const std::string& serverAddr);
+			bool ConnectIP(const std::string& serverAddr);
 
 
 			bool ConnectP2P(SteamNetworkingIdentity& identity, int virtualPort = 0);

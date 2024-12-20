@@ -89,7 +89,7 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Core/Log.h
     Pyxis/Core/MathLog.h
     Pyxis/Core/OrthographicCameraController.h
-    Pyxis/Core/Panel.h
+    "Pyxis/Core/Panel.h"
     Pyxis/Core/PerspectiveCameraController.h
     Pyxis/Core/ProfilingPanel.h
     Pyxis/Core/Timestep.h
@@ -105,8 +105,8 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/FastNoiseLite/FastNoiseLite.h
 
     #Game
-    Pyxis/Game/Entity.cpp
-    Pyxis/Game/Entity.h
+    "Pyxis/Game/Node.cpp"
+    "Pyxis/Game/Node.h"
     Pyxis/Game/Scene.cpp
     Pyxis/Game/Scene.h
 
@@ -152,4 +152,4 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
 
-    )
+      "Pyxis/Game/UI.h" "Pyxis/Game/UI.cpp")

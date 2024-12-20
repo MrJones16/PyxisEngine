@@ -73,9 +73,9 @@ namespace Pyxis
 
 		protected:
 			//called when a client connects to the server
-			inline virtual bool OnClientConnect(HSteamNetConnection client);
+			inline virtual bool OnClientConnect(HSteamNetConnection& client);
 			//called when a client appears to have disconnected
-			inline virtual void OnClientDisconnect(HSteamNetConnection client);
+			inline virtual void OnClientDisconnect(HSteamNetConnection& client);
 			//called when a message arrives
 			//virtual void OnMessage(HSteamNetConnection client, Message<T>& msg);
 

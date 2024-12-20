@@ -22,6 +22,7 @@ namespace Pyxis
 	{
 		PROFILE_SCOPE("GameLayer::OnUpdate");
 		m_OrthographicCameraController.OnUpdate(ts);
+		m_Scene->Update(ts);
 
 		//rendering
 		#if STATISTICS
@@ -59,6 +60,8 @@ namespace Pyxis
 		}
 
 		GameUpdate(ts);
+
+		m_Scene->Render();
 
 		Renderer2D::EndScene();
 

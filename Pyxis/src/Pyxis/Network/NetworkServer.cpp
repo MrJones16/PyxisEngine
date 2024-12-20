@@ -337,15 +337,15 @@ namespace Pyxis
 		}
 
 		
-		inline bool ServerInterface::OnClientConnect(HSteamNetConnection client)
+		inline bool ServerInterface::OnClientConnect(HSteamNetConnection& client)
 		{
 			return false;
 		}
 
 		
-		inline void ServerInterface::OnClientDisconnect(HSteamNetConnection client)
+		inline void ServerInterface::OnClientDisconnect(HSteamNetConnection& client)
 		{
-
+			
 		}
 
 		

@@ -24,7 +24,7 @@ namespace Pyxis
 		void DisconnectClient(HSteamNetConnection client, std::string Reason);
 
 		//bool OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
-		void OnClientDisconnect(HSteamNetConnection client) override;
+		//void OnClientDisconnect(HSteamNetConnection client) override;
 		//void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
 		//void OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client) override;
 		void HandleMessages();

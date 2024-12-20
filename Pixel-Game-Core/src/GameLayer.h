@@ -5,6 +5,8 @@
 #include "Pyxis/Core/OrthographicCameraController.h"
 #include "Pyxis/Core/Panel.h"
 #include "Pyxis/Core/ProfilingPanel.h"
+#include "Pyxis/Game/InspectorPanel.h"
+#include "Pyxis/Game/SceneHierarchyPanel.h"
 #include <Pyxis/Network/NetworkClient.h>
 #include <Pyxis/Network/NetworkServer.h>
 
@@ -50,12 +52,12 @@ namespace Pyxis
 		void TextCentered(std::string text);
 		std::pair<float, float> GetMousePositionScene();
 
-	protected:
+	public:
 
 		struct ClientData
 		{
 			char m_Name[64] = "PyxisEnjoyer";
-			glm::ivec2 m_CursorPixelPosition = { 0,0 };
+			glm::vec2 m_CursorWorldPosition = { 0,0 };
 			glm::vec4 m_Color = { 1,1,1,1 };
 
 			ClientData()
@@ -73,9 +75,12 @@ namespace Pyxis
 				m_Color = colorOptions[std::rand() % colorOptions.size()];
 			}
 		};
-
 		//my client data
 		ClientData m_ClientData;
+
+	protected:
+
+		
 
 		//map of other clients data based on their ID's
 		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;
@@ -98,7 +103,9 @@ namespace Pyxis
 		bool m_SimulationRunning = false;
 		//time vars for update rate
 		std::chrono::time_point<std::chrono::high_resolution_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
+		std::chrono::time_point<std::chrono::high_resolution_clock> m_SlowUpdateTime = std::chrono::high_resolution_clock::now();
 		float m_TickRate = 30.0f;
+		float m_TickRateSlow = 10.0f;
 
 		//the current input tick we are at
 		//starts at -1 or "max value", so when connecting, if we recieve mtc's from 
@@ -107,6 +114,7 @@ namespace Pyxis
 
 		//scene things
 		Ref<FrameBuffer> m_SceneFrameBuffer;
+		Ref<Scene> m_Scene;
 		OrthographicCameraController m_OrthographicCameraController;
 		glm::vec2 m_ViewportSize;
 		ImVec2 m_ViewportOffset;
@@ -115,7 +123,6 @@ namespace Pyxis
 
 		//Tools / Panels
 		std::vector<Ref<Panel>> m_Panels;
-		Ref<ProfilingPanel> m_ProfilingPanel;
 
 		//player tools
 		int m_SelectedElementIndex = 0;

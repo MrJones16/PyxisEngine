@@ -2,6 +2,7 @@
 
 #include "GameLayer.h"
 #include <Pyxis/Network/NetworkClient.h>
+#include <steam/isteamfriends.h>
 
 namespace Pyxis
 {
@@ -24,11 +25,12 @@ namespace Pyxis
 		//////////////////////////////////////
 		/// Multiplayer Functions
 		//////////////////////////////////////
-		void ConnectIP(const std::string& AddressAndPort);
-		void ConnectP2P();
+		void Connect(const std::string& AddressAndPort);
+		void Connect(SteamNetworkingIdentity& identity, int virtualPort = 0);
 		void OnConnectionSuccess() override;
 		void OnConnectionLost(const std::string& reasonText) override;
 		void HandleMessages();
+
 
 	public:
 

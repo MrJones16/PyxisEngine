@@ -1,16 +1,16 @@
 #pragma once
 
-#include "Panel.h"
+#include "Pyxis/Core/Panel.h"
 #include "Pyxis/Core/Core.h"
 #include "SceneHierarchyPanel.h"
-#include <glm/glm/glm.hpp>
+#include <glm/glm.hpp>
 
 namespace Pyxis
 {
 	class InspectorPanel : public Panel
 	{
 	public:
-		inline InspectorPanel(const Ref<SceneHierarchyPanel>& hierarchy)
+		inline InspectorPanel(const Ref<SceneHierarchyPanel> hierarchy)
 			: m_SelectedID(0)
 		{
 			m_Hierarchy = hierarchy;
@@ -21,10 +21,10 @@ namespace Pyxis
 		{
 			if (ImGui::Begin("Inspector"))
 			{
-				Ref<Entity> entity = m_Hierarchy->GetSelectedEntity();
-				if (entity != nullptr)
+				Ref<Node> Node = m_Hierarchy->GetSelectedNode();
+				if (Node != nullptr)
 				{
-					entity->InspectorRender();
+					Node->InspectorRender();
 				}
 			}
 			ImGui::End();
