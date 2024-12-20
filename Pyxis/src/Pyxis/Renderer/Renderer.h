@@ -7,7 +7,6 @@
 
 namespace Pyxis
 {
-
 	class Renderer
 	{
 	public:

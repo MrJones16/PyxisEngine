@@ -162,10 +162,10 @@ namespace Pyxis
 		//delete s_Data;
 	}
 
-	void Renderer2D::BeginScene(const Pyxis::OrthographicCamera& camera)
+	void Renderer2D::BeginScene(const Ref<Pyxis::OrthographicCamera> camera)
 	{	
 		s_Data.TextureShader->Bind();
-		s_Data.TextureShader->SetMat4("u_ViewProjection", camera.GetViewProjectionMatrix());
+		s_Data.TextureShader->SetMat4("u_ViewProjection", camera->GetViewProjectionMatrix());
 
 		s_Data.QuadVertexBufferPtr = s_Data.QuadVertexBufferBase;
 		s_Data.QuadIndexCount = 0;

@@ -1,17 +1,18 @@
 #include "MenuLayer.h"
+#include <steam/steam_api.h>
 
 namespace Pyxis
 {
-	MenuLayer::MenuLayer()
+	MenuLayer::MenuLayer() :
+		m_CallbackRichPresenceJoinRequested(this, &MenuLayer::OnGameRichPresenceJoinRequested),
+		m_CallbackGameOverlayActivated(this, &MenuLayer::OnGameOverlayActivated)
 	{
+
 	}
 
 	MenuLayer::~MenuLayer()
 	{
-		if (!m_GameLayerAttached)
-		{
-			delete m_GameLayer;
-		}
+
 	}
 
 	void MenuLayer::OnAttach()
@@ -20,56 +21,23 @@ namespace Pyxis
 
 	void MenuLayer::OnDetach()
 	{
-
 	}
+
 
 	void MenuLayer::OnUpdate(Timestep ts)
 	{
-		//while we are connecting and there are no failures, run the update connection function
-		switch (m_GameLayer->m_ConnectionStatus)
+		if (m_SinglePlayerLayer.expired() && m_MultiplayerLayer.expired() && m_HostingLayer.expired())
 		{
-		case GameLayer::Connecting:
-		{
-			m_GameLayer->ConnectionUpdate();
-			break;
+			m_AnyGameLayerAttached = false;
 		}
-		case GameLayer::Connected:
-		{
-			if (!m_GameLayerAttached)
-			{
-				//attach the game layer if it isnt yet
-				AttachGameLayer();
-			}
-			break;
-		}
-		case GameLayer::Disconnected:
-		{
-			if (m_GameLayerAttached)
-			{
-				//detach on disconnect
-				DetachGameLayer();
-				m_GameLayer->m_ConnectionStatus = GameLayer::NotConnected;
-			}
-			break;
-		}
-		default:
-		{
-			//do nothing
-			break;
-		}
-
-		}
-
+		SteamAPI_RunCallbacks();
 	}
 
 	
 
 	void MenuLayer::OnImGuiRender()
 	{
-
-		switch (m_GameLayer->m_ConnectionStatus)
-		{
-		case GameLayer::NotConnected:
+		if (!m_AnyGameLayerAttached)
 		{
 			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 			//show main menu
@@ -77,52 +45,69 @@ namespace Pyxis
 			if (ImGui::Begin("Main Menu", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
 			{
 				ImGui::Text("Pyxis");
+		
+
+				if (ImGui::Button("Start Singleplayer"))
+				{
+					Ref<SingleplayerGameLayer> ref = CreateRef<SingleplayerGameLayer>();
+					OnGameLayerStarted(*ref);
+					ref->Start();
+					
+					Application::Get().PushLayer(ref);
+					m_SinglePlayerLayer = ref;
+					m_AnyGameLayerAttached = true;
+				}
 
 				ImGui::InputText("IP Address", m_InputAddress, 22);
 				if (ImGui::Button("Connect"))
 				{
-					m_GameLayer->ConnectToServer(std::string(m_InputAddress));
+					Ref<MultiplayerGameLayer> ref = CreateRef<MultiplayerGameLayer>();
+					OnGameLayerStarted(*ref);
+					ref->ConnectIP(std::string(m_InputAddress));
+					Application::Get().PushLayer(ref);
+					m_MultiplayerLayer = ref;
+					m_AnyGameLayerAttached = true;
 				}
 
-			}
-			ImGui::End();
-			break;
-		}
-		case GameLayer::Connecting:
-		{
-			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-			//show that we are connecting
-			ImGui::SetNextWindowDockID(dock);
-			if (ImGui::Begin("Connecting Screen", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
-			{
-				ImGui::Text("Connecting To Server...");
-			}
-			ImGui::End();
-			break;
-		}
-		case GameLayer::FailedToConnect:
-		{
-			auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MenuDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-			ImGui::SetNextWindowDockID(dock);
-			if (ImGui::Begin("Connection Failed", (bool*)0, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar))
-			{
-				ImGui::Text("Connection Failed");
-
-				ImGui::Text(m_GameLayer->m_ConnectionErrorMessage.c_str());
-				if (ImGui::Button("Okay"))
+				if (ImGui::Button("Host over Steam"))
 				{
-					m_GameLayer->m_ConnectionStatus = GameLayer::NotConnected;
+					Ref<HostingGameLayer> ref = CreateRef<HostingGameLayer>();
+					OnGameLayerStarted(*ref);
+					ref->StartP2P(0);
+					Application::Get().PushLayer(ref);
+					m_HostingLayer = ref;
+					m_AnyGameLayerAttached = true;
 				}
+
+				if (ImGui::Button("Host by IP"))
+				{
+					Ref<HostingGameLayer> ref = CreateRef<HostingGameLayer>();
+					OnGameLayerStarted(*ref);
+					ref->StartIP();
+					Application::Get().PushLayer(ref);
+					m_HostingLayer = ref;
+					m_AnyGameLayerAttached = true;
+				}
+				
+				if (ImGui::BeginChild("Player Customization", { 0,0 }, ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY))
+				{
+					ImGui::Text("Player Customization");
+					//ImGui::ColorPicker3("Player Color", m_PlayerColor);
+					ImGui::ColorEdit3("Player Color", m_PlayerColor);
+					ImGui::InputText("Player Name", m_PlayerName, 64);
+
+					ImGui::EndChild();
+				}
+				
+
+				if (ImGui::Button("Quit Game"))
+				{
+					Application::Get().Close();
+				}
+
 			}
 			ImGui::End();
-			break;
-		}
-		default:
-		{
-			//do nothing
-			break;
-		}
-
+			
 		}
 		
 	}
@@ -131,22 +116,47 @@ namespace Pyxis
 	{
 
 	}
-	void MenuLayer::AttachGameLayer()
-	{
-		//stops displaying the main menu and play game
-		Application::Get().PushLayer(m_GameLayer);
-		m_GameLayerAttached = true;
-	}
-	void MenuLayer::DetachGameLayer()
-	{
-		//Make the menu an active layer and hide the game layer
-		Application::Get().PopLayerQueue(m_GameLayer);
-		m_GameLayerAttached = false;
-		//i would like to clear the game state here as well. TODO
-	}
 
 	void MenuLayer::FailedToConnect()
 	{
 
+	}
+
+	void MenuLayer::OnGameLayerStarted(GameLayer& layer)
+	{
+		layer.m_ClientData.m_Color = glm::vec4(m_PlayerColor[0], m_PlayerColor[1], m_PlayerColor[2], 1);
+		memcpy(layer.m_ClientData.m_Name, m_PlayerName, 64);
+	}
+
+	void MenuLayer::OnGameRichPresenceJoinRequested(GameRichPresenceJoinRequested_t* pCallback)
+	{
+		///start with killing any active instance
+		Application& app = Application::Get();
+		if (!m_SinglePlayerLayer.expired())
+		{
+			app.PopLayerQueue(m_SinglePlayerLayer.lock());
+		}
+		if (!m_MultiplayerLayer.expired())
+		{
+			app.PopLayerQueue(m_MultiplayerLayer.lock());
+		}
+		if (!m_HostingLayer.expired())
+		{
+			app.PopLayerQueue(m_HostingLayer.lock());
+		}
+
+		//create a multiplayer instance and connect
+		SteamNetworkingIdentity identity;
+		identity.SetSteamID(pCallback->m_steamIDFriend);
+		Ref<MultiplayerGameLayer> ref = CreateRef<MultiplayerGameLayer>();
+		ref->Connect(identity);
+		Application::Get().PushLayer(ref);
+		m_MultiplayerLayer = ref;
+		m_AnyGameLayerAttached = true;
+
+	}
+	void MenuLayer::OnGameOverlayActivated(GameOverlayActivated_t* pCallback)
+	{
+		PX_WARN("Successfully detected opening of overlay!");
 	}
 }

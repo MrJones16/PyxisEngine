@@ -18,6 +18,10 @@ namespace Pyxis
 		virtual ~Layer();
 
 		virtual void OnAttach() {}
+		/// <summary>
+		/// OnDetach does not get invoked when the application gets deleted. Instead, the 
+		/// layer's destructor is called
+		/// </summary>
 		virtual void OnDetach() {}
 		virtual void OnUpdate(Timestep ts) {}
 		virtual void OnImGuiRender() {}

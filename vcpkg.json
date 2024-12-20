@@ -1,0 +1,19 @@
+{
+  "builtin-baseline": "9b5cb8e554487f3edb5d50b80188883846f81e14",
+  "dependencies": [
+    { "name": "box2d" },
+    { "name": "gamenetworkingsockets" },
+    { "name": "glad" },
+    { "name": "glfw3" },
+    { "name": "glm" },
+    {
+      "name": "imgui",
+      "features": [ "docking-experimental", "glfw-binding", "opengl3-binding" ]
+    },
+    { "name": "jhasse-poly2tri" },
+    { "name": "snappy" },
+    { "name": "spdlog" },
+    { "name": "stb" },
+    { "name": "tinyxml2" }
+  ]
+}

@@ -3,7 +3,7 @@
 #include <Pyxis.h>
 #include "Element.h"
 
-static const int CHUNKSIZE = 512;
+static const int CHUNKSIZE = 256;
 static const int BUCKETSIZE = 64;
 static const int BUCKETSWIDTH = CHUNKSIZE / BUCKETSIZE;
 

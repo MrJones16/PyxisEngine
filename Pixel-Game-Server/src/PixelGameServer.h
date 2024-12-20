@@ -1,37 +1,39 @@
 #pragma once
 
-#include "Pyxis.h"
-#include <Pyxis/Network/Network.h>
-#include "Pyxis/Core/OrthographicCameraController.h"
-#include "PixelClientInterface.h"
-#include "World.h"
+#include "HostingGameLayer.h"
 
 namespace Pyxis
 {
 
-	class PixelGameServer : public Pyxis::Layer, public Network::ServerInterface<GameMessage>
+	class PixelGameServer : public HostingGameLayer
 	{
 	public:
-		PixelGameServer(uint16_t port);
-		virtual ~PixelGameServer() = default;
+		PixelGameServer(uint16_t port = PX_DEFAULT_PORT);
+		virtual ~PixelGameServer();
 
 		virtual void OnAttach();
 		virtual void OnDetatch();
-
 		virtual void OnUpdate(Pyxis::Timestep ts) override;
+
+		//virtual void OnUpdateOld(Pyxis::Timestep ts);
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Pyxis::Event& e) override;
 		bool OnWindowResizeEvent(Pyxis::WindowResizeEvent& event);
 
 	protected:
-		bool OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
-		void OnClientDisconnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
-		void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
-		void OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client) override;
-		void HandleTickClosure(MergedTickClosure& tc);
+		void DisconnectClient(HSteamNetConnection client, std::string Reason);
+
+		//bool OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client) override;
+		//void OnClientDisconnect(HSteamNetConnection client) override;
+		//void OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message< GameMessage>& msg) override;
+		//void OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client) override;
+		void HandleMessages();
 
 	private:
 		Pyxis::OrthographicCameraController m_OrthographicCameraController;
+
+		//STEAMTESTING
+		uint16_t m_SteamPort;
 
 		/// <summary>
 		/// The authoritative world. 
@@ -44,15 +46,24 @@ namespace Pyxis
 		uint64_t m_InputTick = 0;
 		
 
-		int m_PlayerCount = 0;
-		std::unordered_set<uint64_t> m_ClientsNeededForTick;
-		std::deque<MergedTickClosure> m_MTCDeque;
-
-		std::deque<MergedTickClosure> m_TickRequestStorage;
+		/// <summary>
+		/// Map of clients and their client data to keep track of
+		/// </summary>
+		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;
 		
-		//delay making the server sleep, so the player count is updated and drawn at start.
-		int m_SleepDelay = 0;
-		int m_SleepDelayMax = 10000;
+		std::unordered_map < HSteamNetConnection, std::vector<Network::Message>> m_DownloadingClients;
+		///The current tick closure for the server.
+		MergedTickClosure m_CurrentMergedTickClosure;
+
+		//Time keeping for tick rate and sending of merged tick closures
+		std::chrono::time_point<std::chrono::high_resolution_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
+		float m_TickRate = 30.0f;
+
+		//a deque of the compressed mtc messages! allows for a smaller storage of the tick closures
+		//and so they can be requested by a client if one goes missing
+		std::deque<std::string> m_TickRequestStorage;
+
+		
 
 	};
 }

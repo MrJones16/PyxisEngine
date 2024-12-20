@@ -1,20 +1,24 @@
 #include "PixelGameServer.h"
 
 #include <imgui.h>
-//#include <glm/gtc/type_ptr.hpp>
 
-//#include <Platform/OpenGL/OpenGLShader.h>
-#include <chrono>
+static const int MaxTickStorage = 500;
 
 
 namespace Pyxis
 {
-	PixelGameServer::PixelGameServer(uint16_t port)
-		: Network::ServerInterface<GameMessage>(port), Layer("Pyxis Server"),
+	PixelGameServer::PixelGameServer(uint16_t port) : HostingGameLayer("Pyxis Server"),
 		m_OrthographicCameraController(5, 9.0f / 16.0f, -100, 100),
 		m_World()//m_World("../Pixel-Game/assets")
 	{
+		m_SteamPort = port;
 		m_World.m_ServerMode = true;
+	}
+
+	PixelGameServer::~PixelGameServer()
+	{
+		//stop the server
+		Stop();
 	}
 
 	void PixelGameServer::OnAttach()
@@ -26,171 +30,201 @@ namespace Pyxis
 		// TODO: setup logs / sinks for spdlog
 		//Pyxis::Log::GetClientLogger() ...
 
-		Start();
+		//STEAMTESTING
+		HostIP(m_SteamPort);
 	}
 
 	void PixelGameServer::OnDetatch()
 	{
-		//stop the server
-		Stop();
+
 	}
 
 	void PixelGameServer::OnUpdate(Pyxis::Timestep ts)
 	{
-		//check to make sure all the players are still connected
-		std::vector< std::shared_ptr<Network::Connection<GameMessage>>> clientsToRemove;
-		for (std::shared_ptr<Network::Connection<GameMessage>> client : m_DeqConnections)
-		{
-			if (!client->IsConnected())
-			{
-				clientsToRemove.push_back(client);
-			}
-		}
+		UpdateInterface();
+		HandleMessages();
 
-		//delete the clients after iterating
-		for (auto client : clientsToRemove)
+		auto time = std::chrono::high_resolution_clock::now();
+		//only update if there are players
+		if (m_ClientDataMap.size() > 0)
+		if (m_TickRate > 0 &&
+			std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
+			-
+			std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
+			>= (1.0f / m_TickRate) * 1000000.0f)
 		{
-			//client is no longer connected, so remove them
-			OnClientDisconnect(client);
-			//client.reset();
-			m_DeqConnections.erase(
-				std::remove(m_DeqConnections.begin(), m_DeqConnections.end(), client), m_DeqConnections.end());
-		}
+			m_UpdateTime = time;
 
+			//skip sending the message if we are waiting for a client to connect!
+			if (m_DownloadingClients.empty())
+			{
+				//pack the merged tick into a message and send to all clients
+				Network::Message msg(static_cast<uint32_t>(GameMessage::Game_MergedTickClosure));
+				msg << m_CurrentMergedTickClosure.m_Data;
+				msg << m_CurrentMergedTickClosure.m_ClientCount;
+				msg << m_InputTick;
+				//send the messages unreliably, since i have mtc recovery set up already!
+				SendMessageToAllClients(msg, 0, k_nSteamNetworkingSend_Unreliable);
 
-		//server update
-		if (m_PlayerCount <= 0)
-		{
-			if (m_SleepDelay >= m_SleepDelayMax)
-			{
-				Update(-1, true);//i can save on resources when nobody is connected
+				//add the compressed message into the tick storage
+				m_TickRequestStorage.emplace_back();
+				msg.Compressed(m_TickRequestStorage.back());
+
+				if (m_TickRequestStorage.size() > MaxTickStorage) m_TickRequestStorage.pop_front();
+
+				//process the mtc on the server side
+				HandleTickClosure(m_CurrentMergedTickClosure);
+				m_InputTick++;
+
+				//reset the merged tick
+				m_CurrentMergedTickClosure = MergedTickClosure();
 			}
-			else
-			{
-				Update(-1, false);//i can save on resources when nobody is connected
-				m_SleepDelay++;
-			}
-		}
-		else
-		{
-			m_SleepDelay = 0;
-			Update(-1, false);
+			
 		}
 		
+	}
 
-		//attempt to run the merged tick closure at the front of the queue,
-		
-		if (m_MTCDeque.size() >= 200)
+	void PixelGameServer::HandleMessages()
+	{
+		Ref<Network::Message> msg;
+		while (PollMessage(msg))
 		{
-			PX_TRACE("server fell behind!");
-			PX_TRACE("Server is waiting on tick {0}", m_MTCDeque.front().m_Tick);
-		}
-
-		///if there are no players, 
-		if (m_PlayerCount == 0)
-		{
-			while (m_MTCDeque.size() > 0)
+			switch (static_cast<GameMessage>(msg->header.id))
 			{
-				//handle the remaining merged tick closures
-				MergedTickClosure& mtc = m_MTCDeque.front();
-				m_InputTick++;
-				HandleTickClosure(mtc);
-				m_MTCDeque.pop_front();
-			}
-		}
-
-
-		while (m_MTCDeque.size() > 0)
-		{
-			//if there were no small wait for other players buffer, then old update ticks could progress the
-			//input ticks.
-			bool missingClient = false;
-			for (uint64_t id : m_ClientsNeededForTick)
+			case GameMessage::Client_ClientData:
 			{
-				if (m_MTCDeque.front().m_Clients.find(id) == m_MTCDeque.front().m_Clients.end())
-				{
-					//one of the clients we need are missing, so wait
-					missingClient = true;
-					//PX_TRACE("Waiting on client [{0}]", id);
-					break;
-				}
-			}
-			if (missingClient)
-			{
-				//wait for everyones ticks up to a certain point
-				if (m_MTCDeque.size() <= 10)
-				{
-					//PX_CORE_TRACE("Waiting for a client...");
-					break;
-				}
-			}
-
-			//send empty ticks if we are missing the inputs from clients for too many ticks
-			while (m_MTCDeque.front().m_Tick > m_InputTick && m_MTCDeque.size() > 30)
-			{
-				//since we have a few ticks ahead, and we are missing one, send an empty tick 
-
-				m_TickRequestStorage.push_back(MergedTickClosure());
-				m_TickRequestStorage.back().m_Tick = m_InputTick++;
-
-				Network::Message<GameMessage> emptymsg;
-				emptymsg.header.id = GameMessage::Game_MergedTickClosure;
-				emptymsg << m_TickRequestStorage.back().m_Data;
-				emptymsg << m_TickRequestStorage.back().m_InputActionCount;
-				emptymsg << m_TickRequestStorage.back().m_Tick;
-
-				// update the sim with the empty tick, and tell others to as well.
-				MessageAllClientsUDP(emptymsg);
-				MergedTickClosure copy = m_TickRequestStorage.back();
-				HandleTickClosure(copy);
-				PX_CORE_TRACE("Sent empty tick closure.");
-			}
-
-			//we have all the clients we need, so send the merged tick if it is not a future one!
-			if (m_MTCDeque.front().m_Tick <= m_InputTick)
-			{
-				//PX_CORE_TRACE("Sending merged tick {0}", m_MTCDeque.front().m_Tick);
-				Network::Message<GameMessage> msg;
-				msg.header.id = GameMessage::Game_MergedTickClosure;
-
-				MergedTickClosure& mtc = m_MTCDeque.front();
-				msg << mtc.m_Data;
-				msg << mtc.m_InputActionCount;
-				msg << mtc.m_Tick;
-
-
-				MessageAllClientsUDP(msg);
-
-				//copy the tick closure into storage
-				m_TickRequestStorage.push_back(MergedTickClosure());
-				m_TickRequestStorage.back().m_Tick = mtc.m_Tick;
-				m_TickRequestStorage.back().m_InputActionCount = mtc.m_InputActionCount;
-				m_TickRequestStorage.back().m_Data.resize(mtc.m_Data.size());
-				memcpy(m_TickRequestStorage.back().m_Data.data(), mtc.m_Data.data(), mtc.m_Data.size());
-
-				//handling the tick closure extracts all the mtc data! "its volatile"
-				HandleTickClosure(mtc);
-
-				//clear tick storage past size 500
-				if (m_TickRequestStorage.size() > 500)
-				{
-					m_TickRequestStorage.pop_front();
-				}
-				m_MTCDeque.pop_front();
-				m_InputTick++;
-			}
-			else
-			{
-				//break out of loop to read more messages, since we are waiting
+				//add the client data to a map so we can send it to new players later
+				PX_TRACE("Recieved client data from client: [{0}]:{1}", msg->clientHConnection, m_ClientDataMap[msg->clientHConnection].m_Name);
+				m_ClientDataMap[msg->clientHConnection];
+				*msg >> m_ClientDataMap[msg->clientHConnection];
 				break;
 			}
+			case GameMessage::Client_RequestAllClientData:
+			{
+				PX_TRACE("Recieved request for client data from: [{0}]:{1}", msg->clientHConnection, m_ClientDataMap[msg->clientHConnection].m_Name);
+				Network::Message clientDataMsg;
+				clientDataMsg.header.id = static_cast<uint32_t>(GameMessage::Server_AllClientData);
+				uint32_t numClients = 0;
+				for (auto& clientPair : m_ClientDataMap)
+				{
+					if (clientPair.first != msg->clientHConnection)
+					{
+						clientDataMsg << clientPair.second;
+						clientDataMsg << clientPair.first;
+						numClients++;
+					}
+				}
+				clientDataMsg << numClients;
+				SendMessageToClient(msg->clientHConnection, clientDataMsg);
+				PX_TRACE("Sent All Client Data to {0}", msg->clientHConnection);
+				break;
+			}
+			case GameMessage::Client_RequestMergedTick:
+			{
+				//assuming there are 66 mtc's stored
+				//m_inputtick is then 67
+				//if tick 65 was requested, then that would be located at position 64
+				//which is 66 - (67 - 65)
+				//         66 -  2 = 64
+				//that is the reasoning for the calculation below
+				//basically, the difference between the current tick and how far back
+				//the request is, is how far back from the end of the storage to grab from
+				
+				
+				uint64_t tick;
+				*msg >> tick;
+				int diff = m_InputTick - tick;
+				int position = m_TickRequestStorage.size() - diff;
+				if (position < 0 || position >= m_TickRequestStorage.size())
+				{
+					//Requested tick does not exist!
+					PX_WARN("Requested Tick Not Found, setting client to be out of sync!");
+					DisconnectClient(msg->clientHConnection, "Client Became Desynced (Requested a tick we no longer had!)");
+				}
+				else
+					SendCompressedStringToClient(msg->clientHConnection, m_TickRequestStorage.at(position));				
+
+				break;
+			}
+			case GameMessage::Client_RequestGameData:
+			{
+				//TODO: 
+				//maybe send some info to other clients? so their game doesn't just randomly stop...
+
+
+				// begin by halting the game for this client to join the world
+				// then, send the initializing message, saying how many chunks need
+				// to be sent, and how many rigid bodies?
+				// then send all the chunks individually and send pixel bodies in groups as well? or maybe individually.
+				
+
+				//now, lets send that initial message describing how many chunks we will send
+				//and how many pixel bodies there are.
+				Network::Message gameDataInitMsg;
+				m_World.GetGameDataInit(gameDataInitMsg);
+				gameDataInitMsg << m_InputTick;
+				SendMessageToClient(msg->clientHConnection, gameDataInitMsg);
+
+				//now lets populate a vector of messages to be sent,
+				//being the chunks and pixel bodies
+				m_DownloadingClients[msg->clientHConnection] = std::vector<Network::Message>();
+				PX_WARN("Created a vector of messages for client");
+				m_World.GetGameData(m_DownloadingClients[msg->clientHConnection]);
+				//send the first and wait for it to be acknowledged
+				
+				if (!m_DownloadingClients[msg->clientHConnection].empty())
+				{
+					PX_TRACE("Sent GameDataMsg: ID[{0}], Size[{1}]", m_DownloadingClients[msg->clientHConnection].back().header.id, m_DownloadingClients[msg->clientHConnection].back().size());
+					SendMessageToClient(msg->clientHConnection, m_DownloadingClients[msg->clientHConnection].back());
+					m_DownloadingClients[msg->clientHConnection].pop_back();
+				}
+
+				//as soon as a new client joins the game,
+				//we have to reset everyones box2d simulation, so send that now so everyone stays in sync!
+				Network::Message b2ResetMsg;
+				b2ResetMsg.header.id = static_cast<uint32_t>(GameMessage::Game_ResetBox2D);
+				m_World.ResetBox2D();
+				b2ResetMsg << m_World.m_SimulationTick;
+				SendMessageToAllClients(b2ResetMsg, msg->clientHConnection);
+				break;
+			}
+			case GameMessage::Client_GameDataRecieved:
+			{
+				PX_TRACE("Sent GameDataMsg: ID[{0}], Size[{1}]", m_DownloadingClients[msg->clientHConnection].back().header.id, m_DownloadingClients[msg->clientHConnection].back().size());
+				SendMessageToClient(msg->clientHConnection, m_DownloadingClients[msg->clientHConnection].back());
+				m_DownloadingClients[msg->clientHConnection].pop_back();
+				PX_WARN("Sent GameDataPacket. Remaining: {0}", m_DownloadingClients[msg->clientHConnection].size());
+				break;
+			}
+			case GameMessage::Client_GameDataComplete:
+			{
+				//the connecting client finished loading the world, so lets resume! 
+				if (m_DownloadingClients[msg->clientHConnection].empty())
+				{
+					PX_WARN("Erased Client. DLCL Size: {0}", m_DownloadingClients.size());
+					m_DownloadingClients.erase(msg->clientHConnection);
+				}
+				break;
+			}
+			case GameMessage::Game_TickClosure:
+			{
+				//merge the recieved tick closure into our current merged tick closure!
+
+				TickClosure tc;
+				*msg >> tc.m_InputActionCount;
+				*msg >> tc.m_Data;
+				m_CurrentMergedTickClosure.AddTickClosure(tc, msg->clientHConnection);
+				//finished! we just wait till it's time to send the message, 
+				break;
+			}
+			}
+
 		}
 	}
+	
 
 	void PixelGameServer::OnImGuiRender()
 	{
-		//we are a server, do no imgui rendering!
-		///sike. i wanna debug, or display info
 
 		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 
@@ -209,17 +243,12 @@ namespace Pyxis
 		ImGui::SetNextWindowDockID(dock);
 		if (ImGui::Begin("Server"))
 		{
-			ImGui::Text("Sleep Timer");
-			ImGui::ProgressBar(static_cast<float>(m_SleepDelay) / static_cast<float>(m_SleepDelayMax));
-			ImGui::Text(("Players:" + std::to_string(m_PlayerCount)).c_str());
+			//ImGui::Text("Sleep Timer");
+			//ImGui::ProgressBar(static_cast<float>(m_SleepDelay) / static_cast<float>(m_SleepDelayMax));
+			ImGui::Text(("Players:" + std::to_string(m_ClientDataMap.size())).c_str());
 		}
 		ImGui::End();
 
-		/*if (ImGui::Begin("NetworkDebug"))
-		{
-			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
-		}
-		ImGui::End();*/
 	}
 
 	void PixelGameServer::OnEvent(Pyxis::Event& e)
@@ -236,15 +265,21 @@ namespace Pyxis
 		return false;
 	}
 
-	bool PixelGameServer::OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client)
+	void PixelGameServer::DisconnectClient(HSteamNetConnection client, std::string Reason)
 	{
-		//I am able to block the incoming connection if i desire here
-		m_PlayerCount++;
-
-		return true;
+		OnClientDisconnect(client);
+		m_SteamNetworkingSockets->CloseConnection(client, 0, Reason.c_str(), true);
 	}
 
-	void PixelGameServer::OnClientDisconnect(std::shared_ptr<Network::Connection<GameMessage>> client)
+	//bool PixelGameServer::OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client)
+	//{
+	//	//I am able to block the incoming connection if i desire here
+	//	m_PlayerCount++;
+
+	//	return true;
+	//}
+
+	/*void PixelGameServer::OnClientDisconnect(std::shared_ptr<Network::Connection<GameMessage>> client)
 	{
 		PX_TRACE("Removing Client [{0}]", client->GetID());
 		m_PlayerCount--;
@@ -255,350 +290,18 @@ namespace Pyxis
 		disconnectMsg << client->GetID();
 		MessageAllClients(disconnectMsg, client);
 		return;
-	}
+	}*/
 
-	void PixelGameServer::OnMessage(std::shared_ptr<Network::Connection<GameMessage>> client, Network::Message<GameMessage>& msg)
-	{
-		switch (msg.header.id)
-		{
-		case GameMessage::Ping:
-		{
-			PX_TRACE("[{0}]: Server Ping", client->GetID());
-			//simply bounce the message back
-			client->Send(msg);
-			break;
-		}
-		case GameMessage::Client_RegisterWithServer:
-		{
-			//client is asking for an ID, so give it it's ID
-			PX_TRACE("[{0}]: Registering client with ID", client->GetID());
-			Network::Message<GameMessage> msg;
-			msg.header.id = GameMessage::Server_ClientAssignID;
-			msg << client->GetID();
-			client->Send(msg);
-			break;
-		}
-		case GameMessage::Client_RequestMergedTick:
-		{
-			uint64_t tickRequested;
-			msg >> tickRequested;
-			if (m_TickRequestStorage.size() == 0) return;
-
-			uint64_t oldestTick = m_TickRequestStorage.front().m_Tick;
-			if (tickRequested < oldestTick) 
-			{
-				//client is asking for a tick so old we don't have it anymore!
-				//kick the client out for lagging too far behind...
-				PX_TRACE("Client [{0}] Became Desynced!", client->GetID());
-				Network::Message<GameMessage> kickmsg;
-				kickmsg.header.id = GameMessage::Server_ClientDesynced;
-				MessageClient(client, kickmsg);
-				return;
-			}
-			//if we have the tick, then send it to the client:
-			uint32 diff = tickRequested - oldestTick;
-			Network::Message<GameMessage> tickmsg;
-			tickmsg.header.id = GameMessage::Game_MergedTickClosure;
-			tickmsg << m_TickRequestStorage[diff].m_Data;
-			tickmsg << m_TickRequestStorage[diff].m_InputActionCount;
-			tickmsg << m_TickRequestStorage[diff].m_Tick;
-			PX_TRACE("Sent Client [{0}] missing Game Tick {1}", client->GetID(), m_TickRequestStorage[diff].m_Tick);
-			MessageClient(client, tickmsg);
-			break;
-			
-		}
-		case GameMessage::Game_RequestGameData:
-		{
-			//client is requesting the world data, so send it!
-			//send the world and rigid body data
-			Network::Message<GameMessage> msg;
-			msg.header.id = GameMessage::Game_GameData;
-			//in order to send the game data, i'll pause the game for now while its sending?
-			//or maybe not, and ill just keep updating and sending the client the 
-			//merged ticks so it can catch up afterwards
-			m_World.GetWorldData(msg);
-			msg << m_World.m_Running;
-			msg << m_InputTick;
-			client->Send(msg);
-
-			//as soon as a new client joins the game,
-			//we have to reset everyones box2d simulation, so send that now so everyone stays in sync!
-			Network::Message<GameMessage> b2msg;
-			b2msg.header.id = GameMessage::Game_ResetBox2D;
-			m_World.ResetBox2D();
-			b2msg << m_World.m_SimulationTick;
-			MessageAllClients(b2msg, client);
-
-			break;
-		}
-		case GameMessage::Game_Loaded:
-		{
-			//the server now expects that client to send ticks
-			m_ClientsNeededForTick.insert(client->GetID());
-			PX_TRACE("Starting to need client {0} at game tick {1}", client->GetID(), m_InputTick);
-			Network::Message<GameMessage> msg;
-			msg.header.id = GameMessage::Game_TickToEnter;
-			msg << m_InputTick;
-			client->Send(msg);
-			Network::Message<GameMessage> connectedMsg;
-			connectedMsg.header.id = GameMessage::Server_ClientConnected;
-			connectedMsg << client->GetID();
-			MessageAllClients(connectedMsg, client);
-			break;
-		}
-		case GameMessage::Game_TickClosure:
-		{
-
-			//merge the tick closure with other clients, and send it back if all merged
-
-			TickClosure tickClosure;
-			uint64_t ID;
-			uint64_t tick;
-			msg >> ID;
-			msg >> tick;
-			msg >> tickClosure.m_InputActionCount;
-			msg >> tickClosure.m_Data;
-			//PX_TRACE("Recieved Tick Closure: {0}", tick);
-
-			if (m_MTCDeque.size() == 0)
-			{
-				//first merged tick closure, so just add it
-				MergedTickClosure mtc;
-				if (tick < m_InputTick)
-				{
-					//this is an old tick, so update a newer input with the old inputs.
-					mtc.m_Tick = m_InputTick;
-				}
-				else
-				{
-					mtc.m_Tick = tick;
-				}
-				mtc.AddTickClosure(tickClosure, client->GetID());
-				//PX_CORE_TRACE("Created tick closure Deque");
-				m_MTCDeque.push_back(mtc);
-			}
-			else
-			{
-				//there are already tick closures, so find the one to merge with or make
-				uint64_t oldestTick = m_MTCDeque.front().m_Tick;
-				//see if this is an old tick that can be applied to help "catch it up"
-				if (tick <= oldestTick)
-				{
-					//PX_CORE_TRACE("Merged old tick closure into new");
-					m_MTCDeque.front().AddTickClosure(tickClosure, client->GetID());
-				}
-				else
-				{
-					//look to see if there is an existing tick that we can merge with
-					for (int i = 0; i < m_MTCDeque.size(); i++)
-					{
-						if (tick == m_MTCDeque.at(i).m_Tick)
-						{
-							//found the same tick in the queue, so add it
-							//PX_CORE_TRACE("Found same input tick closure, merging");
-							m_MTCDeque.at(i).AddTickClosure(tickClosure, client->GetID());
-							return;
-						}
-					}
-					//didn't find the tick closure in the queue, so just add it
-					MergedTickClosure mtc;
-					mtc.m_Tick = tick;
-					mtc.AddTickClosure(tickClosure, client->GetID());
-					//PX_CORE_TRACE("Appended tick closure to end of queue");
-					m_MTCDeque.push_back(mtc);
-				}
-				
-			}
-			break;
-		}
-		}
-		//no more code here, there is a return in the switch statement
-		return;
-	}
-
-	void PixelGameServer::OnClientValidated(std::shared_ptr<Network::Connection<GameMessage>> client)
-	{
-		//now that the client has connected to the server and has been validated,
-		//tell the client that they have been accepted / validated
-		Network::Message<GameMessage> msg;
-		msg.header.id = GameMessage::Server_ClientAccepted;
-		client->Send(msg);
-	}
 	
-	/// <summary>
-	/// Volatile to the merged tick closure.
-	/// </summary>
-	/// <param name="tc"></param>
-	void PixelGameServer::HandleTickClosure(MergedTickClosure& tc)
+	void PixelGameServer::OnClientDisconnect(HSteamNetConnection client)
 	{
-		for (int i = 0; i < tc.m_InputActionCount; i++)
+		//remove client from map
+		m_ClientDataMap.erase(client);
+
+		if (m_DownloadingClients.contains(client))
 		{
-			InputAction IA;
-			tc >> IA;
-			switch (IA)
-			{
-			case InputAction::Add_Player:
-			{
-				uint64_t ID;
-				tc >> ID;
-
-				glm::ivec2 pixelPos;
-				tc >> pixelPos;
-
-				m_World.CreatePlayer(ID, pixelPos);
-				break;
-			}
-			case InputAction::PauseGame:
-			{
-				uint64_t ID;
-				tc >> ID;
-				m_World.m_Running = false;
-				break;
-			}
-			case InputAction::ResumeGame:
-			{
-				uint64_t ID;
-				tc >> ID;
-				m_World.m_Running = true;
-				break;
-			}
-			case InputAction::TransformRegionToRigidBody:
-			{
-				uint64_t ID;
-				tc >> ID;
-
-				glm::ivec2 maximum;
-				tc >> maximum;
-
-				glm::ivec2 minimum;
-				tc >> minimum;
-
-				b2BodyType type;
-				tc >> type;
-
-				int width = (maximum.x - minimum.x) + 1;
-				int height = (maximum.y - minimum.y) + 1;
-				if (width * height <= 0) break;
-				glm::ivec2 newMin = maximum;
-				glm::ivec2 newMax = minimum;
-				//iterate over section and find the width, height, center, ect
-				int mass = 0;
-				for (int x = 0; x < width; x++)
-				{
-					for (int y = 0; y < height; y++)
-					{
-						glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-						auto& element = m_World.GetElement(pixelPos);
-						auto& elementData = m_World.m_ElementData[element.m_ID];
-						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-						{
-							if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-							if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-							if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-							if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-							mass++;
-						}
-					}
-				}
-				if (mass < 2) continue;//skip if we are 1 element or 0
-				PX_TRACE("transforming {0} elements to a rigid body", mass);
-
-				width = (newMax.x - newMin.x) + 1;
-				height = (newMax.y - newMin.y) + 1;
-
-				glm::ivec2 origin = { width / 2, height / 2 };
-				std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-				for (int x = 0; x < width; x++)
-				{
-					for (int y = 0; y < height; y++)
-					{
-						glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
-
-						//loop over every element, grab it, and make it rigid if it is a movable Solid
-						auto& element = m_World.GetElement(pixelPos);
-						auto& elementData = m_World.m_ElementData[element.m_ID];
-						if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-						{
-							element.m_Rigid = true;
-							//set the elements at the local position to be the element pulled from world
-							elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-							m_World.SetElement(pixelPos, Element());
-						}
-					}
-				}
-				glm::ivec2 size = newMax - newMin;
-				PX_TRACE("Mass is: {0}", mass);
-				PixelRigidBody* body = new PixelRigidBody(ID, size, elements, type, m_World.m_Box2DWorld);
-				if (body->m_B2Body == nullptr)
-				{
-					PX_TRACE("Failed to create rigid body");
-					continue;
-				}
-				else
-				{
-					m_World.m_PixelBodyMap[body->m_ID] = body;
-					auto pixelPos = (newMin + newMax) / 2;
-					if (width % 2 == 0) pixelPos.x += 1;
-					if (height % 2 == 0) pixelPos.y += 1;
-					body->SetPixelPosition(pixelPos);
-					m_World.PutPixelBodyInWorld(*body);
-				}
-
-
-				break;
-			}
-			case Pyxis::InputAction::Input_Move:
-			{
-				//PX_TRACE("input action: Input_Move");
-				break;
-			}
-			case Pyxis::InputAction::Input_Place:
-			{
-				//PX_TRACE("input action: Input_Place");
-				bool rigid;
-				glm::ivec2 pixelPos;
-				uint32_t elementID;
-				BrushType brush;
-				uint8_t brushSize;
-				tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
-
-				m_World.PaintBrushElement(pixelPos, elementID, brush, brushSize);
-				break;
-			}
-			case Pyxis::InputAction::Input_StepSimulation:
-			{
-				PX_TRACE("input action: Input_StepSimulation");
-				m_World.UpdateWorld();
-				break;
-			}
-			case InputAction::Input_MousePosition:
-			{
-				glm::ivec2 mousePos;
-				uint64_t ID;
-				tc >> mousePos >> ID;
-				
-				//do nothing as server
-				break;
-			}
-			case InputAction::ClearWorld:
-			{
-				m_World.Clear();
-				break;
-			}
-			default:
-			{
-				PX_TRACE("Input Action Error. You have probably mis-aligned the data");
-				break;
-			}
-			}
-		}
-		if (m_World.m_Running)
-		{
-			m_World.UpdateWorld();
-		}
-		else
-		{
-			m_World.UpdateTextures();
+			PX_WARN("Popped DLCL Back. Size: {0}", m_DownloadingClients.size());
+			m_DownloadingClients.erase(client);
 		}
 	}
 

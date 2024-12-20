@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+set(CMAKE_TOOLCHAIN_FILE "C:/Users/Peyton/Documents/GitHub/vcpkg/scripts/buildsystems/vcpkg.cmake")
 
 project("PyxisWorkspace")
 
@@ -9,6 +11,10 @@ project("PyxisWorkspace")
     add_subdirectory("Pixel-Game")
     add_subdirectory("Pixel-Game-Core")
     add_subdirectory("Pixel-Game-server")
+
+    if (PX_DEBUG)
+        target_compile_definitions(PyxisEngine PUBLIC PX_DEBUG)
+    endif()
 
     
     #Specify that this is for windows

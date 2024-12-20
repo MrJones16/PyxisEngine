@@ -8,128 +8,13 @@
 #include <box2d/b2_world.h>
 #include "PixelRigidBody.h"
 #include <box2d/b2_math.h>
-#include "PixelClientInterface.h"
+
+//networking game messages / input actions
+#include "PixelNetworking.h"
 
 
 namespace Pyxis
 {
-	enum class InputAction : uint32_t
-	{
-		Add_Player,
-		Remove_Player,
-		PauseGame, ResumeGame,
-		ClearWorld,
-		TransformRegionToRigidBody,
-		Input_Move,
-		Input_Place,
-		Input_StepSimulation,
-		Input_MousePosition,
-
-	};
-
-	enum BrushType : uint16_t {
-		circle = 0, square = 1, end
-	};
-
-	//class InputActionData : 
-
-	class TickClosure
-	{
-	public:
-		//stored first, all the data for an action, then what kind of action it is
-		std::vector<uint8_t> m_Data;
-		//the number of input actions to apply
-		uint32_t m_InputActionCount = 0;
-
-	public:
-		void AddInputAction(InputAction action)
-		{
-			*(this) << action;
-			m_InputActionCount++;
-		}
-
-		template<typename... Arguments>
-		void AddInputAction(InputAction action, Arguments ... args)
-		{
-			AddInputActionData(args...);
-			*(this) << action;
-			m_InputActionCount++;
-		}
-
-		/// <summary>
-		/// Pushes any "POD" like data into the message buffer
-		/// </summary>
-		template<typename DataType>
-		friend TickClosure& operator << (TickClosure& tc, const DataType& data)
-		{
-			//chack that the type of the data being pushed is trivially copyable
-			static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to be pushed into message body vector");
-
-			//cache current vector size, as this is where we will add the data
-			size_t i = tc.m_Data.size();
-
-			//resize the vector by the size of the data being pushed
-			tc.m_Data.resize(tc.m_Data.size() + sizeof(DataType));
-
-			//physically copy the data into the newly allocated vector space
-			std::memcpy(tc.m_Data.data() + i, &data, sizeof(DataType));
-
-			//return message so it can be "chained"
-			return tc;
-		}
-
-		template<typename DataType>
-		friend TickClosure& operator >> (TickClosure& tc, DataType& data)
-		{
-			//chack that the data is easily copyable
-			static_assert(std::is_standard_layout<DataType>::value, "Data is too complex to have been in a body vector");
-
-			//cache the location towards the end of the vector where the pulled data starts
-			size_t dataSize = sizeof(DataType);
-			size_t i = tc.m_Data.size() - dataSize;
-
-			//physically copy the memory to the DataType variable
-			std::memcpy(&data, tc.m_Data.data() + i, sizeof(DataType));
-
-			//shrink the vector;
-			tc.m_Data.resize(i);
-
-			//return the target message so it can be "chained"
-			return tc;
-		}
-
-	private:
-		template<typename DataType>
-		void AddInputActionData(DataType data)
-		{
-			*(this) << data;
-		}
-
-		template<typename DataType, typename... Arguments>
-		void AddInputActionData(DataType data, Arguments ... args)
-		{
-			*(this) << data;
-			AddInputActionData(args...);
-		}
-
-	};
-
-	class MergedTickClosure : public TickClosure
-	{
-	public:
-		//the "heartbeat" tick this action should occur
-		uint64_t m_Tick = 0;
-
-		std::unordered_set<uint64_t> m_Clients;
-		inline void AddTickClosure(TickClosure& tickClosure, uint64_t clientID)
-		{
-			size_t i = m_Data.size(); // get current end point of data
-			m_Data.resize(m_Data.size() + tickClosure.m_Data.size());
-			memcpy(m_Data.data() + i, tickClosure.m_Data.data(), tickClosure.m_Data.size());
-			m_InputActionCount += tickClosure.m_InputActionCount;
-			m_Clients.insert(clientID);
-		}
-	};
 
 	class WakeUpQueryCallback : public b2QueryCallback
 	{
@@ -144,9 +29,6 @@ namespace Pyxis
 		}
 	};
 
-	
-	static const int CHUNKSIZE = 512;
-
 	class World
 	{
 	public:
@@ -155,8 +37,14 @@ namespace Pyxis
 		void Initialize(int worldSeed);
 		bool LoadElementData(std::string assetPath);
 		void BuildReactionTable();
-		void LoadWorld(Network::Message<GameMessage>& msg);
-		void GetWorldData(Network::Message<GameMessage>& msg);
+
+		enum class GameDataMsgType : uint8_t { pixelbody, chunk };
+		void DownloadWorldInit(Network::Message& msg);
+		void DownloadWorld(Network::Message& msg);
+		void GetGameDataInit(Network::Message& msg);
+		void GetGameData(std::vector<Network::Message>& messages);
+		void GetWorldData(Network::Message& msg);
+
 		~World();
 
 		void AddChunk(const glm::ivec2& chunkPos);

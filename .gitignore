@@ -1,2 +1,5 @@
 /.vs
 .ipch
+out
+build
+vcpkg_installed

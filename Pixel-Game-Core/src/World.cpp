@@ -555,59 +555,28 @@ namespace Pyxis
 	///			linear velocity
 	/// </summary>
 	/// <param name="msg"></param>
-	void World::LoadWorld(Network::Message<GameMessage>& msg)
+	void World::DownloadWorldInit(Network::Message& msg)
 	{
-
-		//things still to synchronize:
-		//
-		// pixel body velocity
-		// chunk dirty rects
-		// 
-		//
-		
+		msg >> m_Running;
 		msg >> m_WorldSeed;
 		Initialize(m_WorldSeed);
-
 		msg >> m_UpdateBit;
 		msg >> m_SimulationTick;
 
-		//Loading the chunks
-		uint32_t chunkCount = 0;
-		msg >> chunkCount;
-		PX_TRACE("Going to load {0} chunks", chunkCount);
-		glm::ivec2 chunkPos;
-		for (int i = 0; i < chunkCount; i++)
+	}
+
+	void World::DownloadWorld(Network::Message& msg)
+	{
+		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataPixelBody)
 		{
-			msg >> chunkPos;
-
-			PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(), "Tried to load a chunk that already existed");
-			Chunk* chunk = new Chunk(chunkPos);
-			for (int ii = (BUCKETSWIDTH * BUCKETSWIDTH) - 1; ii >= 0; ii--)
-			{
-				msg >> chunk->m_DirtyRects[ii];
-			}
-			m_Chunks[chunkPos] = chunk;
-			for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--)
-			{
-				msg >> chunk->m_Elements[ii];
-			}
-
-			chunk->UpdateWholeTexture();
-
-		}
-
-
-		uint32_t pixelBodyCount = 0;
-		msg >> pixelBodyCount;
-		PX_TRACE("Going to load {0} pixel bodies", pixelBodyCount);
-		for (int i = 0; i < pixelBodyCount; i++)
-		{
+			//lets load the pixel body! just reverse the upload order.
+			
 			uint64_t uuid;
 			glm::ivec2 size;
-			msg >> uuid >> size;
-			std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
 			int count;
-			msg >> count;
+			msg >> uuid >> size >> count;
+
+			std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
 			for (int i = 0; i < count; i++)
 			{
 				glm::ivec2 localpos;
@@ -626,57 +595,91 @@ namespace Pyxis
 			body->SetTransform(position, rotation);
 			body->SetAngularVelocity(angularVelocity);
 			body->SetLinearVelocity(linearVelocity);
+			PX_TRACE("Loaded Pixel Body #{0}", uuid);
 			// can safely ignore putting it in the world, since when we got the world
 			// data it is already there!
-			
+		}
+		else if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk)
+		{
+			glm::ivec2 chunkPos;
+			msg >> chunkPos;
+
+			PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(), "Tried to load a chunk that already existed");
+			Chunk* chunk = new Chunk(chunkPos);
+			for (int ii = (BUCKETSWIDTH * BUCKETSWIDTH) - 1; ii >= 0; ii--)
+			{
+				msg >> chunk->m_DirtyRects[ii];
+			}
+			m_Chunks[chunkPos] = chunk;
+			for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--)
+			{
+				msg >> chunk->m_Elements[ii];
+			}
+
+			chunk->UpdateWholeTexture();
+
+			PX_TRACE("Loaded Chunk ({0},{1})", chunkPos.x, chunkPos.y);
 		}
 	}
 
-	void World::GetWorldData(Network::Message<GameMessage>& msg)
+	void World::GetGameDataInit(Network::Message& msg)
 	{
-		for (auto pair : m_PixelBodyMap)
-		{
-			msg << pair.second->m_B2Body->GetLinearVelocity();
-			msg << pair.second->m_B2Body->GetAngularVelocity();
-			msg << pair.second->m_B2Body->GetType();
-			msg << pair.second->m_B2Body->GetAngle();
-			msg << pair.second->m_B2Body->GetPosition();
-			//msg << pair.second->m_Elements;
-			int elementCount = 0;
-			for (auto pair : pair.second->m_Elements)
-			{
-				msg << pair.second;
-				msg << pair.first;
-				elementCount++;
-			}
-			msg << elementCount;
-			glm::ivec2 size = { pair.second->m_Width, pair.second->m_Height };
-			msg << size;
-			msg << pair.first;
-		}
-		msg << uint32_t(m_PixelBodyMap.size());
-		PX_TRACE("Uploaded {0} pixel bodies", m_PixelBodyMap.size());
-
-		for (auto pair : m_Chunks)
-		{
-			for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
-			{
-				msg << pair.second->m_Elements[i];
-			}
-			for (auto minmax : pair.second->m_DirtyRects)
-			{
-				msg << minmax;
-			}
-			msg << pair.first;
-		}
-
-		msg << uint32_t(m_Chunks.size());
-		PX_TRACE("Uploaded {0} chunks", m_Chunks.size());
-
+		PX_TRACE("Gathering World Data");
+		msg.header.id = static_cast<uint32_t>(GameMessage::Server_GameDataInit);
+		msg << static_cast<uint32_t>(m_Chunks.size());
+		PX_TRACE("# Chunks: {0}", m_Chunks.size());
+		msg << static_cast<uint32_t>(m_PixelBodyMap.size());
+		PX_TRACE("# PixelBodies: {0}", m_PixelBodyMap.size());
 		msg << m_SimulationTick;
 		msg << m_UpdateBit;
 		msg << m_WorldSeed;
+		msg << m_Running;
 	}
+
+	void World::GetGameData(std::vector<Network::Message>& messages)
+	{
+		
+		//for each pixel body, lets create a unique message
+		for (auto& pair : m_PixelBodyMap)
+		{
+			messages.emplace_back();
+			messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
+			messages.back() << pair.second->m_B2Body->GetLinearVelocity();
+			messages.back() << pair.second->m_B2Body->GetAngularVelocity();
+			messages.back() << pair.second->m_B2Body->GetType();
+			messages.back() << pair.second->m_B2Body->GetAngle();
+			messages.back() << pair.second->m_B2Body->GetPosition();
+			//msg << pair.second->m_Elements;
+			int elementCount = 0;
+			for (auto& pair : pair.second->m_Elements)
+			{
+				messages.back() << pair.second;
+				messages.back() << pair.first;
+				elementCount++;
+			}
+			glm::ivec2 size = { pair.second->m_Width, pair.second->m_Height };
+
+			messages.back() << elementCount << size << pair.first;
+		}
+
+		//now we create a separate message for each chunk 
+		for (auto& pair : m_Chunks)
+		{
+			messages.emplace_back();
+			messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataChunk);
+			for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
+			{
+				messages.back() << pair.second->m_Elements[i];
+			}
+			for (auto& minmax : pair.second->m_DirtyRects)
+			{
+				messages.back() << minmax;
+			}
+			messages.back() << pair.first;
+		}
+
+	}
+
 
 	bool World::StringContainsTag(const std::string& string)
 	{
@@ -894,7 +897,18 @@ namespace Pyxis
 				elementData.UpdateElementData(element, index.x, index.y);
 
 				//set the element
-				chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+				if (element.m_ID == m_ElementIDs["debug_heat"])
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+				}
+				else if (element.m_ID == m_ElementIDs["debug_cool"])
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+				}
+				else
+				{
+					chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+				}
 				chunk->UpdateDirtyRect(index.x, index.y);
 			}
 		}
@@ -1106,20 +1120,20 @@ namespace Pyxis
 			//BL
 			UpdateChunkBucket(pair.second, 0, 0);
 			UpdateChunkBucket(pair.second, 2, 0);
-			UpdateChunkBucket(pair.second, 4, 0);
-			UpdateChunkBucket(pair.second, 6, 0);
+			//UpdateChunkBucket(pair.second, 4, 0);
+			//UpdateChunkBucket(pair.second, 6, 0);
 			UpdateChunkBucket(pair.second, 0, 2);
 			UpdateChunkBucket(pair.second, 2, 2);
-			UpdateChunkBucket(pair.second, 4, 2);
-			UpdateChunkBucket(pair.second, 6, 2);
-			UpdateChunkBucket(pair.second, 0, 4);
-			UpdateChunkBucket(pair.second, 2, 4);
-			UpdateChunkBucket(pair.second, 4, 4);
-			UpdateChunkBucket(pair.second, 6, 4);
-			UpdateChunkBucket(pair.second, 0, 6);
-			UpdateChunkBucket(pair.second, 2, 6);
-			UpdateChunkBucket(pair.second, 4, 6);
-			UpdateChunkBucket(pair.second, 6, 6);
+			//UpdateChunkBucket(pair.second, 4, 2);
+			//UpdateChunkBucket(pair.second, 6, 2);
+			//UpdateChunkBucket(pair.second, 0, 4);
+			//UpdateChunkBucket(pair.second, 2, 4);
+			//UpdateChunkBucket(pair.second, 4, 4);
+			//UpdateChunkBucket(pair.second, 6, 4);
+			//UpdateChunkBucket(pair.second, 0, 6);
+			//UpdateChunkBucket(pair.second, 2, 6);
+			//UpdateChunkBucket(pair.second, 4, 6);
+			//UpdateChunkBucket(pair.second, 6, 6);
 		}
 
 		for (auto & pair : m_Chunks)
@@ -1127,20 +1141,20 @@ namespace Pyxis
 			//BR
 			UpdateChunkBucket(pair.second, 0 + 1, 0);
 			UpdateChunkBucket(pair.second, 2 + 1, 0);
-			UpdateChunkBucket(pair.second, 4 + 1, 0);
-			UpdateChunkBucket(pair.second, 6 + 1, 0);
+			//UpdateChunkBucket(pair.second, 4 + 1, 0);
+			//UpdateChunkBucket(pair.second, 6 + 1, 0);
 			UpdateChunkBucket(pair.second, 0 + 1, 2);
 			UpdateChunkBucket(pair.second, 2 + 1, 2);
-			UpdateChunkBucket(pair.second, 4 + 1, 2);
-			UpdateChunkBucket(pair.second, 6 + 1, 2);
-			UpdateChunkBucket(pair.second, 0 + 1, 4);
-			UpdateChunkBucket(pair.second, 2 + 1, 4);
-			UpdateChunkBucket(pair.second, 4 + 1, 4);
-			UpdateChunkBucket(pair.second, 6 + 1, 4);
-			UpdateChunkBucket(pair.second, 0 + 1, 6);
-			UpdateChunkBucket(pair.second, 2 + 1, 6);
-			UpdateChunkBucket(pair.second, 4 + 1, 6);
-			UpdateChunkBucket(pair.second, 6 + 1, 6);
+			//UpdateChunkBucket(pair.second, 4 + 1, 2);
+			//UpdateChunkBucket(pair.second, 6 + 1, 2);
+			//UpdateChunkBucket(pair.second, 0 + 1, 4);
+			//UpdateChunkBucket(pair.second, 2 + 1, 4);
+			//UpdateChunkBucket(pair.second, 4 + 1, 4);
+			//UpdateChunkBucket(pair.second, 6 + 1, 4);
+			//UpdateChunkBucket(pair.second, 0 + 1, 6);
+			//UpdateChunkBucket(pair.second, 2 + 1, 6);
+			//UpdateChunkBucket(pair.second, 4 + 1, 6);
+			//UpdateChunkBucket(pair.second, 6 + 1, 6);
 		}
 
 		for (auto & pair : m_Chunks)
@@ -1148,20 +1162,20 @@ namespace Pyxis
 			//TL
 			UpdateChunkBucket(pair.second, 0, 0 + 1);
 			UpdateChunkBucket(pair.second, 2, 0 + 1);
-			UpdateChunkBucket(pair.second, 4, 0 + 1);
-			UpdateChunkBucket(pair.second, 6, 0 + 1);
+			//UpdateChunkBucket(pair.second, 4, 0 + 1);
+			//UpdateChunkBucket(pair.second, 6, 0 + 1);
 			UpdateChunkBucket(pair.second, 0, 2 + 1);
 			UpdateChunkBucket(pair.second, 2, 2 + 1);
-			UpdateChunkBucket(pair.second, 4, 2 + 1);
-			UpdateChunkBucket(pair.second, 6, 2 + 1);
-			UpdateChunkBucket(pair.second, 0, 4 + 1);
-			UpdateChunkBucket(pair.second, 2, 4 + 1);
-			UpdateChunkBucket(pair.second, 4, 4 + 1);
-			UpdateChunkBucket(pair.second, 6, 4 + 1);
-			UpdateChunkBucket(pair.second, 0, 6 + 1);
-			UpdateChunkBucket(pair.second, 2, 6 + 1);
-			UpdateChunkBucket(pair.second, 4, 6 + 1);
-			UpdateChunkBucket(pair.second, 6, 6 + 1);
+			//UpdateChunkBucket(pair.second, 4, 2 + 1);
+			//UpdateChunkBucket(pair.second, 6, 2 + 1);
+			//UpdateChunkBucket(pair.second, 0, 4 + 1);
+			//UpdateChunkBucket(pair.second, 2, 4 + 1);
+			//UpdateChunkBucket(pair.second, 4, 4 + 1);
+			//UpdateChunkBucket(pair.second, 6, 4 + 1);
+			//UpdateChunkBucket(pair.second, 0, 6 + 1);
+			//UpdateChunkBucket(pair.second, 2, 6 + 1);
+			//UpdateChunkBucket(pair.second, 4, 6 + 1);
+			//UpdateChunkBucket(pair.second, 6, 6 + 1);
 		}
 
 		for (auto & pair : m_Chunks)
@@ -1169,20 +1183,20 @@ namespace Pyxis
 			//TR
 			UpdateChunkBucket(pair.second, 0 + 1, 0 + 1);
 			UpdateChunkBucket(pair.second, 2 + 1, 0 + 1);
-			UpdateChunkBucket(pair.second, 4 + 1, 0 + 1);
-			UpdateChunkBucket(pair.second, 6 + 1, 0 + 1);
+			//UpdateChunkBucket(pair.second, 4 + 1, 0 + 1);
+			//UpdateChunkBucket(pair.second, 6 + 1, 0 + 1);
 			UpdateChunkBucket(pair.second, 0 + 1, 2 + 1);
 			UpdateChunkBucket(pair.second, 2 + 1, 2 + 1);
-			UpdateChunkBucket(pair.second, 4 + 1, 2 + 1);
-			UpdateChunkBucket(pair.second, 6 + 1, 2 + 1);
-			UpdateChunkBucket(pair.second, 0 + 1, 4 + 1);
-			UpdateChunkBucket(pair.second, 2 + 1, 4 + 1);
-			UpdateChunkBucket(pair.second, 4 + 1, 4 + 1);
-			UpdateChunkBucket(pair.second, 6 + 1, 4 + 1);
-			UpdateChunkBucket(pair.second, 0 + 1, 6 + 1);
-			UpdateChunkBucket(pair.second, 2 + 1, 6 + 1);
-			UpdateChunkBucket(pair.second, 4 + 1, 6 + 1);
-			UpdateChunkBucket(pair.second, 6 + 1, 6 + 1);
+			//UpdateChunkBucket(pair.second, 4 + 1, 2 + 1);
+			//UpdateChunkBucket(pair.second, 6 + 1, 2 + 1);
+			//UpdateChunkBucket(pair.second, 0 + 1, 4 + 1);
+			//UpdateChunkBucket(pair.second, 2 + 1, 4 + 1);
+			//UpdateChunkBucket(pair.second, 4 + 1, 4 + 1);
+			//UpdateChunkBucket(pair.second, 6 + 1, 4 + 1);
+			//UpdateChunkBucket(pair.second, 0 + 1, 6 + 1);
+			//UpdateChunkBucket(pair.second, 2 + 1, 6 + 1);
+			//UpdateChunkBucket(pair.second, 4 + 1, 6 + 1);
+			//UpdateChunkBucket(pair.second, 6 + 1, 6 + 1);
 		}
 
 		
@@ -2480,8 +2494,8 @@ namespace Pyxis
 						auto e = shape->m_vertices[i + 1];
 						float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 						float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-						glm::vec2 start = glm::vec2(x1, y1) / (PPU * 2.0f);
-						glm::vec2 end = glm::vec2(x2, y2) / (PPU * 2.0f);
+						glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
+						glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
 
 						Renderer2D::DrawLine(start, end);
 					}
@@ -2493,8 +2507,8 @@ namespace Pyxis
 					auto e = shape->m_vertices[0];
 					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec2 start = glm::vec2(x1, y1) / (PPU * 2.0f);
-					glm::vec2 end = glm::vec2(x2, y2) / (PPU * 2.0f);
+					glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
+					glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
 
 					Renderer2D::DrawLine(start, end);
 				}

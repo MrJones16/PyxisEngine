@@ -1,17 +1,49 @@
 # Define the Core library
 add_library(PyxisEngine)
 
-target_link_libraries(PyxisEngine
-    PUBLIC
-    #asio
+
+
+#set(VCPKG_CRT_LINKAGE static)
+#set(VCPKG_LIBRARY_LINKAGE static)
+find_package(box2d CONFIG REQUIRED)
+#find_package(GameNetworkingSockets CONFIG REQUIRED)
+find_package(glad CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(poly2tri CONFIG REQUIRED)
+find_package(Snappy CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(stb REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
+
+#target_compile_definitions(PyxisEngine PUBLIC STEAMNETWORKINGSOCKETS_STATIC_LINK)
+#linking and including Steamworks SDK
+target_include_directories(PyxisEngine PUBLIC Steam)
+target_link_directories(PyxisEngine PUBLIC Steam)
+target_link_libraries(PyxisEngine PUBLIC steam_api)
+if(WIN32)
+    target_link_directories(PyxisEngine PUBLIC Steam/win64)
+    target_link_libraries(PyxisEngine PUBLIC steam_api64)
+endif()
+
+
+# GameNetworkingSockets static library requires both static and GameNetworkingSockets::GameNetworkingSockets targets
+target_link_libraries(PyxisEngine 
+    PUBLIC 
+    box2d::box2d
+    #GameNetworkingSockets::static
+    #GameNetworkingSockets::GameNetworkingSockets
+    glad::glad
     glfw
-    glad
-    imgui
-    glm
-    spdlog
-    box2d
-    poly2tri
+    glm::glm
+    imgui::imgui
+    poly2tri::poly2tri
+    Snappy::snappy
+    spdlog::spdlog
+    tinyxml2::tinyxml2
 )
+
 
 # Set the include directory to current directory.
 target_include_directories(PyxisEngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
@@ -57,7 +89,7 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Core/Log.h
     Pyxis/Core/MathLog.h
     Pyxis/Core/OrthographicCameraController.h
-    Pyxis/Core/Panel.h
+    "Pyxis/Core/Panel.h"
     Pyxis/Core/PerspectiveCameraController.h
     Pyxis/Core/ProfilingPanel.h
     Pyxis/Core/Timestep.h
@@ -73,8 +105,8 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/FastNoiseLite/FastNoiseLite.h
 
     #Game
-    Pyxis/Game/Entity.cpp
-    Pyxis/Game/Entity.h
+    "Pyxis/Game/Node.cpp"
+    "Pyxis/Game/Node.h"
     Pyxis/Game/Scene.cpp
     Pyxis/Game/Scene.h
 
@@ -84,14 +116,10 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/ImGui/ImGuiLayer.h
 
     ## Network
-    Pyxis/Network/Network.cpp
-    Pyxis/Network/Network.h
+    
+    
     Pyxis/Network/NetworkClient.cpp
     Pyxis/Network/NetworkClient.h
-    Pyxis/Network/NetworkCommon.cpp
-    Pyxis/Network/NetworkCommon.h
-    Pyxis/Network/NetworkConnection.cpp
-    Pyxis/Network/NetworkConnection.h
     Pyxis/Network/NetworkMessage.h
     Pyxis/Network/NetworkServer.cpp
     Pyxis/Network/NetworkServer.h
@@ -123,5 +151,5 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/Texture.h
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
-    
-)
+
+      "Pyxis/Game/UI.h" "Pyxis/Game/UI.cpp")

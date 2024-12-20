@@ -35,15 +35,15 @@ namespace Pyxis
 
 		void OnEvent(Event& e);
 
-		void PushLayer(Layer* layer);
-		void PushOverlay(Layer* layer);
+		void PushLayer(Ref<Layer> layer);
+		void PushOverlay(Ref<Layer> layer);
 
-		void PopLayerQueue(Layer* layer);
-		void PopLayer(Layer* layer);
+		void PopLayerQueue(Ref<Layer> layer);
+		void PopLayer(Ref<Layer> layer);
 
 		inline Window& GetWindow() { return *m_Window; }
 
-		inline ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
+		inline Ref<ImGuiLayer> GetImGuiLayer() { return m_ImGuiLayer; }
 
 		inline static Application& Get() { return *s_Instance; }
 	private:
@@ -52,12 +52,12 @@ namespace Pyxis
 
 	private:
 		std::unique_ptr<Window> m_Window;
-		ImGuiLayer* m_ImGuiLayer;
+		Ref<ImGuiLayer> m_ImGuiLayer = nullptr;
 		bool m_Running = true;
 		bool m_Minimized = false;
 		LayerStack m_LayerStack;
-		std::queue<Layer*> m_LayersToAdd;
-		std::queue<Layer*> m_LayersToRemove;
+		std::queue<Ref<Layer>> m_LayersToAdd;
+		std::queue<Ref<Layer>> m_LayersToRemove;
 		float m_LastFrameTime = 0.0f;
 	private:
 		static Application* s_Instance;
