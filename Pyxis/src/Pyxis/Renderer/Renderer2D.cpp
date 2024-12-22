@@ -18,10 +18,19 @@ namespace Pyxis
 		float TilingFactor;
 	};
 
+	struct TextVertex
+	{
+		glm::vec3 Position;
+		glm::vec4 Color;
+		glm::vec2 TexCoord;
+		float TexIndex;
+	};
+
 	struct LineVertex
 	{
 		//holds useless information, but that info will be used for the same shader as quads use
 		//so it still needs it
+		//TODO: Rework lines to use diff shader?
 		glm::vec3 Position;
 		glm::vec4 Color;
 		glm::vec2 TexCoord;
@@ -29,19 +38,22 @@ namespace Pyxis
 		float TilingFactor;
 	};
 
+	
+
 
 	struct RendererData2D
 	{
-		//idk why ref of texture2d is better here, i guess for
-		//if a texture comes from something not a texture2D?
 		static const uint32_t MaxTextureSlots = 32;
-		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
-		uint32_t TextureSlotsIndex = 1;
-		Ref<Shader> TextureShader;
 		Ref<Texture2D> WhiteTexture;
 
 
 		//QUADS
+
+		std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
+		uint32_t TextureSlotsIndex = 1;
+		Ref<Shader> TextureShader;
+
+
 		static const uint32_t MaxQuads = 40000;
 		static const uint32_t MaxVertices = MaxQuads * 4;
 		static const uint32_t MaxIndices = MaxQuads * 6;
@@ -50,13 +62,45 @@ namespace Pyxis
 		QuadVertex* QuadVertexBufferBase = nullptr;
 		QuadVertex* QuadVertexBufferPtr = nullptr;
 		glm::vec4 QuadVertexPositions[4] = {
-			{-0.5f, -0.5f, 0, 1},
-			{ 0.5f, -0.5f, 0, 1},
-			{ 0.5f,  0.5f, 0, 1},
-			{-0.5f,  0.5f, 0, 1}
+			{-0.5f, -0.5f, 0, 1},//bl
+			{ 0.5f, -0.5f, 0, 1},//br
+			{ 0.5f,  0.5f, 0, 1},//tr
+			{-0.5f,  0.5f, 0, 1} //tl
+			
 		};
 		Ref<VertexArray> QuadVertexArray;
 		Ref<VertexBuffer> QuadVertexBuffer;
+
+		//BITMAPS
+
+		std::array<Ref<Texture2D>, MaxTextureSlots> BitMapTextureSlots;
+		uint32_t BitMapTextureSlotsIndex = 0;
+		Ref<Shader> BitMapShader;
+
+		static const uint32_t MaxBitmapQuads = 40000;
+		static const uint32_t MaxBitmapQuadsVertices = MaxBitmapQuads * 4;
+		static const uint32_t MaxBitmapQuadsIndices = MaxBitmapQuads * 6;
+
+		Ref<VertexArray> BitMapVertexArray;
+		Ref<VertexBuffer> BitMapVertexBuffer;
+		Ref<IndexBuffer> BitMapIndexBuffer;
+		glm::vec4 BitMapVertexPositions[4] = {
+			{ 0, 0, 0, 1},//bl
+			{ 1, 0, 0, 1},//br
+			{ 1, 1, 0, 1},//tr
+			{ 0, 1, 0, 1} //tl
+		};
+		glm::vec2 BitMapVertexTexCoords[4] = {
+			{0,1},//bl
+			{1,1},//br
+			{1,0},//tr
+			{0,0}//tl
+		};
+
+		uint32_t BitMapIndexCount = 0;
+		TextVertex* BitMapVertexBufferBase = nullptr;
+		TextVertex* BitMapVertexBufferPtr = nullptr;
+
 		
 		//LINES
 		Ref<VertexArray> LineVertexArray;
@@ -78,7 +122,10 @@ namespace Pyxis
 	{
 		//initialize the renderer2d primitive things
 		//s_Data = new RendererData2D();
-
+		
+		////////////////////
+		/// QUADS
+		////////////////////
 
 		s_Data.QuadVertexArray = VertexArray::Create();
 		//m_OrthographicCameraController = Pyxis::OrthographicCameraController(5, 9 / 16, -100, 100);
@@ -126,7 +173,53 @@ namespace Pyxis
 		s_Data.QuadVertexArray->SetIndexBuffer(QuadIndexBuffer);
 		delete[] QuadIndices;
 
-		//line init
+		////////////////////
+		/// TEXT
+		////////////////////
+
+		
+		s_Data.BitMapShader = Shader::Create("assets/shaders/Text.glsl");
+		s_Data.BitMapShader->Bind();
+		s_Data.BitMapShader->SetIntArray("u_BitMapTextures", samplers, s_Data.MaxTextureSlots);
+
+		s_Data.BitMapVertexArray = VertexArray::Create();
+		s_Data.BitMapVertexBuffer = VertexBuffer::Create(s_Data.MaxBitmapQuadsVertices * sizeof(TextVertex));
+
+		BufferLayout TextBufferLayout = {
+			{ShaderDataType::Float3, "a_Position"},
+			{ShaderDataType::Float4, "a_Color"},
+			{ShaderDataType::Float2, "a_TexCoord"},
+			{ShaderDataType::Float, "a_TexID"},
+		};
+		s_Data.BitMapVertexBuffer->SetLayout(TextBufferLayout);
+		s_Data.BitMapVertexArray->AddVertexBuffer(s_Data.BitMapVertexBuffer);
+		s_Data.BitMapVertexBufferBase = new TextVertex[s_Data.MaxBitmapQuadsVertices];
+
+
+		//set indices
+		uint32_t* BitMapIndices = new uint32_t[s_Data.MaxBitmapQuadsIndices];
+		uint32_t BitMapOffset = 0;
+		for (uint32_t i = 0; i < s_Data.MaxIndices; i += 6)
+		{
+			BitMapIndices[i + 0] = BitMapOffset + 0;
+			BitMapIndices[i + 1] = BitMapOffset + 1;
+			BitMapIndices[i + 2] = BitMapOffset + 2;
+
+			BitMapIndices[i + 3] = BitMapOffset + 2;
+			BitMapIndices[i + 4] = BitMapOffset + 3;
+			BitMapIndices[i + 5] = BitMapOffset + 0;
+
+			BitMapOffset += 4;
+		}
+
+		s_Data.BitMapIndexBuffer = IndexBuffer::Create(BitMapIndices, s_Data.MaxBitmapQuadsIndices);
+		s_Data.BitMapVertexArray->SetIndexBuffer(s_Data.BitMapIndexBuffer);
+		delete[] BitMapIndices;
+
+
+		////////////////////
+		/// LINES
+		////////////////////
 		s_Data.LineVertexArray = VertexArray::Create();
 		s_Data.LineVertexBuffer = VertexBuffer::Create(2 * sizeof(LineVertex));
 
@@ -164,6 +257,12 @@ namespace Pyxis
 
 	void Renderer2D::BeginScene(const Ref<Pyxis::OrthographicCamera> camera)
 	{	
+		s_Data.BitMapShader->Bind();
+		s_Data.BitMapShader->SetMat4("u_ViewProjection", camera->GetViewProjectionMatrix());
+
+		s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
+		s_Data.BitMapIndexCount = 0;
+
 		s_Data.TextureShader->Bind();
 		s_Data.TextureShader->SetMat4("u_ViewProjection", camera->GetViewProjectionMatrix());
 
@@ -180,6 +279,10 @@ namespace Pyxis
 
 	void Renderer2D::Flush()
 	{
+		////////////////////////////
+		/// Flush normal quads first
+		////////////////////////////
+		s_Data.TextureShader->Bind();
 		//send data to buffer
 		uint32_t size = (uint8_t*)s_Data.QuadVertexBufferPtr - (uint8_t*)s_Data.QuadVertexBufferBase;
 		s_Data.QuadVertexBuffer->SetData(s_Data.QuadVertexBufferBase, size);
@@ -188,14 +291,32 @@ namespace Pyxis
 		{
 			s_Data.TextureSlots[i]->Bind(i);
 		}
-
 		//draw
 		RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
-
 		s_Data.QuadVertexBufferPtr = s_Data.QuadVertexBufferBase;
 		s_Data.QuadIndexCount = 0;
-
 		s_Data.TextureSlotsIndex = 1;
+
+		///////////////////////
+		/// Flush Text Quads
+		///////////////////////
+
+		s_Data.BitMapShader->Bind();
+		//send data to buffer
+		uint32_t BitMapBufferSize = (uint8_t*)s_Data.BitMapVertexBufferPtr - (uint8_t*)s_Data.BitMapVertexBufferBase;
+		s_Data.BitMapVertexBuffer->SetData(s_Data.BitMapVertexBufferBase, BitMapBufferSize);
+
+		for (uint32_t i = 0; i < s_Data.BitMapTextureSlotsIndex; i++)
+		{
+			s_Data.BitMapTextureSlots[i]->Bind(i);
+		}
+		//draw
+		RenderCommand::DrawIndexed(s_Data.BitMapVertexArray, s_Data.BitMapIndexCount);
+		s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
+		s_Data.BitMapIndexCount = 0;
+		s_Data.BitMapTextureSlotsIndex = 0;
+
+
 #if STATISTICS
 		s_Data.Stats.DrawCalls++;
 #endif
@@ -274,7 +395,7 @@ namespace Pyxis
 				TexIndex = (float)i;
 				break;
 			}
-	}
+		}
 		if (TexIndex == 0.0f)
 		{
 			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
@@ -674,6 +795,143 @@ namespace Pyxis
 #if STATISTICS
 		s_Data.Stats.QuadCount++;
 #endif
+	}
+
+	/// <summary>
+	/// Draws just like a quad, but uses a bitmap (only red channel).
+	/// Has a separate storage buffer and attempts to render after for transparency
+	/// </summary>
+	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, const glm::vec4& tintColor)
+	{
+		//check if we hit text limit
+		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapQuadsIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (uint32_t i = 1; i < s_Data.BitMapTextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.BitMapTextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+		}
+		if (TexIndex == 0.0f)
+		{
+			if (s_Data.BitMapTextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
+			TexIndex = (float)s_Data.BitMapTextureSlotsIndex;
+			s_Data.BitMapTextureSlots[s_Data.BitMapTextureSlotsIndex] = texture;
+			s_Data.BitMapTextureSlotsIndex = s_Data.BitMapTextureSlotsIndex + 1;
+		}
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.BitMapVertexBufferPtr->Position = transform * s_Data.BitMapVertexPositions[i];
+			s_Data.BitMapVertexBufferPtr->Color = tintColor;
+			s_Data.BitMapVertexBufferPtr->TexCoord = s_Data.BitMapVertexTexCoords[i];
+			s_Data.BitMapVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.BitMapVertexBufferPtr++;
+		}
+		s_Data.BitMapIndexCount += 6;
+
+	}
+
+	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, const glm::vec4& tintColor)
+	{
+		//check if we hit text limit
+		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapQuadsIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2* textureCoords = subTexture->GetTexCoords();
+		const Ref<Texture2D> texture = subTexture->GetTexture();
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (uint32_t i = 1; i < s_Data.BitMapTextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.BitMapTextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+		}
+		if (TexIndex == 0.0f)
+		{
+			if (s_Data.BitMapTextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
+			TexIndex = (float)s_Data.BitMapTextureSlotsIndex;
+			s_Data.BitMapTextureSlots[s_Data.BitMapTextureSlotsIndex] = texture;
+			s_Data.BitMapTextureSlotsIndex = s_Data.BitMapTextureSlotsIndex + 1;
+		}
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.BitMapVertexBufferPtr->Position = transform * s_Data.BitMapVertexPositions[i];
+			s_Data.BitMapVertexBufferPtr->Color = tintColor;
+			s_Data.BitMapVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.BitMapVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.BitMapVertexBufferPtr++;
+		}
+		s_Data.BitMapIndexCount += 6;
+
+	}
+
+	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, const glm::vec4& color)
+	{
+
+		float size = fontSize / 1000.0f;
+		float newLineShift = lineHeight * size;
+		// iterate through all characters
+		glm::vec2 pos = {0,0};
+		std::string::const_iterator c;
+		for (c = text.begin(); c != text.end(); c++)
+		{
+			
+			Font::Character ch = font->m_Characters[*c];
+
+			if (*c == '\n')
+			{
+				//(new line)
+				pos.x = 0;
+				pos.y -= font->m_CharacterHeight * newLineShift;
+				continue;
+			}
+			if (*c == ' ')
+			{
+				pos.x += (ch.Advance >> 6) * size * 2;
+				continue;
+			}
+
+			//create a transform for the character
+			float xpos = pos.x + ch.Bearing.x * size;
+			float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * size;
+
+			glm::mat4 charTransform = glm::translate(glm::mat4(1), { xpos, ypos, 0 });
+			charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });
+			charTransform = transform * charTransform;
+
+			DrawBitMap(charTransform, ch.Texture, color);
+
+			// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+			pos.x += (ch.Advance >> 6) * size; // bitshift by 6 to get value in pixels (2^6 = 64)
+		}
 	}
 
 	void Renderer2D::ResetStats()

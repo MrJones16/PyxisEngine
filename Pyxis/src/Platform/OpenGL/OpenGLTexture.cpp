@@ -72,6 +72,61 @@ namespace Pyxis
 
 	}
 
+	OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t rows, unsigned char* buffer)
+	{
+
+
+		m_Width = width;
+		m_Height = rows;
+
+		m_InternalFormat = GL_RED;
+		m_DataFormat = GL_RED;
+
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+		glGenTextures(1, &m_RendererID);
+		glBindTexture(GL_TEXTURE_2D, m_RendererID);
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			m_InternalFormat,
+			m_Width,
+			m_Height,
+			0,
+			m_DataFormat,
+			GL_UNSIGNED_BYTE,
+			buffer
+		);
+		// set texture options
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
+		
+		//m_Width = width;
+		//m_Height = rows;
+
+		//
+		//m_InternalFormat = GL_RED;
+		//m_DataFormat = GL_RED;
+
+		//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+		////create texture in glfw / glad
+		//glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
+		////make room on gpu?
+		//glTextureStorage2D(m_RendererID, 1, GL_RED, m_Width, m_Height);
+
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		//glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		//glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+		//glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, m_DataFormat, GL_UNSIGNED_BYTE, buffer);
+	}
+
 	OpenGLTexture2D::~OpenGLTexture2D()
 	{
 		glDeleteTextures(1, &m_RendererID);

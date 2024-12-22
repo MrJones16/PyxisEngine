@@ -33,6 +33,11 @@ namespace Pyxis
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
+	void OpenGLRendererAPI::DrawArray(const Ref<VertexArray>& VertexArray)
+	{
+		glDrawArrays(GL_TRIANGLES, 0, 2);
+	}
+
 	void OpenGLRendererAPI::DrawLines(const Ref<VertexArray>& VertexArray, uint32_t VertexCount)
 	{
 		VertexArray->Bind();

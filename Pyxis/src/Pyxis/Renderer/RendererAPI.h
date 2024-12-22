@@ -21,6 +21,7 @@ namespace Pyxis
 		virtual void Clear() = 0;
 
 		virtual void DrawIndexed(const Ref<VertexArray>& VertexArray, uint32_t indexCount = 0) = 0;
+		virtual void DrawArray(const Ref<VertexArray>& VertexArray) = 0;
 		virtual void DrawLines(const Ref<VertexArray>& VertexArray, uint32_t VertexCount) = 0;
 
 		inline static API GetAPI() { return s_API; }

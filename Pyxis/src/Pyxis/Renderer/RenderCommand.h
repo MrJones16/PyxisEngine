@@ -35,6 +35,12 @@ namespace Pyxis
 			s_RendererAPI->DrawIndexed(vertexArray, indexCount);
 		}
 
+		inline static void DrawArray(const Ref<VertexArray>& vertexArray)
+		{
+			vertexArray->Bind();
+			s_RendererAPI->DrawArray(vertexArray);
+		}
+
 		inline static void DrawLines(const Ref<VertexArray>& vertexArray, uint32_t vertexCount)
 		{
 			vertexArray->Bind();

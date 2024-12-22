@@ -7,7 +7,7 @@
 #include <chrono>
 #include <variant>
 
-#include "Pyxis/Game/UI.h"
+#include "Pyxis/Renderer/UI.h"
 
 namespace Pyxis
 {
@@ -40,9 +40,14 @@ namespace Pyxis
 		m_Panels.push_back(sceneHeirarchyPanel);
 		m_Panels.push_back(CreateRef<InspectorPanel>(sceneHeirarchyPanel));
 
-		Ref<UINode> UI = CreateRef<UINode>();
+		Ref<UI::UINode> UI = CreateRef<UI::UINode>();
 		m_Scene->AddNode(UI);
-		UI->AddChild(CreateRef<UIRect>(glm::vec4(1)));
+		//UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
+
+		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
+		FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");
+
+		UI->AddChild(CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite")));
 
 
 		FrameBufferSpecification fbspec;
@@ -144,7 +149,6 @@ namespace Pyxis
 	void GameLayer::ClientImGuiRender(ImGuiID dockID)
 	{
 		
-	
 		//ImGui::ShowDemoWindow();
 		m_Hovering = ImGui::IsWindowHovered();
 

@@ -61,6 +61,7 @@ namespace Pyxis
 
 		GameUpdate(ts);
 
+
 		m_Scene->Render();
 
 		Renderer2D::EndScene();

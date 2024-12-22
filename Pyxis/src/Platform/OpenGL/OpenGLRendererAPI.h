@@ -13,6 +13,7 @@ namespace Pyxis
 		virtual void Clear() override;
 
 		virtual void DrawIndexed(const Ref<VertexArray>& VertexArray, uint32_t indexCount = 0) override;
+		virtual void DrawArray(const Ref<VertexArray>& VertexArray) override;
 		virtual void DrawLines(const Ref<VertexArray>& VertexArray, uint32_t VertexCount) override;
 
 	};

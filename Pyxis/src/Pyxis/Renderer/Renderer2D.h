@@ -3,6 +3,7 @@
 #include "Camera.h"
 #include "Texture.h"
 #include "SubTexture2D.h"
+#include "Pyxis/Renderer/Font.h"
 
 namespace Pyxis
 {
@@ -40,6 +41,12 @@ namespace Pyxis
 		static void DrawRotatedQuad(const glm::vec2 position, const glm::vec2& size, float rotation, const Ref<SubTexture2D>& subTexture, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 		static void DrawRotatedQuad(const glm::vec3 position, const glm::vec2& size, float rotation, const Ref<SubTexture2D>& subTexture, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 
+		static void DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, const glm::vec4& tintColor = { 1,1,1,1 });
+		static void DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, const glm::vec4& tintColor = { 1,1,1,1 });
+
+		static void DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize = 20.0f, float lineHeight = 1.3f, const glm::vec4& color = {1,1,1,1});
+
+		
 		//Stats
 		struct Statistics
 		{

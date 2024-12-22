@@ -24,13 +24,30 @@ namespace Pyxis
 		void AddChild(const Ref<Node>& child);
 		void RemoveChild(const Ref<Node>& child);
 		
-
-		glm::mat4 GetTransform();
+		/// <summary>
+		/// Gets this transform 
+		/// </summary>
+		/// <returns></returns>
+		glm::mat4 GetWorldTransform();
 		glm::mat4 m_LocalTransform = glm::mat4(1);
+		void Translate(glm::vec3 translation);
+		void Rotate(glm::vec3 rotation);
+		void Scale(glm::vec3 scale);
+
 		std::string m_Name = "Node";
 		Node* m_Parent = nullptr;
 		std::vector<Ref<Node>> m_Children;
+
 	private:
+
+		/// <summary>
+		/// Uses the private local position rotation and scale to set the local transform
+		/// </summary>
+		void UpdateLocalTransform();
+		glm::vec3 m_Position = glm::vec3(0);
+		glm::vec3 m_Rotation = glm::vec3(0);
+		glm::vec3 m_Scale = glm::vec3(1);
+
 		const uint32_t m_ID = ++NodeCounter;
 	};
 

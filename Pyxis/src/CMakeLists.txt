@@ -16,6 +16,7 @@ find_package(Snappy CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 find_package(stb REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
+find_package(freetype CONFIG REQUIRED)
 
 #target_compile_definitions(PyxisEngine PUBLIC STEAMNETWORKINGSOCKETS_STATIC_LINK)
 #linking and including Steamworks SDK
@@ -42,6 +43,7 @@ target_link_libraries(PyxisEngine
     Snappy::snappy
     spdlog::spdlog
     tinyxml2::tinyxml2
+    Freetype::Freetype
 )
 
 
@@ -152,4 +154,4 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
 
-      "Pyxis/Game/UI.h" "Pyxis/Game/UI.cpp")
+      "Pyxis/Renderer/UI.h"  "Pyxis/Renderer/UINode.h" "Pyxis/Renderer/UIRect.h" "Pyxis/Renderer/UIText.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp")

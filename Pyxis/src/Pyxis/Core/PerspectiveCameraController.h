@@ -37,7 +37,7 @@ namespace Pyxis
 		void OnUpdate(Timestep ts)
 		{
 			//camera turning
-			auto& [mouseX, mouseY] = Input::GetMousePosition();
+			auto [mouseX, mouseY] = Input::GetMousePosition();
 
 			float xDiff = mouseX - lastMousePos.x;
 			float yDiff = mouseY - lastMousePos.y;

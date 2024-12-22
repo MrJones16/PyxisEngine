@@ -28,6 +28,7 @@ namespace Pyxis
 	public:
 		static Ref<Texture2D> Create(const std::string& path);
 		static Ref<Texture2D> Create(uint32_t width, uint32_t height);
+		static Ref<Texture2D> CreateGlyph(uint32_t width, uint32_t height, unsigned char* buffer);
 	private:
 
 	};

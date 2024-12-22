@@ -142,6 +142,8 @@ namespace Pyxis
 
 		}
 
+		m_Scene->Render();
+
 		Renderer2D::EndScene();
 
 		m_SceneFrameBuffer->Unbind();
