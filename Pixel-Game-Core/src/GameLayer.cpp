@@ -16,7 +16,7 @@ namespace Pyxis
 		: Layer(debugName),
 		m_OrthographicCameraController(2, 1 / 1, -100, 100)//, m_CurrentTickClosure()
 	{
-		
+
 	}
 
 	GameLayer::~GameLayer()
@@ -105,25 +105,27 @@ namespace Pyxis
 				auto [x, y] = GetMousePositionScene();
 				int max_width = Application::Get().GetWindow().GetWidth();
 				int max_height = Application::Get().GetWindow().GetHeight();
-				if (x > max_width || x < 0 || y > max_height || y < 0) return;
-				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
-				if (m_BuildingRigidBody)
+				if (!(x > max_width || x < 0 || y > max_height || y < 0))
 				{
-					if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
-					if (pixelPos.x > m_RigidMax.x) m_RigidMax.x = pixelPos.x;
-					if (pixelPos.y < m_RigidMin.y) m_RigidMin.y = pixelPos.y;
-					if (pixelPos.y > m_RigidMax.y) m_RigidMax.y = pixelPos.y;
-				}
-				else
-				{
-					m_CurrentTickClosure.AddInputAction(
-						InputAction::Input_Place,
-						(uint8_t)m_BrushSize,
-						(uint16_t)m_BrushType,
-						(uint32_t)m_SelectedElementIndex,
-						pixelPos,
-						false);
+					auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+					glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+					if (m_BuildingRigidBody)
+					{
+						if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
+						if (pixelPos.x > m_RigidMax.x) m_RigidMax.x = pixelPos.x;
+						if (pixelPos.y < m_RigidMin.y) m_RigidMin.y = pixelPos.y;
+						if (pixelPos.y > m_RigidMax.y) m_RigidMax.y = pixelPos.y;
+					}
+					else
+					{
+						m_CurrentTickClosure.AddInputAction(
+							InputAction::Input_Place,
+							(uint8_t)m_BrushSize,
+							(uint16_t)m_BrushType,
+							(uint32_t)m_SelectedElementIndex,
+							pixelPos,
+							false);
+					}
 				}
 			}
 		}
@@ -148,7 +150,6 @@ namespace Pyxis
 
 	void GameLayer::ClientImGuiRender(ImGuiID dockID)
 	{
-		
 		//ImGui::ShowDemoWindow();
 		m_Hovering = ImGui::IsWindowHovered();
 

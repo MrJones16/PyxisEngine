@@ -74,12 +74,12 @@ namespace Pyxis
 		//BITMAPS
 
 		std::array<Ref<Texture2D>, MaxTextureSlots> BitMapTextureSlots;
-		uint32_t BitMapTextureSlotsIndex = 0;
+		uint32_t BitMapSlotsIndex = 0;
 		Ref<Shader> BitMapShader;
 
 		static const uint32_t MaxBitmapQuads = 40000;
 		static const uint32_t MaxBitmapQuadsVertices = MaxBitmapQuads * 4;
-		static const uint32_t MaxBitmapQuadsIndices = MaxBitmapQuads * 6;
+		static const uint32_t MaxBitmapIndices = MaxBitmapQuads * 6;
 
 		Ref<VertexArray> BitMapVertexArray;
 		Ref<VertexBuffer> BitMapVertexBuffer;
@@ -197,7 +197,7 @@ namespace Pyxis
 
 
 		//set indices
-		uint32_t* BitMapIndices = new uint32_t[s_Data.MaxBitmapQuadsIndices];
+		uint32_t* BitMapIndices = new uint32_t[s_Data.MaxBitmapIndices];
 		uint32_t BitMapOffset = 0;
 		for (uint32_t i = 0; i < s_Data.MaxIndices; i += 6)
 		{
@@ -212,7 +212,7 @@ namespace Pyxis
 			BitMapOffset += 4;
 		}
 
-		s_Data.BitMapIndexBuffer = IndexBuffer::Create(BitMapIndices, s_Data.MaxBitmapQuadsIndices);
+		s_Data.BitMapIndexBuffer = IndexBuffer::Create(BitMapIndices, s_Data.MaxBitmapIndices);
 		s_Data.BitMapVertexArray->SetIndexBuffer(s_Data.BitMapIndexBuffer);
 		delete[] BitMapIndices;
 
@@ -292,13 +292,14 @@ namespace Pyxis
 			s_Data.TextureSlots[i]->Bind(i);
 		}
 		//draw
-		RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
+		if (s_Data.QuadIndexCount > 0)
+			RenderCommand::DrawIndexed(s_Data.QuadVertexArray, s_Data.QuadIndexCount);
 		s_Data.QuadVertexBufferPtr = s_Data.QuadVertexBufferBase;
 		s_Data.QuadIndexCount = 0;
 		s_Data.TextureSlotsIndex = 1;
 
 		///////////////////////
-		/// Flush Text Quads
+		/// Flush BitMap Quads
 		///////////////////////
 
 		s_Data.BitMapShader->Bind();
@@ -306,15 +307,16 @@ namespace Pyxis
 		uint32_t BitMapBufferSize = (uint8_t*)s_Data.BitMapVertexBufferPtr - (uint8_t*)s_Data.BitMapVertexBufferBase;
 		s_Data.BitMapVertexBuffer->SetData(s_Data.BitMapVertexBufferBase, BitMapBufferSize);
 
-		for (uint32_t i = 0; i < s_Data.BitMapTextureSlotsIndex; i++)
+		for (uint32_t i = 0; i < s_Data.BitMapSlotsIndex; i++)
 		{
 			s_Data.BitMapTextureSlots[i]->Bind(i);
 		}
 		//draw
-		RenderCommand::DrawIndexed(s_Data.BitMapVertexArray, s_Data.BitMapIndexCount);
+		if (s_Data.BitMapIndexCount > 0)
+			RenderCommand::DrawIndexed(s_Data.BitMapVertexArray, s_Data.BitMapIndexCount);
 		s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
 		s_Data.BitMapIndexCount = 0;
-		s_Data.BitMapTextureSlotsIndex = 0;
+		s_Data.BitMapSlotsIndex = 0;
 
 
 #if STATISTICS
@@ -485,7 +487,7 @@ namespace Pyxis
 	void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor)
 	{
 		//check if we need to flush
-		if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
 		{
 			Flush();
 		}
@@ -804,16 +806,14 @@ namespace Pyxis
 	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, const glm::vec4& tintColor)
 	{
 		//check if we hit text limit
-		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapQuadsIndices)
+		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapIndices)
 		{
 			Flush();
 		}
 
-		//texture coords
-
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (uint32_t i = 1; i < s_Data.BitMapTextureSlotsIndex; i++)
+		for (uint32_t i = 0; i < s_Data.BitMapSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.BitMapTextureSlots[i].get() == *texture.get())
@@ -824,13 +824,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
-			if (s_Data.BitMapTextureSlotsIndex == s_Data.MaxTextureSlots)
+			if (s_Data.BitMapSlotsIndex == s_Data.MaxTextureSlots)
 			{
 				Flush();
 			}
-			TexIndex = (float)s_Data.BitMapTextureSlotsIndex;
-			s_Data.BitMapTextureSlots[s_Data.BitMapTextureSlotsIndex] = texture;
-			s_Data.BitMapTextureSlotsIndex = s_Data.BitMapTextureSlotsIndex + 1;
+			TexIndex = (float)s_Data.BitMapSlotsIndex;
+			s_Data.BitMapTextureSlots[s_Data.BitMapSlotsIndex] = texture;
+			s_Data.BitMapSlotsIndex = s_Data.BitMapSlotsIndex + 1;
 		}
 
 		constexpr size_t quadVertexCount = 4;
@@ -849,7 +849,7 @@ namespace Pyxis
 	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, const glm::vec4& tintColor)
 	{
 		//check if we hit text limit
-		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapQuadsIndices)
+		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapIndices)
 		{
 			Flush();
 		}
@@ -860,7 +860,7 @@ namespace Pyxis
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
-		for (uint32_t i = 1; i < s_Data.BitMapTextureSlotsIndex; i++)
+		for (uint32_t i = 0; i < s_Data.BitMapSlotsIndex; i++)
 		{
 			//check if we are already in there
 			if (*s_Data.BitMapTextureSlots[i].get() == *texture.get())
@@ -871,13 +871,13 @@ namespace Pyxis
 		}
 		if (TexIndex == 0.0f)
 		{
-			if (s_Data.BitMapTextureSlotsIndex == s_Data.MaxTextureSlots)
+			if (s_Data.BitMapSlotsIndex == s_Data.MaxTextureSlots)
 			{
 				Flush();
 			}
-			TexIndex = (float)s_Data.BitMapTextureSlotsIndex;
-			s_Data.BitMapTextureSlots[s_Data.BitMapTextureSlotsIndex] = texture;
-			s_Data.BitMapTextureSlotsIndex = s_Data.BitMapTextureSlotsIndex + 1;
+			TexIndex = (float)s_Data.BitMapSlotsIndex;
+			s_Data.BitMapTextureSlots[s_Data.BitMapSlotsIndex] = texture;
+			s_Data.BitMapSlotsIndex = s_Data.BitMapSlotsIndex + 1;
 		}
 
 		constexpr size_t quadVertexCount = 4;

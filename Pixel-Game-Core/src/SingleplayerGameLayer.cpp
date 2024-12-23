@@ -21,6 +21,7 @@ namespace Pyxis
 	void SingleplayerGameLayer::OnUpdate(Timestep ts)
 	{
 		PROFILE_SCOPE("GameLayer::OnUpdate");
+
 		m_OrthographicCameraController.OnUpdate(ts);
 		m_Scene->Update(ts);
 
