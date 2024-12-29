@@ -99,8 +99,8 @@ namespace Pyxis
 
 					Network::Message mousePosMsg;
 					mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Server_ClientDataMousePosition);
-					auto [x, y] = GetMousePositionScene();
-					glm::vec2 vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+					glm::ivec2 mousePos = GetMousePositionImGui();
+					glm::vec2 vec = m_OrthographicCameraController.MousePercentToWorldPos(mousePos.x, mousePos.y);
 					m_ClientData.m_CursorWorldPosition = vec;
 					//invalid for the server
 					HSteamNetConnection serverConn = k_HSteamNetConnection_Invalid;

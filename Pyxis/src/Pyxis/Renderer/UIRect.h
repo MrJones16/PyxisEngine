@@ -47,21 +47,25 @@ namespace Pyxis
 
 			virtual void OnRender() override
 			{
-				UINode::OnRender();
-				if (m_Texture != nullptr)
+				if (m_Enabled)
 				{
-					//we have a texture, so display it!
-					glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Texture->GetWidth(), m_Texture->GetHeight(), 1 });
+					UINode::OnRender();
+					if (m_Texture != nullptr)
+					{
+						//we have a texture, so display it!
+						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Texture->GetWidth(), m_Texture->GetHeight(), 1 });
 
-					//TODO: Test ordering
-					Renderer2D::DrawQuad(GetWorldTransform() * sizeMat, m_Texture);
+						//TODO: Test ordering
+						Renderer2D::DrawQuad(GetWorldTransform() * sizeMat, m_Texture);
+					}
+					else
+					{
+						//just draw the color as the square
+						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
+						Renderer2D::DrawQuad(GetWorldTransform() * sizeMat, m_Color);
+					}
 				}
-				else
-				{
-					//just draw the color as the square
-					glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-					Renderer2D::DrawQuad(GetWorldTransform() * sizeMat, m_Color);
-				}
+				
 			}
 		};
 

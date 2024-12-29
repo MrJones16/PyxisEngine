@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <chrono>
+#include <functional>
 
 #ifdef PX_PLATFORM_WINDOWS
 	#if PX_DYNAMIC_LINK
@@ -109,5 +110,27 @@ namespace Pyxis
 #define PROFILE_SCOPE(name)
 #endif
 
+	/*template<typename T>
+	class Callback
+	{
+	public:
+
+		std::function<T> m_CallBackFunction = nullptr;
+		Callback()
+		{
+
+		}
+
+		Callback(void* func)
+		{
+			m_CallBackFunction = func;
+		}
+
+		void operator () ()
+		{
+			m_CallBackFunction();
+		}
+
+	};*/
 
 }

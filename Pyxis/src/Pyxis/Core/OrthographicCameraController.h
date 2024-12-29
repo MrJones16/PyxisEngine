@@ -74,20 +74,19 @@ namespace Pyxis
 			m_Camera->SetPosition(m_Camera->GetPosition() + direction * m_CameraSpeed * ts.GetSeconds());
 		}
 
-		glm::vec4 MouseToWorldPos(float x, float y)
+		glm::vec4 MousePercentToWorldPos(float x, float y)
 		{
 			Window& window = Application::Get().GetWindow();
-			x = ((x / (float)window.GetWidth()) * 2) - 1;
-			y = ((y / (float)window.GetHeight()) * 2) - 1;
+			//from 0->1 to -1 -> 1
+			x = (x - 0.5f) * 2.0f;
+			y = (y - 0.5f) * 2.0f;
 
 			x *= m_Camera->GetWidth() / 2;
 			y *= m_Camera->GetHeight() / 2;
-			//PX_CORE_TRACE("screen mouse pos: ({0}, {1})", x, y);
 
 			glm::vec4 vec = glm::vec4(x, -y, 0, 1);
 			vec = glm::translate(glm::mat4(1), m_Camera->GetPosition()) * vec;
 			return vec;
-			//vec is world pos
 		}
 
 

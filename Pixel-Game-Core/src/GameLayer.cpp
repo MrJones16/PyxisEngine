@@ -1,6 +1,5 @@
 ﻿#include "GameLayer.h"
 
-#include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 
 #include <Platform/OpenGL/OpenGLShader.h>
@@ -42,19 +41,24 @@ namespace Pyxis
 
 		Ref<UI::UINode> UI = CreateRef<UI::UINode>();
 		m_Scene->AddNode(UI);
-		//UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
+		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
 
 		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
-		FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");
+		//FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");
 
 		UI->AddChild(CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite")));
 
 
 		FrameBufferSpecification fbspec;
+		fbspec.Attachments = 
+		{   
+			{FrameBufferTextureFormat::RGBA8, FrameBufferTextureType::Color},
+			{FrameBufferTextureFormat::R32UI, FrameBufferTextureType::Color},
+			{FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}
+		};
 		fbspec.Width = m_ViewportSize.x;
 		fbspec.Height = m_ViewportSize.y;
 		m_SceneFrameBuffer = FrameBuffer::Create(fbspec);
-
 	}
 
 	void GameLayer::OnDetach()
@@ -75,12 +79,10 @@ namespace Pyxis
 	/// <param name="ts"></param>
 	void GameLayer::GameUpdate(Timestep ts)
 	{
+
 		{
 			PROFILE_SCOPE("Game Update");
-			auto [x, y] = GetMousePositionScene();
-			auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-
-			glm::ivec2 mousePixelPos = m_World->WorldToPixel(vec);
+			glm::ivec2 mousePixelPos = m_World->WorldToPixel(GetMousePosWorld());
 
 			auto chunkPos = m_World->PixelToChunk(mousePixelPos);
 			auto it = m_World->m_Chunks.find(chunkPos);
@@ -102,12 +104,12 @@ namespace Pyxis
 
 			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
 			{
-				auto [x, y] = GetMousePositionScene();
-				int max_width = Application::Get().GetWindow().GetWidth();
-				int max_height = Application::Get().GetWindow().GetHeight();
-				if (!(x > max_width || x < 0 || y > max_height || y < 0))
+				glm::ivec2 mousePos = GetMousePositionImGui();
+				
+				if (!(mousePos.x > m_ViewportSize.x || mousePos.x < 0 || mousePos.y > m_ViewportSize.y || mousePos.y < 0))
 				{
-					auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+					glm::vec2 mousePercent = (glm::vec2)mousePos / m_ViewportSize;
+					auto vec = m_OrthographicCameraController.MousePercentToWorldPos(mousePercent.x, mousePercent.y);
 					glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
 					if (m_BuildingRigidBody)
 					{
@@ -150,7 +152,6 @@ namespace Pyxis
 
 	void GameLayer::ClientImGuiRender(ImGuiID dockID)
 	{
-		//ImGui::ShowDemoWindow();
 		m_Hovering = ImGui::IsWindowHovered();
 
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
@@ -158,32 +159,40 @@ namespace Pyxis
 		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
 		{
 			m_SceneViewIsFocused = ImGui::IsWindowFocused();
+
+			auto viewportOffset = ImGui::GetCursorScreenPos();
+			auto newViewportSize = ImGui::GetContentRegionAvail();
+
+			m_ViewportBounds[0] = { viewportOffset.x, viewportOffset.y };
+			m_ViewportBounds[1] = { viewportOffset.x + newViewportSize.x, viewportOffset.y + newViewportSize.y };
+
+			//PX_CORE_WARN("Min Bounds: ({0},{1})", m_ViewportBounds[0].x, m_ViewportBounds[0].y);
+			//PX_CORE_WARN("Max Bounds: ({0},{1})", m_ViewportBounds[1].x, m_ViewportBounds[1].y);
+
 			Application::Get().GetImGuiLayer()->BlockEvents(false);
-			auto sceneViewSize = ImGui::GetContentRegionAvail();
 			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
 			ImGui::Image(
-				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID()),
-				sceneViewSize,
+				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID(0)),
+				newViewportSize,
 				ImVec2(0, 1),
 				ImVec2(1, 0),
 				ImVec4(1, 1, 1, 1)
 				//ImVec4(1, 1, 1, 1) border color
 			);
 			m_ViewportOffset = ImGui::GetItemRectMin();
-					
 		
-			if (m_ViewportSize.x != sceneViewSize.x || m_ViewportSize.y != sceneViewSize.y)
+			if (m_ViewportSize.x != newViewportSize.x || m_ViewportSize.y != newViewportSize.y)
 			{
-				m_OrthographicCameraController.SetAspect(sceneViewSize.y / sceneViewSize.x);
-				m_SceneFrameBuffer->Resize((uint32_t)sceneViewSize.x, (uint32_t)sceneViewSize.y);
-				m_ViewportSize = { sceneViewSize.x, sceneViewSize.y };
+				m_ViewportSize = { newViewportSize.x, newViewportSize.y };
+				m_OrthographicCameraController.SetAspect(m_ViewportSize.y / m_ViewportSize.x);
+				m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
 			}
 		
 			ImGui::End();
 		}
 		ImGui::PopStyleVar();
 
-		if (ImGui::Begin("Settings"))
+		if (ImGui::Begin("Game"))
 		{
 			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Simulation"))
@@ -282,9 +291,7 @@ namespace Pyxis
 			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Hovered Element Properties"))
 			{
-				auto [x, y] = GetMousePositionScene();
-				auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-				glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+				glm::ivec2 pixelPos = m_World->WorldToPixel(GetMousePosWorld());
 				ImGui::Text(("(" + std::to_string(pixelPos.x) + ", " + std::to_string(pixelPos.y) + ")").c_str());
 				ElementData& elementData = m_World->m_ElementData[m_HoveredElement.m_ID];
 				ImGui::Text("Element: %s", elementData.name.c_str());
@@ -820,22 +827,23 @@ namespace Pyxis
 		return true;
 	}
 
-	std::pair<float, float> GameLayer::GetMousePositionScene()
+	glm::ivec2 GameLayer::GetMousePositionImGui()
 	{
 		///if not using a framebuffer / imgui image, just use Pyxis::Input::GetMousePosition();
-		
-		float x = ImGui::GetMousePos().x;
-		float y = ImGui::GetMousePos().y;
-		x -= m_ViewportOffset.x;
-		y -= m_ViewportOffset.y;
-		
-		//PX_TRACE("mouse position in scene: ({0},{1})", x, y);
-		
-		x = (x / m_ViewportSize.x) * Application::Get().GetWindow().GetWidth();
-		y = (y / m_ViewportSize.y) * Application::Get().GetWindow().GetHeight();
+		//TODO: Set up ifdef for using imgui? or just stop using imgui... lol
+		auto [mx, my] = ImGui::GetMousePos();
 
+		mx -= m_ViewportBounds[0].x;
+		my -= m_ViewportBounds[0].y;
 
-		return std::pair<float, float>(x, y);
+		return { (int)mx, (int)my };
+	}
+
+	glm::vec2 GameLayer::GetMousePosWorld()
+	{
+		glm::ivec2 mousePos = GetMousePositionImGui();
+		glm::vec2 mousePercent = (glm::vec2)mousePos / m_ViewportSize;
+		return m_OrthographicCameraController.MousePercentToWorldPos(mousePercent.x, mousePercent.y);
 	}
 
 	bool GameLayer::OnWindowResizeEvent(WindowResizeEvent& event) {
@@ -926,10 +934,7 @@ namespace Pyxis
 
 	void GameLayer::PaintBrushHologram()
 	{
-
-		auto [x, y] = GetMousePositionScene();
-		auto vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
-		glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
+		glm::ivec2 pixelPos = m_World->WorldToPixel(GetMousePosWorld());
 
 		glm::ivec2 newPos = pixelPos;
 		for (int x = -m_BrushSize; x <= m_BrushSize; x++)

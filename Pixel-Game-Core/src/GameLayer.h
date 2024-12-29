@@ -50,7 +50,8 @@ namespace Pyxis
 		bool CreateWorld();
 		void PaintBrushHologram();
 		void TextCentered(std::string text);
-		std::pair<float, float> GetMousePositionScene();
+		glm::ivec2 GetMousePositionImGui();
+		glm::vec2 GetMousePosWorld();
 
 	public:
 
@@ -80,7 +81,7 @@ namespace Pyxis
 
 	protected:
 
-		
+		glm::vec2 m_ViewportBounds[2];
 
 		//map of other clients data based on their ID's
 		std::unordered_map<HSteamNetConnection, ClientData> m_ClientDataMap;

@@ -14,7 +14,7 @@ namespace Pyxis
 		public:
 
 			std::string m_Text = "Text";
-			glm::vec4 m_Color = glm::vec4(1);
+			glm::vec4 m_Color = glm::vec4(0,0,0,1);
 			float m_MaxWidth = 10;
 			float m_FontSize = 20;
 			Ref<Font> m_Font;
@@ -47,11 +47,13 @@ namespace Pyxis
 
 			virtual void OnRender() override
 			{
-				///render children
-				UINode::OnRender();
+				if (m_Enabled)
+				{
+					///render children
+					UINode::OnRender();
 
-				Renderer2D::DrawText(m_Text, GetWorldTransform(), m_Font, m_FontSize, 1.3f, m_Color);
-				
+					Renderer2D::DrawText(m_Text, GetWorldTransform(), m_Font, m_FontSize, 1.3f, m_MaxWidth, m_Color);
+				}
 			}
 		};
 

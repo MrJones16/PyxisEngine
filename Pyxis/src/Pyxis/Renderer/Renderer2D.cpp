@@ -5,6 +5,7 @@
 #include "VertexArray.h"
 #include "Shader.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <sstream>
 
 namespace Pyxis
 {
@@ -893,45 +894,80 @@ namespace Pyxis
 
 	}
 
-	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, const glm::vec4& color)
-	{
 
+	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, const glm::vec4& color)
+	{
 		float size = fontSize / 1000.0f;
-		float newLineShift = lineHeight * size;
+		float newLineShift = lineHeight * size * font->m_CharacterHeight;
 		// iterate through all characters
 		glm::vec2 pos = {0,0};
 		std::string::const_iterator c;
-		for (c = text.begin(); c != text.end(); c++)
-		{
-			
-			Font::Character ch = font->m_Characters[*c];
 
-			if (*c == '\n')
+		std::vector<std::string> words;
+		size_t index = text.find(' ');
+		size_t initialPos = 0;
+		while (index != std::string::npos) {
+			//create the word substring
+			words.push_back(text.substr(initialPos, index - initialPos));
+			initialPos = index + 1;
+			index = text.find(' ', initialPos);
+		}
+		// Add the last one
+		int len = std::min(index, text.size()) - initialPos + 1;
+		if (len > 0)
+			words.push_back(text.substr(initialPos, len));
+		
+		for (std::string& word : words)
+		{
+
+			//PX_TRACE("Word: {0}", word);
+
+			if (word == "")
 			{
+				pos.x += (font->m_Characters[' '].Advance >> 6) * size * 2;
+				continue;
+			}
+
+			float wordLength = 0;
+			for (auto c : word)
+			{
+				wordLength += (font->m_Characters[c].Advance >> 6) * size;
+			}
+			if ((wordLength + pos.x) > maxWidth * size * (font->m_Characters[' '].Advance >> 6))
+			{
+				//this word makes it go past the max length. we need to do a new line before this word
 				//(new line)
 				pos.x = 0;
-				pos.y -= font->m_CharacterHeight * newLineShift;
-				continue;
+				pos.y -= newLineShift;
 			}
-			if (*c == ' ')
+			for (c = word.begin(); c != word.end(); c++)
 			{
-				pos.x += (ch.Advance >> 6) * size * 2;
-				continue;
+				if (*c == '\n')
+				{
+					//(new line)
+					pos.x = 0;
+					pos.y -= newLineShift;
+					continue;
+				}
+
+				Font::Character ch = font->m_Characters[*c];
+				//create a transform for the character
+				float xpos = pos.x + ch.Bearing.x * size;
+				float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * size;
+
+				glm::mat4 charTransform = glm::translate(glm::mat4(1), { xpos, ypos, 0 });
+				charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });
+				charTransform = transform * charTransform;
+
+				DrawBitMap(charTransform, ch.Texture, color);
+
+				// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+				pos.x += (ch.Advance >> 6) * size; // bitshift by 6 to get value in pixels (2^6 = 64)
 			}
-
-			//create a transform for the character
-			float xpos = pos.x + ch.Bearing.x * size;
-			float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * size;
-
-			glm::mat4 charTransform = glm::translate(glm::mat4(1), { xpos, ypos, 0 });
-			charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });
-			charTransform = transform * charTransform;
-
-			DrawBitMap(charTransform, ch.Texture, color);
-
-			// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
-			pos.x += (ch.Advance >> 6) * size; // bitshift by 6 to get value in pixels (2^6 = 64)
+			//put the space for a space
+			pos.x += (font->m_Characters[' '].Advance >> 6) * size * 2;
 		}
+		
 	}
 
 	void Renderer2D::ResetStats()

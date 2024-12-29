@@ -35,6 +35,8 @@ namespace Pyxis
 			m_SceneFrameBuffer->Bind();
 			RenderCommand::SetClearColor({ 198 / 255.0f, 239 / 255.0f, 249 / 255.0f, 1 });
 			RenderCommand::Clear();
+			uint32_t clear = 0;
+			m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
 			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
 		}
 
@@ -66,6 +68,18 @@ namespace Pyxis
 		m_Scene->Render();
 
 		Renderer2D::EndScene();
+
+		auto mp = GetMousePositionImGui();
+		//flip the y so bottom left is 0,0
+		mp.y = m_ViewportSize.y - mp.y;
+
+		if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
+		{
+			//we are in bounds, so lets read the pixel
+			//PX_TRACE("Mouse Pos: {0}, {1}", mp.x, mp.y);
+			uint32_t pixel; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &pixel);
+			PX_TRACE("Pixel: {0}", pixel);
+		}
 
 		m_SceneFrameBuffer->Unbind();
 	}

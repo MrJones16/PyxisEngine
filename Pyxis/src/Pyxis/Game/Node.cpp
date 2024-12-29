@@ -18,6 +18,7 @@ namespace Pyxis
 
 	void Node::OnUpdate(Timestep ts)
 	{
+		if (m_Enabled)
 		for (Ref<Node> node : m_Children)
 		{
 			node->OnUpdate(ts);
@@ -26,6 +27,7 @@ namespace Pyxis
 
 	void Node::OnRender()
 	{
+		if (m_Enabled)
 		for (Ref<Node> node : m_Children)
 		{
 			node->OnRender();

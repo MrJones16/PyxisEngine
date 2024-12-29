@@ -38,6 +38,8 @@ namespace Pyxis
 		Node* m_Parent = nullptr;
 		std::vector<Ref<Node>> m_Children;
 
+		bool m_Enabled = true;
+
 	private:
 
 		/// <summary>

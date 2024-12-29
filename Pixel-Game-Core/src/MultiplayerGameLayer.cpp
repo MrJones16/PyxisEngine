@@ -87,8 +87,8 @@ namespace Pyxis
 
 				Network::Message mousePosMsg;
 				mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Client_ClientDataMousePosition);
-				auto [x, y] = GetMousePositionScene();
-				glm::vec2 vec = m_OrthographicCameraController.MouseToWorldPos(x, y);
+				glm::ivec2 mousePos = GetMousePositionImGui();
+				glm::vec2 vec = m_OrthographicCameraController.MousePercentToWorldPos(mousePos.x, mousePos.y);
 				m_ClientData.m_CursorWorldPosition = vec;
 				mousePosMsg << vec;
 				SendMessageToServer(mousePosMsg);
@@ -131,7 +131,6 @@ namespace Pyxis
 		if (m_MultiplayerState == MultiplayerState::Connected && m_ConnectionStatus == ConnectionStatus::Connected)
 		{
 			GameUpdate(ts);
-
 			for (auto& clientPair : m_ClientDataMap)
 			{
 				//draw the 3x3 square for each players cursor
