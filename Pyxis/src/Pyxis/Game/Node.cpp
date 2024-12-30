@@ -21,23 +21,23 @@ namespace Pyxis
 		Nodes.erase(m_ID);
 	}
 
-	void Node::OnUpdate(Timestep ts)
+	/*void Node::OnUpdate(Timestep ts)
 	{
 		if (m_Enabled)
 		for (Ref<Node> node : m_Children)
 		{
 			node->OnUpdate(ts);
 		}
-	}
+	}*/
 
-	void Node::OnRender()
+	/*void Node::OnRender()
 	{
 		if (m_Enabled)
 		for (Ref<Node> node : m_Children)
 		{
 			node->OnRender();
 		}
-	}
+	}*/
 
 	void Node::AddChild(const Ref<Node>& child)
 	{

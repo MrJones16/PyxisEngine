@@ -37,7 +37,7 @@ namespace Pyxis
 			virtual void InspectorRender() override
 			{
 				UINode::InspectorRender();
-				if (ImGui::TreeNodeEx("Rect"))
+				if (ImGui::TreeNodeEx("Rect", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					//Size
 					ImGui::DragFloat2("Size", glm::value_ptr(m_Size));
@@ -52,12 +52,10 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					PX_TRACE("Im Drawing! my id is: {0}", GetID());
-					UINode::OnRender();
 					if (m_Texture != nullptr)
-					{
+					{	
 						//we have a texture, so display it!
-						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Texture->GetWidth(), m_Texture->GetHeight(), 1 });
+						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
 						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());

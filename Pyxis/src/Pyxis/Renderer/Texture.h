@@ -5,6 +5,9 @@
 
 namespace Pyxis
 {
+
+	//TODO: Enable custom setting of filtering & texture properties
+
 	class Texture
 	{
 	public:

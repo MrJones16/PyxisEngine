@@ -23,6 +23,8 @@ namespace Pyxis
 
 		Ref<OrthographicCamera> m_ActiveCamera;
 		std::unordered_map<uint32_t, Ref<Node>> m_Nodes;
+
+		uint32_t m_HoveredNodeID;
 	private:
 		//std::vector<Ref<Node>> m_Nodes;
 	};

@@ -28,22 +28,35 @@ namespace Pyxis
 
 		PX_TRACE("Attached game layer");
 
+		
+		///////////////////////////////
+		/// Init members & Renderer2D
+		///////////////////////////////
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
 		Renderer2D::Init();
 		m_Scene = CreateRef<Scene>();
 		m_Scene->m_ActiveCamera = m_OrthographicCameraController.GetCamera();
 
-		//Create panels to add
+		///////////////////////////////
+		/// Panels (kinda debugging)
+		///////////////////////////////
 		m_Panels.push_back(CreateRef<ProfilingPanel>());
 		Ref<SceneHierarchyPanel> sceneHeirarchyPanel = CreateRef<SceneHierarchyPanel>(m_Scene);
 		m_Panels.push_back(sceneHeirarchyPanel);
 		m_Panels.push_back(CreateRef<InspectorPanel>(sceneHeirarchyPanel));
 
+		///////////////////////////////
+		/// Debug / Testing
+		///////////////////////////////
 		Ref<UI::UINode> UI = CreateRef<UI::UINode>();
 		m_Scene->AddNode(UI);
-		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
-		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
-		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
+		auto rect = CreateRef<UI::UIRect>(glm::vec4(1));
+		rect->m_Texture = Texture2D::Create("assets/textures/Test.png");
+		UI->AddChild(rect);
+
+		Ref<UI::UIButton> button = CreateRef<UI::UIButton>();
+		button->Translate({ 0, 1, 1 });
+		UI->AddChild(button);
 
 		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
 		//FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");
@@ -428,6 +441,7 @@ namespace Pyxis
 		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(GameLayer::OnWindowResizeEvent));
 		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
 		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
+		dispatcher.Dispatch<MouseButtonReleasedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonReleasedEvent));
 		dispatcher.Dispatch<MouseScrolledEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseScrolledEvent));
 	}
 
@@ -899,17 +913,53 @@ namespace Pyxis
 
 	bool GameLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
 	{
+		//let the UI keep track of what has been pressed, so that way buttons can be on release!
+		UI::UINode::s_MousePressedNodeID = m_Scene->m_HoveredNodeID;
+
+		//see if the node is valid, and if it is then send the event through.
+		if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
+		{
+			//the hovered node is valid
+			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
+			{
+				uinode->OnMousePressed(event.GetMouseButton());
+			}
+
+		}
+
 		//PX_TRACE(event.GetMouseButton());
 		if (event.GetMouseButton() == PX_MOUSE_BUTTON_FORWARD) // forward
 		{
 			m_BrushSize++;
+			if (m_BrushSize > 32) m_BrushSize = 32;
 		}
 		if (event.GetMouseButton() == PX_MOUSE_BUTTON_BACK) // back
 		{
 			m_BrushSize--;
-			if (m_BrushSize < 1) m_BrushSize == 1;
+			if (m_BrushSize < 0.0f) m_BrushSize = 0;
 		}
 
+
+		return false;
+	}
+
+	bool GameLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
+	{
+		if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
+		{
+			//the hovered node is valid
+			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
+			{
+				uinode->OnMouseReleased(event.GetMouseButton());
+				if (UI::UINode::s_MousePressedNodeID == m_Scene->m_HoveredNodeID)
+					uinode->OnClick();
+			}
+			
+					
+
+		}
+
+		//do not end event here
 		return false;
 	}
 
@@ -918,7 +968,7 @@ namespace Pyxis
 		if (Input::IsKeyPressed(PX_KEY_LEFT_CONTROL))
 		{
 			m_BrushSize += event.GetYOffset();
-			if (m_BrushSize < 1) m_BrushSize = 1;
+			if (m_BrushSize < 0) m_BrushSize = 0;
 			if (m_BrushSize > 32) m_BrushSize = 32;
 		}
 		else if (Input::IsKeyPressed(PX_KEY_LEFT_ALT))
@@ -930,6 +980,8 @@ namespace Pyxis
 			m_OrthographicCameraController.Zoom(1 - (event.GetYOffset() / 10));
 		}
 		
+		//do not end event here
+		return false;
 		return false;
 	}
 
@@ -969,7 +1021,7 @@ namespace Pyxis
 				//draw square at that pixel
 				float pixelSize = 1.0f / (float)CHUNKSIZE;
 				//
-				Renderer2D::DrawQuad((glm::vec3(newPos.x, newPos.y, 0) / (float)CHUNKSIZE) + glm::vec3(pixelSize / 2, pixelSize / 2, 5), glm::vec2(pixelSize, pixelSize), vecColor);
+				Renderer2D::DrawQuad((glm::vec3(newPos.x, newPos.y, 0) / (float)CHUNKSIZE) + glm::vec3(pixelSize / 2, pixelSize / 2, 0.05f), glm::vec2(pixelSize, pixelSize), vecColor);
 				
 			}
 		}

@@ -1,4 +1,5 @@
 #include "SingleplayerGameLayer.h"
+#include <Pyxis/Renderer/UI.h>
 
 namespace Pyxis
 {
@@ -68,6 +69,15 @@ namespace Pyxis
 		m_Scene->Render();
 
 		Renderer2D::EndScene();
+
+		auto mp = GetMousePositionImGui();
+		//flip the y so bottom left is 0,0
+		mp.y = m_ViewportSize.y - mp.y;
+		if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
+		{
+			uint32_t nodeID; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
+			m_Scene->m_HoveredNodeID = nodeID;
+		}
 
 		//auto mp = GetMousePositionImGui();
 		////flip the y so bottom left is 0,0

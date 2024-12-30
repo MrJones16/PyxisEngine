@@ -49,9 +49,6 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					///render children
-					UINode::OnRender();
-
 					Renderer2D::DrawText(m_Text, GetWorldTransform(), m_Font, m_FontSize, 1.3f, m_MaxWidth, m_Color);
 				}
 			}

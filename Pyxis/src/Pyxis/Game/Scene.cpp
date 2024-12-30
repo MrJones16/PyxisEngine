@@ -32,17 +32,25 @@ namespace Pyxis
 
 	void Scene::Update(Timestep ts)
 	{
-		for (std::pair<uint32_t, Ref<Node>> NodePair : m_Nodes)
+		/*for (std::pair<uint32_t, Ref<Node>> NodePair : m_Nodes)
 		{
 			NodePair.second->OnUpdate(ts);
+		}*/
+		for (auto node : Node::Nodes)
+		{
+			node.second->OnUpdate(ts);
 		}
 	}
 
 	void Scene::Render()
 	{
-		for (std::pair<uint32_t, Ref<Node>> NodePair : m_Nodes)
+		/*for (std::pair<uint32_t, Ref<Node>> NodePair : m_Nodes)
 		{
 			NodePair.second->OnRender();
+		}*/
+		for (auto node : Node::Nodes)
+		{
+			node.second->OnRender();
 		}
 	}
 }

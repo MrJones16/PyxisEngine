@@ -38,6 +38,7 @@ namespace Pyxis
 		bool OnWindowResizeEvent(WindowResizeEvent& event);
 		bool OnKeyPressedEvent(KeyPressedEvent& event);
 		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
+		bool OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event);
 		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
 
