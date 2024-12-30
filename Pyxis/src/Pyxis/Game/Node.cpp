@@ -13,7 +13,12 @@ namespace Pyxis
 	Node::Node(const std::string& name)
 		: m_ID(++NodeCounter)
 	{
+		Node::Nodes[m_ID] = this;
+	}
 
+	Node::~Node()
+	{
+		Nodes.erase(m_ID);
 	}
 
 	void Node::OnUpdate(Timestep ts)

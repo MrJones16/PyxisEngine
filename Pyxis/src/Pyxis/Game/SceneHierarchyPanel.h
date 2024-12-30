@@ -14,6 +14,11 @@ namespace Pyxis
 		}
 		~SceneHierarchyPanel() = default;
 
+		inline void SetSelectedNode(Ref<Node> node)
+		{
+			m_SelectedNode = node;
+		}
+
 		inline virtual void OnImGuiRender() override
 		{
 			if (ImGui::Begin("Scene Hierarchy"))
@@ -37,7 +42,7 @@ namespace Pyxis
 			return nullptr;*/
 		}
 
-		inline void DrawNodeNode(const Ref<Node>& Node)
+		inline void DrawNodeNode(Ref<Node> Node)
 		{
 			ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ((Node == m_SelectedNode) ? ImGuiTreeNodeFlags_Selected : 0);
 			

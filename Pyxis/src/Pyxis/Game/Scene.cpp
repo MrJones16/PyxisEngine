@@ -17,6 +17,7 @@ namespace Pyxis
 		//m_Nodes.push_back(Node);
 		//m_Prototypes.insert()
 	}
+
 	void Scene::RemoveNode(const Ref<Node>& Node)
 	{
 		for (auto it = m_Nodes.begin(); it != m_Nodes.end(); it++)
@@ -28,6 +29,7 @@ namespace Pyxis
 			}
 		}
 	}
+
 	void Scene::Update(Timestep ts)
 	{
 		for (std::pair<uint32_t, Ref<Node>> NodePair : m_Nodes)
@@ -35,6 +37,7 @@ namespace Pyxis
 			NodePair.second->OnUpdate(ts);
 		}
 	}
+
 	void Scene::Render()
 	{
 		for (std::pair<uint32_t, Ref<Node>> NodePair : m_Nodes)

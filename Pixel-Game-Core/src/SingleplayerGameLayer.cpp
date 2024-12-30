@@ -69,17 +69,35 @@ namespace Pyxis
 
 		Renderer2D::EndScene();
 
-		auto mp = GetMousePositionImGui();
-		//flip the y so bottom left is 0,0
-		mp.y = m_ViewportSize.y - mp.y;
-
-		if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
-		{
-			//we are in bounds, so lets read the pixel
-			//PX_TRACE("Mouse Pos: {0}, {1}", mp.x, mp.y);
-			uint32_t pixel; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &pixel);
-			PX_TRACE("Pixel: {0}", pixel);
-		}
+		//auto mp = GetMousePositionImGui();
+		////flip the y so bottom left is 0,0
+		//mp.y = m_ViewportSize.y - mp.y;
+		//if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
+		//{
+		//	//we are in bounds, so lets read the pixel
+		//	//PX_TRACE("Mouse Pos: {0}, {1}", mp.x, mp.y);
+		//	uint32_t pixel; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &pixel);
+		//	PX_TRACE("ID of Hovered Entity: {0}", pixel);
+		//	if (Pyxis::Input::IsMouseButtonPressed(PX_MOUSE_BUTTON_LEFT))
+		//	{
+		//		if (SceneHierarchyPanel* panel = dynamic_cast<SceneHierarchyPanel*>(m_Panels[1].get()))
+		//		{
+		//			// do Child specific stuff
+		//			if (pixel == 0)
+		//			{
+		//				PX_TRACE("Set selected node to null");
+		//				panel->SetSelectedNode(nullptr);
+		//			}
+		//			else
+		//			{
+		//				PX_TRACE("Set selected node to object! {0}", pixel);
+		//				PX_TRACE("It's id is: {0}", Node::Nodes[pixel]->GetID());
+		//				panel->SetSelectedNode(Node::Nodes[pixel]->shared_from_this());
+		//			}
+		//			
+		//		}
+		//	}
+		//}
 
 		m_SceneFrameBuffer->Unbind();
 	}

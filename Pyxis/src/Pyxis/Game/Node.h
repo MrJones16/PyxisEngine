@@ -8,12 +8,15 @@
 
 namespace Pyxis
 {
-	class Node
+	class Node : public std::enable_shared_from_this<Node>
 	{
 	public:
-		inline static uint32_t NodeCounter;
+		inline static uint32_t NodeCounter = 1;
+
+		inline static std::unordered_map<uint32_t, Node*> Nodes;
 		
 		Node(const std::string& name = "Node");
+		virtual ~Node();
 
 		virtual void OnUpdate(Timestep ts);
 		virtual void OnRender();

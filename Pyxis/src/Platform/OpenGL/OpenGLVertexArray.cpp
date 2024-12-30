@@ -21,6 +21,7 @@ namespace Pyxis
 		case Pyxis::ShaderDataType::Int2:     return GL_INT;
 		case Pyxis::ShaderDataType::Int3:     return GL_INT;
 		case Pyxis::ShaderDataType::Int4:     return GL_INT;
+		case Pyxis::ShaderDataType::Uint:     return GL_UNSIGNED_INT;
 		}
 
 		PX_CORE_ASSERT(false, "Unknown ShaderDataType!");
@@ -58,14 +59,49 @@ namespace Pyxis
 		const auto& layout = vertexBuffer->GetLayout();
 		for (const auto& element : layout)
 		{
-			glEnableVertexAttribArray(index);
-			glVertexAttribPointer(index,
-				element.GetComponentCount(),
-				ShaderDataTypeToOpenGLBaseType(element.Type),
-				element.Normalized ? GL_TRUE : GL_FALSE,
-				layout.GetStride(),
-				(const void*)element.Offset);
-			index++;
+			switch (element.Type)
+			{
+				case ShaderDataType::Float:
+				case ShaderDataType::Float2:
+				case ShaderDataType::Float3:
+				case ShaderDataType::Float4:
+				case ShaderDataType::Mat2:
+				case ShaderDataType::Mat3:
+				case ShaderDataType::Mat4:
+				{
+					glEnableVertexAttribArray(index);
+					glVertexAttribPointer(index,
+						element.GetComponentCount(),
+						ShaderDataTypeToOpenGLBaseType(element.Type),
+						element.Normalized ? GL_TRUE : GL_FALSE,
+						layout.GetStride(),
+						(const void*)element.Offset); 
+					index++;
+					break;
+				}
+				case ShaderDataType::Bool:
+				case ShaderDataType::Int:
+				case ShaderDataType::Int2:
+				case ShaderDataType::Int3:
+				case ShaderDataType::Int4:
+				case ShaderDataType::Uint:
+				{
+					glEnableVertexAttribArray(index);
+					glVertexAttribIPointer(index,
+						element.GetComponentCount(),
+						ShaderDataTypeToOpenGLBaseType(element.Type),
+						layout.GetStride(),
+						(const void*)element.Offset);
+					index++;
+					break;
+				}
+				case ShaderDataType::None:
+				default:
+				{
+					break;
+				}
+			}
+			
 		}
 		m_VertexBuffers.push_back(vertexBuffer);
 	}

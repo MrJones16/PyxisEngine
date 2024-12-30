@@ -21,10 +21,10 @@ namespace Pyxis
 		{
 			if (ImGui::Begin("Inspector"))
 			{
-				Ref<Node> Node = m_Hierarchy->GetSelectedNode();
-				if (Node != nullptr)
+				Ref<Node> node = m_Hierarchy->GetSelectedNode();
+				if (node != nullptr)
 				{
-					Node->InspectorRender();
+					node->InspectorRender();
 				}
 			}
 			ImGui::End();

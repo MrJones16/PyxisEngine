@@ -18,12 +18,15 @@ namespace Pyxis
 
 			UIRect(const std::string& name = "UIRect") : UINode(name) 
 			{
+
 			}
+
 			UIRect(Ref<Texture2D> texture, const std::string& name = "UIRect") : UINode(name),
 				m_Texture(texture), m_Color(1)
 			{
 
 			}
+
 			UIRect(const glm::vec4& color, const std::string& name = "UIRect") : UINode(name),
 				m_Texture(nullptr), m_Color(color)
 			{
@@ -49,6 +52,7 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
+					PX_TRACE("Im Drawing! my id is: {0}", GetID());
 					UINode::OnRender();
 					if (m_Texture != nullptr)
 					{
@@ -56,13 +60,13 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Texture->GetWidth(), m_Texture->GetHeight(), 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuad(GetWorldTransform() * sizeMat, m_Texture);
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());
 					}
 					else
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuad(GetWorldTransform() * sizeMat, m_Color);
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
 					}
 				}
 				

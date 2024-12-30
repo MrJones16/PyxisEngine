@@ -42,6 +42,8 @@ namespace Pyxis
 		Ref<UI::UINode> UI = CreateRef<UI::UINode>();
 		m_Scene->AddNode(UI);
 		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
+		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
+		UI->AddChild(CreateRef<UI::UIRect>(glm::vec4(1)));
 
 		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
 		//FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");

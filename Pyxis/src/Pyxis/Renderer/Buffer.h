@@ -4,7 +4,7 @@ namespace Pyxis
 {
 	enum class ShaderDataType : uint16_t
 	{
-		None = 0, Bool, Float, Float2, Float3, Float4, Mat2, Mat3, Mat4, Int, Int2, Int3, Int4
+		None = 0, Bool, Float, Float2, Float3, Float4, Mat2, Mat3, Mat4, Int, Int2, Int3, Int4, Uint
 	};
 
 	static uint32_t ShaderDataTypeSize(ShaderDataType type)
@@ -23,6 +23,7 @@ namespace Pyxis
 		case ShaderDataType::Int2:     return 4 * 2;
 		case ShaderDataType::Int3:     return 4 * 3;
 		case ShaderDataType::Int4:     return 4 * 4;
+		case ShaderDataType::Uint:     return 4;
 		}
 
 		PX_CORE_ASSERT(false, "Unknown ShaderDataType!");
@@ -61,6 +62,7 @@ namespace Pyxis
 				case ShaderDataType::Int2:    return 2;
 				case ShaderDataType::Int3:    return 3;
 				case ShaderDataType::Int4:    return 4;
+				case ShaderDataType::Uint:    return 1;
 			}
 
 			PX_CORE_ASSERT(false, "Unknown ShaderDataType!");

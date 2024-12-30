@@ -17,6 +17,7 @@ namespace Pyxis
 		glm::vec2 TexCoord;
 		float TexIndex;
 		float TilingFactor;
+		uint32_t NodeID;
 	};
 
 	struct TextVertex
@@ -148,6 +149,7 @@ namespace Pyxis
 			{ShaderDataType::Float2, "a_TexCoord"},
 			{ShaderDataType::Float, "a_TexID"},
 			{ShaderDataType::Float, "a_TilingFactor"},
+			{ShaderDataType::Uint, "a_NodeID"},
 		};
 		s_Data.QuadVertexBuffer->SetLayout(layout);
 		s_Data.QuadVertexArray->AddVertexBuffer(s_Data.QuadVertexBuffer);
@@ -344,7 +346,7 @@ namespace Pyxis
 	/// <summary>
 	/// Submit a transform and color to be drawn
 	/// </summary>
-	void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4& color, float tilingFactor)
+	void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4& color)
 	{
 		//check if we need to flush
 		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
@@ -365,7 +367,8 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->Color = color;
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
-			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->TilingFactor = 1;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -418,6 +421,7 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
 			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -471,6 +475,7 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
 			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -480,12 +485,12 @@ namespace Pyxis
 	}
 
 
-	void Renderer2D::DrawQuad(const glm::vec2 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor)
+	void Renderer2D::DrawQuad(const glm::vec2 position, const glm::vec2& size, const glm::vec4& color)
 	{
-		DrawQuad({ position.x, position.y, 0 }, size, color, tilingFactor);
+		DrawQuad({ position.x, position.y, 0 }, size, color);
 	}
 
-	void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2& size, const glm::vec4& color, float tilingFactor)
+	void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2& size, const glm::vec4& color)
 	{
 		//check if we need to flush
 		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
@@ -511,7 +516,8 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->Color = color;
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
-			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->TilingFactor = 1;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -572,6 +578,7 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
 			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -633,6 +640,7 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
 			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -641,12 +649,12 @@ namespace Pyxis
 #endif
 	}
 
-	void Renderer2D::DrawRotatedQuad(const glm::vec2 position, const glm::vec2& size, float rotation, const glm::vec4& color, float tilingFactor)
+	void Renderer2D::DrawRotatedQuad(const glm::vec2 position, const glm::vec2& size, float rotation, const glm::vec4& color)
 	{
-		DrawRotatedQuad({ position.x, position.y, 0 }, size, rotation, color, tilingFactor);
+		DrawRotatedQuad({ position.x, position.y, 0 }, size, rotation, color);
 	}
 
-	void Renderer2D::DrawRotatedQuad(const glm::vec3 position, const glm::vec2& size, float rotation, const glm::vec4& color, float tilingFactor)
+	void Renderer2D::DrawRotatedQuad(const glm::vec3 position, const glm::vec2& size, float rotation, const glm::vec4& color)
 	{
 		//check if we need to flush
 		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
@@ -672,7 +680,8 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->Color = color;
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
-			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->TilingFactor = 1;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -732,6 +741,7 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
 			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
@@ -792,6 +802,178 @@ namespace Pyxis
 			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
 			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = 0;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	void Renderer2D::DrawQuadEntity(const glm::vec3 position, const glm::vec2& size, const glm::vec4& color, uint32_t nodeID)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+
+		//texture
+		float TexIndex = 0.0f; // white texture
+
+		//position
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+		transform = glm::scale(transform, { size.x, size.y, 0 });
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			//heavy math so hurts on debug
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = color;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = 1;
+			s_Data.QuadVertexBufferPtr->NodeID = nodeID;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	void Renderer2D::DrawQuadEntity(const glm::vec3 position, const glm::vec2& size, const Ref<Texture2D>& texture, uint32_t nodeID, float tilingFactor, const glm::vec4& tintColor)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.TextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+		}
+		if (TexIndex == 0.0f)
+		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
+			TexIndex = (float)s_Data.TextureSlotsIndex;
+			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
+		}
+
+		//position
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+		transform = glm::scale(transform, { size.x, size.y, 0 });
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = tintColor;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = nodeID;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	void Renderer2D::DrawQuadEntity(glm::mat4 transform, const glm::vec4& color, uint32_t nodeID)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+
+		//texture
+		float TexIndex = 0.0f; // white texture
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = color;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = 1;
+			s_Data.QuadVertexBufferPtr->NodeID = nodeID;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	void Renderer2D::DrawQuadEntity(glm::mat4 transform, const Ref<Texture2D>& texture, uint32_t nodeID, float tilingFactor, const glm::vec4& tintColor)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.TextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+		}
+		if (TexIndex == 0.0f)
+		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
+			TexIndex = (float)s_Data.TextureSlotsIndex;
+			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
+		}
+		
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = tintColor;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = nodeID;
 			s_Data.QuadVertexBufferPtr++;
 		}
 		s_Data.QuadIndexCount += 6;
