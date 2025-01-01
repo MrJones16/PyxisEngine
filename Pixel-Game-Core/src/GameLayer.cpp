@@ -50,13 +50,26 @@ namespace Pyxis
 		///////////////////////////////
 		Ref<UI::UINode> UI = CreateRef<UI::UINode>();
 		m_Scene->AddNode(UI);
+
+		auto container = CreateRef<UI::UIContainer>();
+		UI->AddChild(container);
+
+		container->m_Size = { 10, 5 };
+
+		auto block1 = CreateRef<UI::UIRect>(glm::vec4(0.5, 0.5, 0.8, 1), "block1");
+		container->AddChild(block1);
+
+		auto block2 = CreateRef<UI::UIRect>(glm::vec4(1, 0.5, 0.8, 1), "block2");
+		container->AddChild(block2);
+
+
 		auto rect = CreateRef<UI::UIRect>(glm::vec4(1));
 		rect->m_Texture = Texture2D::Create("assets/textures/Test.png");
-		UI->AddChild(rect);
+		container->AddChild(rect);
 
 		Ref<UI::UIButton> button = CreateRef<UI::UIButton>();
 		button->Translate({ 0, 1, 1 });
-		UI->AddChild(button);
+		container->AddChild(button);
 
 		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
 		//FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");

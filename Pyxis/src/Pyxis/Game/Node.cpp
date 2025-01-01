@@ -110,13 +110,47 @@ namespace Pyxis
 		}
 	}
 
+	void Node::ResetLocalTransform()
+	{
+		m_Position = glm::vec3(0);
+		m_Scale = glm::vec3(1);
+		m_Rotation = glm::vec3(0);
+		m_LocalTransform = glm::mat4(1);
+	}
+
+	void Node::SetLocalTransform(const glm::mat4& transform)
+	{
+		glm::vec3 scale;
+		glm::quat rotation;
+		glm::vec3 translation;
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		glm::decompose(transform, m_Scale, rotation, m_Position, skew, perspective);
+
+		m_Rotation = -glm::degrees(glm::eulerAngles(rotation));
+
+		UpdateLocalTransform();
+	}
+
+	void Node::SetLocalTransformTest(const glm::mat4& transform)
+	{
+		m_LocalTransform = transform;
+	}
+
+	glm::mat4& Node::GetLocalTransform()
+	{
+		return m_LocalTransform;
+	}
+
 	void Node::Translate(glm::vec3 translation)
 	{
+		m_Position += translation;
 		m_LocalTransform = glm::translate(m_LocalTransform, translation);
 	}
 
 	void Node::Rotate(glm::vec3 rotation)
 	{
+		m_Rotation += rotation;
 		m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.x, { 1,0,0 });
 		m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.y, { 0,1,0 });
 		m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.z, { 0,0,1 });
@@ -124,6 +158,7 @@ namespace Pyxis
 
 	void Node::Scale(glm::vec3 scale)
 	{
+		m_Scale += scale;
 		m_LocalTransform = glm::scale(m_LocalTransform, scale);
 	}
 

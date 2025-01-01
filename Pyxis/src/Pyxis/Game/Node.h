@@ -32,7 +32,11 @@ namespace Pyxis
 		/// </summary>
 		/// <returns></returns>
 		glm::mat4 GetWorldTransform();
-		glm::mat4 m_LocalTransform = glm::mat4(1);
+
+		void ResetLocalTransform();
+		void SetLocalTransform(const glm::mat4& transform);
+		void SetLocalTransformTest(const glm::mat4& transform);
+		glm::mat4& GetLocalTransform();
 		void Translate(glm::vec3 translation);
 		void Rotate(glm::vec3 rotation);
 		void Scale(glm::vec3 scale);
@@ -43,12 +47,13 @@ namespace Pyxis
 
 		bool m_Enabled = true;
 
-	private:
+	protected:
 
 		/// <summary>
 		/// Uses the private local position rotation and scale to set the local transform
 		/// </summary>
 		void UpdateLocalTransform();
+		glm::mat4 m_LocalTransform = glm::mat4(1);
 		glm::vec3 m_Position = glm::vec3(0);
 		glm::vec3 m_Rotation = glm::vec3(0);
 		glm::vec3 m_Scale = glm::vec3(1);

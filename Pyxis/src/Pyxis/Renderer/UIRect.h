@@ -42,6 +42,8 @@ namespace Pyxis
 					//Size
 					ImGui::DragFloat2("Size", glm::value_ptr(m_Size));
 
+					ImGui::ColorEdit4("Color", glm::value_ptr(m_Color));
+
 					ImGui::TreePop();
 				}
 			}

@@ -12,13 +12,10 @@ namespace Pyxis
 		{
 		public:
 
-			/*Ref<Texture2D> m_Texture = nullptr;
-			glm::vec4 m_Color = glm::vec4(1);
-			glm::vec2 m_Size = glm::vec2(1);*/
 
 			//overriding default color so easier to see
-			glm::vec4 m_Color = glm::vec4(0.1f, 0.8f, 0.2f, 1);
-			glm::vec2 m_Size = glm::vec2(1, 0.5f);
+			/*glm::vec4 m_Color = glm::vec4(0.1f, 0.8f, 0.2f, 1);
+			glm::vec2 m_Size = glm::vec2(1, 0.5f);*/
 
 			UIButton(const std::string& name = "UIButton") : UIRect(name)
 			{
