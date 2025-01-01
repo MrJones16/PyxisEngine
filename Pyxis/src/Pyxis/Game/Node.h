@@ -24,8 +24,8 @@ namespace Pyxis
 
 		uint32_t GetID() { return m_ID; }
 
-		void AddChild(const Ref<Node>& child);
-		void RemoveChild(const Ref<Node>& child);
+		virtual void AddChild(const Ref<Node>& child);
+		virtual void RemoveChild(const Ref<Node>& child);
 		
 		/// <summary>
 		/// Gets this transform 

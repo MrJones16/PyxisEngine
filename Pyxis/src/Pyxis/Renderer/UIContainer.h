@@ -45,6 +45,18 @@ namespace Pyxis
 
 			virtual ~UIContainer() = default;
 
+			virtual void AddChild(const Ref<Node>& child) override
+			{
+				UIRect::AddChild(child);
+				RearrangeChildren();
+			}
+
+			virtual void RemoveChild(const Ref<Node>& child) override
+			{
+				UIRect::RemoveChild(child);
+				RearrangeChildren();
+			}
+
 			virtual void InspectorRender() override
 			{
 				UIRect::InspectorRender();
@@ -101,8 +113,6 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
 					}
-
-					RearrangeChildren();
 
 				}
 
