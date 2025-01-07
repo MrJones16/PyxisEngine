@@ -60,7 +60,7 @@ namespace Pyxis
 
 
 
-	template <typename T>
+	template <typename T> 
 	using Ref = std::shared_ptr<T>;
 
 	template<typename T, typename ... Args>

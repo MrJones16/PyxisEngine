@@ -60,7 +60,7 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID(), 1, m_Color);
 					}
 					else
 					{

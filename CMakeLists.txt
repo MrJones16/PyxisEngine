@@ -8,6 +8,7 @@ set(CMAKE_TOOLCHAIN_FILE "C:/Users/Peyton/Documents/GitHub/vcpkg/scripts/buildsy
 project("PyxisWorkspace")
 
     add_subdirectory("Pyxis")
+    #add_subdirectory("Pyxis-Game")
     add_subdirectory("Pixel-Game")
     add_subdirectory("Pixel-Game-Core")
     add_subdirectory("Pixel-Game-server")
@@ -19,6 +20,7 @@ project("PyxisWorkspace")
     
     #Specify that this is for windows
     target_compile_definitions(PyxisEngine PRIVATE PX_PLATFORM_WINDOWS)
+    #target_compile_definitions(Pyxis-Game PRIVATE PX_PLATFORM_WINDOWS)
     target_compile_definitions(Pixel-Game PRIVATE PX_PLATFORM_WINDOWS)
     target_compile_definitions(Pixel-Game-Core PRIVATE PX_PLATFORM_WINDOWS)
     target_compile_definitions(Pixel-Game-Server PRIVATE PX_PLATFORM_WINDOWS)

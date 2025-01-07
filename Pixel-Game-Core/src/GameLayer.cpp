@@ -51,11 +51,78 @@ namespace Pyxis
 		Ref<UI::UINode> UI = CreateRef<UI::UINode>();
 		m_Scene->AddNode(UI);
 
+		auto canvas = CreateRef<UI::UICanvas>();
+		Texture::TextureSpecification canvasSpec;
+		for (int i = 0; i < 9; i++)
+		{
+			Texture::TextureSpecification canvasSpec;
+			switch (i)
+			{
+			case 0:
+			case 2:
+			case 6:
+			case 8:
+			{
+				//corners
+				/*canvasSpec.m_TextureModeS = Texture::TextureMode::Stretch;
+				canvasSpec.m_TextureModeT = Texture::TextureMode::Stretch;*/
+				break;
+			}
+			case 1:
+			{
+				//top
+				canvasSpec.m_TextureModeS = Texture::TextureMode::Tile;
+				break;
+			}
+			case 3:
+			{
+				//left
+				canvasSpec.m_TextureModeT = Texture::TextureMode::Tile;
+				break;
+			}
+			case 5:
+			{
+				//right
+				canvasSpec.m_TextureModeT = Texture::TextureMode::Tile;
+				break;
+			}
+			case 7:
+			{
+				//bottom
+				canvasSpec.m_TextureModeS = Texture::TextureMode::Tile;
+				break;
+			}
+			case 4:
+			{
+				//center
+			}
+			}
+			canvas->m_CanvasTextures[i] = Texture2D::Create("assets/textures/GreenCanvas/CanvasGreen_" + std::to_string(i) + ".png", canvasSpec);
+		}
+		UI->AddChild(canvas);
+
 		auto container = CreateRef<UI::UIContainer>();
 		UI->AddChild(container);
 
 		container->m_Size = { 10, 5 };
 
+		auto TilingTest = CreateRef<UI::UIRect>(glm::vec4(161.0f / 255.0f, 191.0f / 255.0f, 168.0f / 255.0f, 1), "TilingTest");
+		Texture::TextureSpecification spec;
+		spec.m_TextureModeS = Texture::TextureMode::Tile;
+		spec.m_TextureModeT = Texture::TextureMode::Tile;
+		TilingTest->m_Texture = Texture2D::Create("assets/textures/Test-Tiling.png", spec);
+		container->AddChild(TilingTest);
+
+		auto GreenPyp = CreateRef<UI::UIRect>("BasePyp2");
+		GreenPyp->m_Texture = Texture2D::Create("assets/textures/BasePyp.png");
+		container->AddChild(GreenPyp);
+
+
+		auto BasePyp = CreateRef<UI::UIRect>(glm::vec4(161.0f / 255.0f, 191.0f/ 255.0f, 168.0f / 255.0f, 1), "BasePyp");
+		BasePyp->m_Texture = Texture2D::Create("assets/textures/BasePyp.png");
+		container->AddChild(BasePyp);
+
+		
 		auto block1 = CreateRef<UI::UIRect>(glm::vec4(0.5, 0.5, 0.8, 1), "block1");
 		container->AddChild(block1);
 
@@ -63,8 +130,8 @@ namespace Pyxis
 		container->AddChild(block2);
 
 
-		auto rect = CreateRef<UI::UIRect>(glm::vec4(1));
-		rect->m_Texture = Texture2D::Create("assets/textures/Test.png");
+		auto rect = CreateRef<UI::UIRect>("Logo Letter");
+		rect->m_Texture = Texture2D::Create("assets/textures/PyxisLogoLetter.png");
 		container->AddChild(rect);
 
 		Ref<UI::UIButton> button = CreateRef<UI::UIButton>();

@@ -5,6 +5,8 @@
 #include <GLFW/glfw3.h>
 #include "Pyxis/Renderer/Renderer.h"
 
+#include <Pyxis/Events/EventSignals.h>
+
 #include <GLFW/glfw3.h>//temp for time
 
 namespace Pyxis 
@@ -63,6 +65,45 @@ namespace Pyxis
 	{
 		//PX_CORE_INFO("Event {0}", e);
 		EventDispatcher dispatcher(e);
+		switch (e.GetEventType())
+		{
+		case Pyxis::EventType::None:
+			break;
+		case Pyxis::EventType::WindowClose:
+			break;
+		case Pyxis::EventType::WindowResize:
+			EventSignal::s_WindowResizeEventSignal(static_cast<WindowResizeEvent&>(e));
+			break;
+		case Pyxis::EventType::WindowFocus:
+			break;
+		case Pyxis::EventType::WindowLostFocus:
+			break;
+		case Pyxis::EventType::WindowMoved:
+			break;
+		case Pyxis::EventType::AppTick:
+			break;
+		case Pyxis::EventType::AppUpdate:
+			break;
+		case Pyxis::EventType::AppRender:
+			break;
+		case Pyxis::EventType::KeyPressed:
+			break;
+		case Pyxis::EventType::KeyReleased:
+			break;
+		case Pyxis::EventType::KeyTyped:
+			break;
+		case Pyxis::EventType::MouseButtonPressed:
+			break;
+		case Pyxis::EventType::MouseButtonReleased:
+			break;
+		case Pyxis::EventType::MouseMoved:
+			break;
+		case Pyxis::EventType::MouseScrolled:
+			break;
+		default:
+			break;
+		}
+		
 		dispatcher.Dispatch<WindowCloseEvent>(PX_BIND_EVENT_FN(Application::OnWindowClose));
 		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(Application::OnWindowResize));
 

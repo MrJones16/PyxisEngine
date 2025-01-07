@@ -102,7 +102,7 @@ namespace Pyxis
 					if (m_Texture != nullptr)
 					{
 						//we have a texture, so display it!
-						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Texture->GetWidth(), m_Texture->GetHeight(), 1 });
+						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
 						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());

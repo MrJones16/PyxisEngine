@@ -26,6 +26,16 @@ namespace Pyxis
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 
+	void OpenGLRendererAPI::EnableDepthTest()
+	{
+		glEnable(GL_DEPTH_TEST);
+	}
+
+	void OpenGLRendererAPI::DisableDepthTest()
+	{
+		glDisable(GL_DEPTH_TEST);
+	}
+
 	void OpenGLRendererAPI::DrawIndexed(const Ref<VertexArray>& VertexArray, uint32_t indexCount)
 	{
 		uint32_t count = indexCount ? indexCount : VertexArray->GetIndexBuffer()->GetCount();

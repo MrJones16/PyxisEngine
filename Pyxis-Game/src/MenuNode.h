@@ -1,26 +1,23 @@
 #pragma once
 
-#include "GameLayer.h"
-#include "SingleplayerGameLayer.h"
-#include "MultiplayerGameLayer.h"
-#include "HostingGameLayer.h"
-#include "steam/isteamfriends.h"
+#include <Pyxis/Game/Node.h>
 
-#include <Pyxis/Events/Signal.h>
+//#include "GameLayer.h"
+//#include "SingleplayerGameLayer.h"
+//#include "MultiplayerGameLayer.h"
+//#include "HostingGameLayer.h"
+//#include "steam/isteamfriends.h"
 
-#include <Pyxis/Events/EventSignals.h>
+
 
 namespace Pyxis
 {
-	class MenuLayer : public Layer
+	class MenuNode : public Node
 	{
 	public:
 		MenuLayer();
 		virtual ~MenuLayer();
 
-		//Layer functions
-		virtual void OnAttach() override;
-		virtual void OnDetach() override;
 
 		virtual void OnUpdate(Timestep ts) override;
 		virtual void OnImGuiRender() override;
@@ -29,6 +26,8 @@ namespace Pyxis
 		void FailedToConnect();
 
 		void OnGameLayerStarted(GameLayer& layer);
+
+
 		//bool OnWindowResizeEvent(WindowResizeEvent& event);
 		//bool OnKeyPressedEvent(KeyPressedEvent& event);
 		//bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
@@ -36,25 +35,9 @@ namespace Pyxis
 
 		//std::pair<float, float> GetMousePositionScene();
 
-		inline void TestFunction(int i)
-		{
-			PX_TRACE("HI!:: {0}", i);
-		}
-
-		void OnWindowResize(WindowResizeEvent& event)
-		{
-			PX_TRACE("Resized!");
-		}
 		
 
 	private:
-
-		Signal<void(int)> m_Signal;
-
-		Reciever<void(int)> m_Reciever;
-
-		Reciever<void(WindowResizeEvent&)> m_ResizeReciever;
-
 
 		//////////////////////////////////////
 		/// Steam Callbacks

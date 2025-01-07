@@ -18,8 +18,9 @@ namespace Pyxis
 		Node(const std::string& name = "Node");
 		virtual ~Node();
 
-		virtual void OnUpdate(Timestep ts) = 0;
-		virtual void OnRender() = 0;
+		virtual void OnUpdate(Timestep ts);
+		virtual void OnFixedUpdate();
+		virtual void OnRender();
 		virtual void InspectorRender();
 
 		uint32_t GetID() { return m_ID; }

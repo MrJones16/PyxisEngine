@@ -258,7 +258,7 @@ namespace Pyxis
 		//delete s_Data;
 	}
 
-	void Renderer2D::BeginScene(const Ref<Pyxis::OrthographicCamera> camera)
+	void Renderer2D::BeginScene(const Ref<Pyxis::Camera> camera)
 	{	
 		s_Data.BitMapShader->Bind();
 		s_Data.BitMapShader->SetMat4("u_ViewProjection", camera->GetViewProjectionMatrix());
@@ -940,7 +940,14 @@ namespace Pyxis
 		}
 
 		//texture coords
-		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		glm::vec2 textureCoords[4] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		
+		for (int i = 0; i < 4; i++)
+		{
+			glm::vec2 TiledCoord = (transform * s_Data.QuadVertexPositions[i]) - (transform * s_Data.QuadVertexPositions[0]);
+			if (texture->GetTextureSpecification().m_TextureModeS == Texture::TextureMode::Tile) textureCoords[i].x = TiledCoord.x;
+			if (texture->GetTextureSpecification().m_TextureModeT == Texture::TextureMode::Tile) textureCoords[i].y = TiledCoord.y;
+		}
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
@@ -964,6 +971,59 @@ namespace Pyxis
 			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 		
+
+		constexpr size_t quadVertexCount = 4;
+		for (int i = 0; i < quadVertexCount; i++)
+		{
+			s_Data.QuadVertexBufferPtr->Position = transform * s_Data.QuadVertexPositions[i];
+			s_Data.QuadVertexBufferPtr->Color = tintColor;
+			s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
+			s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
+			s_Data.QuadVertexBufferPtr->NodeID = nodeID;
+			s_Data.QuadVertexBufferPtr++;
+		}
+		s_Data.QuadIndexCount += 6;
+#if STATISTICS
+		s_Data.Stats.QuadCount++;
+#endif
+	}
+
+	void Renderer2D::DrawQuadEntity(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, uint32_t nodeID, float tilingFactor, const glm::vec4& tintColor)
+	{
+		//check if we need to flush
+		if (s_Data.QuadIndexCount >= RendererData2D::MaxIndices)
+		{
+			Flush();
+		}
+
+		//texture coords
+		const glm::vec2* textureCoords = subTexture->GetTexCoords();
+		const Ref<Texture2D> texture = subTexture->GetTexture();
+
+
+		//check if the texture can fit into GPU, or already is there
+		float TexIndex = 0.0f;
+		for (uint32_t i = 1; i < s_Data.TextureSlotsIndex; i++)
+		{
+			//check if we are already in there
+			if (*s_Data.TextureSlots[i].get() == *texture.get())
+			{
+				TexIndex = (float)i;
+				break;
+			}
+		}
+		if (TexIndex == 0.0f)
+		{
+			if (s_Data.TextureSlotsIndex == s_Data.MaxTextureSlots)
+			{
+				Flush();
+			}
+			TexIndex = (float)s_Data.TextureSlotsIndex;
+			s_Data.TextureSlots[s_Data.TextureSlotsIndex] = texture;
+			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
+		}
+
 
 		constexpr size_t quadVertexCount = 4;
 		for (int i = 0; i < quadVertexCount; i++)

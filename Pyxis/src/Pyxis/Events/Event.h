@@ -5,7 +5,7 @@
 
 namespace Pyxis
 {
-	//Events in Pyxis are blocking. no buffer or deffering
+
 	enum class EventType
 	{
 		None = 0,
@@ -14,7 +14,7 @@ namespace Pyxis
 		KeyPressed, KeyReleased, KeyTyped,
 		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
 	};
-
+	
 	enum EventCategory
 	{
 		None = 0, 

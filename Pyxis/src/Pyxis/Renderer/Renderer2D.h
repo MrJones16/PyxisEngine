@@ -13,7 +13,7 @@ namespace Pyxis
 		static void Init();
 		static void Shutdown();
 
-		static void BeginScene(const Ref<Pyxis::OrthographicCamera> camera);
+		static void BeginScene(const Ref<Pyxis::Camera> camera);
 		static void EndScene();
 		static void Flush();
 
@@ -45,6 +45,7 @@ namespace Pyxis
 		static void DrawQuadEntity(const glm::vec3 position, const glm::vec2& size, const Ref<Texture2D>& texture, uint32_t nodeID, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 		static void DrawQuadEntity(glm::mat4 transform, const glm::vec4& color, uint32_t nodeID);
 		static void DrawQuadEntity(glm::mat4 transform, const Ref<Texture2D>& texture, uint32_t nodeID, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
+		static void DrawQuadEntity(glm::mat4 transform, const Ref<SubTexture2D>& texture, uint32_t nodeID, float tilingFactor = 1, const glm::vec4& tintColor = { 1,1,1,1 });
 
 		static void DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, const glm::vec4& tintColor = { 1,1,1,1 });
 		static void DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, const glm::vec4& tintColor = { 1,1,1,1 });

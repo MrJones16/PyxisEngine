@@ -5,7 +5,9 @@ namespace Pyxis
 {
 	MenuLayer::MenuLayer() :
 		m_CallbackRichPresenceJoinRequested(this, &MenuLayer::OnGameRichPresenceJoinRequested),
-		m_CallbackGameOverlayActivated(this, &MenuLayer::OnGameOverlayActivated)
+		m_CallbackGameOverlayActivated(this, &MenuLayer::OnGameOverlayActivated),
+		m_Reciever(this, &MenuLayer::TestFunction),
+		m_ResizeReciever(this, &MenuLayer::OnWindowResize)
 	{
 
 	}
@@ -21,11 +23,13 @@ namespace Pyxis
 
 	void MenuLayer::OnDetach()
 	{
+
 	}
 
 
 	void MenuLayer::OnUpdate(Timestep ts)
 	{
+		m_Signal(5);
 		if (m_SinglePlayerLayer.expired() && m_MultiplayerLayer.expired() && m_HostingLayer.expired())
 		{
 			m_AnyGameLayerAttached = false;

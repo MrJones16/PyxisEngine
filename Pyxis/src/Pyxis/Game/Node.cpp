@@ -11,7 +11,7 @@ namespace Pyxis
 {
 
 	Node::Node(const std::string& name)
-		: m_ID(++NodeCounter)
+		: m_ID(++NodeCounter), m_Name(name)
 	{
 		Node::Nodes[m_ID] = this;
 	}
@@ -61,6 +61,21 @@ namespace Pyxis
 				break;
 			}
 		}
+	}
+
+	void Node::OnUpdate(Timestep ts)
+	{
+
+	}
+
+	void Node::OnFixedUpdate()
+	{
+
+	}
+
+	void Node::OnRender()
+	{
+
 	}
 
 	/// <summary>

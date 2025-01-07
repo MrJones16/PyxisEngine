@@ -8,8 +8,8 @@
 
 namespace Pyxis
 {
-	OpenGLTexture2D::OpenGLTexture2D(const std::string& path)
-		: m_Path(path)
+	OpenGLTexture2D::OpenGLTexture2D(const std::string& path, TextureSpecification spec)
+		: m_Path(path), m_Specification(spec)
 	{
 		stbi_set_flip_vertically_on_load(true);
 		int width, height, channels;
@@ -44,17 +44,15 @@ namespace Pyxis
 		//make room on gpu?
 		glTextureStorage2D(m_RendererID, 1, internalFormat, m_Width, m_Height);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glBindTexture(GL_TEXTURE_2D, m_RendererID);
+		SetParametersFromSpecification();
 
 		glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, dataFormat, GL_UNSIGNED_BYTE, data);
 		stbi_image_free(data);
 	}
 
-	OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t height)
-		: m_Width(width), m_Height(height)
+	OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t height, TextureSpecification spec)
+		: m_Width(width), m_Height(height), m_Specification(spec)
 	{
 		m_InternalFormat = GL_RGBA8;
 		m_DataFormat = GL_RGBA;
@@ -65,16 +63,13 @@ namespace Pyxis
 
 		glBindTexture(GL_TEXTURE_2D, m_RendererID);
 
-		glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		SetParametersFromSpecification();
 
 	}
 
-	OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t rows, unsigned char* buffer)
+	OpenGLTexture2D::OpenGLTexture2D(uint32_t width, uint32_t rows, unsigned char* buffer, TextureSpecification spec) : 
+		m_Specification(spec)
 	{
-
 
 		m_Width = width;
 		m_Height = rows;
@@ -98,33 +93,7 @@ namespace Pyxis
 			buffer
 		);
 		// set texture options
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-
-		
-		//m_Width = width;
-		//m_Height = rows;
-
-		//
-		//m_InternalFormat = GL_RED;
-		//m_DataFormat = GL_RED;
-
-		//glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-		////create texture in glfw / glad
-		//glCreateTextures(GL_TEXTURE_2D, 1, &m_RendererID);
-		////make room on gpu?
-		//glTextureStorage2D(m_RendererID, 1, GL_RED, m_Width, m_Height);
-
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		//glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		//glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		//glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, m_DataFormat, GL_UNSIGNED_BYTE, buffer);
+		SetParametersFromSpecification();
 	}
 
 	OpenGLTexture2D::~OpenGLTexture2D()
@@ -153,8 +122,84 @@ namespace Pyxis
 		glBindTextureUnit(slot, m_RendererID);
 	}
 
-	OpenGLTexture3D::OpenGLTexture3D(const std::string& path)
-		: m_Path(path)
+	void OpenGLTexture2D::UpdateSpecification(TextureSpecification spec)
+	{
+		Bind();
+	}
+
+	Texture::TextureSpecification& OpenGLTexture2D::GetTextureSpecification() 
+	{
+		return m_Specification;
+	}
+
+	void OpenGLTexture2D::SetParametersFromSpecification()
+	{
+		Bind();
+		switch (m_Specification.m_WrapS)
+		{
+		case Pyxis::Texture::Repeat:
+			
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, GL_REPEAT);
+			break;
+		case Pyxis::Texture::RepeatMirrored:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
+			break;
+		case Pyxis::Texture::ClampToEdge:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			break;
+		case Pyxis::Texture::ClampToBorder:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+			break;
+		default:
+			break;
+		}
+
+		switch (m_Specification.m_WrapT)
+		{
+		case Pyxis::Texture::Repeat:
+
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, GL_REPEAT);
+			break;
+		case Pyxis::Texture::RepeatMirrored:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, GL_MIRRORED_REPEAT);
+			break;
+		case Pyxis::Texture::ClampToEdge:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			break;
+		case Pyxis::Texture::ClampToBorder:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+			break;
+		default:
+			break;
+		}
+
+		switch (m_Specification.m_MinFiltering)
+		{
+		case Pyxis::Texture::Nearest:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			break;
+		case Pyxis::Texture::Linear:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			break;
+		default:
+			break;
+		}
+
+		switch (m_Specification.m_MagFiltering)
+		{
+		case Pyxis::Texture::Nearest:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			break;
+		case Pyxis::Texture::Linear:
+			glTextureParameteri(m_RendererID, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			break;
+		default:
+			break;
+		}
+	}
+
+	OpenGLTexture3D::OpenGLTexture3D(const std::string& path, const TextureSpecification& spec)
+		: m_Path(path), m_Specification(spec)
 	{
 		stbi_set_flip_vertically_on_load(true);
 		int width, height, channels;
@@ -195,7 +240,8 @@ namespace Pyxis
 		glTextureSubImage2D(m_RendererID, 0, 0, 0, m_Width, m_Height, dataFormat, GL_UNSIGNED_BYTE, data);
 		stbi_image_free(data);
 	}
-	OpenGLTexture3D::OpenGLTexture3D(uint32_t width, uint32_t height, uint32_t length)
+
+	OpenGLTexture3D::OpenGLTexture3D(uint32_t width, uint32_t height, uint32_t length, const TextureSpecification& spec)
 	{
 
 	}
@@ -218,6 +264,14 @@ namespace Pyxis
 	void OpenGLTexture3D::Bind(uint32_t slot) const
 	{
 
+	}
+	void OpenGLTexture3D::UpdateSpecification(TextureSpecification spec)
+	{
+		m_Specification = spec;
+	}
+	Texture::TextureSpecification& OpenGLTexture3D::GetTextureSpecification()
+	{
+		return m_Specification;
 	}
 }
 
