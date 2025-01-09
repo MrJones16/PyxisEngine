@@ -51,6 +51,16 @@ namespace Pyxis
 		{
 			s_RendererAPI->BindTexture2D(TextureID);
 		}
+
+		inline static void EnableDepthTesting()
+		{
+			s_RendererAPI->EnableDepthTesting();
+		}
+
+		inline static void DisableDepthTesting()
+		{
+			s_RendererAPI->DisableDepthTesting();
+		}
 	private:
 		static RendererAPI* s_RendererAPI;
 	};

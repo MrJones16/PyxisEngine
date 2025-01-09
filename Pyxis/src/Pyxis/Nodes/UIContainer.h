@@ -63,32 +63,32 @@ namespace Pyxis
 				if (ImGui::TreeNodeEx("Container", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					//Size
-					ImGui::DragFloat2("Size", glm::value_ptr(m_Size));
+					if (ImGui::DragFloat2("Size", glm::value_ptr(m_Size))) RearrangeChildren();
 
-					ImGui::DragFloat("Gap", &m_Gap);
+					if (ImGui::DragFloat("Gap", &m_Gap)) RearrangeChildren();
 
 					if (ImGui::TreeNodeEx("Direction", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 
-						if (ImGui::Button("Right"))		{ m_Direction =	ContainerEnum::Right; }
-						if (ImGui::Button("Left"))		{ m_Direction = ContainerEnum::Left; }
-						if (ImGui::Button("Up"))		{ m_Direction = ContainerEnum::Up; }
-						if (ImGui::Button("Down"))		{ m_Direction = ContainerEnum::Down; }
+						if (ImGui::Button("Right"))		{ m_Direction =	ContainerEnum::Right; RearrangeChildren();}
+						if (ImGui::Button("Left"))		{ m_Direction = ContainerEnum::Left; RearrangeChildren();}
+						if (ImGui::Button("Up"))		{ m_Direction = ContainerEnum::Up; RearrangeChildren();}
+						if (ImGui::Button("Down"))		{ m_Direction = ContainerEnum::Down; RearrangeChildren();}
 						ImGui::TreePop();
 					}
 
 					if (ImGui::TreeNodeEx("Horizontal Alignment", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						if (ImGui::Button("Left"))	{ m_HorizontalAlignment = ContainerEnum::Left; }
-						if (ImGui::Button("Right"))	{ m_HorizontalAlignment = ContainerEnum::Right; }
-						if (ImGui::Button("Center")){ m_HorizontalAlignment = ContainerEnum::Center; }
+						if (ImGui::Button("Left"))	{ m_HorizontalAlignment = ContainerEnum::Left; RearrangeChildren();}
+						if (ImGui::Button("Right"))	{ m_HorizontalAlignment = ContainerEnum::Right; RearrangeChildren();}
+						if (ImGui::Button("Center")){ m_HorizontalAlignment = ContainerEnum::Center; RearrangeChildren();}
 						ImGui::TreePop();
 					}
 					if (ImGui::TreeNodeEx("Vertical Alignment", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						if (ImGui::Button("Up"))	{ m_VerticalAlignment = ContainerEnum::Up; }
-						if (ImGui::Button("Down"))	{ m_VerticalAlignment = ContainerEnum::Down; }
-						if (ImGui::Button("Center")){ m_VerticalAlignment = ContainerEnum::Center; }
+						if (ImGui::Button("Up"))	{ m_VerticalAlignment = ContainerEnum::Up; RearrangeChildren();}
+						if (ImGui::Button("Down"))	{ m_VerticalAlignment = ContainerEnum::Down; RearrangeChildren();}
+						if (ImGui::Button("Center")) { m_VerticalAlignment = ContainerEnum::Center; RearrangeChildren();}
 						ImGui::TreePop();
 					}
 					ImGui::TreePop();

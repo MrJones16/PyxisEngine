@@ -26,12 +26,12 @@ namespace Pyxis
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 
-	void OpenGLRendererAPI::EnableDepthTest()
+	void OpenGLRendererAPI::EnableDepthTesting()
 	{
 		glEnable(GL_DEPTH_TEST);
 	}
 
-	void OpenGLRendererAPI::DisableDepthTest()
+	void OpenGLRendererAPI::DisableDepthTesting()
 	{
 		glDisable(GL_DEPTH_TEST);
 	}

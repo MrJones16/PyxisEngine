@@ -32,6 +32,7 @@ namespace Pyxis
 		glm::vec4 Color;
 		glm::vec2 TexCoord;
 		float TexIndex;
+		uint32_t NodeID;
 	};
 
 	struct LineVertex
@@ -242,6 +243,7 @@ namespace Pyxis
 			{ShaderDataType::Float4, "a_Color"},
 			{ShaderDataType::Float2, "a_TexCoord"},
 			{ShaderDataType::Float, "a_TexID"},
+			{ShaderDataType::Uint, "a_NodeID"},
 		};
 		s_Data.BitMapVertexBuffer->SetLayout(TextBufferLayout);
 		s_Data.BitMapVertexArray->AddVertexBuffer(s_Data.BitMapVertexBuffer);
@@ -290,12 +292,6 @@ namespace Pyxis
 		s_Data.LineVertexBufferData[1].TexIndex = 0.0f;
 		s_Data.LineVertexBufferData[1].TilingFactor = 1;
 
-
-		
-
-		//frame buffer
-		//m_FrameBuffer = FrameBuffer::Create(1920, 1080);
-		//Renderer::AddFrameBuffer(m_FrameBuffer);
 	}
 
 	void Renderer2D::Shutdown()
@@ -349,6 +345,7 @@ namespace Pyxis
 		///////////////////////
 		/// Flush BitMap Quads
 		///////////////////////
+		RenderCommand::DisableDepthTesting();
 
 		s_Data.BitMapShader->Bind();
 		//send data to buffer
@@ -365,6 +362,7 @@ namespace Pyxis
 		s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
 		s_Data.BitMapIndexCount = 0;
 		s_Data.BitMapSlotsIndex = 0;
+		RenderCommand::EnableDepthTesting();
 
 
 #if STATISTICS
@@ -444,7 +442,13 @@ namespace Pyxis
 		}
 
 		//texture coords
-		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		for (int i = 0; i < 4; i++)
+		{
+			glm::vec2 TiledCoord = (transform * s_Data.QuadVertexPositions[i]) - (transform * s_Data.QuadVertexPositions[0]);
+			if (texture->GetTextureSpecification().m_TextureModeS == Texture::TextureMode::Tile) textureCoords[i].x = TiledCoord.x;
+			if (texture->GetTextureSpecification().m_TextureModeT == Texture::TextureMode::Tile) textureCoords[i].y = TiledCoord.y;
+		}
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
@@ -595,9 +599,18 @@ namespace Pyxis
 		{
 			Flush();
 		}
+		//position
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+		transform = glm::scale(transform, { size.x, size.y, 0 });
 
 		//texture coords
-		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		for (int i = 0; i < 4; i++)
+		{
+			glm::vec2 TiledCoord = (transform * s_Data.QuadVertexPositions[i]) - (transform * s_Data.QuadVertexPositions[0]);
+			if (texture->GetTextureSpecification().m_TextureModeS == Texture::TextureMode::Tile) textureCoords[i].x = TiledCoord.x;
+			if (texture->GetTextureSpecification().m_TextureModeT == Texture::TextureMode::Tile) textureCoords[i].y = TiledCoord.y;
+		}
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
@@ -621,9 +634,6 @@ namespace Pyxis
 			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 		
-		//position
-		glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
-		transform = glm::scale(transform, { size.x, size.y, 0 });
 
 		constexpr size_t quadVertexCount = 4;
 		for (int i = 0; i < quadVertexCount; i++)
@@ -758,8 +768,19 @@ namespace Pyxis
 			Flush();
 		}
 
+		//position
+		glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
+		transform = glm::rotate(transform, -rotation, { 0,0,1 });
+		transform = glm::scale(transform, { size.x, size.y, 0 });
+
 		//texture coords
-		const glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		for (int i = 0; i < 4; i++)
+		{
+			glm::vec2 TiledCoord = (transform * s_Data.QuadVertexPositions[i]) - (transform * s_Data.QuadVertexPositions[0]);
+			if (texture->GetTextureSpecification().m_TextureModeS == Texture::TextureMode::Tile) textureCoords[i].x = TiledCoord.x;
+			if (texture->GetTextureSpecification().m_TextureModeT == Texture::TextureMode::Tile) textureCoords[i].y = TiledCoord.y;
+		}
 
 		//check if the texture can fit into GPU, or already is there
 		float TexIndex = 0.0f;
@@ -783,10 +804,6 @@ namespace Pyxis
 			s_Data.TextureSlotsIndex = s_Data.TextureSlotsIndex + 1;
 		}
 
-		//position
-		glm::mat4 transform = glm::translate(glm::mat4(1.0f), position);
-		transform = glm::rotate(transform, -rotation, { 0,0,1 });
-		transform = glm::scale(transform, { size.x, size.y, 0 });
 
 		constexpr size_t quadVertexCount = 4;
 		for (int i = 0; i < quadVertexCount; i++)
@@ -995,7 +1012,7 @@ namespace Pyxis
 		}
 
 		//texture coords
-		glm::vec2 textureCoords[4] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
+		glm::vec2 textureCoords[] = { { 0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f} };
 		
 		for (int i = 0; i < 4; i++)
 		{
@@ -1101,7 +1118,7 @@ namespace Pyxis
 	/// Draws just like a quad, but uses a bitmap (only red channel).
 	/// Has a separate storage buffer and attempts to render after for transparency
 	/// </summary>
-	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, const glm::vec4& tintColor)
+	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, uint32_t nodeID, const glm::vec4& tintColor)
 	{
 		//check if we hit text limit
 		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapIndices)
@@ -1138,13 +1155,14 @@ namespace Pyxis
 			s_Data.BitMapVertexBufferPtr->Color = tintColor;
 			s_Data.BitMapVertexBufferPtr->TexCoord = s_Data.BitMapVertexTexCoords[i];
 			s_Data.BitMapVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.BitMapVertexBufferPtr->NodeID = nodeID;
 			s_Data.BitMapVertexBufferPtr++;
 		}
 		s_Data.BitMapIndexCount += 6;
 
 	}
 
-	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, const glm::vec4& tintColor)
+	void Renderer2D::DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, uint32_t nodeID, const glm::vec4& tintColor)
 	{
 		//check if we hit text limit
 		if (s_Data.BitMapIndexCount >= RendererData2D::MaxBitmapIndices)
@@ -1185,6 +1203,7 @@ namespace Pyxis
 			s_Data.BitMapVertexBufferPtr->Color = tintColor;
 			s_Data.BitMapVertexBufferPtr->TexCoord = textureCoords[i];
 			s_Data.BitMapVertexBufferPtr->TexIndex = TexIndex;
+			s_Data.BitMapVertexBufferPtr->NodeID = nodeID;
 			s_Data.BitMapVertexBufferPtr++;
 		}
 		s_Data.BitMapIndexCount += 6;
@@ -1192,7 +1211,7 @@ namespace Pyxis
 	}
 
 
-	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, const glm::vec4& color)
+	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, const glm::vec4& color, uint32_t nodeID)
 	{
 		float size = fontSize / 1000.0f;
 		float newLineShift = lineHeight * size * font->m_CharacterHeight;
@@ -1230,7 +1249,7 @@ namespace Pyxis
 			{
 				wordLength += (font->m_Characters[c].Advance >> 6) * size;
 			}
-			if ((wordLength + pos.x) > maxWidth * size * (font->m_Characters[' '].Advance >> 6))
+			if ((wordLength + pos.x) > maxWidth)
 			{
 				//this word makes it go past the max length. we need to do a new line before this word
 				//(new line)
@@ -1256,7 +1275,7 @@ namespace Pyxis
 				charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });
 				charTransform = transform * charTransform;
 
-				DrawBitMap(charTransform, ch.Texture, color);
+				DrawBitMap(charTransform, ch.Texture, nodeID, color);
 
 				// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
 				pos.x += (ch.Advance >> 6) * size; // bitshift by 6 to get value in pixels (2^6 = 64)

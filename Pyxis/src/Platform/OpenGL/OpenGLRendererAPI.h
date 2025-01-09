@@ -12,8 +12,8 @@ namespace Pyxis
 		virtual void SetClearColor(const glm::vec4& color) override;
 		virtual void Clear() override;
 
-		virtual void EnableDepthTest() override;
-		virtual void DisableDepthTest() override;
+		virtual void EnableDepthTesting() override;
+		virtual void DisableDepthTesting() override;
 
 		virtual void DrawIndexed(const Ref<VertexArray>& VertexArray, uint32_t indexCount = 0) override;
 		virtual void DrawArray(const Ref<VertexArray>& VertexArray) override;

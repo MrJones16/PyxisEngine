@@ -16,7 +16,7 @@ namespace Pyxis
 	class SceneLayer : public Layer
 	{
 	public:
-		SceneLayer();
+		SceneLayer(bool debug = false);
 		virtual ~SceneLayer();
 
 		//Layer functions
@@ -27,6 +27,8 @@ namespace Pyxis
 		virtual void OnImGuiRender() override;
 		virtual void OnEvent(Event& e) override;
 
+
+		
 
 		glm::ivec2 GetMousePositionImGui();
 
@@ -44,6 +46,12 @@ namespace Pyxis
 		Ref<Camera> m_MainCamera;
 
 	private:
+
+		//debug heirarchy / inspector
+		bool m_Debug = false;
+		virtual void DrawNodeTree(Ref<Node> Node);
+		Ref<Node> m_SelectedNode;
+
 
 		//viewport
 		Ref<FrameBuffer> m_SceneFrameBuffer;

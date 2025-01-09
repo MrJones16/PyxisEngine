@@ -9,8 +9,8 @@
 namespace Pyxis
 {
 
-	SceneLayer::SceneLayer()
-		//m_ResizeEventReciever(this, &SceneLayer::OnWindowResizeEvent)
+	SceneLayer::SceneLayer(bool debug) :
+		m_Debug(debug)
 	{
 		//EventSignal::s_WindowResizeEventSignal.AddReciever(m_ResizeEventReciever);
 		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
@@ -120,8 +120,52 @@ namespace Pyxis
 		Renderer2D::DrawScreenQuad(m_SceneFrameBuffer->GetColorAttachmentRendererID(0));
 	}
 
+	void SceneLayer::DrawNodeTree(Ref<Node> Node)
+	{
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ((Node == m_SelectedNode) ? ImGuiTreeNodeFlags_Selected : 0);
+
+		bool opened = ImGui::TreeNodeEx((void*)(uint32_t)Node->GetID(), flags, Node->m_Name.c_str());
+
+		if (ImGui::IsItemClicked())
+		{
+			m_SelectedNode = Node;
+		}
+
+		if (opened)
+		{
+			//get child entities displayed as well
+			for (auto& node : Node->m_Children)
+			{
+				DrawNodeTree(node);
+			}
+			ImGui::TreePop();
+		}
+
+	}
+
 	void SceneLayer::OnImGuiRender()
 	{
+		if (m_Debug)
+		{
+			if (ImGui::Begin("Scene Hierarchy"))
+			{
+				for (auto& node : m_RootNodes)
+				{
+					DrawNodeTree(node);
+				}
+			}
+			ImGui::End();
+
+
+			if (ImGui::Begin("Inspector"))
+			{
+				if (m_SelectedNode != nullptr)
+				{
+					m_SelectedNode->InspectorRender();
+				}
+			}
+			ImGui::End();
+		}
 		//auto dockID = ImGui::DockSpaceOverViewport(ImGui::GetID("SceneLayerDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 		//ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
 		//ImGui::SetNextWindowDockID(dockID);

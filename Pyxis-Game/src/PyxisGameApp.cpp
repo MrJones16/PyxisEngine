@@ -105,7 +105,7 @@ namespace Pyxis
 			SteamNetworkingUtils()->InitRelayNetworkAccess();
 
 			//overlay instead of layer so it is on top
-			auto scene = CreateRef<SceneLayer>();
+			auto scene = CreateRef<SceneLayer>(true);
 			PushOverlay(scene);
 
 			//create game nodes

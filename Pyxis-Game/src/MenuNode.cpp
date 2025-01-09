@@ -41,6 +41,14 @@ namespace Pyxis
 			//add child after setting the dimensions, because otherwise ArrangeChildren isn't called
 			//in the container
 			container->AddChild(playButton);
+
+			//text on play button
+			auto text = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
+			text->m_Text = "Singleplayer";
+			text->m_FontSize = 20;
+			text->m_Size = { 2, 0.25f };
+			text->Translate({ 0.25f,0,1 });
+			playButton->AddChild(text);
 		}
 	}
 

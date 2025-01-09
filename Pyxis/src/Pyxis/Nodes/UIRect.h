@@ -14,7 +14,7 @@ namespace Pyxis
 
 			Ref<Texture2D> m_Texture = nullptr;
 			glm::vec4 m_Color = glm::vec4(1);
-			glm::vec2 m_Size = glm::vec2(1);
+			glm::vec2 m_Size = { 1,1 };
 
 			UIRect(const std::string& name = "UIRect") : UINode(name) 
 			{

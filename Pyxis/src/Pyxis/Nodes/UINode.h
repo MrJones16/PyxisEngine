@@ -24,9 +24,10 @@ namespace Pyxis
 			virtual void OnMouseReleased(int mouseButton) {};
 			virtual void OnClick() {};
 
-			//virtual void InspectorRender() override;
+			//virtual void InspectorRender() override {};
 			virtual void OnUpdate(Timestep ts) override {};
 			virtual void OnRender() override {};
+			
 		};
 	}
 
