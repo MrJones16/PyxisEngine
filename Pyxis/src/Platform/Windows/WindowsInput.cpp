@@ -19,21 +19,21 @@ namespace Pyxis
 		auto state = glfwGetMouseButton(window, button);
 		return state == GLFW_PRESS;
 	}
-	std::pair<float, float> Input::GetMousePosition()
+	glm::ivec2 Input::GetMousePosition()
 	{
 		auto window = static_cast<GLFWwindow*>(Application::Get().GetWindow().GetNativeWindow());
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
 		return { (float)xpos, (float)ypos};
 	}
-	float Input::GetMouseX()
+
+	int Input::GetMouseX()
 	{
-		auto [x, y] = GetMousePosition();
-		return x;
+		return GetMousePosition().x;
 	}
-	float Input::GetMouseY()
+
+	int Input::GetMouseY()
 	{
-		auto [x, y] = GetMousePosition();
-		return y;
+		return GetMousePosition().y;
 	}
 }

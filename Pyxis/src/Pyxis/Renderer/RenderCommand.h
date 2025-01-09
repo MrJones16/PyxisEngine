@@ -47,6 +47,10 @@ namespace Pyxis
 			s_RendererAPI->DrawLines(vertexArray, vertexCount);
 		}
 
+		inline static void BindTexture2D(uint32_t TextureID = 0)
+		{
+			s_RendererAPI->BindTexture2D(TextureID);
+		}
 	private:
 		static RendererAPI* s_RendererAPI;
 	};

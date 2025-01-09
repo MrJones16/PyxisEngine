@@ -4,6 +4,12 @@
 #include <Pyxis/Renderer/Camera.h>
 #include <Pyxis/Renderer/FrameBuffer.h>
 
+#include <Pyxis/Nodes/Node.h>
+#include <Pyxis/Nodes/UI.h>
+#include <Pyxis/Nodes/OrthographicCameraNode.h>
+
+#include <Pyxis/Events/EventSignals.h>
+
 
 namespace Pyxis
 {
@@ -32,13 +38,18 @@ namespace Pyxis
 
 		//std::pair<float, float> GetMousePositionScene();
 
+	public:
+		//scene
+		std::vector<Ref<Node>> m_RootNodes;
+		Ref<Camera> m_MainCamera;
+
 	private:
 
-		//scene / viewport
+		//viewport
 		Ref<FrameBuffer> m_SceneFrameBuffer;
-		Ref<Camera> m_MainCamera;
 		glm::vec2 m_ViewportSize;
 		glm::vec2 m_ViewportBounds[2];
+
 
 		//fixed update
 		double m_FixedUpdateRate = 60.0f;

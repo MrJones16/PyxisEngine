@@ -2,7 +2,7 @@
 
 #include "Pyxis/Core/Core.h"
 #include "Pyxis/Renderer/Camera.h"
-#include "Pyxis/Game/Node.h"
+#include "Pyxis/Nodes/Node.h"
 
 namespace Pyxis
 {

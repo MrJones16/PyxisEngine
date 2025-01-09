@@ -1,15 +1,19 @@
 #include "SceneLayer.h"
-#include "Node.h"
+#include <Pyxis/Core/Application.h>
+
 #include <Pyxis/Renderer/Renderer2D.h>
 #include <Pyxis/Renderer/RenderCommand.h>
-#include <Pyxis/Renderer/UI.h>
+
+#include <Pyxis/Core/Input.h>
 
 namespace Pyxis
 {
 
 	SceneLayer::SceneLayer()
+		//m_ResizeEventReciever(this, &SceneLayer::OnWindowResizeEvent)
 	{
-
+		//EventSignal::s_WindowResizeEventSignal.AddReciever(m_ResizeEventReciever);
+		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
 	}
 
 	SceneLayer::~SceneLayer()
@@ -19,6 +23,10 @@ namespace Pyxis
 
 	void SceneLayer::OnAttach()
 	{
+		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
+		Renderer2D::Init();
+
+
 		FrameBufferSpecification fbspec;
 		fbspec.Attachments =
 		{
@@ -52,6 +60,7 @@ namespace Pyxis
 			RenderCommand::Clear();
 			uint32_t clear = 0;
 			m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
+			m_MainCamera->RecalculateViewMatrix();
 			Renderer2D::BeginScene(m_MainCamera);
 		}
 
@@ -84,10 +93,18 @@ namespace Pyxis
 				node.second->OnRender();
 			}
 		}
+		/*auto[x,y] = Input::GetMousePosition();
+		glm::vec2 worldPos = m_CameraNode->MouseToWorldPos({x, y});
+		PX_TRACE("Mouse Pos: ({0},{1})", x, y);
+		PX_TRACE("World Pos: ({0},{1})", worldPos.x, worldPos.y);
+
+		Renderer2D::DrawText("Hello!", glm::mat4(1), FontLibrary::GetFont("Aseprite"));*/
+
+
 
 		Renderer2D::EndScene();
 
-		auto mp = GetMousePositionImGui();
+		auto mp = Input::GetMousePosition();
 		//flip the y so bottom left is 0,0
 		mp.y = m_ViewportSize.y - mp.y;
 		if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
@@ -96,45 +113,49 @@ namespace Pyxis
 			m_HoveredNodeID = nodeID;
 		}
 
+		
+
 		m_SceneFrameBuffer->Unbind();
+		//m_SceneFrameBuffer->BindColorAttachmentTexture(0);
+		Renderer2D::DrawScreenQuad(m_SceneFrameBuffer->GetColorAttachmentRendererID(0));
 	}
 
 	void SceneLayer::OnImGuiRender()
 	{
-		auto dockID = ImGui::DockSpaceOverViewport(ImGui::GetID("SceneLayerDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
-		ImGui::SetNextWindowDockID(dockID);
-		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
-		{
-			//m_SceneViewIsFocused = ImGui::IsWindowFocused();
+		//auto dockID = ImGui::DockSpaceOverViewport(ImGui::GetID("SceneLayerDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+		//ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
+		//ImGui::SetNextWindowDockID(dockID);
+		//if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
+		//{
+		//	//m_SceneViewIsFocused = ImGui::IsWindowFocused();
 
-			auto viewportOffset = ImGui::GetCursorScreenPos();
-			auto newViewportSize = ImGui::GetContentRegionAvail();
+		//	auto viewportOffset = ImGui::GetCursorScreenPos();
+		//	auto newViewportSize = ImGui::GetContentRegionAvail();
 
-			m_ViewportBounds[0] = { viewportOffset.x, viewportOffset.y };
-			m_ViewportBounds[1] = { viewportOffset.x + newViewportSize.x, viewportOffset.y + newViewportSize.y };
+		//	m_ViewportBounds[0] = { viewportOffset.x, viewportOffset.y };
+		//	m_ViewportBounds[1] = { viewportOffset.x + newViewportSize.x, viewportOffset.y + newViewportSize.y };
 
-			//Application::Get().GetImGuiLayer()->BlockEvents(false);
-			ImGui::Image(
-				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID(0)),
-				newViewportSize,
-				ImVec2(0, 1),
-				ImVec2(1, 0),
-				ImVec4(1, 1, 1, 1)
-				//ImVec4(1, 1, 1, 1) border color
-			);
-			//m_ViewportOffset = ImGui::GetItemRectMin();
+		//	//Application::Get().GetImGuiLayer()->BlockEvents(false);
+		//	ImGui::Image(
+		//		(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID(0)),
+		//		newViewportSize,
+		//		ImVec2(0, 1),
+		//		ImVec2(1, 0),
+		//		ImVec4(1, 1, 1, 1)
+		//		//ImVec4(1, 1, 1, 1) border color
+		//	);
+		//	//m_ViewportOffset = ImGui::GetItemRectMin();
 
-			if (m_ViewportSize.x != newViewportSize.x || m_ViewportSize.y != newViewportSize.y)
-			{
-				m_ViewportSize = { newViewportSize.x, newViewportSize.y };
-				//m_OrthographicCameraController.SetAspect(m_ViewportSize.y / m_ViewportSize.x);
-				m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-			}
+		//	if (m_ViewportSize.x != newViewportSize.x || m_ViewportSize.y != newViewportSize.y)
+		//	{
+		//		m_ViewportSize = { newViewportSize.x, newViewportSize.y };
+		//		//m_OrthographicCameraController.SetAspect(m_ViewportSize.y / m_ViewportSize.x);
+		//		m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
+		//	}
 
-			ImGui::End();
-		}
-		ImGui::PopStyleVar();
+		//	ImGui::End();
+		//}
+		//ImGui::PopStyleVar();
 	}
 
 	void SceneLayer::OnEvent(Event& e)
@@ -162,6 +183,14 @@ namespace Pyxis
 
 	bool SceneLayer::OnWindowResizeEvent(WindowResizeEvent& event)
 	{
+		m_ViewportSize = { event.GetWidth(), event.GetHeight()};
+		Camera* cam = Camera::Main();
+		if (cam != nullptr)
+		{
+			cam->SetAspect(m_ViewportSize.y / m_ViewportSize.x);
+		}
+		//m_OrthographicCameraController.SetAspect(m_ViewportSize.y / m_ViewportSize.x);
+		m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
 		return false;
 	}
 

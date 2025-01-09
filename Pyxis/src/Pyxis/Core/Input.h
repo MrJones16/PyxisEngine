@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pyxis/Core/Core.h"
+#include "glm/glm.hpp"
 
 namespace Pyxis
 {
@@ -10,9 +11,9 @@ namespace Pyxis
 		static bool IsKeyPressed(int keycode);
 
 		static bool IsMouseButtonPressed(int button);
-		static std::pair<float, float> GetMousePosition();
-		static float GetMouseX();
-		static float GetMouseY();
+		static glm::ivec2 GetMousePosition();
+		static int GetMouseX();
+		static int GetMouseY();
 	};
 
 }

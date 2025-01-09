@@ -54,4 +54,10 @@ namespace Pyxis
 		glDrawArrays(GL_LINES, 0, VertexCount);
 	}
 
+	void OpenGLRendererAPI::BindTexture2D(const uint32_t textureID)
+	{
+		glBindTextureUnit(0, textureID);
+		//glBindTexture(GL_TEXTURE_2D, textureID);
+	}
+
 }

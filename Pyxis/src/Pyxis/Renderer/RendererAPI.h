@@ -27,6 +27,8 @@ namespace Pyxis
 		virtual void DrawArray(const Ref<VertexArray>& VertexArray) = 0;
 		virtual void DrawLines(const Ref<VertexArray>& VertexArray, uint32_t VertexCount) = 0;
 
+		virtual void BindTexture2D(const uint32_t textureID) = 0;
+
 		inline static API GetAPI() { return s_API; }
 	private:
 		static API s_API;

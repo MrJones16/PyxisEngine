@@ -64,6 +64,70 @@ namespace Pyxis
 
 			}*/
 
+
+			/// <summary>
+			/// Creates the textures with the desirable settings to be used for the canvas.
+			/// 
+			/// assumes files are located at folderPath + filePrefix + {1-9} + fileSuffix
+			/// 
+			/// example: "assets/textures/"   "canvas_"   ".png"
+			/// </summary>
+			/// <param name="folderPath">Path to the folder containing the 1-9 images</param>
+			/// <param name="filePrefix">consistent prefix name for the file, like canvas_</param>
+			/// <param name="fileSuffix">file type, like .png</param>
+			void CreateTextures(const std::string& folderPath, const std::string& filePrefix, const std::string& fileSuffix)
+			{
+				Texture::TextureSpecification canvasSpec;
+				for (int i = 0; i < 9; i++)
+				{
+					Texture::TextureSpecification canvasSpec;
+					switch (i)
+					{
+					case 0:
+					case 2:
+					case 6:
+					case 8:
+					{
+						//corners
+						/*canvasSpec.m_TextureModeS = Texture::TextureMode::Stretch;
+						canvasSpec.m_TextureModeT = Texture::TextureMode::Stretch;*/
+						break;
+					}
+					case 1:
+					{
+						//top
+						canvasSpec.m_TextureModeS = Texture::TextureMode::Tile;
+						break;
+					}
+					case 3:
+					{
+						//left
+						canvasSpec.m_TextureModeT = Texture::TextureMode::Tile;
+						break;
+					}
+					case 5:
+					{
+						//right
+						canvasSpec.m_TextureModeT = Texture::TextureMode::Tile;
+						break;
+					}
+					case 7:
+					{
+						//bottom
+						canvasSpec.m_TextureModeS = Texture::TextureMode::Tile;
+						break;
+					}
+					case 4:
+					{
+						//center
+					}
+					}
+
+					m_CanvasTextures[i] = Texture2D::Create(folderPath + filePrefix + std::to_string(i + 1) + fileSuffix, canvasSpec);
+
+				}
+			}
+
 			virtual void InspectorRender() override
 			{
 				UIRect::InspectorRender();

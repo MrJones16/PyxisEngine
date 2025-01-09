@@ -23,6 +23,7 @@ namespace Pyxis
 		virtual void ClearColorAttachment(int index, const void* value) override;
 
 		inline virtual uint32_t GetColorAttachmentRendererID(int index) const override { PX_CORE_ASSERT(index < m_ColorAttachments.size(), "Index exceeds the count of attachments!");  return m_ColorAttachments[index]; }
+		virtual void BindColorAttachmentTexture(int index = 0) const override;
 
 		virtual const FrameBufferSpecification& GetSpecification() const { return m_Specification; }
 

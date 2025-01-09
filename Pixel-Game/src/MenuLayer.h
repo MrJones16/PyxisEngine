@@ -36,25 +36,7 @@ namespace Pyxis
 
 		//std::pair<float, float> GetMousePositionScene();
 
-		inline void TestFunction(int i)
-		{
-			PX_TRACE("HI!:: {0}", i);
-		}
-
-		void OnWindowResize(WindowResizeEvent& event)
-		{
-			PX_TRACE("Resized!");
-		}
-		
-
 	private:
-
-		Signal<void(int)> m_Signal;
-
-		Reciever<void(int)> m_Reciever;
-
-		Reciever<void(WindowResizeEvent&)> m_ResizeReciever;
-
 
 		//////////////////////////////////////
 		/// Steam Callbacks

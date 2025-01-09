@@ -147,10 +147,6 @@ namespace Pyxis
 		UpdateLocalTransform();
 	}
 
-	void Node::SetLocalTransformTest(const glm::mat4& transform)
-	{
-		m_LocalTransform = transform;
-	}
 
 	glm::mat4& Node::GetLocalTransform()
 	{

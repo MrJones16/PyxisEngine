@@ -295,4 +295,9 @@ namespace Pyxis
 		
 	}
 
+	void OpenGLFrameBuffer::BindColorAttachmentTexture(int index) const
+	{
+		glBindTexture(GL_TEXTURE_2D, m_ColorAttachments[index]);
+	}
+
 }

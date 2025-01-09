@@ -1,5 +1,6 @@
 #pragma once
 #include "UIRect.h"
+#include <Pyxis/Events/Signal.h>
 
 namespace Pyxis
 {
@@ -10,8 +11,9 @@ namespace Pyxis
 		/// </summary>
 		class UIButton : public UIRect
 		{
+		private:
+			Signal<void()> m_Signal;
 		public:
-
 
 			//overriding default color so easier to see
 			/*glm::vec4 m_Color = glm::vec4(0.1f, 0.8f, 0.2f, 1);
@@ -32,6 +34,11 @@ namespace Pyxis
 
 			}
 
+			void AddReciever(const Reciever<void()>& reciever)
+			{
+				m_Signal.AddReciever(reciever);
+			}
+
 			virtual ~UIButton() = default;
 
 			virtual void InspectorRender() override
@@ -48,7 +55,7 @@ namespace Pyxis
 
 			virtual void OnClick() override
 			{
-				PX_WARN("Mouse Pressed On Button!");
+				m_Signal();
 			}
 
 			/*virtual void OnUpdate(Timestep ts)
@@ -63,7 +70,7 @@ namespace Pyxis
 					if (m_Texture != nullptr)
 					{
 						//we have a texture, so display it!
-						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Texture->GetWidth(), m_Texture->GetHeight(), 1 });
+						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
 						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());

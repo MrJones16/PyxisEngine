@@ -83,7 +83,7 @@ namespace Pyxis
 		virtual void ClearColorAttachment(int index, const void* value) = 0;
 
 		virtual uint32_t GetColorAttachmentRendererID(int index = 0) const = 0;
-		//virtual void BindTexture(Ref<Texture2D> texture) const = 0;
+		virtual void BindColorAttachmentTexture(int index = 0) const = 0;
 		//virtual void UnbindTexture() const = 0;
 
 		virtual const FrameBufferSpecification& GetSpecification() const = 0;

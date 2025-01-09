@@ -32,15 +32,14 @@ namespace Pyxis
 		/// Gets this transform 
 		/// </summary>
 		/// <returns></returns>
-		glm::mat4 GetWorldTransform();
+		virtual glm::mat4 GetWorldTransform();
 
-		void ResetLocalTransform();
-		void SetLocalTransform(const glm::mat4& transform);
-		void SetLocalTransformTest(const glm::mat4& transform);
+		virtual void ResetLocalTransform();
+		virtual void SetLocalTransform(const glm::mat4& transform);
 		glm::mat4& GetLocalTransform();
-		void Translate(glm::vec3 translation);
-		void Rotate(glm::vec3 rotation);
-		void Scale(glm::vec3 scale);
+		virtual void Translate(glm::vec3 translation);
+		virtual void Rotate(glm::vec3 rotation);
+		virtual void Scale(glm::vec3 scale);
 
 		std::string m_Name = "Node";
 		Node* m_Parent = nullptr;

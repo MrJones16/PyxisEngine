@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <Pyxis/Renderer/Renderer2D.h>
-#include <Pyxis/Game/Node.h>
+#include <Pyxis/Nodes/Node.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis

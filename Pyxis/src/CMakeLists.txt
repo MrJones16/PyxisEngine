@@ -107,8 +107,8 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/FastNoiseLite/FastNoiseLite.h
 
     #Game
-    "Pyxis/Game/Node.cpp"
-    "Pyxis/Game/Node.h"
+    "Pyxis/Nodes/Node.cpp"
+    "Pyxis/Nodes/Node.h"
     Pyxis/Game/Scene.cpp
     Pyxis/Game/Scene.h
 
@@ -154,4 +154,4 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
 
-      "Pyxis/Renderer/UI.h"  "Pyxis/Renderer/UINode.h" "Pyxis/Renderer/UIRect.h" "Pyxis/Renderer/UIText.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp" "Pyxis/Renderer/UIButton.h" "Pyxis/Renderer/UIContainer.h" "Pyxis/Renderer/UICanvas.h" "Pyxis/Game/SceneLayer.h" "Pyxis/Game/SceneLayer.cpp" "Pyxis/Events/Signal.h" "Pyxis/Events/EventSignals.h")
+      "Pyxis/Nodes/UI.h"  "Pyxis/Nodes/UINode.h" "Pyxis/Nodes/UIRect.h" "Pyxis/Nodes/UIText.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp" "Pyxis/Nodes/UIButton.h" "Pyxis/Nodes/UIContainer.h" "Pyxis/Nodes/UICanvas.h" "Pyxis/Game/SceneLayer.h" "Pyxis/Game/SceneLayer.cpp" "Pyxis/Events/Signal.h" "Pyxis/Events/EventSignals.h" "Pyxis/Nodes/OrthographicCameraNode.h" "Pyxis/Nodes/OrthographicCameraNode.cpp")

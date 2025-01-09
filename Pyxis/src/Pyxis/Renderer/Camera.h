@@ -7,18 +7,90 @@ namespace Pyxis
 	class Camera
 	{
 	public:
+
+		//Main Camera
+		inline static Camera* s_MainCamera = nullptr;
+		inline static Camera* Main() { return s_MainCamera; }
+		Camera() { if (s_MainCamera == nullptr) { s_MainCamera = this; } }
+		virtual ~Camera() { if (s_MainCamera == this) { s_MainCamera = nullptr; } }
+
+
+		//Camera Functions
+		virtual void RecalculateProjectionMatrix() = 0;
 		virtual const glm::mat4& GetProjectionMatrix() const { return m_ProjectionMatrix; }
+
+		virtual void RecalculateViewMatrix() = 0;
 		virtual const glm::mat4& GetViewMatrix() const { return m_ViewMatrix; }
+
 		virtual const glm::mat4& GetViewProjectionMatrix() const { return m_ViewProjectionMatrix; }
 
+		//Position Functions
 		virtual const glm::vec3& GetPosition() const = 0;
 		virtual const glm::vec3& GetRotation() const = 0;
 		virtual const glm::mat3& GetRotationMatrix() const = 0;
-		virtual const float GetFOV() const = 0;
-	private:
-		glm::mat4 m_ProjectionMatrix;
-		glm::mat4 m_ViewMatrix;
-		glm::mat4 m_ViewProjectionMatrix;
+
+		//Camera Settings Functions
+		virtual const float GetFOV() const { return m_FOV; }
+		virtual void SetFOV(float fov) { m_FOV = fov; RecalculateProjectionMatrix(); };
+
+		virtual const float GetAspect() const { return m_Aspect; }
+		virtual void SetAspect(float aspect) {
+			m_Aspect = aspect;
+			m_Size.y = m_Size.x * aspect;
+			RecalculateProjectionMatrix();
+		}
+
+		virtual const float GetNear() const { return m_Near; }
+		virtual void SetNear(float nearClip) { m_Near = nearClip; RecalculateProjectionMatrix(); }
+
+		virtual const float GetFar() const { return m_Far; }
+		virtual void SetFar(float farClip) { m_Far = farClip; RecalculateProjectionMatrix(); }
+
+		virtual const float GetWidth() const { return m_Size.x; }
+		virtual void SetWidth(float width)
+		{
+			m_Size.x = width;
+			if (m_LockAspect)
+			{
+				m_Size.y = m_Size.x * m_Aspect;
+			}
+			else
+			{
+				m_Aspect = m_Size.y / m_Size.x;
+			}
+			RecalculateProjectionMatrix(); 
+		}
+
+		virtual const float GetHeight() const { return m_Size.y; }
+		virtual void SetHeight(float height)
+		{
+			m_Size.y = height;
+			if (m_LockAspect)
+			{
+				m_Size.x = m_Size.y * (1 / m_Aspect);
+			}
+			else
+			{
+				m_Aspect = m_Size.y / m_Size.x;
+			}
+			RecalculateProjectionMatrix();
+		}
+
+	public:
+		bool m_LockAspect = true;
+
+	protected:
+		glm::mat4 m_ProjectionMatrix = glm::mat4(1);
+		glm::mat4 m_ViewMatrix = glm::mat4(1);
+		glm::mat4 m_ViewProjectionMatrix = glm::mat4(1);
+
+		glm::vec2 m_Size = glm::vec2(1);
+
+		float m_Aspect = 9.0f / 16.0f;
+
+		float m_FOV = 90.0f;
+		float m_Near = -100.0f;
+		float m_Far = 100.0f;
 	};
 
 	class PerspectiveCamera : public Camera
@@ -32,11 +104,6 @@ namespace Pyxis
 		virtual const glm::vec3& GetRotation() const override{ return m_Rotation; }
 		void SetRotation(glm::vec3 rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
 
-		const float GetFOV() const override { return m_FOV; }
-		void SetFOV(float fov) { m_FOV = fov; RecalculateProjectionMatrix(); }
-
-		const float GetAspect() const { return m_Aspect; }
-		void SetAspect(float aspect) { m_Aspect = aspect; RecalculateProjectionMatrix(); }
 
 		const float GetNear() const { return m_Near; }
 		void SetNear(float nearClip) { m_Near = nearClip; RecalculateProjectionMatrix(); }
@@ -51,22 +118,17 @@ namespace Pyxis
 		virtual const glm::mat3& GetRotationMatrix() const override { return m_RotationMatrix; }
 
 	private:
-		void RecalculateProjectionMatrix();
-		void RecalculateViewMatrix();
+		void RecalculateProjectionMatrix() override;
+		void RecalculateViewMatrix() override;
 	private:
-		glm::mat4 m_ProjectionMatrix;
-		glm::mat4 m_ViewMatrix;
-		glm::mat4 m_ViewProjectionMatrix;
+		//glm::mat4 m_ProjectionMatrix;
+		//glm::mat4 m_ViewMatrix;
+		//glm::mat4 m_ViewProjectionMatrix;
 		glm::mat3 m_RotationMatrix;
 
 		glm::vec3 m_Position;
 		glm::vec3 m_Rotation;
 		
-
-		float m_FOV;
-		float m_Aspect;
-		float m_Near = -100.0f;
-		float m_Far = 100.0f;
 	};
 
 	class OrthographicCamera : public Camera
@@ -81,24 +143,6 @@ namespace Pyxis
 		virtual const glm::vec3& GetRotation() const override { return m_Rotation; }
 		void SetRotation(glm::vec3 rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
 
-		const float GetWidth() const { return m_Width; }
-		void SetWidth(float width) { m_Width = width; RecalculateProjectionMatrix(); }
-
-		const float GetHeight() const { return m_Height; }
-		void SetHeight(float height) { m_Height = height; RecalculateProjectionMatrix(); }
-
-		const float GetNear() const { return m_Near; }
-		void SetNear(float nearClip) { m_Near = nearClip; RecalculateProjectionMatrix(); }
-
-		const float GetFar() const { return m_Far; }
-		void SetFar(float farClip) { m_Far = farClip; RecalculateProjectionMatrix(); }
-
-		///not applicable
-		const float GetFOV() const override { return 1; }
-
-		const float GetAspect() const { return m_Aspect; }
-		void SetAspect(float aspect) { m_Aspect = aspect; m_Height = m_Width * m_Aspect; RecalculateProjectionMatrix(); }
-
 
 		//void SetProjectionMatrix(float width, float height, ) const override { return m_ProjectionMatrix; }
 
@@ -109,22 +153,16 @@ namespace Pyxis
 
 
 	private:
-		void RecalculateProjectionMatrix();
-		void RecalculateViewMatrix();
+		void RecalculateProjectionMatrix() override;
+		void RecalculateViewMatrix() override;
 	private:
-		glm::mat4 m_ProjectionMatrix;
-		glm::mat4 m_ViewMatrix;
-		glm::mat4 m_ViewProjectionMatrix;
+		//glm::mat4 m_ProjectionMatrix;
+		//glm::mat4 m_ViewMatrix;
+		//glm::mat4 m_ViewProjectionMatrix;
 		glm::mat3 m_RotationMatrix;
 
 		glm::vec3 m_Position;
 		glm::vec3 m_Rotation;
 
-		float m_Width;
-		float m_Height;
-
-		float m_Aspect = 9/16;
-		float m_Near = -100.0f;
-		float m_Far = 100.0f;
 	};
 }

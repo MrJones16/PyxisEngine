@@ -19,5 +19,7 @@ namespace Pyxis
 		virtual void DrawArray(const Ref<VertexArray>& VertexArray) override;
 		virtual void DrawLines(const Ref<VertexArray>& VertexArray, uint32_t VertexCount) override;
 
+		virtual void BindTexture2D(const uint32_t textureID) override;
+
 	};
 }

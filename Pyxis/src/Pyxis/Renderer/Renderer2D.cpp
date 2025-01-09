@@ -10,6 +10,12 @@
 namespace Pyxis
 {
 
+	struct ScreenQuadVertex
+	{
+		glm::vec2 Position;
+		glm::vec2 TexCoord;
+	};
+
 	struct QuadVertex
 	{
 		glm::vec3 Position;
@@ -47,6 +53,11 @@ namespace Pyxis
 	{
 		static const uint32_t MaxTextureSlots = 32;
 		Ref<Texture2D> WhiteTexture;
+
+		Ref<Shader> ScreenQuadShader;
+		Ref<VertexArray> ScreenQuadVertexArray;
+		Ref<VertexBuffer> ScreenQuadVertexBuffer;
+		Ref<IndexBuffer> ScreenQuadIndexBuffer;
 
 
 		//QUADS
@@ -124,6 +135,44 @@ namespace Pyxis
 	{
 		//initialize the renderer2d primitive things
 		//s_Data = new RendererData2D();
+
+		//texture init
+		s_Data.WhiteTexture = Texture2D::Create(1, 1);
+		uint32_t WhiteTextureData = 0xffffffff;
+		s_Data.WhiteTexture->SetData(&WhiteTextureData, sizeof(WhiteTextureData));
+		s_Data.TextureSlots[0] = s_Data.WhiteTexture;
+
+		//screen quad
+		s_Data.ScreenQuadShader = Shader::Create("assets/shaders/ScreenQuad.glsl");
+		s_Data.ScreenQuadShader->Bind();
+		//s_Data.ScreenQuadShader->SetInt("u_Texture", s_Data.WhiteTexture->GetID());
+
+		s_Data.ScreenQuadVertexArray = VertexArray::Create();
+		s_Data.ScreenQuadVertexBuffer = VertexBuffer::Create(16 * sizeof(float));
+		BufferLayout ScreenQuadLayout = {
+			{ShaderDataType::Float2, "a_Position"},
+			{ShaderDataType::Float2, "a_TexCoord"},
+		};
+		s_Data.ScreenQuadVertexBuffer->SetLayout(ScreenQuadLayout);
+		ScreenQuadVertex ScreenQuadData[4] =
+		{
+			{{-1,-1}, {0,0}},
+			{{1,-1}, {1,0}},
+			{{1,1}, {1,1}},
+			{{-1,1}, {0,1}}
+
+		};
+
+
+		uint32_t SingleQuadIndices[6] =
+		{
+			0,1,2,2,3,0
+		};
+		s_Data.ScreenQuadIndexBuffer = IndexBuffer::Create(SingleQuadIndices, 6);
+
+		s_Data.ScreenQuadVertexBuffer->SetData(ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
+		s_Data.ScreenQuadVertexArray->AddVertexBuffer(s_Data.ScreenQuadVertexBuffer);
+		s_Data.ScreenQuadVertexArray->SetIndexBuffer(s_Data.ScreenQuadIndexBuffer);
 		
 		////////////////////
 		/// QUADS
@@ -242,11 +291,7 @@ namespace Pyxis
 		s_Data.LineVertexBufferData[1].TilingFactor = 1;
 
 
-		//texture init
-		s_Data.WhiteTexture = Texture2D::Create(1, 1);
-		uint32_t WhiteTextureData = 0xffffffff;
-		s_Data.WhiteTexture->SetData(&WhiteTextureData, sizeof(WhiteTextureData));
-		s_Data.TextureSlots[0] = s_Data.WhiteTexture;
+		
 
 		//frame buffer
 		//m_FrameBuffer = FrameBuffer::Create(1920, 1080);
@@ -325,6 +370,16 @@ namespace Pyxis
 #if STATISTICS
 		s_Data.Stats.DrawCalls++;
 #endif
+	}
+
+	void Renderer2D::DrawScreenQuad(uint32_t TextureID)
+	{
+		RenderCommand::Clear();
+		s_Data.ScreenQuadShader->Bind();
+		s_Data.ScreenQuadVertexArray->Bind();
+		RenderCommand::BindTexture2D(TextureID);
+		//s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
+		RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
 	}
 
 	void Renderer2D::DrawLine(const glm::vec2& start, const glm::vec2& end, const glm::vec4& color)

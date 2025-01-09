@@ -1,4 +1,4 @@
-﻿#include "GameLayer.h"
+﻿#include "GameNode.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -11,69 +11,18 @@
 namespace Pyxis
 {
 
-	GameLayer::GameLayer(std::string debugName)
-		: Layer(debugName),
+	GameNode::GameNode(std::string debugName)
+		: Node(debugName),
 		m_OrthographicCameraController(2, 1 / 1, -100, 100)//, m_CurrentTickClosure()
 	{
 
 	}
 
-	GameLayer::~GameLayer()
+	GameNode::~GameNode()
 	{
-
-	}
-
-	void GameLayer::OnAttach()
-	{
-
-		PX_TRACE("Attached game layer");
-
-		
-		///////////////////////////////
-		/// Init members & Renderer2D
-		///////////////////////////////
-		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
-		Renderer2D::Init();
-		m_Scene = CreateRef<Scene>();
-		m_Scene->m_ActiveCamera = m_OrthographicCameraController.GetCamera();
-
-
-		///////////////////////////////
-		/// Panels (kinda debugging)
-		///////////////////////////////
-		m_Panels.push_back(CreateRef<ProfilingPanel>());
-		Ref<SceneHierarchyPanel> sceneHeirarchyPanel = CreateRef<SceneHierarchyPanel>(m_Scene);
-		m_Panels.push_back(sceneHeirarchyPanel);
-		m_Panels.push_back(CreateRef<InspectorPanel>(sceneHeirarchyPanel));
-
-
-		
-
-		//FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
-		////FontLibrary::AddFont("Arial", "assets/fonts/arial.ttf");
-
-		//UI->AddChild(CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite")));
-
-
-		FrameBufferSpecification fbspec;
-		fbspec.Attachments = 
-		{   
-			{FrameBufferTextureFormat::RGBA8, FrameBufferTextureType::Color},
-			{FrameBufferTextureFormat::R32UI, FrameBufferTextureType::Color},
-			{FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}
-		};
-		fbspec.Width = m_ViewportSize.x;
-		fbspec.Height = m_ViewportSize.y;
-		m_SceneFrameBuffer = FrameBuffer::Create(fbspec);
-	}
-
-	void GameLayer::OnDetach()
-	{
-		PX_TRACE("Detached game layer");
-		//when detaching the game layer, it should be reset so the server can be joined again.
 		m_World = nullptr;
-
 	}
+
 
 	/// <summary>
 	/// This is the main update loop involving actually playing the game, input, controls, ect.
@@ -83,7 +32,7 @@ namespace Pyxis
 	/// The output of inputs is in m_CurrentTickClosure
 	/// </summary>
 	/// <param name="ts"></param>
-	void GameLayer::GameUpdate(Timestep ts)
+	void GameNode::GameUpdate(Timestep ts)
 	{
 
 		{
@@ -156,7 +105,7 @@ namespace Pyxis
 	}
 
 
-	void GameLayer::ClientImGuiRender(ImGuiID dockID)
+	void GameNode::ClientImGuiRender(ImGuiID dockID)
 	{
 		m_Hovering = ImGui::IsWindowHovered();
 
@@ -403,7 +352,7 @@ namespace Pyxis
 	}
 
 
-	void GameLayer::TextCentered(std::string text)
+	void GameNode::TextCentered(std::string text)
 	{
 		float win_width = ImGui::GetWindowSize().x;
 		float text_width = ImGui::CalcTextSize(text.c_str()).x;
@@ -424,19 +373,7 @@ namespace Pyxis
 		ImGui::PopTextWrapPos();
 	}
 
-	void GameLayer::OnEvent(Event& e)
-	{
-		//PX_CORE_INFO("event: {0}", e);
-		//m_OrthographicCameraController.OnEvent(e);
-		EventDispatcher dispatcher(e);
-		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(GameLayer::OnWindowResizeEvent));
-		dispatcher.Dispatch<KeyPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnKeyPressedEvent));
-		dispatcher.Dispatch<MouseButtonPressedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonPressedEvent));
-		dispatcher.Dispatch<MouseButtonReleasedEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseButtonReleasedEvent));
-		dispatcher.Dispatch<MouseScrolledEvent>(PX_BIND_EVENT_FN(GameLayer::OnMouseScrolledEvent));
-	}
-
-	//void GameLayer::ConnectionUpdate()
+	//void GameNode::ConnectionUpdate()
 	//{
 	//	//still connecting...
 
@@ -492,7 +429,7 @@ namespace Pyxis
 	//	}
 	//}
 
-	//void GameLayer::HandleMessages()
+	//void GameNode::HandleMessages()
 	//{
 	//	Ref<Network::Message> msg;
 	//	while (PollMessage(msg))
@@ -642,7 +579,7 @@ namespace Pyxis
 	//}
 
 
-	void GameLayer::HandleTickClosure(MergedTickClosure& tc)
+	void GameNode::HandleTickClosure(MergedTickClosure& tc)
 	{
 		for (int i = 0; i < tc.m_ClientCount; i++)
 		{
@@ -820,7 +757,7 @@ namespace Pyxis
 		}
 	}
 
-	bool GameLayer::CreateWorld()
+	bool GameNode::CreateWorld()
 	{
 		//create the world
 		m_World = CreateRef<World>();
@@ -834,7 +771,7 @@ namespace Pyxis
 		return true;
 	}
 
-	glm::ivec2 GameLayer::GetMousePositionImGui()
+	glm::ivec2 GameNode::GetMousePositionImGui()
 	{
 		///if not using a framebuffer / imgui image, just use Pyxis::Input::GetMousePosition();
 		//TODO: Set up ifdef for using imgui? or just stop using imgui... lol
@@ -846,21 +783,21 @@ namespace Pyxis
 		return { (int)mx, (int)my };
 	}
 
-	glm::vec2 GameLayer::GetMousePosWorld()
+	glm::vec2 GameNode::GetMousePosWorld()
 	{
 		glm::ivec2 mousePos = GetMousePositionImGui();
 		glm::vec2 mousePercent = (glm::vec2)mousePos / m_ViewportSize;
 		return m_OrthographicCameraController.MousePercentToWorldPos(mousePercent.x, mousePercent.y);
 	}
 
-	bool GameLayer::OnWindowResizeEvent(WindowResizeEvent& event) {
+	bool GameNode::OnWindowResizeEvent(WindowResizeEvent& event) {
 		m_OrthographicCameraController.SetAspect((float)event.GetHeight() / (float)event.GetWidth());
 		m_ViewportSize = { event.GetWidth() , event.GetHeight() };
 		Renderer::OnWindowResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
 		return false;
 	}
 
-	bool GameLayer::OnKeyPressedEvent(KeyPressedEvent& event) {
+	bool GameNode::OnKeyPressedEvent(KeyPressedEvent& event) {
 		if (event.GetKeyCode() == PX_KEY_F)
 		{
 			//SendStringToServer("Respects Paid!");
@@ -902,7 +839,7 @@ namespace Pyxis
 		return false;
 	}
 
-	bool GameLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
+	bool GameNode::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
 	{
 		//let the UI keep track of what has been pressed, so that way buttons can be on release!
 		UI::UINode::s_MousePressedNodeID = m_Scene->m_HoveredNodeID;
@@ -934,7 +871,7 @@ namespace Pyxis
 		return false;
 	}
 
-	bool GameLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
+	bool GameNode::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
 	{
 		if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
 		{
@@ -954,7 +891,7 @@ namespace Pyxis
 		return false;
 	}
 
-	bool GameLayer::OnMouseScrolledEvent(MouseScrolledEvent& event)
+	bool GameNode::OnMouseScrolledEvent(MouseScrolledEvent& event)
 	{
 		if (Input::IsKeyPressed(PX_KEY_LEFT_CONTROL))
 		{
@@ -977,7 +914,7 @@ namespace Pyxis
 	}
 
 
-	void GameLayer::PaintBrushHologram()
+	void GameNode::PaintBrushHologram()
 	{
 		glm::ivec2 pixelPos = m_World->WorldToPixel(GetMousePosWorld());
 
