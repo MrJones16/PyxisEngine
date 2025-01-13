@@ -1,6 +1,7 @@
 #pragma once
 #include "UIRect.h"
 #include <Pyxis/Core/InputCodes.h>
+#include <Pyxis/Events/Signal.h>
 
 namespace Pyxis
 {
@@ -10,40 +11,40 @@ namespace Pyxis
 		/// A UI Node that functions as a button. can definitely be made into a templated if i need
 		/// to have more complex arguments or return types?
 		/// </summary>
-		class UIButton : public UIRect
+		class UISignalButton : public UIRect
 		{
 		private:
-			std::function<void()> m_Function = nullptr;
+			Signal<void()> m_Signal;
 			bool m_Pressed = false;
 
 		public:
 
 			Ref<Texture2D> m_TexturePressed = nullptr;
+			//overriding default color so easier to see
+			/*glm::vec4 m_Color = glm::vec4(0.1f, 0.8f, 0.2f, 1);
+			glm::vec2 m_Size = glm::vec2(1, 0.5f);*/
 
-			UIButton(const std::string& name = "UIButton", const std::function<void()>& function = nullptr) : 
-				UIRect(name), m_Function(function)
+			UISignalButton(const std::string& name = "UISignalButton") : UIRect(name)
 			{
 
 			}
 
-			UIButton(const std::string& name = "UIButton", Ref<Texture2D> texture = nullptr, const std::function<void()>& function = nullptr) : 
-				UIRect(texture, name), m_Function(function)
+			UISignalButton(Ref<Texture2D> texture, const std::string& name = "UISignalButton") : UIRect(texture, name)
 			{
 
 			}
 
-			UIButton(const std::string& name = "UIButton", const glm::vec4& color = glm::vec4(1), const std::function<void()>& function = nullptr) :
-				UIRect(color, name), m_Function(function)
+			UISignalButton(const glm::vec4& color, const std::string& name = "UISignalButton") : UIRect(color, name)
 			{
 
 			}
 
-			void SetFunction(const std::function<void()>& function)
+			void AddReciever(const Reciever<void()>& reciever)
 			{
-				m_Function = function;
+				m_Signal.AddReciever(reciever);
 			}
 
-			virtual ~UIButton() = default;
+			virtual ~UISignalButton() = default;
 
 			virtual void InspectorRender() override
 			{
@@ -70,10 +71,7 @@ namespace Pyxis
 				if (mouseButton == PX_MOUSE_BUTTON_1)
 				{
 					m_Pressed = false;
-					if (continuous && m_Function != nullptr)
-					{
-						m_Function();
-					}
+					if (continuous) m_Signal();
 				}
 				
 			}

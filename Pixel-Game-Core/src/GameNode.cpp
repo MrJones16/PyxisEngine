@@ -873,19 +873,7 @@ namespace Pyxis
 
 	bool GameNode::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
 	{
-		if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
-		{
-			//the hovered node is valid
-			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
-			{
-				uinode->OnMouseReleased(event.GetMouseButton());
-				if (UI::UINode::s_MousePressedNodeID == m_Scene->m_HoveredNodeID)
-					uinode->OnClick();
-			}
-			
-					
-
-		}
+		
 
 		//do not end event here
 		return false;

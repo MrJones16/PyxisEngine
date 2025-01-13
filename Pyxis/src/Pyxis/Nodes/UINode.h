@@ -21,8 +21,8 @@ namespace Pyxis
 			virtual  ~UINode() = default;
 
 			virtual void OnMousePressed(int mouseButton) {};
-			virtual void OnMouseReleased(int mouseButton) {};
-			virtual void OnClick() {};
+			virtual void OnMouseReleased(int mouseButton, bool continuous) {};
+			//virtual void OnClick() {};
 
 			//virtual void InspectorRender() override {};
 			virtual void OnUpdate(Timestep ts) override {};

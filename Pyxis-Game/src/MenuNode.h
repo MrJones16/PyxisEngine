@@ -5,6 +5,8 @@
 #include <Pyxis/Nodes/Node.h>
 #include <Pyxis/Nodes/UI.h>
 
+#include <Pyxis/Events/EventSignals.h>
+
 //#include "GameLayer.h"
 //#include "SingleplayerGameLayer.h"
 //#include "MultiplayerGameLayer.h"
@@ -15,6 +17,7 @@
 
 namespace Pyxis
 {
+	
 	class MenuNode : public Node
 	{
 	public:
@@ -23,21 +26,26 @@ namespace Pyxis
 		~MenuNode();
 
 		virtual void OnUpdate(Timestep ts) override;
-		//virtual void OnImGuiRender() override;
-		//virtual void OnEvent(Event& e) override;
+
+		//reciever functions for buttons & UI
+		void PlaySinglePlayer();
+		void PlayMultiplayer();
+		void HostGame();
 
 
-		void PlayButton();
+		void OnWindowResize(WindowResizeEvent& event);
 
 		void FailedToConnect();
 
-		//void OnGameLayerStarted(GameLayer& layer);
-
-		
-
 	private:
+
+		//Canvas node for resizing
+		Ref<UI::UICanvas> m_CanvasNode;
+
 		//recievers
 		Reciever<void()> m_PlayButtonReciever;
+
+		Reciever<void(WindowResizeEvent&)> m_WindowResizeReciever;
 
 		//////////////////////////////////////
 		/// Steam Callbacks

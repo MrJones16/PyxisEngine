@@ -15,6 +15,7 @@ namespace Pyxis
 			Ref<Texture2D> m_Texture = nullptr;
 			glm::vec4 m_Color = glm::vec4(1);
 			glm::vec2 m_Size = { 1,1 };
+			float m_PPU = 32;
 
 			UIRect(const std::string& name = "UIRect") : UINode(name) 
 			{
@@ -24,7 +25,7 @@ namespace Pyxis
 			UIRect(Ref<Texture2D> texture, const std::string& name = "UIRect") : UINode(name),
 				m_Texture(texture), m_Color(1)
 			{
-
+				UpdateSizeFromTexture();
 			}
 
 			UIRect(const glm::vec4& color, const std::string& name = "UIRect") : UINode(name),
@@ -32,6 +33,17 @@ namespace Pyxis
 			{
 
 			}
+
+
+			//uses the PPU and the texture to set the size of the object
+			void UpdateSizeFromTexture()
+			{
+				if (m_Texture != nullptr)
+				{
+					m_Size = { (float)m_Texture->GetWidth() / m_PPU , (float)m_Texture->GetHeight() / m_PPU };
+				}
+			}
+
 			virtual ~UIRect() = default;
 
 			virtual void InspectorRender() override

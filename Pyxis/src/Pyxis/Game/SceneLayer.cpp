@@ -263,24 +263,58 @@ namespace Pyxis
 		return false;
 	}
 
+
+	/// <summary>
+	/// checks to see if we released on the same object we pressed, and if so calls
+	/// OnMouseReleased with continuous as true. otherwise, will call onmousereleased
+	/// on both the previously selected object, and the hovered object. 
+	/// </summary>
+	/// <param name="event"></param>
+	/// <returns></returns>
 	bool SceneLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
 	{
-		if (Node::Nodes.contains(m_HoveredNodeID))
+		if (UI::UINode::s_MousePressedNodeID == m_HoveredNodeID)
 		{
-			//the hovered node is valid
-
-			//try to cast it to UI 
-			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_HoveredNodeID]))
+			//the hovered node is what we pressed last
+			if (Node::Nodes.contains(m_HoveredNodeID))
 			{
-				uinode->OnMouseReleased(event.GetMouseButton());
-				//if this was pressed on before as well, call onClick()
-				if (UI::UINode::s_MousePressedNodeID == m_HoveredNodeID)
-					uinode->OnClick();
+				//the hovered node is valid
+				
+				//try to cast it to UI 
+				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_HoveredNodeID]))
+				{
+					uinode->OnMouseReleased(event.GetMouseButton(), true);
+				}
+			}
+		}
+		else
+		{
+			//the hovered node is not what we pressed originally, so call released on original press
+			if (Node::Nodes.contains(UI::UINode::s_MousePressedNodeID))
+			{
+				//the hovered node is valid
+
+				//try to cast it to UI 
+				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[UI::UINode::s_MousePressedNodeID]))
+				{
+					uinode->OnMouseReleased(event.GetMouseButton(), false);
+				}
 			}
 
+			///here if we want to call released on UI nodes without having to press first?
+			//if (Node::Nodes.contains(m_HoveredNodeID))
+			//{
+			//	//the hovered node is valid
 
-
+			//	//try to cast it to UI 
+			//	if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_HoveredNodeID]))
+			//	{
+			//		uinode->OnMouseReleased(event.GetMouseButton(), false);
+			//	}
+			//}
 		}
+
+		
 		return false;
 	}
 

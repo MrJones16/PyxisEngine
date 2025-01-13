@@ -28,4 +28,5 @@ namespace Pyxis
 		inline static Signal<void(MouseScrolledEvent&)>			s_MouseScrolledEventSignal;
 
 	};
+
 }

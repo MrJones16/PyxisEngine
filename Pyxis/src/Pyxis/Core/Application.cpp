@@ -65,6 +65,18 @@ namespace Pyxis
 	{
 		//PX_CORE_INFO("Event {0}", e);
 		EventDispatcher dispatcher(e);
+
+		dispatcher.Dispatch<WindowCloseEvent>(PX_BIND_EVENT_FN(Application::OnWindowClose));
+		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(Application::OnWindowResize));
+
+		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+		{
+			if (e.Handled)
+				break;
+			(*it)->OnEvent(e);
+		}
+
+		//todo: decide if handled events should be passed?
 		switch (e.GetEventType())
 		{
 		case Pyxis::EventType::None:
@@ -102,16 +114,6 @@ namespace Pyxis
 			break;
 		default:
 			break;
-		}
-		
-		dispatcher.Dispatch<WindowCloseEvent>(PX_BIND_EVENT_FN(Application::OnWindowClose));
-		dispatcher.Dispatch<WindowResizeEvent>(PX_BIND_EVENT_FN(Application::OnWindowResize));
-
-		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
-		{
-			if (e.Handled) 
-				break;
-			(*it)->OnEvent(e);
 		}
 
 	}

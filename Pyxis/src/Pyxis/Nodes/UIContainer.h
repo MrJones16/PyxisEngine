@@ -67,6 +67,8 @@ namespace Pyxis
 
 					if (ImGui::DragFloat("Gap", &m_Gap)) RearrangeChildren();
 
+					if (ImGui::Button("Rearrange Children")) RearrangeChildren();
+
 					if (ImGui::TreeNodeEx("Direction", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 

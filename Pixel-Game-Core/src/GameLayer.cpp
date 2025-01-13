@@ -936,18 +936,44 @@ namespace Pyxis
 
 	bool GameLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
 	{
-		if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
+		if (UI::UINode::s_MousePressedNodeID == m_Scene->m_HoveredNodeID)
 		{
-			//the hovered node is valid
-			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
+			//the hovered node is what we pressed last
+			if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
 			{
-				uinode->OnMouseReleased(event.GetMouseButton());
-				if (UI::UINode::s_MousePressedNodeID == m_Scene->m_HoveredNodeID)
-					uinode->OnClick();
-			}
-			
-					
+				//the hovered node is valid
 
+				//try to cast it to UI 
+				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
+				{
+					uinode->OnMouseReleased(event.GetMouseButton(), true);
+				}
+			}
+		}
+		else
+		{
+			//the hovered node is not what we pressed originally, so call released on original press, and hovered object
+			if (Node::Nodes.contains(UI::UINode::s_MousePressedNodeID))
+			{
+				//the hovered node is valid
+
+				//try to cast it to UI 
+				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[UI::UINode::s_MousePressedNodeID]))
+				{
+					uinode->OnMouseReleased(event.GetMouseButton(), false);
+				}
+			}
+
+			if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
+			{
+				//the hovered node is valid
+
+				//try to cast it to UI 
+				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
+				{
+					uinode->OnMouseReleased(event.GetMouseButton(), false);
+				}
+			}
 		}
 
 		//do not end event here

@@ -6,49 +6,74 @@ namespace Pyxis
 	MenuNode::MenuNode(const std::string& name) : Node(name),
 		m_CallbackRichPresenceJoinRequested(this, &MenuNode::OnGameRichPresenceJoinRequested),
 		m_CallbackGameOverlayActivated(this, &MenuNode::OnGameOverlayActivated),
-		m_PlayButtonReciever(this, &MenuNode::PlayButton)
+		m_PlayButtonReciever(this, &MenuNode::PlaySinglePlayer),
+		m_WindowResizeReciever(this, &MenuNode::OnWindowResize)
 	{
 		//since I don't have scenes to set up an actual heirarchy, and an editor to do things
 		//scenes are set in a constructor...
 
+		EventSignal::s_WindowResizeEventSignal.AddReciever(m_WindowResizeReciever);
+
 		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
 
-		auto canvas = CreateRef<UI::UICanvas>();
-		canvas->CreateTextures("assets/textures/GreenCanvas/", "GreenCanvasTile_", ".png");
+		m_CanvasNode = CreateRef<UI::UICanvas>();
+		m_CanvasNode->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		Camera* camera = Camera::Main();
 		if (camera)
 		{
 			//base canvas
-			canvas->m_Size = { camera->GetWidth(),camera->GetHeight()};
-			AddChild(canvas);
+			m_CanvasNode->m_Size = { camera->GetWidth(),camera->GetHeight()};
+			AddChild(m_CanvasNode);
 
 			//container
 			auto container = CreateRef<UI::UIContainer>();
 			container->Translate({ 0,0,1 });
-			canvas->AddChild(container);
-			container->m_Size = canvas->m_Size - glm::vec2(1);
+			m_CanvasNode->AddChild(container);
+			container->m_Size = m_CanvasNode->m_Size - glm::vec2(1);
 			container->m_Direction = UI::UIContainer::Down;
 			container->m_Color = { 0,0,0,0 };
 
-			//play button!
-			auto playButton = CreateRef<UI::UIButton>();
-			playButton->Translate({ 0,0,1 });
-			playButton->m_Size = { 3, 1 };
-			playButton->m_Color = { 0.1f, 0.8f, 0.1f, 1.0f };
-			playButton->m_Texture = Texture2D::Create("assets/textures/UIButton.png");
-			playButton->AddReciever(m_PlayButtonReciever);
+			auto logo = CreateRef<UI::UIRect>(Texture2D::Create("assets/textures/UI/InsetPyxisLogo.png"), "Logo");
+			logo->m_Size = { ((float)logo->m_Texture->GetWidth() / 32.0f), ((float)logo->m_Texture->GetHeight() / 32.0f) };
+			container->AddChild(logo);
 
 			//add child after setting the dimensions, because otherwise ArrangeChildren isn't called
 			//in the container
+
+			//Singleplayer button
+			auto playButton = CreateRef<UI::UIButton>("Play-Singleplayer-Button", std::bind(&MenuNode::PlaySinglePlayer, this));
+			playButton->Translate({ 0,0,1 });
+			playButton->m_Texture = Texture2D::Create("assets/textures/UI/SingleplayerButton.png");
+			playButton->m_TexturePressed = Texture2D::Create("assets/textures/UI/SingleplayerButtonPressed.png");
+			playButton->UpdateSizeFromTexture();
 			container->AddChild(playButton);
 
-			//text on play button
-			auto text = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
-			text->m_Text = "Singleplayer";
-			text->m_FontSize = 20;
-			text->m_Size = { 2, 0.25f };
-			text->Translate({ 0.25f,0,1 });
-			playButton->AddChild(text);
+			//Multiplayer button
+			auto multiButton = CreateRef<UI::UIButton>("Play-Multiplayer-Button", std::bind(&MenuNode::PlayMultiplayer, this));
+			multiButton->Translate({ 0,0,1 });
+			multiButton->m_Texture = Texture2D::Create("assets/textures/UI/MultiplayerButton.png");
+			multiButton->m_TexturePressed = Texture2D::Create("assets/textures/UI/MultiplayerButtonPressed.png");
+			multiButton->UpdateSizeFromTexture();
+			container->AddChild(multiButton);
+
+			//Host Game button
+			auto hostButton = CreateRef<UI::UIButton>("Host-Button", std::bind(&MenuNode::HostGame, this));
+			hostButton->Translate({ 0,0,1 });
+			hostButton->m_Texture = Texture2D::Create("assets/textures/UI/HostGameButton.png");
+			hostButton->m_TexturePressed = Texture2D::Create("assets/textures/UI/HostGameButtonPressed.png");
+			hostButton->UpdateSizeFromTexture();
+			container->AddChild(hostButton);
+
+			
+			
+
+			////text on play button
+			//auto text = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
+			//text->m_Text = "Singleplayer";
+			//text->m_FontSize = 20;
+			//text->m_Size = { 2, 0.25f };
+			//text->Translate({ 0.25f,0,1 });
+			//playButton->AddChild(text);
 		}
 	}
 
@@ -152,9 +177,30 @@ namespace Pyxis
 
 	//}
 
-	void MenuNode::PlayButton()
+	void MenuNode::PlaySinglePlayer()
 	{
 		PX_WARN("Pressed Play!!");
+	}
+
+	void MenuNode::PlayMultiplayer()
+	{
+		PX_WARN("Multiplayer!");
+	}
+
+	void MenuNode::HostGame()
+	{
+		PX_WARN("Host!");
+	}
+
+	void MenuNode::OnWindowResize(WindowResizeEvent& event)
+	{
+		m_CanvasNode->m_Size = { Camera::s_MainCamera->GetWidth(), Camera::s_MainCamera->GetHeight() };
+		m_CanvasNode->UpdateCanvasTransforms();
+		if (auto container = dynamic_cast<UI::UIContainer*>(m_CanvasNode->m_Children.front().get()))
+		{
+			container->m_Size = m_CanvasNode->m_Size - glm::vec2(1);
+			container->RearrangeChildren();
+		}
 	}
 
 	void MenuNode::FailedToConnect()
