@@ -21,7 +21,7 @@ target_sources(Pixel-Game-Core PRIVATE
 	src/HostingGameLayer.h
 
 
- "src/PixelNetworking.h" "src/GameNode.cpp" "src/GameNode.h")
+ "src/PixelNetworking.h" "../Pyxis-Game/src/GameNode.cpp" "../Pyxis-Game/src/GameNode.h" "../Pyxis-Game/src/SingleplayerGameNode.h")
 
 target_include_directories(Pixel-Game-Core PUBLIC
 	src

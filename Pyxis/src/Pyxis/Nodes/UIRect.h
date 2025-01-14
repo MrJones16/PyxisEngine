@@ -17,6 +17,13 @@ namespace Pyxis
 			glm::vec2 m_Size = { 1,1 };
 			float m_PPU = 32;
 
+			bool m_AutoResizing = false;
+			glm::vec2 m_AutomaticSizingPercent = { 1,1 };
+
+			bool m_AutoAlign = false;
+			Direction m_HorizontalAlignment = Center;
+			Direction m_VerticalAlignment = Center;
+
 			UIRect(const std::string& name = "UIRect") : UINode(name) 
 			{
 
@@ -33,6 +40,7 @@ namespace Pyxis
 			{
 
 			}
+
 
 
 			//uses the PPU and the texture to set the size of the object
@@ -58,6 +66,49 @@ namespace Pyxis
 
 					ImGui::TreePop();
 				}
+			}
+
+			void AutoRect()
+			{
+				if (auto parentRect = dynamic_cast<UIRect*>(m_Parent))
+				{
+					if (m_AutoResizing)
+						m_Size = parentRect->m_Size * m_AutomaticSizingPercent;
+
+					if (m_AutoAlign)
+					{
+						//reset position
+						m_Position = glm::vec3(0, 0, m_Position.z);
+						//horizontal
+						if (m_HorizontalAlignment == Left)
+						{
+							m_Position.x -= (parentRect->m_Size.x / 2.0f) - (m_Size.x / 2);
+						}
+						else if (m_HorizontalAlignment == Right)
+						{
+							m_Position.x += (parentRect->m_Size.x / 2.0f) - (m_Size.x / 2);
+						}
+
+						//vertical
+						if (m_VerticalAlignment == Up)
+						{
+							m_Position.y += (parentRect->m_Size.y / 2.0f) - (m_Size.y / 2);
+						}
+						else if (m_VerticalAlignment == Down)
+						{
+							m_Position.y -= (parentRect->m_Size.y / 2.0f) - (m_Size.y / 2);
+						}
+						
+						UpdateLocalTransform();
+					}
+				}
+				
+			}
+
+			virtual void PropagateUpdate() override
+			{
+				AutoRect();
+				UINode::PropagateUpdate();
 			}
 
 			//virtual void OnUpdate(Timestep ts) override;

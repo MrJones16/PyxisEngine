@@ -38,7 +38,7 @@ namespace Pyxis
 			RenderCommand::Clear();
 			uint32_t clear = 0;
 			m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
-			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
+			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera().get());
 		}
 
 		

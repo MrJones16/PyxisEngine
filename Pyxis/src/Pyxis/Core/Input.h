@@ -2,6 +2,7 @@
 
 #include "Pyxis/Core/Core.h"
 #include "glm/glm.hpp"
+#include <Pyxis/Core/InputCodes.h>
 
 namespace Pyxis
 {

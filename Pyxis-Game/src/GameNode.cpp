@@ -8,19 +8,50 @@
 
 #include "Pyxis/Nodes/UI.h"
 
+
 namespace Pyxis
 {
 
 	GameNode::GameNode(std::string debugName)
 		: Node(debugName),
-		m_OrthographicCameraController(2, 1 / 1, -100, 100)//, m_CurrentTickClosure()
+		m_KeyPressedReciever(this, &GameNode::OnKeyPressedEvent),
+		m_MouseButtonPressedReciever(this, &GameNode::OnMouseButtonPressedEvent),
+		m_MouseScrolledReciever(this, &GameNode::OnMouseScrolledEvent)
 	{
+		EventSignal::s_KeyPressedEventSignal.AddReciever(m_KeyPressedReciever);
+		EventSignal::s_MouseButtonPressedEventSignal.AddReciever(m_MouseButtonPressedReciever);
+		EventSignal::s_MouseScrolledEventSignal.AddReciever(m_MouseScrolledReciever);
 
+		//Set up the UI Heirarchy since we have no scenes
+
+		//I'm going to aim for a bottom hot bar for now.
+		m_CameraController = CreateRef<OrthographicCameraControllerNode>();
+		m_CameraController->SetMainCamera();
+		m_CameraController->SetWidth(2);
+		m_CameraController->Translate({ 0,1,0 });
+		AddChild(m_CameraController);
+
+		auto screenSpace = CreateRef<UI::UIScreenSpace>();
+		AddChild(screenSpace);
+
+		m_Hotbar = CreateRef<UI::UICanvas>();
+		m_Hotbar->m_AutoResizing = true;
+		m_Hotbar->m_AutomaticSizingPercent = { 1, 0.1f };//10 % height
+		//full x, 1/10th up the screen
+		m_Hotbar->m_AutoAlign = true;
+		m_Hotbar->m_VerticalAlignment = UI::Down;
+		
+		m_Hotbar->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
+		m_Hotbar->m_PPU = 32;
+		m_Hotbar->m_TextureScale = m_Hotbar->m_PPU;
+		screenSpace->AddChild(m_Hotbar);
+		screenSpace->PropagateUpdate(); // simple way to tell the hotbar to fix itself
 	}
 
 	GameNode::~GameNode()
 	{
 		m_World = nullptr;
+		
 	}
 
 
@@ -34,6 +65,9 @@ namespace Pyxis
 	/// <param name="ts"></param>
 	void GameNode::GameUpdate(Timestep ts)
 	{
+
+		m_Hovering = (Node::s_HoveredNodeID == GetID()) || (Node::s_HoveredNodeID == 0);
+		//PX_TRACE("Hovered Node: {0}", Node::s_HoveredNodeID);
 
 		{
 			PROFILE_SCOPE("Game Update");
@@ -57,32 +91,26 @@ namespace Pyxis
 			}
 
 
-			if (Input::IsMouseButtonPressed(0) && !m_Hovering)
+			if (Input::IsMouseButtonPressed(0) && m_Hovering)
 			{
-				glm::ivec2 mousePos = GetMousePositionImGui();
-				
-				if (!(mousePos.x > m_ViewportSize.x || mousePos.x < 0 || mousePos.y > m_ViewportSize.y || mousePos.y < 0))
+				glm::vec2 mousePos = GetMousePosWorld();
+				glm::ivec2 pixelPos = m_World->WorldToPixel(mousePos);
+				if (m_BuildingRigidBody)
 				{
-					glm::vec2 mousePercent = (glm::vec2)mousePos / m_ViewportSize;
-					auto vec = m_OrthographicCameraController.MousePercentToWorldPos(mousePercent.x, mousePercent.y);
-					glm::ivec2 pixelPos = m_World->WorldToPixel(vec);
-					if (m_BuildingRigidBody)
-					{
-						if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
-						if (pixelPos.x > m_RigidMax.x) m_RigidMax.x = pixelPos.x;
-						if (pixelPos.y < m_RigidMin.y) m_RigidMin.y = pixelPos.y;
-						if (pixelPos.y > m_RigidMax.y) m_RigidMax.y = pixelPos.y;
-					}
-					else
-					{
-						m_CurrentTickClosure.AddInputAction(
-							InputAction::Input_Place,
-							(uint8_t)m_BrushSize,
-							(uint16_t)m_BrushType,
-							(uint32_t)m_SelectedElementIndex,
-							pixelPos,
-							false);
-					}
+					if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
+					if (pixelPos.x > m_RigidMax.x) m_RigidMax.x = pixelPos.x;
+					if (pixelPos.y < m_RigidMin.y) m_RigidMin.y = pixelPos.y;
+					if (pixelPos.y > m_RigidMax.y) m_RigidMax.y = pixelPos.y;
+				}
+				else
+				{
+					m_CurrentTickClosure.AddInputAction(
+						InputAction::Input_Place,
+						(uint8_t)m_BrushSize,
+						(uint16_t)m_BrushType,
+						(uint32_t)m_SelectedElementIndex,
+						pixelPos,
+						false);
 				}
 			}
 		}
@@ -105,48 +133,8 @@ namespace Pyxis
 	}
 
 
-	void GameNode::ClientImGuiRender(ImGuiID dockID)
+	void GameNode::ClientImGuiRender()
 	{
-		m_Hovering = ImGui::IsWindowHovered();
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
-		ImGui::SetNextWindowDockID(dockID);
-		if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
-		{
-			m_SceneViewIsFocused = ImGui::IsWindowFocused();
-
-			auto viewportOffset = ImGui::GetCursorScreenPos();
-			auto newViewportSize = ImGui::GetContentRegionAvail();
-
-			m_ViewportBounds[0] = { viewportOffset.x, viewportOffset.y };
-			m_ViewportBounds[1] = { viewportOffset.x + newViewportSize.x, viewportOffset.y + newViewportSize.y };
-
-			//PX_CORE_WARN("Min Bounds: ({0},{1})", m_ViewportBounds[0].x, m_ViewportBounds[0].y);
-			//PX_CORE_WARN("Max Bounds: ({0},{1})", m_ViewportBounds[1].x, m_ViewportBounds[1].y);
-
-			Application::Get().GetImGuiLayer()->BlockEvents(false);
-			//ImGui::GetForegroundDrawList()->AddRect(minPos, maxPos, ImU32(0xFFFFFFFF));
-			ImGui::Image(
-				(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID(0)),
-				newViewportSize,
-				ImVec2(0, 1),
-				ImVec2(1, 0),
-				ImVec4(1, 1, 1, 1)
-				//ImVec4(1, 1, 1, 1) border color
-			);
-			m_ViewportOffset = ImGui::GetItemRectMin();
-		
-			if (m_ViewportSize.x != newViewportSize.x || m_ViewportSize.y != newViewportSize.y)
-			{
-				m_ViewportSize = { newViewportSize.x, newViewportSize.y };
-				m_OrthographicCameraController.SetAspect(m_ViewportSize.y / m_ViewportSize.x);
-				m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-			}
-		
-			ImGui::End();
-		}
-		ImGui::PopStyleVar();
-
 		if (ImGui::Begin("Game"))
 		{
 			ImGui::SetNextItemOpen(true);
@@ -785,19 +773,21 @@ namespace Pyxis
 
 	glm::vec2 GameNode::GetMousePosWorld()
 	{
-		glm::ivec2 mousePos = GetMousePositionImGui();
-		glm::vec2 mousePercent = (glm::vec2)mousePos / m_ViewportSize;
-		return m_OrthographicCameraController.MousePercentToWorldPos(mousePercent.x, mousePercent.y);
+		glm::vec2 mousePos = Input::GetMousePosition();
+		Window& window = Application::Get().GetWindow();
+		mousePos.x /= (float)window.GetWidth();
+		mousePos.y /= (float)window.GetHeight();
+		//from 0->1 to -1 -> 1
+		mousePos = (mousePos - 0.5f) * 2.0f;
+		mousePos *= (Camera::Main()->GetSize() / 2.0f);
+		
+
+		glm::vec4 vec = glm::vec4(mousePos.x, -mousePos.y, 0, 1);
+		vec = glm::translate(glm::mat4(1), Camera::Main()->GetPosition()) * vec;
+		return vec;
 	}
 
-	bool GameNode::OnWindowResizeEvent(WindowResizeEvent& event) {
-		m_OrthographicCameraController.SetAspect((float)event.GetHeight() / (float)event.GetWidth());
-		m_ViewportSize = { event.GetWidth() , event.GetHeight() };
-		Renderer::OnWindowResize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);
-		return false;
-	}
-
-	bool GameNode::OnKeyPressedEvent(KeyPressedEvent& event) {
+	void GameNode::OnKeyPressedEvent(KeyPressedEvent& event) {
 		if (event.GetKeyCode() == PX_KEY_F)
 		{
 			//SendStringToServer("Respects Paid!");
@@ -836,25 +826,10 @@ namespace Pyxis
 			m_BrushType = BrushType(type);
 		}
 
-		return false;
 	}
 
-	bool GameNode::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
+	void GameNode::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
 	{
-		//let the UI keep track of what has been pressed, so that way buttons can be on release!
-		UI::UINode::s_MousePressedNodeID = m_Scene->m_HoveredNodeID;
-
-		//see if the node is valid, and if it is then send the event through.
-		if (Node::Nodes.contains(m_Scene->m_HoveredNodeID))
-		{
-			//the hovered node is valid
-			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_Scene->m_HoveredNodeID]))
-			{
-				uinode->OnMousePressed(event.GetMouseButton());
-			}
-
-		}
-
 		//PX_TRACE(event.GetMouseButton());
 		if (event.GetMouseButton() == PX_MOUSE_BUTTON_FORWARD) // forward
 		{
@@ -866,20 +841,9 @@ namespace Pyxis
 			m_BrushSize--;
 			if (m_BrushSize < 0.0f) m_BrushSize = 0;
 		}
-
-
-		return false;
 	}
 
-	bool GameNode::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
-	{
-		
-
-		//do not end event here
-		return false;
-	}
-
-	bool GameNode::OnMouseScrolledEvent(MouseScrolledEvent& event)
+	void GameNode::OnMouseScrolledEvent(MouseScrolledEvent& event)
 	{
 		if (Input::IsKeyPressed(PX_KEY_LEFT_CONTROL))
 		{
@@ -887,19 +851,20 @@ namespace Pyxis
 			if (m_BrushSize < 0) m_BrushSize = 0;
 			if (m_BrushSize > 32) m_BrushSize = 32;
 		}
-		else if (Input::IsKeyPressed(PX_KEY_LEFT_ALT))
-		{
-			m_OrthographicCameraController.m_CameraSpeed *= 1 + (event.GetYOffset() / 10);
-		}
-		else
-		{
-			m_OrthographicCameraController.Zoom(1 - (event.GetYOffset() / 10));
-		}
 		
 		//do not end event here
-		return false;
-		return false;
 	}
+
+	/*void GameNode::OnWindowResizeEvent(WindowResizeEvent& event)
+	{
+		glm::vec2 windowSize = { event.GetWidth(), event.GetHeight() };
+		m_Hotbar->ResetLocalTransform();
+		m_Hotbar->SetScale((glm::vec3(1) / glm::vec3(windowSize.x / 2.0f, windowSize.y / 2.0f, 1)));
+		m_Hotbar->m_Size = { windowSize.x, windowSize.y * 0.1f };
+		m_Hotbar->m_TextureScale = 32;
+		m_Hotbar->UpdateCanvasTransforms();
+
+	}*/
 
 
 	void GameNode::PaintBrushHologram()

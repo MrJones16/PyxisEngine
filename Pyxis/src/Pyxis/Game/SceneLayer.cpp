@@ -60,8 +60,9 @@ namespace Pyxis
 			RenderCommand::Clear();
 			uint32_t clear = 0;
 			m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
-			m_MainCamera->RecalculateViewMatrix();
-			Renderer2D::BeginScene(m_MainCamera);
+			PX_CORE_ASSERT(Camera::Main() != nullptr, "There is no main camera!");
+			Camera::Main()->RecalculateViewMatrix();
+			Renderer2D::BeginScene(Camera::Main());
 		}
 
 
@@ -110,7 +111,7 @@ namespace Pyxis
 		if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
 		{
 			uint32_t nodeID; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
-			m_HoveredNodeID = nodeID;
+			Node::s_HoveredNodeID = nodeID;
 		}
 
 		
@@ -149,7 +150,7 @@ namespace Pyxis
 		{
 			if (ImGui::Begin("Scene Hierarchy"))
 			{
-				for (auto& node : m_RootNodes)
+				for (auto& node : m_RootNode.m_Children)
 				{
 					DrawNodeTree(node);
 				}
@@ -166,6 +167,12 @@ namespace Pyxis
 			}
 			ImGui::End();
 		}
+
+		for (auto node : Node::Nodes)
+		{
+			node.second->OnImGuiRender();
+		}
+
 		//auto dockID = ImGui::DockSpaceOverViewport(ImGui::GetID("SceneLayerDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
 		//ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
 		//ImGui::SetNextWindowDockID(dockID);
@@ -246,15 +253,15 @@ namespace Pyxis
 	bool SceneLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent& event)
 	{
 		//let the UI keep track of what has been pressed, so that way buttons can be on release!
-		UI::UINode::s_MousePressedNodeID = m_HoveredNodeID;
+		UI::UINode::s_MousePressedNodeID = Node::s_HoveredNodeID;
 
 		//see if the node is valid, and if it is then send the event through.
-		if (Node::Nodes.contains(m_HoveredNodeID))
+		if (Node::Nodes.contains(Node::s_HoveredNodeID))
 		{
 			//the hovered node is valid
 
 			//try to cast it to a UI node, and call onMousePressed
-			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_HoveredNodeID]))
+			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[Node::s_HoveredNodeID]))
 			{
 				uinode->OnMousePressed(event.GetMouseButton());
 			}
@@ -273,15 +280,15 @@ namespace Pyxis
 	/// <returns></returns>
 	bool SceneLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
 	{
-		if (UI::UINode::s_MousePressedNodeID == m_HoveredNodeID)
+		if (UI::UINode::s_MousePressedNodeID == Node::s_HoveredNodeID)
 		{
 			//the hovered node is what we pressed last
-			if (Node::Nodes.contains(m_HoveredNodeID))
+			if (Node::Nodes.contains(Node::s_HoveredNodeID))
 			{
 				//the hovered node is valid
 				
 				//try to cast it to UI 
-				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_HoveredNodeID]))
+				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[Node::s_HoveredNodeID]))
 				{
 					uinode->OnMouseReleased(event.GetMouseButton(), true);
 				}
@@ -302,12 +309,12 @@ namespace Pyxis
 			}
 
 			///here if we want to call released on UI nodes without having to press first?
-			//if (Node::Nodes.contains(m_HoveredNodeID))
+			//if (Node::Nodes.contains(Node::s_HoveredNodeID))
 			//{
 			//	//the hovered node is valid
 
 			//	//try to cast it to UI 
-			//	if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[m_HoveredNodeID]))
+			//	if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[Node::s_HoveredNodeID]))
 			//	{
 			//		uinode->OnMouseReleased(event.GetMouseButton(), false);
 			//	}

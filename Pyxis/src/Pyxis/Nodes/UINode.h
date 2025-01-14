@@ -9,6 +9,14 @@ namespace Pyxis
 {
 	namespace UI
 	{
+
+		enum Direction : int
+		{
+			None,
+
+			Up, Down, Left, Right, Center
+		};
+
 		/// <summary>
 		/// A Base UI Node that can act as a root
 		/// </summary>
@@ -27,6 +35,32 @@ namespace Pyxis
 			//virtual void InspectorRender() override {};
 			virtual void OnUpdate(Timestep ts) override {};
 			virtual void OnRender() override {};
+
+			//update propagation for UI elements
+			virtual void PropagateUpdate()
+			{
+				for (auto& child : m_Children)
+				{
+					if (UINode* node = dynamic_cast<UINode*>(child.get()))
+					{
+						PX_TRACE("Sent Propagation to child");
+						node->PropagateUpdate();
+					}
+				}
+			}
+
+			virtual void UpdateLocalTransform() override
+			{
+				Node::UpdateLocalTransform();
+				for (auto& child : m_Children)
+				{
+					if (UINode* node = dynamic_cast<UINode*>(child.get()))
+					{
+						PX_TRACE("Sent Propagation to child");
+						node->PropagateUpdate();
+					}
+				}
+			}
 			
 		};
 	}

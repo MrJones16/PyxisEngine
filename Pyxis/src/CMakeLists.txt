@@ -154,4 +154,4 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
 
-      "Pyxis/Nodes/UI.h"  "Pyxis/Nodes/UINode.h" "Pyxis/Nodes/UIRect.h" "Pyxis/Nodes/UIText.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp" "Pyxis/Nodes/UIButton.h" "Pyxis/Nodes/UIContainer.h" "Pyxis/Nodes/UICanvas.h" "Pyxis/Game/SceneLayer.h" "Pyxis/Game/SceneLayer.cpp" "Pyxis/Events/Signal.h" "Pyxis/Events/EventSignals.h" "Pyxis/Nodes/OrthographicCameraNode.h" "Pyxis/Nodes/OrthographicCameraNode.cpp" "Pyxis/Nodes/UISignalButton.h")
+      "Pyxis/Nodes/UI.h"  "Pyxis/Nodes/UINode.h" "Pyxis/Nodes/UIRect.h" "Pyxis/Nodes/UIText.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp" "Pyxis/Nodes/UIButton.h" "Pyxis/Nodes/UIContainer.h" "Pyxis/Nodes/UICanvas.h" "Pyxis/Game/SceneLayer.h" "Pyxis/Game/SceneLayer.cpp" "Pyxis/Events/Signal.h" "Pyxis/Events/EventSignals.h" "Pyxis/Nodes/CameraNode.h" "Pyxis/Nodes/CameraNode.cpp" "Pyxis/Nodes/UISignalButton.h" "Pyxis/Nodes/OrthographicCameraControllerNode.h" )

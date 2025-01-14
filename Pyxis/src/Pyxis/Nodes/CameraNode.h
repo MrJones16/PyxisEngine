@@ -13,11 +13,11 @@ namespace Pyxis
 	/// <summary>
 	/// A Base UI Node that can act as a root
 	/// </summary>
-	class OrthographicCameraNode : public Node, public Camera
+	class CameraNode : public Node, public Camera
 	{
 	public:
-		OrthographicCameraNode(const std::string& name = "OrthographicCameraNode") : Node(name), Camera() { RecalculateProjectionMatrix(); };
-		virtual ~OrthographicCameraNode() = default;
+		CameraNode(const std::string& name = "CameraNode") : Node(name), Camera() { RecalculateProjectionMatrix(); };
+		virtual ~CameraNode() = default;
 
 
 		//Functions for game usage

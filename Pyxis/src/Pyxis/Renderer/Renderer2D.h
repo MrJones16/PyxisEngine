@@ -13,7 +13,7 @@ namespace Pyxis
 		static void Init();
 		static void Shutdown();
 
-		static void BeginScene(const Ref<Pyxis::Camera> camera);
+		static void BeginScene(Pyxis::Camera* camera);
 		static void EndScene();
 		static void Flush();
 		static void DrawScreenQuad(uint32_t TextureID);

@@ -13,7 +13,7 @@ namespace Pyxis
 		inline static Camera* Main() { return s_MainCamera; }
 		Camera() { if (s_MainCamera == nullptr) { s_MainCamera = this; } }
 		virtual ~Camera() { if (s_MainCamera == this) { s_MainCamera = nullptr; } }
-
+		void SetMainCamera() { s_MainCamera = this; };
 
 		//Camera Functions
 		virtual void RecalculateProjectionMatrix() = 0;
@@ -75,6 +75,8 @@ namespace Pyxis
 			}
 			RecalculateProjectionMatrix();
 		}
+
+		virtual glm::vec2 GetSize() const { return m_Size; }
 
 	public:
 		bool m_LockAspect = true;

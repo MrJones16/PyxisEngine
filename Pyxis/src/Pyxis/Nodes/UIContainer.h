@@ -8,7 +8,7 @@ namespace Pyxis
 		/// <summary>
 		/// A UI Node that will update the positions of it's children to be in an organized fashion
 		/// </summary>
-		class UIContainer : public UIRect
+		class Container : public UIRect
 		{
 		public:
 
@@ -17,33 +17,28 @@ namespace Pyxis
 			float m_Padding = 0.0f;
 			float m_Gap = 0.2f;
 			
-			enum ContainerEnum : int
-			{
-				None,
+			
 
-				Up, Down, Left, Right, Center
-			};
+			Direction m_HorizontalAlignment = Left;
+			Direction m_VerticalAlignment = Up;
+			Direction m_Direction = Right;
 
-			ContainerEnum m_HorizontalAlignment = Left;
-			ContainerEnum m_VerticalAlignment = Up;
-			ContainerEnum m_Direction = Right;
-
-			UIContainer(const std::string& name = "UIContainer") : UIRect(name)
+			Container(const std::string& name = "Container") : UIRect(name)
 			{
 
 			}
 
-			UIContainer(Ref<Texture2D> texture, const std::string& name = "UIContainer") : UIRect(texture, name)
+			Container(Ref<Texture2D> texture, const std::string& name = "Container") : UIRect(texture, name)
 			{
 
 			}
 
-			UIContainer(const glm::vec4& color, const std::string& name = "UIContainer") : UIRect(color, name)
+			Container(const glm::vec4& color, const std::string& name = "Container") : UIRect(color, name)
 			{
 
 			}
 
-			virtual ~UIContainer() = default;
+			virtual ~Container() = default;
 
 			virtual void AddChild(const Ref<Node>& child) override
 			{
@@ -72,29 +67,36 @@ namespace Pyxis
 					if (ImGui::TreeNodeEx("Direction", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 
-						if (ImGui::Button("Right"))		{ m_Direction =	ContainerEnum::Right; RearrangeChildren();}
-						if (ImGui::Button("Left"))		{ m_Direction = ContainerEnum::Left; RearrangeChildren();}
-						if (ImGui::Button("Up"))		{ m_Direction = ContainerEnum::Up; RearrangeChildren();}
-						if (ImGui::Button("Down"))		{ m_Direction = ContainerEnum::Down; RearrangeChildren();}
+						if (ImGui::Button("Right"))		{ m_Direction =	Direction::Right; RearrangeChildren();}
+						if (ImGui::Button("Left"))		{ m_Direction = Direction::Left; RearrangeChildren();}
+						if (ImGui::Button("Up"))		{ m_Direction = Direction::Up; RearrangeChildren();}
+						if (ImGui::Button("Down"))		{ m_Direction = Direction::Down; RearrangeChildren();}
 						ImGui::TreePop();
 					}
 
 					if (ImGui::TreeNodeEx("Horizontal Alignment", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						if (ImGui::Button("Left"))	{ m_HorizontalAlignment = ContainerEnum::Left; RearrangeChildren();}
-						if (ImGui::Button("Right"))	{ m_HorizontalAlignment = ContainerEnum::Right; RearrangeChildren();}
-						if (ImGui::Button("Center")){ m_HorizontalAlignment = ContainerEnum::Center; RearrangeChildren();}
+						if (ImGui::Button("Left"))	{ m_HorizontalAlignment = Direction::Left; RearrangeChildren();}
+						if (ImGui::Button("Right"))	{ m_HorizontalAlignment = Direction::Right; RearrangeChildren();}
+						if (ImGui::Button("Center")){ m_HorizontalAlignment = Direction::Center; RearrangeChildren();}
 						ImGui::TreePop();
 					}
 					if (ImGui::TreeNodeEx("Vertical Alignment", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						if (ImGui::Button("Up"))	{ m_VerticalAlignment = ContainerEnum::Up; RearrangeChildren();}
-						if (ImGui::Button("Down"))	{ m_VerticalAlignment = ContainerEnum::Down; RearrangeChildren();}
-						if (ImGui::Button("Center")) { m_VerticalAlignment = ContainerEnum::Center; RearrangeChildren();}
+						if (ImGui::Button("Up"))	{ m_VerticalAlignment = Direction::Up; RearrangeChildren();}
+						if (ImGui::Button("Down"))	{ m_VerticalAlignment = Direction::Down; RearrangeChildren();}
+						if (ImGui::Button("Center")) { m_VerticalAlignment = Direction::Center; RearrangeChildren();}
 						ImGui::TreePop();
 					}
 					ImGui::TreePop();
 				}
+			}
+
+			virtual void PropagateUpdate() override
+			{
+				AutoRect();
+				RearrangeChildren();
+				UINode::PropagateUpdate();
 			}
 
 			virtual void OnRender() override
@@ -216,7 +218,7 @@ namespace Pyxis
 						//first lets see if we are past the limit
 						switch (m_Direction)
 						{
-						case Pyxis::UI::UIContainer::Up:
+						case Pyxis::UI::Direction::Up:
 							if (position.y + (rect->m_Size.y) > maxShiftY)
 							{
 								//with this next object, we will be past the vertical limit, so lets shift against alignment
@@ -228,7 +230,7 @@ namespace Pyxis
 								nextLineShift = m_Gap;
 							}
 							break;
-						case Pyxis::UI::UIContainer::Down:
+						case Pyxis::UI::Direction::Down:
 							if (position.y - (rect->m_Size.y) < -maxShiftY)
 							{
 								//with this next object, we will be past the vertical limit, so lets shift against alignment
@@ -240,7 +242,7 @@ namespace Pyxis
 								nextLineShift = m_Gap;
 							}
 							break;
-						case Pyxis::UI::UIContainer::Left:
+						case Pyxis::UI::Direction::Left:
 							if (position.x - (rect->m_Size.x) < -maxShiftX)
 							{
 								//with this next object, we will be past the vertical limit, so lets shift against alignment
@@ -252,7 +254,7 @@ namespace Pyxis
 								nextLineShift = m_Gap;
 							}
 							break;
-						case Pyxis::UI::UIContainer::Right:
+						case Pyxis::UI::Direction::Right:
 							if (position.x + (rect->m_Size.x) > maxShiftX)
 							{
 								//with this next object, we will be past the vertical limit, so lets shift against alignment
@@ -264,21 +266,21 @@ namespace Pyxis
 								nextLineShift = m_Gap;
 							}
 							break;
-						case Pyxis::UI::UIContainer::None:
-						case Pyxis::UI::UIContainer::Center:
+						case Pyxis::UI::Direction::None:
+						case Pyxis::UI::Direction::Center:
 						default:
 							break;
 						}
 
 						switch (m_Direction)
 						{
-						case Pyxis::UI::UIContainer::Up:
-						case Pyxis::UI::UIContainer::Down:
+						case Pyxis::UI::Direction::Up:
+						case Pyxis::UI::Direction::Down:
 						{
 							if (rect->m_Size.x + m_Gap > nextLineShift) nextLineShift = rect->m_Size.x + m_Gap;
 						}
-						case Pyxis::UI::UIContainer::Left:
-						case Pyxis::UI::UIContainer::Right:
+						case Pyxis::UI::Direction::Left:
+						case Pyxis::UI::Direction::Right:
 						{
 							if (rect->m_Size.y + m_Gap > nextLineShift) nextLineShift = rect->m_Size.y + m_Gap;
 						}
@@ -296,32 +298,32 @@ namespace Pyxis
 						switch (m_HorizontalAlignment)
 						{
 
-						case Pyxis::UI::UIContainer::Left:
+						case Pyxis::UI::Direction::Left:
 							rect->Translate({ (rect->m_Size.x / 2), 0, 0 });
 							break;
-						case Pyxis::UI::UIContainer::Right:
+						case Pyxis::UI::Direction::Right:
 							rect->Translate({ -(rect->m_Size.x / 2), 0, 0 });
 							break;
-						case Pyxis::UI::UIContainer::Center:
-						case Pyxis::UI::UIContainer::Up:
-						case Pyxis::UI::UIContainer::Down:
-						case Pyxis::UI::UIContainer::None:
+						case Pyxis::UI::Direction::Center:
+						case Pyxis::UI::Direction::Up:
+						case Pyxis::UI::Direction::Down:
+						case Pyxis::UI::Direction::None:
 						default:
 							break;
 						}
 						switch (m_VerticalAlignment)
 						{
 
-						case Pyxis::UI::UIContainer::Up:
+						case Pyxis::UI::Direction::Up:
 							rect->Translate({ 0, -(rect->m_Size.y / 2), 0 });
 							break;
-						case Pyxis::UI::UIContainer::Down:
+						case Pyxis::UI::Direction::Down:
 							rect->Translate({ 0, (rect->m_Size.y / 2), 0 });
 							break;
-						case Pyxis::UI::UIContainer::Center:
-						case Pyxis::UI::UIContainer::Left:
-						case Pyxis::UI::UIContainer::Right:
-						case Pyxis::UI::UIContainer::None:
+						case Pyxis::UI::Direction::Center:
+						case Pyxis::UI::Direction::Left:
+						case Pyxis::UI::Direction::Right:
+						case Pyxis::UI::Direction::None:
 						default:
 							break;
 						}
@@ -330,20 +332,20 @@ namespace Pyxis
 						//shift position the direction after setting an item
 						switch (m_Direction)
 						{
-						case Pyxis::UI::UIContainer::Up:
+						case Pyxis::UI::Direction::Up:
 							position.y += m_Gap + (rect->m_Size.y);
 							break;
-						case Pyxis::UI::UIContainer::Down:
+						case Pyxis::UI::Direction::Down:
 							position.y -= m_Gap + (rect->m_Size.y);
 							break;
-						case Pyxis::UI::UIContainer::Left:
+						case Pyxis::UI::Direction::Left:
 							position.x -= m_Gap + (rect->m_Size.x);
 							break;
-						case Pyxis::UI::UIContainer::Right:
+						case Pyxis::UI::Direction::Right:
 							position.x += m_Gap + (rect->m_Size.x);
 							break;
-						case Pyxis::UI::UIContainer::None:
-						case Pyxis::UI::UIContainer::Center:
+						case Pyxis::UI::Direction::None:
+						case Pyxis::UI::Direction::Center:
 						default:
 							break;
 						}

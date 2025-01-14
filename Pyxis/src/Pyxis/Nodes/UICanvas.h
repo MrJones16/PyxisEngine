@@ -128,10 +128,17 @@ namespace Pyxis
 				}
 			}
 
+			virtual void PropagateUpdate() override
+			{
+				AutoRect();
+				UpdateCanvasTransforms();
+				UINode::PropagateUpdate();
+			}
+
 			virtual void InspectorRender() override
 			{
 				UIRect::InspectorRender();
-				if (ImGui::TreeNodeEx("Container", ImGuiTreeNodeFlags_DefaultOpen))
+				if (ImGui::TreeNodeEx("Canvas", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					//Size
 					ImGui::DragFloat2("Size", glm::value_ptr(m_Size));
@@ -203,7 +210,7 @@ namespace Pyxis
 						//first, lets render the texture for the center?
 						glm::mat4 worldTransform = GetWorldTransform();
 						//
-						UpdateCanvasTransforms();
+						//UpdateCanvasTransforms();
 						//now, we should render the outside edges, 
 						for (int i = 0; i < 9; i++)
 						{

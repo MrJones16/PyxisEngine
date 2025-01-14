@@ -6,7 +6,7 @@
 
 #include <Pyxis/Nodes/Node.h>
 #include <Pyxis/Nodes/UI.h>
-#include <Pyxis/Nodes/OrthographicCameraNode.h>
+#include <Pyxis/Nodes/CameraNode.h>
 
 #include <Pyxis/Events/EventSignals.h>
 
@@ -42,7 +42,7 @@ namespace Pyxis
 
 	public:
 		//scene
-		std::vector<Ref<Node>> m_RootNodes;
+		Node m_RootNode;
 		Ref<Camera> m_MainCamera;
 
 	private:

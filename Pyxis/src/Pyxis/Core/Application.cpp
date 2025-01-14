@@ -87,10 +87,12 @@ namespace Pyxis
 			EventSignal::s_WindowResizeEventSignal(static_cast<WindowResizeEvent&>(e));
 			break;
 		case Pyxis::EventType::WindowFocus:
+			EventSignal::s_WindowFocusEventSignal(static_cast<WindowFocusEvent&>(e));
 			break;
 		case Pyxis::EventType::WindowLostFocus:
 			break;
 		case Pyxis::EventType::WindowMoved:
+			EventSignal::s_WindowMoveEventSignal(static_cast<WindowMoveEvent&>(e));
 			break;
 		case Pyxis::EventType::AppTick:
 			break;
@@ -99,18 +101,25 @@ namespace Pyxis
 		case Pyxis::EventType::AppRender:
 			break;
 		case Pyxis::EventType::KeyPressed:
+			EventSignal::s_KeyPressedEventSignal(static_cast<KeyPressedEvent&>(e));
 			break;
 		case Pyxis::EventType::KeyReleased:
+			EventSignal::s_KeyReleasedEventSignal(static_cast<KeyReleasedEvent&>(e));
 			break;
 		case Pyxis::EventType::KeyTyped:
+			EventSignal::s_KeyTypedEventSignal(static_cast<KeyTypedEvent&>(e));
 			break;
 		case Pyxis::EventType::MouseButtonPressed:
+			EventSignal::s_MouseButtonPressedEventSignal(static_cast<MouseButtonPressedEvent&>(e));
 			break;
 		case Pyxis::EventType::MouseButtonReleased:
+			EventSignal::s_MouseButtonReleasedEventSignal(static_cast<MouseButtonReleasedEvent&>(e));
 			break;
 		case Pyxis::EventType::MouseMoved:
+			EventSignal::s_MouseMovedEventSignal(static_cast<MouseMovedEvent&>(e));
 			break;
 		case Pyxis::EventType::MouseScrolled:
+			EventSignal::s_MouseScrolledEventSignal(static_cast<MouseScrolledEvent&>(e));
 			break;
 		default:
 			break;

@@ -1,16 +1,16 @@
 #pragma once
 
 #include "Pyxis.h"
-#include "Pyxis/Game/Scene.h"
-#include "Pyxis/Core/OrthographicCameraController.h"
 #include "Pyxis/Core/Panel.h"
 #include "Pyxis/Core/ProfilingPanel.h"
-#include "Pyxis/Game/InspectorPanel.h"
-#include "Pyxis/Game/SceneHierarchyPanel.h"
 #include <Pyxis/Network/NetworkClient.h>
 #include <Pyxis/Network/NetworkServer.h>
 
 #include "World.h"
+#include <Pyxis/Events/EventSignals.h>
+
+#include <Pyxis/Nodes/OrthographicCameraControllerNode.h>
+#include <Pyxis/Nodes/UICanvas.h>
 
 
 
@@ -23,23 +23,35 @@ namespace Pyxis
 		GameNode(std::string debugName = "Game Layer");
 		virtual ~GameNode();
 
+		//game node can force hold a camera since it is very important to it
+		Ref<OrthographicCameraControllerNode> m_CameraController;
 
 		//////////////////////////////////////
 		//////////////////////////////////////
-		/// Game Engine Events
+		/// Game Engine Event Recievers & Functions
 		//////////////////////////////////////
-		bool OnWindowResizeEvent(WindowResizeEvent& event);
-		bool OnKeyPressedEvent(KeyPressedEvent& event);
-		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
-		bool OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event);
-		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
 
+		Reciever<void(KeyPressedEvent&)> m_KeyPressedReciever;
+		void OnKeyPressedEvent(KeyPressedEvent& event);
+
+		Reciever<void(MouseButtonPressedEvent&)> m_MouseButtonPressedReciever;
+		void OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
+
+		Reciever<void(MouseScrolledEvent&)> m_MouseScrolledReciever;
+		void OnMouseScrolledEvent(MouseScrolledEvent& event);
+
+		/*Reciever<void(WindowResizeEvent&)> m_WindowResizeReciever;
+		void OnWindowResizeEvent(WindowResizeEvent& event);*/
+
+
+		//UI
+		Ref<UI::UICanvas> m_Hotbar;
 
 		//////////////////////////////////////
 		/// Game Functions
 		//////////////////////////////////////
 		void GameUpdate(Timestep ts);
-		virtual void ClientImGuiRender(ImGuiID dockID);
+		virtual void ClientImGuiRender();
 		void HandleTickClosure(MergedTickClosure& tc);
 		bool CreateWorld();
 		void PaintBrushHologram();
@@ -96,25 +108,13 @@ namespace Pyxis
 		//////////////////////////////////////
 		Ref<World> m_World;
 		bool m_SimulationRunning = false;
-		//time vars for update rate
-		std::chrono::time_point<std::chrono::high_resolution_clock> m_UpdateTime = std::chrono::high_resolution_clock::now();
-		std::chrono::time_point<std::chrono::high_resolution_clock> m_SlowUpdateTime = std::chrono::high_resolution_clock::now();
-		float m_TickRate = 30.0f;
-		float m_TickRateSlow = 10.0f;
+
+		bool m_Hovering = false;
 
 		//the current input tick we are at
 		//starts at -1 or "max value", so when connecting, if we recieve mtc's from 
 		//before the world data, we discard them.
-		uint64_t m_InputTick = -1;
-
-		//scene things
-		Ref<FrameBuffer> m_SceneFrameBuffer;
-		Ref<Scene> m_Scene;
-		OrthographicCameraController m_OrthographicCameraController;
-		glm::vec2 m_ViewportSize;
-		ImVec2 m_ViewportOffset;
-		bool m_SceneViewIsFocused = false;
-		bool m_Hovering = false;
+		uint64_t m_InputTick = -1;		
 
 		//Tools / Panels
 		std::vector<Ref<Panel>> m_Panels;

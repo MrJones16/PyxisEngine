@@ -299,7 +299,7 @@ namespace Pyxis
 		//delete s_Data;
 	}
 
-	void Renderer2D::BeginScene(const Ref<Pyxis::Camera> camera)
+	void Renderer2D::BeginScene(Pyxis::Camera* camera)
 	{	
 		s_Data.BitMapShader->Bind();
 		s_Data.BitMapShader->SetMat4("u_ViewProjection", camera->GetViewProjectionMatrix());

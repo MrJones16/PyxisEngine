@@ -109,14 +109,11 @@ namespace Pyxis
 			PushOverlay(scene);
 
 			//create game nodes
-			auto camera = CreateRef<OrthographicCameraNode>();
-			camera->SetWidth(12.8);
-			scene->m_MainCamera = camera;
-			scene->m_RootNodes.push_back(camera);
+			
 
 			//scene->m_RootNodes.push_back(CreateRef<UI::UIRect>(glm::vec4(0,1,0.4f, 1)));
 
-			scene->m_RootNodes.push_back(CreateRef<MenuNode>());
+			scene->m_RootNode.AddChild(CreateRef<MenuNode>());
 
 		}
 		~PyxisGame()

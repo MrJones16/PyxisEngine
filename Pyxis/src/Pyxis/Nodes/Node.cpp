@@ -104,7 +104,7 @@ namespace Pyxis
 
 	void Node::UpdateLocalTransform()
 	{
-		PX_TRACE("Updated Transform");
+		//PX_TRACE("Updated Transform");
 		m_LocalTransform = glm::translate(glm::mat4(1), m_Position);
 		m_LocalTransform = glm::rotate(m_LocalTransform, glm::radians(m_Rotation.x), {-1, 0, 0});
 		m_LocalTransform = glm::rotate(m_LocalTransform, glm::radians(m_Rotation.y), { 0,-1, 0 });
@@ -156,21 +156,25 @@ namespace Pyxis
 	void Node::Translate(glm::vec3 translation)
 	{
 		m_Position += translation;
-		m_LocalTransform = glm::translate(m_LocalTransform, translation);
+		UpdateLocalTransform();
 	}
 
 	void Node::Rotate(glm::vec3 rotation)
 	{
 		m_Rotation += rotation;
-		m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.x, { 1,0,0 });
-		m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.y, { 0,1,0 });
-		m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.z, { 0,0,1 });
+		UpdateLocalTransform();
+	}
+
+	void Node::SetScale(glm::vec3 scale)
+	{
+		m_Scale = scale;
+		UpdateLocalTransform();
 	}
 
 	void Node::Scale(glm::vec3 scale)
 	{
-		m_Scale += scale;
-		m_LocalTransform = glm::scale(m_LocalTransform, scale);
+		m_Scale *= scale;
+		UpdateLocalTransform();
 	}
 
 

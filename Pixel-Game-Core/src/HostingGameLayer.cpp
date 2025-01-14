@@ -35,7 +35,7 @@ namespace Pyxis
 			m_SceneFrameBuffer->Bind();
 			RenderCommand::SetClearColor({ 198 / 255.0f, 239 / 255.0f, 249 / 255.0f, 1 });
 			RenderCommand::Clear();
-			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera());
+			Renderer2D::BeginScene(m_OrthographicCameraController.GetCamera().get());
 		}
 
 
