@@ -17,10 +17,14 @@ namespace Pyxis
 			glm::vec2 m_Size = { 1,1 };
 			float m_PPU = 32;
 
-			bool m_AutoResizing = false;
-			glm::vec2 m_AutomaticSizingPercent = { 1,1 };
+			//automatic sizing
+			bool m_AutomaticResizing = false;
+			glm::vec2 m_AutomaticSizingPercent = { 1, 1 };
+			glm::vec2 m_AutomaticSizingOffset = { 0, 0 };
 
-			bool m_AutoAlign = false;
+			///automatic positioning
+			bool m_AutomaticPositioning = false;
+			glm::vec3 m_AutomaticPositionOffset = { 0, 0, 0 };
 			Direction m_HorizontalAlignment = Center;
 			Direction m_VerticalAlignment = Center;
 
@@ -72,10 +76,13 @@ namespace Pyxis
 			{
 				if (auto parentRect = dynamic_cast<UIRect*>(m_Parent))
 				{
-					if (m_AutoResizing)
+					if (m_AutomaticResizing)
+					{
 						m_Size = parentRect->m_Size * m_AutomaticSizingPercent;
+						m_Size += m_AutomaticSizingOffset;
+					}
 
-					if (m_AutoAlign)
+					if (m_AutomaticPositioning)
 					{
 						//reset position
 						m_Position = glm::vec3(0, 0, m_Position.z);
@@ -98,6 +105,8 @@ namespace Pyxis
 						{
 							m_Position.y -= (parentRect->m_Size.y / 2.0f) - (m_Size.y / 2);
 						}
+
+						m_Position += m_AutomaticPositionOffset;
 						
 						UpdateLocalTransform();
 					}

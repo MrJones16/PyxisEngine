@@ -6,8 +6,6 @@
 #include <chrono>
 #include <variant>
 
-#include "Pyxis/Nodes/UI.h"
-
 
 namespace Pyxis
 {
@@ -35,16 +33,47 @@ namespace Pyxis
 		AddChild(screenSpace);
 
 		m_Hotbar = CreateRef<UI::UICanvas>();
-		m_Hotbar->m_AutoResizing = true;
+		m_Hotbar->m_AutomaticResizing = true;
 		m_Hotbar->m_AutomaticSizingPercent = { 1, 0.1f };//10 % height
 		//full x, 1/10th up the screen
-		m_Hotbar->m_AutoAlign = true;
+		m_Hotbar->m_AutomaticPositioning = true;
 		m_Hotbar->m_VerticalAlignment = UI::Down;
-		
 		m_Hotbar->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		m_Hotbar->m_PPU = 32;
 		m_Hotbar->m_TextureScale = m_Hotbar->m_PPU;
 		screenSpace->AddChild(m_Hotbar);
+
+
+		auto container = CreateRef<UI::Container>();
+		container->m_AutomaticResizing = true;
+		container->m_AutomaticSizingPercent = { 1,1 };
+		container->m_AutomaticSizingOffset = { -32, -32 };
+		container->Translate({ 0,0,-0.05f });
+		m_Hotbar->AddChild(container);
+
+		auto buttonTexture = Texture2D::Create("assets/textures/UI/Button.png");
+		auto buttonPressedTexture = Texture2D::Create("assets/textures/UI/ButtonPressed.png");
+
+		auto ButtonHolder = CreateRef<UI::UIRect>("Button Holder");
+		ButtonHolder->m_Size = { 32, 32 };
+
+		m_PlayButton = CreateRef<UI::UIButton>("Play Button", Texture2D::Create("assets/Textures/UI/PlayButton.png"));
+		m_PlayButton->SetFunction(std::bind(&GameNode::Play, this));
+		m_PlayButton->m_TexturePressed = Texture2D::Create("assets/Textures/UI/PlayButtonPressed.png");
+		m_PlayButton->m_Size = { 32,32 };
+		m_PlayButton->m_Enabled = false;
+		ButtonHolder->AddChild(m_PlayButton);
+
+		m_PauseButton = CreateRef<UI::UIButton>("Play Button", Texture2D::Create("assets/Textures/UI/PauseButton.png"));
+		m_PauseButton->SetFunction(std::bind(&GameNode::Pause, this));
+		m_PauseButton->m_TexturePressed = Texture2D::Create("assets/Textures/UI/PauseButtonPressed.png");
+		m_PauseButton->m_Size = { 32,32 };
+		ButtonHolder->AddChild(m_PauseButton);
+
+		ButtonHolder->m_Enabled = false;
+
+		container->AddChild(ButtonHolder);
+
 		screenSpace->PropagateUpdate(); // simple way to tell the hotbar to fix itself
 	}
 

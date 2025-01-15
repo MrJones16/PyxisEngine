@@ -17,7 +17,7 @@ namespace Pyxis
 			float m_Padding = 0.0f;
 			float m_Gap = 0.2f;
 			
-			
+			bool m_ShowRegion = false;
 
 			Direction m_HorizontalAlignment = Left;
 			Direction m_VerticalAlignment = Up;
@@ -25,7 +25,7 @@ namespace Pyxis
 
 			Container(const std::string& name = "Container") : UIRect(name)
 			{
-
+				
 			}
 
 			Container(Ref<Texture2D> texture, const std::string& name = "Container") : UIRect(texture, name)
@@ -61,6 +61,8 @@ namespace Pyxis
 					if (ImGui::DragFloat2("Size", glm::value_ptr(m_Size))) RearrangeChildren();
 
 					if (ImGui::DragFloat("Gap", &m_Gap)) RearrangeChildren();
+
+					if (ImGui::Checkbox("Show Region", &m_ShowRegion));
 
 					if (ImGui::Button("Rearrange Children")) RearrangeChildren();
 
@@ -101,7 +103,7 @@ namespace Pyxis
 
 			virtual void OnRender() override
 			{
-				if (m_Enabled)
+				if (m_Enabled && m_ShowRegion)
 				{
 					if (m_Texture != nullptr)
 					{
@@ -127,7 +129,7 @@ namespace Pyxis
 				//re-position the children!
 
 				//first, lets get our current position
-				glm::vec3 startPosition = glm::vec3(0, 0, 1);
+				glm::vec3 startPosition = glm::vec3(0, 0, 0);
 
 				float maxShiftX = (m_Size.x / 2) - m_Padding;
 				float maxShiftY = (m_Size.y / 2) - m_Padding;

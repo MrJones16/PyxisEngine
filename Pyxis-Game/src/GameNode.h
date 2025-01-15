@@ -10,7 +10,7 @@
 #include <Pyxis/Events/EventSignals.h>
 
 #include <Pyxis/Nodes/OrthographicCameraControllerNode.h>
-#include <Pyxis/Nodes/UICanvas.h>
+#include <Pyxis/Nodes/UI.h>
 
 
 
@@ -46,6 +46,11 @@ namespace Pyxis
 
 		//UI
 		Ref<UI::UICanvas> m_Hotbar;
+
+		Ref<UI::UIButton> m_PlayButton;
+		Ref<UI::UIButton> m_PauseButton;
+		void Play() { m_PlayButton->m_Enabled = false; m_PauseButton->m_Enabled = true; m_World->m_Running = true; PX_TRACE("Play!"); };
+		void Pause() { m_PlayButton->m_Enabled = true; m_PauseButton->m_Enabled = false; m_World->m_Running = false; PX_TRACE("Pause!"); };
 
 		//////////////////////////////////////
 		/// Game Functions
@@ -107,7 +112,7 @@ namespace Pyxis
 		/// Game Variables
 		//////////////////////////////////////
 		Ref<World> m_World;
-		bool m_SimulationRunning = false;
+		
 
 		bool m_Hovering = false;
 
