@@ -43,7 +43,7 @@ namespace Pyxis
 				{
 					if (UINode* node = dynamic_cast<UINode*>(child.get()))
 					{
-						PX_TRACE("Sent Propagation to child");
+						//PX_TRACE("Sent Propagation to child");
 						node->PropagateUpdate();
 					}
 				}
@@ -56,7 +56,7 @@ namespace Pyxis
 				{
 					if (UINode* node = dynamic_cast<UINode*>(child.get()))
 					{
-						PX_TRACE("Sent Propagation to child");
+						//PX_TRACE("Sent Propagation to child");
 						node->PropagateUpdate();
 					}
 				}

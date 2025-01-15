@@ -21,23 +21,13 @@ namespace Pyxis
 
 			EdgeMode m_EdgeMode = Repeat;
 
-			Ref<Texture2D> m_CanvasTextures[9];
+			Ref<Texture2DResource> m_CanvasTextures[9];
 			glm::mat4 m_Matrices[9] = { glm::mat4(1) };
 
 			float m_TextureScale = 1.0f;
 
 
 			UICanvas(const std::string& name = "UICanvas") : UIRect(name)
-			{
-
-			}
-
-			UICanvas(Ref<Texture2D> texture, const std::string& name = "UICanvas") : UIRect(texture, name)
-			{
-
-			}
-
-			UICanvas(const glm::vec4& color, const std::string& name = "UICanvas") : UIRect(color, name)
 			{
 
 			}
@@ -123,7 +113,9 @@ namespace Pyxis
 					}
 					}
 
-					m_CanvasTextures[i] = Texture2D::Create(folderPath + filePrefix + std::to_string(i + 1) + fileSuffix, canvasSpec);
+					m_CanvasTextures[i] = ResourceSystem::Load<Texture2DResource>((folderPath + filePrefix + std::to_string(i + 1) + fileSuffix));
+					m_CanvasTextures[i]->m_Texture->SetTextureSpecification(canvasSpec);
+					//m_CanvasTextures[i] = Texture2D::Create(folderPath + filePrefix + std::to_string(i + 1) + fileSuffix, canvasSpec);
 
 				}
 			}
@@ -214,16 +206,16 @@ namespace Pyxis
 						//now, we should render the outside edges, 
 						for (int i = 0; i < 9; i++)
 						{
-							Renderer2D::DrawQuadEntity(worldTransform * m_Matrices[i], m_CanvasTextures[i], GetID());
+							Renderer2D::DrawQuadEntity(worldTransform * m_Matrices[i], m_CanvasTextures[i]->m_Texture, GetID());
 						}
 					}
-					else if (m_Texture != nullptr)
+					else if (m_TextureResource != nullptr)
 					{
 						//we have a texture, so display it!
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID());
 					}
 					else
 					{

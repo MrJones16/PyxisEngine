@@ -2,6 +2,7 @@
 
 #include <string>
 #include "Pyxis/Core/Core.h"
+#include <Pyxis/Core/Resource.h>
 
 namespace Pyxis
 {
@@ -44,6 +45,8 @@ namespace Pyxis
 		};
 		
 	public:
+		
+
 		virtual ~Texture() = default;
 
 		virtual uint32_t GetWidth() const = 0;
@@ -52,12 +55,12 @@ namespace Pyxis
 		virtual uint8_t* GetData() = 0;
 		virtual uint32_t GetID() const = 0;
 		virtual void Bind(uint32_t slot = 0) const = 0;
-		virtual void UpdateSpecification(TextureSpecification spec) = 0;
-		virtual TextureSpecification& GetTextureSpecification() = 0;
+		virtual void SetTextureSpecification(TextureSpecification spec) = 0;
+		virtual TextureSpecification& GetTextureSpecification() { return m_Specification; };
 
 		virtual bool operator== (const Texture& other) const = 0;
-
-
+	protected:
+		TextureSpecification m_Specification;
 	};
 
 	class Texture2D : public Texture
@@ -77,6 +80,17 @@ namespace Pyxis
 		virtual const uint32_t GetLength() const = 0;
 	private:
 
+	};
+
+	class Texture2DResource : public Resource
+	{
+	public:
+		Texture2DResource(std::string filePath) : Resource(filePath)
+		{
+			m_Texture = Texture2D::Create(filePath);
+		}
+
+		Ref<Texture2D> m_Texture;
 	};
 
 }

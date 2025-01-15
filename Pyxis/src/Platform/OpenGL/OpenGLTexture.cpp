@@ -122,9 +122,11 @@ namespace Pyxis
 		glBindTextureUnit(slot, m_RendererID);
 	}
 
-	void OpenGLTexture2D::UpdateSpecification(TextureSpecification spec)
+	void OpenGLTexture2D::SetTextureSpecification(TextureSpecification spec)
 	{
 		Bind();
+		m_Specification = spec;
+		SetParametersFromSpecification();
 	}
 
 	Texture::TextureSpecification& OpenGLTexture2D::GetTextureSpecification() 
@@ -265,7 +267,7 @@ namespace Pyxis
 	{
 
 	}
-	void OpenGLTexture3D::UpdateSpecification(TextureSpecification spec)
+	void OpenGLTexture3D::SetTextureSpecification(TextureSpecification spec)
 	{
 		m_Specification = spec;
 	}

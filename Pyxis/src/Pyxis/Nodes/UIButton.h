@@ -18,7 +18,7 @@ namespace Pyxis
 
 		public:
 
-			Ref<Texture2D> m_TexturePressed = nullptr;
+			Ref<Texture2DResource> m_TexturePressedResource = nullptr;
 
 			UIButton(const std::string& name = "UIButton", const std::function<void()>& function = nullptr) : 
 				UIRect(name), m_Function(function)
@@ -26,7 +26,7 @@ namespace Pyxis
 
 			}
 
-			UIButton(const std::string& name = "UIButton", Ref<Texture2D> texture = nullptr, const std::function<void()>& function = nullptr) : 
+			UIButton(const std::string& name = "UIButton", Ref<Texture2DResource> texture = nullptr, const std::function<void()>& function = nullptr) : 
 				UIRect(texture, name), m_Function(function)
 			{
 
@@ -87,20 +87,20 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					if (m_Texture != nullptr)
+					if (m_TextureResource != nullptr)
 					{
 						//we have a texture, so display it!
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
 
-						if (m_TexturePressed != nullptr && m_Pressed)
+						if (m_TexturePressedResource != nullptr && m_Pressed)
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TexturePressed, GetID());
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TexturePressedResource->m_Texture, GetID());
 						}
 						else
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID());
 						}
 						
 						

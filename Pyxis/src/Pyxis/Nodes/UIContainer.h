@@ -28,16 +28,6 @@ namespace Pyxis
 				
 			}
 
-			Container(Ref<Texture2D> texture, const std::string& name = "Container") : UIRect(texture, name)
-			{
-
-			}
-
-			Container(const glm::vec4& color, const std::string& name = "Container") : UIRect(color, name)
-			{
-
-			}
-
 			virtual ~Container() = default;
 
 			virtual void AddChild(const Ref<Node>& child) override
@@ -105,13 +95,13 @@ namespace Pyxis
 			{
 				if (m_Enabled && m_ShowRegion)
 				{
-					if (m_Texture != nullptr)
+					if (m_TextureResource != nullptr)
 					{
 						//we have a texture, so display it!
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID());
 					}
 					else
 					{

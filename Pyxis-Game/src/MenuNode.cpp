@@ -39,8 +39,9 @@ namespace Pyxis
 		container->m_VerticalAlignment = UI::Up;
 		container->m_Color = { 0,0,0,0 };
 
-		auto logo = CreateRef<UI::UIRect>(Texture2D::Create("assets/textures/UI/InsetPyxisLogo.png"), "Logo");
-		logo->m_Size = { ((float)logo->m_Texture->GetWidth() / 32.0f), ((float)logo->m_Texture->GetHeight() / 32.0f) };
+		auto logo = CreateRef<UI::UIRect>(ResourceSystem::Load<Texture2DResource>("assets/textures/UI/InsetPyxisLogo.png"), "Logo");
+		logo->m_PPU = 32;
+		logo->UpdateSizeFromTexture();
 		container->AddChild(logo);
 
 		//add child after setting the dimensions, because otherwise ArrangeChildren isn't called
@@ -49,24 +50,24 @@ namespace Pyxis
 		//Singleplayer button
 		auto playButton = CreateRef<UI::UIButton>("Play-Singleplayer-Button", std::bind(&MenuNode::PlaySinglePlayer, this));
 		playButton->Translate({ 0,0,1 });
-		playButton->m_Texture = Texture2D::Create("assets/textures/UI/SingleplayerButtonVertical.png");
-		playButton->m_TexturePressed = Texture2D::Create("assets/textures/UI/SingleplayerButtonVerticalPressed.png");
+		playButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/SingleplayerButtonVertical.png");
+		playButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/SingleplayerButtonVerticalPressed.png");
 		playButton->UpdateSizeFromTexture();
 		container->AddChild(playButton);
 
 		//Multiplayer button
 		auto multiButton = CreateRef<UI::UIButton>("Play-Multiplayer-Button", std::bind(&MenuNode::PlayMultiplayer, this));
 		multiButton->Translate({ 0,0,1 });
-		multiButton->m_Texture = Texture2D::Create("assets/textures/UI/MultiplayerButtonVertical.png");
-		multiButton->m_TexturePressed = Texture2D::Create("assets/textures/UI/MultiplayerButtonVerticalPressed.png");
+		multiButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/MultiplayerButtonVertical.png");
+		multiButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/MultiplayerButtonVerticalPressed.png");
 		multiButton->UpdateSizeFromTexture();
 		container->AddChild(multiButton);
 
 		//Host Game button
 		auto hostButton = CreateRef<UI::UIButton>("Host-Button", std::bind(&MenuNode::HostGame, this));
 		hostButton->Translate({ 0,0,1 });
-		hostButton->m_Texture = Texture2D::Create("assets/textures/UI/HostGameButtonVertical.png");
-		hostButton->m_TexturePressed = Texture2D::Create("assets/textures/UI/HostGameButtonVerticalPressed.png");
+		hostButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/HostGameButtonVertical.png");
+		hostButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/HostGameButtonVerticalPressed.png");
 		hostButton->UpdateSizeFromTexture();
 		container->AddChild(hostButton);
 

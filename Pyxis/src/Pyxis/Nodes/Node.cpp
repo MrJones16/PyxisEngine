@@ -84,6 +84,7 @@ namespace Pyxis
 	void Node::InspectorRender()
 	{
 		ImGui::InputText("##Name", &m_Name);
+		ImGui::Checkbox("Enabled", &m_Enabled);
 		if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen))
 		{
 			if (ImGui::DragFloat3("Position", glm::value_ptr(m_Position)))
@@ -135,9 +136,7 @@ namespace Pyxis
 
 	void Node::SetLocalTransform(const glm::mat4& transform)
 	{
-		glm::vec3 scale;
 		glm::quat rotation;
-		glm::vec3 translation;
 		glm::vec3 skew;
 		glm::vec4 perspective;
 		glm::decompose(transform, m_Scale, rotation, m_Position, skew, perspective);

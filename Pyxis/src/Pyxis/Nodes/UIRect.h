@@ -12,7 +12,7 @@ namespace Pyxis
 		{
 		public:
 
-			Ref<Texture2D> m_Texture = nullptr;
+			Ref<Texture2DResource> m_TextureResource = nullptr;
 			glm::vec4 m_Color = glm::vec4(1);
 			glm::vec2 m_Size = { 1,1 };
 			float m_PPU = 32;
@@ -33,14 +33,14 @@ namespace Pyxis
 
 			}
 
-			UIRect(Ref<Texture2D> texture, const std::string& name = "UIRect") : UINode(name),
-				m_Texture(texture), m_Color(1)
+			UIRect(Ref<Texture2DResource> texture, const std::string& name = "UIRect") : UINode(name),
+				m_TextureResource(texture), m_Color(1)
 			{
 				UpdateSizeFromTexture();
 			}
 
 			UIRect(const glm::vec4& color, const std::string& name = "UIRect") : UINode(name),
-				m_Texture(nullptr), m_Color(color)
+				m_TextureResource(nullptr), m_Color(color)
 			{
 
 			}
@@ -50,9 +50,9 @@ namespace Pyxis
 			//uses the PPU and the texture to set the size of the object
 			void UpdateSizeFromTexture()
 			{
-				if (m_Texture != nullptr)
+				if (m_TextureResource != nullptr)
 				{
-					m_Size = { (float)m_Texture->GetWidth() / m_PPU , (float)m_Texture->GetHeight() / m_PPU };
+					m_Size = { (float)m_TextureResource->m_Texture->GetWidth() / m_PPU , (float)m_TextureResource->m_Texture->GetHeight() / m_PPU };
 				}
 			}
 
@@ -109,6 +109,7 @@ namespace Pyxis
 						m_Position += m_AutomaticPositionOffset;
 						
 						UpdateLocalTransform();
+						
 					}
 				}
 				
@@ -126,13 +127,13 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					if (m_Texture != nullptr)
+					if (m_TextureResource != nullptr)
 					{	
 						//we have a texture, so display it!
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID(), 1, m_Color);
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID(), 1, m_Color);
 					}
 					else
 					{

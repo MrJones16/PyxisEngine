@@ -24,7 +24,7 @@ namespace Pyxis
 		virtual uint32_t GetID() const override { return m_RendererID; }
 
 		virtual void Bind(uint32_t slot = 0) const override;
-		virtual void UpdateSpecification(TextureSpecification spec) override;
+		virtual void SetTextureSpecification(TextureSpecification spec) override;
 		virtual TextureSpecification& GetTextureSpecification() override;
 
 		virtual bool operator==(const Texture& other) const override 
@@ -58,7 +58,7 @@ namespace Pyxis
 		virtual uint32_t GetID() const override { return m_RendererID; }
 
 		virtual void Bind(uint32_t slot = 0) const override;
-		virtual void UpdateSpecification(TextureSpecification spec) override;
+		virtual void SetTextureSpecification(TextureSpecification spec) override;
 		virtual TextureSpecification& GetTextureSpecification() override;
 
 		virtual bool operator==(const Texture& other) const override

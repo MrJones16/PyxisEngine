@@ -26,7 +26,7 @@ namespace Pyxis
 		//game node can force hold a camera since it is very important to it
 		Ref<OrthographicCameraControllerNode> m_CameraController;
 
-		//////////////////////////////////////
+
 		//////////////////////////////////////
 		/// Game Engine Event Recievers & Functions
 		//////////////////////////////////////
@@ -52,6 +52,11 @@ namespace Pyxis
 		void Play() { m_PlayButton->m_Enabled = false; m_PauseButton->m_Enabled = true; m_World->m_Running = true; PX_TRACE("Play!"); };
 		void Pause() { m_PlayButton->m_Enabled = true; m_PauseButton->m_Enabled = false; m_World->m_Running = false; PX_TRACE("Pause!"); };
 
+		void SetBrushType(BrushType type)
+		{
+			m_BrushType = type;
+		}
+
 		//////////////////////////////////////
 		/// Game Functions
 		//////////////////////////////////////
@@ -59,6 +64,7 @@ namespace Pyxis
 		virtual void ClientImGuiRender();
 		void HandleTickClosure(MergedTickClosure& tc);
 		bool CreateWorld();
+		
 		void PaintBrushHologram();
 		void TextCentered(std::string text);
 		glm::ivec2 GetMousePositionImGui();
