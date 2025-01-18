@@ -49,12 +49,19 @@ namespace Pyxis
 
 		Ref<UI::UIButton> m_PlayButton;
 		Ref<UI::UIButton> m_PauseButton;
-		void Play() { m_PlayButton->m_Enabled = false; m_PauseButton->m_Enabled = true; m_World->m_Running = true; PX_TRACE("Play!"); };
-		void Pause() { m_PlayButton->m_Enabled = true; m_PauseButton->m_Enabled = false; m_World->m_Running = false; PX_TRACE("Pause!"); };
+		void Play() { m_PlayButton->m_Enabled = false; m_PauseButton->m_Enabled = true; m_World.m_Running = true; PX_TRACE("Play!"); };
+		void Pause() { m_PlayButton->m_Enabled = true; m_PauseButton->m_Enabled = false; m_World.m_Running = false; PX_TRACE("Pause!"); };
 
 		void SetBrushType(BrushType type)
 		{
 			m_BrushType = type;
+		}
+
+		void SetBrushElement(int ID)
+		{
+			m_SelectedElementIndex = ID;
+			if (m_SelectedElementIndex < 0) m_SelectedElementIndex = 0;
+			if (m_SelectedElementIndex > m_World.m_ElementData.size()) m_SelectedElementIndex = m_World.m_ElementData.size();
 		}
 
 		//////////////////////////////////////
@@ -63,7 +70,7 @@ namespace Pyxis
 		void GameUpdate(Timestep ts);
 		virtual void ClientImGuiRender();
 		void HandleTickClosure(MergedTickClosure& tc);
-		bool CreateWorld();
+		
 		
 		void PaintBrushHologram();
 		void TextCentered(std::string text);
@@ -117,7 +124,7 @@ namespace Pyxis
 		//////////////////////////////////////
 		/// Game Variables
 		//////////////////////////////////////
-		Ref<World> m_World;
+		World m_World;
 		
 
 		bool m_Hovering = false;

@@ -21,13 +21,12 @@ namespace Pyxis
 		//////////////////////////////////////
 		void Start()
 		{
-			CreateWorld();
 			for (int x = -1; x <= 1; x++)
 			{
 				for (int y = -1; y <= 1; y++)
 				{
-					m_World->AddChunk({ x,y });
-					m_World->GenerateChunk(m_World->GetChunk({ x,y }));
+					m_World.AddChunk({ x,y });
+					m_World.GenerateChunk(m_World.GetChunk({ x,y }));
 				}
 			}
 			

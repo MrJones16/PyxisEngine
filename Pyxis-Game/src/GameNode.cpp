@@ -34,7 +34,8 @@ namespace Pyxis
 
 		m_Hotbar = CreateRef<UI::UICanvas>();
 		m_Hotbar->m_AutomaticResizing = true;
-		m_Hotbar->m_AutomaticSizingPercent = { 1, 0.1f };//10 % height
+		m_Hotbar->m_AutomaticSizingPercent = { 1, 1 };//10 % height
+		m_Hotbar->m_FixedSize.y = 64;
 		//full x, 1/10th up the screen
 		m_Hotbar->m_AutomaticPositioning = true;
 		m_Hotbar->m_VerticalAlignment = UI::Down;
@@ -49,6 +50,7 @@ namespace Pyxis
 		container->m_AutomaticSizingPercent = { 1,1 };
 		container->m_AutomaticSizingOffset = { -32, -32 };
 		container->m_Gap = 32;
+		container->m_VerticalAlignment = UI::Center;
 		container->Translate({ 0,0,-0.05f });
 		m_Hotbar->AddChild(container);
 
@@ -86,14 +88,45 @@ namespace Pyxis
 		brushSquare->m_Size = { 32,32 };
 		brushSquare->Translate({ 20, 0, 0 });
 		BrushOptions->AddChild(brushSquare);
-		container->AddChild(BrushOptions);
+		container->AddChild(BrushOptions);		
+
+		auto ElementButtonContainer = CreateRef<UI::Container>("Element Buttons Container");
+		ElementButtonContainer->m_Size = {400, 32};
+		ElementButtonContainer->m_Gap = 8;
+		for (int i = 0; i < m_World.m_ElementData.size(); i++)
+		{
+			ElementData& ed = m_World.m_ElementData[i];
+			auto ElementButton = CreateRef<UI::UIButton>("ElementButton" + ed.name,
+				std::bind(&GameNode::SetBrushElement, this, i));
+			int r = (ed.color & 0xFF000000) >> 24;
+			int g = (ed.color & 0x00FF0000) >> 16;
+			int b = (ed.color & 0x0000FF00) >> 8;
+			int a = (ed.color & 0x000000FF) >> 0;
+
+			//abgr
+			r = (ed.color & 0x000000FF) >> 0;
+			g = (ed.color & 0x0000FF00) >> 8;
+			b = (ed.color & 0x00FF0000) >> 16;
+			a = (ed.color & 0xFF000000) >> 24;
+
+			ElementButton->m_Color = glm::vec4(r,g,b,a);
+			ElementButton->m_Size = { 32, 9 };
+			auto ElementButtonText = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
+			ElementButtonText->m_Text = ed.name;
+			ElementButtonText->m_Size = { 32, 9 };
+			ElementButtonText->m_FontSize = 800;
+			ElementButtonText->Translate({ 0,0,-0.01f });
+			ElementButton->AddChild(ElementButtonText);
+			ElementButtonContainer->AddChild(ElementButton);
+		}
+		container->AddChild(ElementButtonContainer);
+
 
 		screenSpace->PropagateUpdate(); // simple way to tell the hotbar to fix itself
 	}
 
 	GameNode::~GameNode()
 	{
-		m_World = nullptr;
 		
 	}
 
@@ -114,15 +147,15 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Game Update");
-			glm::ivec2 mousePixelPos = m_World->WorldToPixel(GetMousePosWorld());
+			glm::ivec2 mousePixelPos = m_World.WorldToPixel(GetMousePosWorld());
 
-			auto chunkPos = m_World->PixelToChunk(mousePixelPos);
-			auto it = m_World->m_Chunks.find(chunkPos);
-			if (it != m_World->m_Chunks.end())
+			auto chunkPos = m_World.PixelToChunk(mousePixelPos);
+			auto it = m_World.m_Chunks.find(chunkPos);
+			if (it != m_World.m_Chunks.end())
 			{
-				auto index = m_World->PixelToIndex(mousePixelPos);
+				auto index = m_World.PixelToIndex(mousePixelPos);
 				m_HoveredElement = it->second->m_Elements[index.x + index.y * CHUNKSIZE];
-				if (m_HoveredElement.m_ID >= m_World->m_TotalElements)
+				if (m_HoveredElement.m_ID >= m_World.m_TotalElements)
 				{
 					//something went wrong? how?
 					m_HoveredElement = Element();
@@ -137,7 +170,7 @@ namespace Pyxis
 			if (Input::IsMouseButtonPressed(0) && m_Hovering)
 			{
 				glm::vec2 mousePos = GetMousePosWorld();
-				glm::ivec2 pixelPos = m_World->WorldToPixel(mousePos);
+				glm::ivec2 pixelPos = m_World.WorldToPixel(mousePos);
 				if (m_BuildingRigidBody)
 				{
 					if (pixelPos.x < m_RigidMin.x) m_RigidMin.x = pixelPos.x;
@@ -160,7 +193,7 @@ namespace Pyxis
 
 		{
 			PROFILE_SCOPE("Renderer Draw");
-			m_World->RenderWorld();
+			m_World.RenderWorld();
 			PaintBrushHologram();
 			//draw rigid body outline
 			//horizontals
@@ -185,7 +218,7 @@ namespace Pyxis
 			{
 				//ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
 				//ImGui::SetItemTooltip("Default: 60");
-				if (m_World->m_Running)
+				if (m_World.m_Running)
 				{
 					if (ImGui::Button("Pause"))
 					{
@@ -210,7 +243,7 @@ namespace Pyxis
 			
 				if (ImGui::Button("Toggle Collider View"))
 				{
-					m_World->m_DebugDrawColliders = !m_World->m_DebugDrawColliders;
+					m_World.m_DebugDrawColliders = !m_World.m_DebugDrawColliders;
 				}
 							
 				if (m_BuildingRigidBody)
@@ -219,7 +252,7 @@ namespace Pyxis
 					{
 						srand(time(0));
 						uint64_t uuid = std::rand();
-						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
+						while (m_World.m_PixelBodyMap.find(uuid) != m_World.m_PixelBodyMap.end())
 						{
 							srand(time(0));
 							uint64_t uuid = std::rand();
@@ -233,7 +266,7 @@ namespace Pyxis
 					{
 						srand(time(0));
 						uint64_t uuid = std::rand();
-						while (m_World->m_PixelBodyMap.find(uuid) != m_World->m_PixelBodyMap.end())
+						while (m_World.m_PixelBodyMap.find(uuid) != m_World.m_PixelBodyMap.end())
 						{
 							srand(time(0));
 							uint64_t uuid = std::rand();
@@ -263,7 +296,7 @@ namespace Pyxis
 			
 				if (ImGui::Button("UpdateOutline"))
 				{
-					for each (auto body in m_World->m_PixelBodies)
+					for each (auto body in m_World.m_PixelBodies)
 					{
 						auto contour = body->GetContourPoints();
 						body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, m_DouglasThreshold);
@@ -277,9 +310,9 @@ namespace Pyxis
 			ImGui::SetNextItemOpen(true);
 			if (ImGui::TreeNode("Hovered Element Properties"))
 			{
-				glm::ivec2 pixelPos = m_World->WorldToPixel(GetMousePosWorld());
+				glm::ivec2 pixelPos = m_World.WorldToPixel(GetMousePosWorld());
 				ImGui::Text(("(" + std::to_string(pixelPos.x) + ", " + std::to_string(pixelPos.y) + ")").c_str());
-				ElementData& elementData = m_World->m_ElementData[m_HoveredElement.m_ID];
+				ElementData& elementData = m_World.m_ElementData[m_HoveredElement.m_ID];
 				ImGui::Text("Element: %s", elementData.name.c_str());
 				ImGui::Text("- Temperature: %f", m_HoveredElement.m_Temperature);
 			
@@ -326,22 +359,22 @@ namespace Pyxis
 			if (ImGui::TreeNode("Element Type"))
 			{
 				float width = ImGui::GetContentRegionAvail().x / 5;
-				for (int y = 0; y < (m_World->m_TotalElements / 4) + 1; y++)
+				for (int y = 0; y < (m_World.m_TotalElements / 4) + 1; y++)
 					for (int x = 0; x < 4; x++)
 					{
 						if (x > 0)
 							ImGui::SameLine();
 						int index = y * 4 + x;
-						if (index >= m_World->m_TotalElements) continue;
+						if (index >= m_World.m_TotalElements) continue;
 						ImGui::PushID(index);
-						auto color = m_World->m_ElementData[index].color;
+						auto color = m_World.m_ElementData[index].color;
 						int r = (color & 0x000000FF) >> 0;
 						int g = (color & 0x0000FF00) >> 8;
 						int b = (color & 0x00FF0000) >> 16;
 						int a = (color & 0xFF000000) >> 24;
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
-						std::string name = (m_World->m_ElementData[index].name);
-						;
+						std::string name = (m_World.m_ElementData[index].name);
+						
 						if (ImGui::Selectable(name.c_str(), m_SelectedElementIndex == index, 0, ImVec2(width, 25)))
 						{
 							// Toggle clicked cell
@@ -440,7 +473,7 @@ namespace Pyxis
 	//				return;
 	//			}
 	//			m_LatencyStateReset = true;
-	//			PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World->m_SimulationTick);
+	//			PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World.m_SimulationTick);
 	//			HandleTickClosure(m_MTCQueue.front());
 	//			m_MTCQueue.pop_front();
 	//			m_InputTick++;
@@ -511,7 +544,7 @@ namespace Pyxis
 	//			*msg >> m_InputTick;
 	//			CreateWorld();
 	//			
-	//			m_World->DownloadWorldInit(*msg);
+	//			m_World.DownloadWorldInit(*msg);
 	//			uint32_t numPixelBodies;
 	//			uint32_t numChunks;
 	//			*msg >> numPixelBodies >> numChunks;
@@ -519,7 +552,7 @@ namespace Pyxis
 	//			m_DownloadTotal = static_cast<uint64_t>(numPixelBodies) + static_cast<uint64_t>(numChunks);
 	//			m_DownloadCount = 0;
 
-	//			PX_TRACE("Downloading game at tick [{0}], simulation tick [{1}]", m_InputTick, m_World->m_SimulationTick);
+	//			PX_TRACE("Downloading game at tick [{0}], simulation tick [{1}]", m_InputTick, m_World.m_SimulationTick);
 	//			if (m_DownloadTotal == 0)
 	//			{
 	//				PX_TRACE("The world is empty! hop on in!");
@@ -542,7 +575,7 @@ namespace Pyxis
 	//			
 	//			//we recieved a pixel body, so lets count it, and add it to the world
 	//			m_DownloadCount++;
-	//			m_World->DownloadWorld(*msg);
+	//			m_World.DownloadWorld(*msg);
 	//			if (m_DownloadCount == m_DownloadTotal)
 	//			{
 	//				PX_INFO("Downloading World: [100%]");
@@ -599,7 +632,7 @@ namespace Pyxis
 	//			//reset, and do it then!
 	//			*msg >> m_TickToResetBox2D;
 	//			PX_TRACE("Sim Tick to reset at: {0}", m_TickToResetBox2D);
-	//			PX_TRACE("current sim tick: {0}", m_World->m_SimulationTick);
+	//			PX_TRACE("current sim tick: {0}", m_World.m_SimulationTick);
 	//			break;
 	//		}
 
@@ -632,7 +665,7 @@ namespace Pyxis
 					glm::ivec2 pixelPos;
 					tc >> pixelPos;
 
-					m_World->CreatePlayer(ID, pixelPos);
+					m_World.CreatePlayer(ID, pixelPos);
 					break;
 				}*/
 				case InputAction::PauseGame:
@@ -671,8 +704,8 @@ namespace Pyxis
 						for (int y = 0; y < height; y++)
 						{
 							glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-							auto& element = m_World->GetElement(pixelPos);
-							auto& elementData = m_World->m_ElementData[element.m_ID];
+							auto& element = m_World.GetElement(pixelPos);
+							auto& elementData = m_World.m_ElementData[element.m_ID];
 							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
 							{
 								if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
@@ -698,20 +731,20 @@ namespace Pyxis
 							glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
 
 							//loop over every element, grab it, and make it rigid if it is a movable Solid
-							auto& element = m_World->GetElement(pixelPos);
-							auto& elementData = m_World->m_ElementData[element.m_ID];
+							auto& element = m_World.GetElement(pixelPos);
+							auto& elementData = m_World.m_ElementData[element.m_ID];
 							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
 							{
 								element.m_Rigid = true;
 								//set the elements at the local position to be the element pulled from world
 								elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-								m_World->SetElement(pixelPos, Element());
+								m_World.SetElement(pixelPos, Element());
 							}
 						}
 					}
 					glm::ivec2 size = newMax - newMin;
 					PX_TRACE("Mass is: {0}", mass);
-					PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World->m_Box2DWorld);
+					PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World.m_Box2DWorld);
 					if (body->m_B2Body == nullptr)
 					{
 						PX_TRACE("Failed to create rigid body");
@@ -719,12 +752,12 @@ namespace Pyxis
 					}
 					else
 					{
-						m_World->m_PixelBodyMap[body->m_ID] = body;
+						m_World.m_PixelBodyMap[body->m_ID] = body;
 						auto pixelPos = (newMin + newMax) / 2;
 						if (width % 2 == 0) pixelPos.x += 1;
 						if (height % 2 == 0) pixelPos.y += 1;
 						body->SetPixelPosition(pixelPos);
-						m_World->PutPixelBodyInWorld(*body);
+						m_World.PutPixelBodyInWorld(*body);
 					}
 
 
@@ -745,13 +778,13 @@ namespace Pyxis
 					uint8_t brushSize;
 					tc >> rigid >> pixelPos >> elementID >> brush >> brushSize;
 
-					m_World->PaintBrushElement(pixelPos, elementID, brush, brushSize);
+					m_World.PaintBrushElement(pixelPos, elementID, brush, brushSize);
 					break;
 				}
 				case Pyxis::InputAction::Input_StepSimulation:
 				{
 					PX_TRACE("input action: Input_StepSimulation");
-					m_World->UpdateWorld();
+					m_World.UpdateWorld();
 					break;
 					break;
 				}
@@ -766,7 +799,7 @@ namespace Pyxis
 				}
 				case InputAction::ClearWorld:
 				{
-					m_World->Clear();
+					m_World.Clear();
 					break;
 				}
 				default:
@@ -778,28 +811,14 @@ namespace Pyxis
 			}
 		}
 		
-		if (m_World->m_Running)
+		if (m_World.m_Running)
 		{
-			m_World->UpdateWorld();
+			m_World.UpdateWorld();
 		}
 		else
 		{
-			m_World->UpdateTextures();
+			m_World.UpdateTextures();
 		}
-	}
-
-	bool GameNode::CreateWorld()
-	{
-		//create the world
-		m_World = CreateRef<World>();
-		if (m_World->m_Error)
-		{
-			PX_ERROR("Failed to create the world");
-			Application::Get().Sleep(2000);
-			Application::Get().Close();
-			return false;
-		}
-		return true;
 	}
 
 	glm::ivec2 GameNode::GetMousePositionImGui()
@@ -837,7 +856,7 @@ namespace Pyxis
 		}
 		if (event.GetKeyCode() == PX_KEY_SPACE)
 		{
-			if (m_World->m_Running)
+			if (m_World.m_Running)
 			{
 				m_CurrentTickClosure.AddInputAction(InputAction::PauseGame);
 			}
@@ -912,7 +931,7 @@ namespace Pyxis
 
 	void GameNode::PaintBrushHologram()
 	{
-		glm::ivec2 pixelPos = m_World->WorldToPixel(GetMousePosWorld());
+		glm::ivec2 pixelPos = m_World.WorldToPixel(GetMousePosWorld());
 
 		glm::ivec2 newPos = pixelPos;
 		for (int x = -m_BrushSize; x <= m_BrushSize; x++)
@@ -933,7 +952,7 @@ namespace Pyxis
 					break;
 				}
 
-				uint32_t color = m_World->m_ElementData[m_SelectedElementIndex].color;
+				uint32_t color = m_World.m_ElementData[m_SelectedElementIndex].color;
 
 				
 				float r = float(color & 0x000000FF) / 255.0f;

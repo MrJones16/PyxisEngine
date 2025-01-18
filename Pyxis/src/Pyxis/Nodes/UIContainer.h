@@ -87,8 +87,8 @@ namespace Pyxis
 			virtual void PropagateUpdate() override
 			{
 				AutoRect();
-				RearrangeChildren();
 				UINode::PropagateUpdate();
+				RearrangeChildren();
 			}
 
 			virtual void OnRender() override

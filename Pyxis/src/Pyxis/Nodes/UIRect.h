@@ -21,6 +21,8 @@ namespace Pyxis
 			bool m_AutomaticResizing = false;
 			glm::vec2 m_AutomaticSizingPercent = { 1, 1 };
 			glm::vec2 m_AutomaticSizingOffset = { 0, 0 };
+			//-1 means not fixed, any other value will be set after sizing
+			glm::vec2 m_FixedSize = { -1, -1 };
 
 			///automatic positioning
 			bool m_AutomaticPositioning = false;
@@ -80,6 +82,8 @@ namespace Pyxis
 					{
 						m_Size = parentRect->m_Size * m_AutomaticSizingPercent;
 						m_Size += m_AutomaticSizingOffset;
+						if (m_FixedSize.x != -1) m_Size.x = m_FixedSize.x;
+						if (m_FixedSize.y != -1) m_Size.y = m_FixedSize.y;
 					}
 
 					if (m_AutomaticPositioning)
