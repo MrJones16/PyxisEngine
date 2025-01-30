@@ -9,6 +9,7 @@
 #include <Pyxis/Game/SceneLayer.h>
 
 #include "MenuNode.h"
+#include "SteamManagerNode.h"
 
 
 /// <summary>
@@ -98,28 +99,25 @@ namespace Pyxis
 	class PyxisGame : public Pyxis::Application {
 	public:
 		PyxisGame()
-			: Application("Pixel Game", 1280, 720)
+			: Application("Pixel Game", 1280, 720, "assets/Icon.png")
 		{
 			bool success = SteamAPI_Init();
 			PX_CORE_ASSERT(success, "Failed to init steam api!");
 			SteamNetworkingUtils()->InitRelayNetworkAccess();
 
 			//overlay instead of layer so it is on top
-			auto scene = CreateRef<SceneLayer>(true);
+			auto scene = CreateRef<SceneLayer>(false);//Set True for Debug!
 			PushOverlay(scene);
 
 			//create game nodes
-			
-
-			//scene->m_RootNodes.push_back(CreateRef<UI::UIRect>(glm::vec4(0,1,0.4f, 1)));
 
 			scene->m_RootNode.AddChild(CreateRef<MenuNode>());
+			scene->m_RootNode.AddChild(CreateRef<SteamManagerNode>());
 
 		}
 		~PyxisGame()
 		{
 			SteamAPI_Shutdown();
-
 		}
 	};
 

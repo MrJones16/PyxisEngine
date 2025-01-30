@@ -46,7 +46,9 @@ namespace Pyxis
 
 	void SceneLayer::OnUpdate(Timestep ts)
 	{
-		PROFILE_SCOPE("GameLayer::OnUpdate");
+		PROFILE_SCOPE("SceneLayer OnUpdate");
+
+		//PX_TRACE("Node Count: {0}", Node::Nodes.size());
 
 		//rendering
 		#if STATISTICS
@@ -80,9 +82,17 @@ namespace Pyxis
 			
 			for (auto node : Node::Nodes)
 			{
-				node.second->OnUpdate(ts);
-				node.second->OnFixedUpdate();
-				node.second->OnRender();
+				if (node.second != nullptr)
+				{
+					node.second->OnUpdate(ts);
+					node.second->OnFixedUpdate();
+					node.second->OnRender();
+				}
+				else
+				{
+					//node was null so add it to list to delete
+					m_NullNodeQueue.push(node.first);
+				}
 			}
 
 		}
@@ -90,9 +100,24 @@ namespace Pyxis
 		{
 			for (auto node : Node::Nodes)
 			{
-				node.second->OnUpdate(ts);
-				node.second->OnRender();
+				if (node.second != nullptr)
+				{
+					node.second->OnUpdate(ts);
+					node.second->OnRender();
+				}
+				else
+				{
+					//node was null so add it to list to delete
+					m_NullNodeQueue.push(node.first);
+				}
 			}
+		}
+
+		//remove null nodes from map
+		while (!m_NullNodeQueue.empty())
+		{
+			Node::Nodes.erase(m_NullNodeQueue.front());
+			m_NullNodeQueue.pop();
 		}
 		/*auto[x,y] = Input::GetMousePosition();
 		glm::vec2 worldPos = m_CameraNode->MouseToWorldPos({x, y});
@@ -146,6 +171,7 @@ namespace Pyxis
 
 	void SceneLayer::OnImGuiRender()
 	{
+		//PX_TRACE("Node Count ImGui: {0}", Node::Nodes.size());
 		if (m_Debug)
 		{
 			if (ImGui::Begin("Scene Hierarchy"))
@@ -170,7 +196,23 @@ namespace Pyxis
 
 		for (auto node : Node::Nodes)
 		{
-			node.second->OnImGuiRender();
+			if (node.second != nullptr)
+			{
+				node.second->OnImGuiRender();
+			}
+			else
+			{
+				//node was null so add it to list to delete
+				m_NullNodeQueue.push(node.first);
+			}
+			
+		}
+
+		//remove null nodes from map
+		while (!m_NullNodeQueue.empty())
+		{
+			Node::Nodes.erase(m_NullNodeQueue.front());
+			m_NullNodeQueue.pop();
 		}
 
 		//auto dockID = ImGui::DockSpaceOverViewport(ImGui::GetID("SceneLayerDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);

@@ -7,6 +7,7 @@
 
 #include "Platform/OpenGL/OpenGLContext.h"
 #include <glad/glad.h>
+#include <stb_image.h>
 
 namespace Pyxis
 {
@@ -48,6 +49,8 @@ namespace Pyxis
 			s_GLFWInitialized = true;
 		}
 
+		
+
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);//version 4
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);//         .6
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -56,6 +59,18 @@ namespace Pyxis
 		m_Context = new OpenGLContext(m_Window);
 		
 		m_Context->Init();
+
+		//load app icon
+		if (props.IconPath != "")
+		{
+			stbi_set_flip_vertically_on_load(false);
+			GLFWimage images[1];
+			images[0].pixels = stbi_load(props.IconPath.c_str(), &images[0].width, &images[0].height, 0, 4); //rgba channels 
+			glfwSetWindowIcon(m_Window, 1, images);
+			stbi_image_free(images[0].pixels);
+			PX_CORE_INFO("Loaded Icon");
+		}
+		
 		
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);

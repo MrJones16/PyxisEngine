@@ -1,7 +1,5 @@
 #include "HostingGameLayer.h"
 
-static const int MaxTickStorage = 500;
-
 namespace Pyxis
 {
 

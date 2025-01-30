@@ -40,6 +40,11 @@ namespace Pyxis
 			GameUpdate(ts);
 		}
 
+		virtual void OnRender()
+		{
+			Renderer2D::DrawText("Testing Font size", glm::mat4(1), FontLibrary::GetFont("Aseprite"));
+		}
+
 		virtual void OnFixedUpdate() override
 		{
 			PROFILE_SCOPE("Simulation Update");

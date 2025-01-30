@@ -30,22 +30,25 @@ namespace Pyxis
 		//reciever functions for buttons & UI
 		void PlaySinglePlayer();
 		void PlayMultiplayer();
-		void HostGame();
+		void HostGameP2P();
+		void HostGameIP();
+
+		void QuitGame();
 
 
-		void OnWindowResize(WindowResizeEvent& event);
+		//void OnWindowResize(WindowResizeEvent& event);
 
 		void FailedToConnect();
 
 	private:
 
 		//Canvas node for resizing
-		Ref<UI::UICanvas> m_CanvasNode;
+		//Ref<UI::UICanvas> m_CanvasNode;
 
 		//recievers
 		Reciever<void()> m_PlayButtonReciever;
 
-		Reciever<void(WindowResizeEvent&)> m_WindowResizeReciever;
+		//Reciever<void(WindowResizeEvent&)> m_WindowResizeReciever;
 
 		//////////////////////////////////////
 		/// Steam Callbacks

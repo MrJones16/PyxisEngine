@@ -5,7 +5,7 @@ add_executable(Pyxis-Game
     "src/MenuNode.cpp"
 
  "../Pixel-Game-Core/src/SingleplayerGameLayer.h" "../Pixel-Game-Core/src/SingleplayerGameLayer.cpp" "../Pixel-Game-Core/src/HostingGameLayer.h" "../Pixel-Game-Core/src/HostingGameLayer.cpp" "../Pixel-Game-Core/src/MultiplayerGameLayer.h" "../Pixel-Game-Core/src/MultiplayerGameLayer.cpp"
- "../Pyxis/src/Pyxis/Nodes/UIScreenSpace.h")
+ "../Pyxis/src/Pyxis/Nodes/UIScreenSpace.h" "src/MultiplayerGameNode.h" "src/MultiplayerGameNode.cpp" "src/HostedGameNode.h" "src/HostedGameNode.cpp" "src/SteamManagerNode.h")
 
 if(WIN32)
     # for Windows operating system in general

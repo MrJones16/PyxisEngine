@@ -18,7 +18,7 @@ namespace Pyxis
 			float m_PPU = 32;
 
 			//automatic sizing
-			bool m_AutomaticResizing = false;
+			bool m_AutomaticSizing = false;
 			glm::vec2 m_AutomaticSizingPercent = { 1, 1 };
 			glm::vec2 m_AutomaticSizingOffset = { 0, 0 };
 			//-1 means not fixed, any other value will be set after sizing
@@ -78,7 +78,7 @@ namespace Pyxis
 			{
 				if (auto parentRect = dynamic_cast<UIRect*>(m_Parent))
 				{
-					if (m_AutomaticResizing)
+					if (m_AutomaticSizing)
 					{
 						m_Size = parentRect->m_Size * m_AutomaticSizingPercent;
 						m_Size += m_AutomaticSizingOffset;

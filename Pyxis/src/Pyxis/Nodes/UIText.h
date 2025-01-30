@@ -19,6 +19,10 @@ namespace Pyxis
 			Ref<Font> m_Font;
 			bool m_ShowRegion = false;
 
+			//default: Left. Only Left, Center, and ___ work
+			UI::Direction m_TextAlignment = Left;
+			
+
 			UIText(Ref<Font> font) : UIRect("UIText"),
 				m_Font(font)
 			{

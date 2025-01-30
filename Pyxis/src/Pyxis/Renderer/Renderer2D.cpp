@@ -1233,9 +1233,9 @@ namespace Pyxis
 		if (len > 0)
 			words.push_back(text.substr(initialPos, len));
 		
+		bool startOfLine = true;
 		for (std::string& word : words)
 		{
-
 			//PX_TRACE("Word: {0}", word);
 
 			if (word == "")
@@ -1244,18 +1244,23 @@ namespace Pyxis
 				continue;
 			}
 
+			//get the length of the word
 			float wordLength = 0;
 			for (auto c : word)
 			{
 				wordLength += (font->m_Characters[c].Advance >> 6) * size;
 			}
-			if ((wordLength + pos.x) > maxWidth)
+
+			//check if we need to shift for a new line
+			if ((wordLength + pos.x) > maxWidth && !startOfLine)
 			{
 				//this word makes it go past the max length. we need to do a new line before this word
 				//(new line)
 				pos.x = 0;
 				pos.y -= newLineShift;
+				startOfLine = true;
 			}
+
 			for (c = word.begin(); c != word.end(); c++)
 			{
 				if (*c == '\n')
@@ -1282,6 +1287,7 @@ namespace Pyxis
 			}
 			//put the space for a space
 			pos.x += (font->m_Characters[' '].Advance >> 6) * size * 2;
+			startOfLine = false;
 		}
 		
 	}

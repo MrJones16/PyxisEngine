@@ -5,6 +5,7 @@
 #include <Platform/OpenGL/OpenGLShader.h>
 #include <chrono>
 #include <variant>
+#include "MenuNode.h"
 
 
 namespace Pyxis
@@ -33,7 +34,7 @@ namespace Pyxis
 		AddChild(screenSpace);
 
 		m_Hotbar = CreateRef<UI::UICanvas>();
-		m_Hotbar->m_AutomaticResizing = true;
+		m_Hotbar->m_AutomaticSizing = true;
 		m_Hotbar->m_AutomaticSizingPercent = { 1, 1 };//10 % height
 		m_Hotbar->m_FixedSize.y = 64;
 		//full x, 1/10th up the screen
@@ -46,7 +47,7 @@ namespace Pyxis
 
 
 		auto container = CreateRef<UI::Container>();
-		container->m_AutomaticResizing = true;
+		container->m_AutomaticSizing = true;
 		container->m_AutomaticSizingPercent = { 1,1 };
 		container->m_AutomaticSizingOffset = { -32, -32 };
 		container->m_Gap = 32;
@@ -59,13 +60,13 @@ namespace Pyxis
 		ButtonHolder->m_Enabled = false;
 		ButtonHolder->m_Size = { 32, 32 };
 		m_PlayButton = CreateRef<UI::UIButton>("Play Button", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PlayButton.png"));
-		m_PlayButton->SetFunction(std::bind(&GameNode::Play, this));
+		m_PlayButton->SetFunction(std::bind(&GameNode::PlayButtonFunc, this));
 		m_PlayButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PlayButtonPressed.png");
 		m_PlayButton->m_Size = { 32,32 };
 		m_PlayButton->m_Enabled = false;
 		ButtonHolder->AddChild(m_PlayButton);
 		m_PauseButton = CreateRef<UI::UIButton>("Pause Button", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PauseButton.png"));
-		m_PauseButton->SetFunction(std::bind(&GameNode::Pause, this));
+		m_PauseButton->SetFunction(std::bind(&GameNode::PauseButtonFunc, this));
 		m_PauseButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PauseButtonPressed.png");
 		m_PauseButton->m_Size = { 32,32 };
 		ButtonHolder->AddChild(m_PauseButton);
@@ -109,7 +110,8 @@ namespace Pyxis
 			b = (ed.color & 0x00FF0000) >> 16;
 			a = (ed.color & 0xFF000000) >> 24;
 
-			ElementButton->m_Color = glm::vec4(r,g,b,a);
+			ElementButton->m_Color = glm::vec4(r, g, b, a);
+			ElementButton->m_Color /= 255.0f;
 			ElementButton->m_Size = { 32, 9 };
 			auto ElementButtonText = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
 			ElementButtonText->m_Text = ed.name;
@@ -120,6 +122,13 @@ namespace Pyxis
 			ElementButtonContainer->AddChild(ElementButton);
 		}
 		container->AddChild(ElementButtonContainer);
+
+		auto QuitButton = CreateRef<UI::UIButton>("Back To Menu Button", ResourceSystem::Load<Texture2DResource>("assets/textures/UI/QuitButton.png"));
+		QuitButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/QuitButtonPressed.png");
+		QuitButton->SetFunction(std::bind(&GameNode::ReturnToMenu, this));
+		QuitButton->m_PPU = 0.5;
+		QuitButton->UpdateSizeFromTexture();
+		container->AddChild(QuitButton);
 
 
 		screenSpace->PropagateUpdate(); // simple way to tell the hotbar to fix itself
@@ -915,6 +924,39 @@ namespace Pyxis
 		}
 		
 		//do not end event here
+	}
+
+	void GameNode::PlayButtonFunc()
+	{
+		m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame);
+	}
+
+	void GameNode::PauseButtonFunc()
+	{
+		m_CurrentTickClosure.AddInputAction(InputAction::PauseGame);
+	}
+
+	void GameNode::Play()
+	{
+		m_PlayButton->m_Enabled = false;
+		m_PauseButton->m_Enabled = true; 
+		m_World.m_Running = true;
+		//PX_TRACE("Play!");
+	}
+
+	void GameNode::Pause()
+	{
+		m_PlayButton->m_Enabled = true;
+		m_PauseButton->m_Enabled = false;
+		m_World.m_Running = false;
+		//PX_TRACE("Pause!");
+	}
+
+	void GameNode::ReturnToMenu()
+	{
+		auto menu = CreateRef<MenuNode>();
+		m_Parent->AddChild(menu);
+		QueueFree();
 	}
 
 	/*void GameNode::OnWindowResizeEvent(WindowResizeEvent& event)

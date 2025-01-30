@@ -159,9 +159,10 @@ namespace Pyxis
 			// We use linger mode to ask for any remaining reliable data
 			// to be flushed out.  But remember this is an application
 			// protocol on UDP.  See ShutdownSteamDatagramConnectionSockets
-			PX_CORE_TRACE("Disconnecting from chat server");
+			PX_CORE_TRACE("Disconnecting from server");
 			m_SteamNetworkingSockets->CloseConnection(m_hConnection, 0, "Goodbye", false);
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
+			
 			//GameNetworkingSockets_Kill();
 		}
 
@@ -322,6 +323,7 @@ namespace Pyxis
 					m_ConnectionStatus = ConnectionStatus::Disconnected;
 					m_ConnectionStatusMessage = "The host hath bidden us farewell: (" + (std::string)(pInfo->m_info.m_szEndDebug) + ")";
 					PX_CORE_TRACE(m_ConnectionStatusMessage);
+					OnConnectionLost(m_ConnectionStatusMessage);
 				}
 
 				// Clean up the connection.  This is important!

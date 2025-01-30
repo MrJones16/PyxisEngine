@@ -1,5 +1,5 @@
 #pragma once
-#include "GameLayer.h"
+#include "GameNode.h"
 #include <Pyxis/Network/NetworkServer.h>
 #include <steam/isteamfriends.h>
 
@@ -7,22 +7,22 @@
 namespace Pyxis
 {
 
-	
-
-	class HostingGameLayer : public GameLayer, public Network::ServerInterface, public std::enable_shared_from_this<HostingGameLayer>
+	class HostedGameNode : public GameNode, public Network::ServerInterface
 	{
 	public:
 
 		static const int MaxTickStorage = 500;
 
 
-		HostingGameLayer(std::string debugName = "Hosting Game Layer");
-		virtual ~HostingGameLayer();
+		HostedGameNode(std::string name = "Hosted Game Node") : GameNode(name) {}
+		virtual ~HostedGameNode() = default;
+
 
 		//////////////////////////////////////
-		/// Layer Functions
+		/// Node Functions
 		//////////////////////////////////////
 		virtual void OnUpdate(Timestep ts) override;
+		virtual void OnFixedUpdate() override;
 		virtual void OnImGuiRender() override;
 
 
@@ -37,6 +37,10 @@ namespace Pyxis
 		/// Server Function Overrides
 		//////////////////////////////////////
 		void OnClientDisconnect(HSteamNetConnection& client) override;
+
+
+		//Return to menu override
+		virtual void ReturnToMenu() override;
 
 	public:
 

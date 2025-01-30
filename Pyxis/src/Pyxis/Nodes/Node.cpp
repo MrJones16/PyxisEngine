@@ -18,7 +18,11 @@ namespace Pyxis
 
 	Node::~Node()
 	{
-		Nodes.erase(m_ID);
+		Nodes[m_ID] = nullptr;//won't actuall remove from the collection since this might happen during iteration
+		for (auto child : m_Children)
+		{
+			child->m_Parent = nullptr;
+		}
 	}
 
 	/*void Node::OnUpdate(Timestep ts)
@@ -83,6 +87,8 @@ namespace Pyxis
 	/// </summary>
 	void Node::InspectorRender()
 	{
+		std::string ID = "ID: " + std::to_string(m_ID);
+		ImGui::Text(ID.c_str());
 		ImGui::InputText("##Name", &m_Name);
 		ImGui::Checkbox("Enabled", &m_Enabled);
 		if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen))
@@ -124,6 +130,7 @@ namespace Pyxis
 		{
 			return m_LocalTransform;
 		}
+
 	}
 
 	void Node::ResetLocalTransform()

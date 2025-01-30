@@ -10,9 +10,7 @@
 namespace Pyxis
 {
 	
-	/// <summary>
-	/// A Base UI Node that can act as a root
-	/// </summary>
+	//Camera node: inherits a camera and node.
 	class CameraNode : public Node, public Camera
 	{
 	public:

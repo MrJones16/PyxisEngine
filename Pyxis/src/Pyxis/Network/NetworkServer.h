@@ -47,6 +47,8 @@ namespace Pyxis
 			/// The main update loop for the server. It polls incoming messages, connection changes, and waits
 			/// </summary>
 			void UpdateInterface();
+
+			//Disconnects all clients and shuts down the server
 			void Stop();
 
 

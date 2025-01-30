@@ -1,90 +1,100 @@
-#include "PixelGameServer.h"
+#include "HostedGameNode.h"
 
-#include <imgui.h>
-
-static const int MaxTickStorage = 500;
-
+#include "MenuNode.h"
 
 namespace Pyxis
 {
-	PixelGameServer::PixelGameServer(uint16_t port) : HostingGameLayer("Pyxis Server"),
-		m_OrthographicCameraController(5, 9.0f / 16.0f, -100, 100),
-		m_World()//m_World("../Pixel-Game/assets")
-	{
-		m_SteamPort = port;
-		m_World.m_ServerMode = true;
-	}
 
-	PixelGameServer::~PixelGameServer()
-	{
-		//stop the server
-		Stop();
-	}
 
-	void PixelGameServer::OnAttach()
-	{
-		//m_ProfileResults = std::vector<ProfileResult>();
-		Pyxis::Renderer2D::Init();
 
-		//setup the log so that imgui can display messages and not just the console
-		// TODO: setup logs / sinks for spdlog
-		//Pyxis::Log::GetClientLogger() ...
-
-		//STEAMTESTING
-		HostIP(m_SteamPort);
-	}
-
-	void PixelGameServer::OnDetatch()
-	{
-
-	}
-
-	void PixelGameServer::OnUpdate(Pyxis::Timestep ts)
+	void HostedGameNode::OnUpdate(Timestep ts)
 	{
 		UpdateInterface();
+
 		HandleMessages();
 
-		auto time = std::chrono::high_resolution_clock::now();
-		//only update if there are players
-		if (m_ClientDataMap.size() > 0)
-		if (m_TickRate > 0 &&
-			std::chrono::time_point_cast<std::chrono::microseconds>(time).time_since_epoch().count()
-			-
-			std::chrono::time_point_cast<std::chrono::microseconds>(m_UpdateTime).time_since_epoch().count()
-			>= (1.0f / m_TickRate) * 1000000.0f)
+		for (auto& clientPair : m_ClientDataMap)
 		{
-			m_UpdateTime = time;
-
-			//skip sending the message if we are waiting for a client to connect!
-			if (m_DownloadingClients.empty())
-			{
-				//pack the merged tick into a message and send to all clients
-				Network::Message msg(static_cast<uint32_t>(GameMessage::Game_MergedTickClosure));
-				msg << m_CurrentMergedTickClosure.m_Data;
-				msg << m_CurrentMergedTickClosure.m_ClientCount;
-				msg << m_InputTick;
-				//send the messages unreliably, since i have mtc recovery set up already!
-				SendMessageToAllClients(msg, 0, k_nSteamNetworkingSend_Unreliable);
-
-				//add the compressed message into the tick storage
-				m_TickRequestStorage.emplace_back();
-				msg.Compressed(m_TickRequestStorage.back());
-
-				if (m_TickRequestStorage.size() > MaxTickStorage) m_TickRequestStorage.pop_front();
-
-				//process the mtc on the server side
-				HandleTickClosure(m_CurrentMergedTickClosure);
-				m_InputTick++;
-
-				//reset the merged tick
-				m_CurrentMergedTickClosure = MergedTickClosure();
-			}
-			
+			if (clientPair.first == 0) continue;
+			//draw the 3x3 square for each players cursor
+			glm::vec3 worldPos = glm::vec3(clientPair.second.m_CursorWorldPosition.x, clientPair.second.m_CursorWorldPosition.y, 5);
+			glm::vec2 size = glm::vec2(3.0f / CHUNKSIZE);
+			Renderer2D::DrawQuad(worldPos, size, clientPair.second.m_Color);
 		}
+
+		GameUpdate(ts);
+	}
+
+	void HostedGameNode::OnFixedUpdate()
+	{
+		PROFILE_SCOPE("Simulation Update");
+
+		//skip sending the message if we are waiting for a client to connect!
+		if (m_DownloadingClients.empty())
+		{
+			//first, since we are also playing, put our tick closure into the mtc
+			m_CurrentMergedTickClosure.AddTickClosure(m_CurrentTickClosure, k_HSteamNetConnection_Invalid);
+
+			//pack the merged tick into a message and send to all clients
+			Network::Message msg(static_cast<uint32_t>(GameMessage::Game_MergedTickClosure));
+			msg << m_CurrentMergedTickClosure.m_Data;
+			msg << m_CurrentMergedTickClosure.m_ClientCount;
+			msg << m_InputTick;
+
+			//send the messages unreliably, since i have mtc recovery set up already!
+			SendMessageToAllClients(msg, 0, k_nSteamNetworkingSend_Unreliable);
+
+			//add the compressed message into the tick storage
+			m_TickRequestStorage.emplace_back();
+			msg.Compressed(m_TickRequestStorage.back());
+
+			//limit the tick storage to "MaxTickStorage"
+			if (m_TickRequestStorage.size() > MaxTickStorage) m_TickRequestStorage.pop_front();
+
+			//process the mtc on the our end
+			HandleTickClosure(m_CurrentMergedTickClosure);
+			m_InputTick++;
+
+			//reset the merged tick
+			m_CurrentMergedTickClosure = MergedTickClosure();
+
+			//reset tick closure
+			m_CurrentTickClosure = TickClosure();
+
+
+			//update player mouse positions
+			Network::Message mousePosMsg;
+			mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Server_ClientDataMousePosition);
+			m_ClientData.m_CursorWorldPosition = GetMousePosWorld();
+			//invalid for the server
+			HSteamNetConnection serverConn = k_HSteamNetConnection_Invalid;
+			mousePosMsg << m_ClientData.m_CursorWorldPosition;
+			mousePosMsg << serverConn;
+			SendMessageToAllClients(mousePosMsg);
+		}
+
 		
 	}
 
-	void PixelGameServer::HandleMessages()
+	void HostedGameNode::OnImGuiRender()
+	{
+		//ClientImGuiRender();
+	}
+
+	void HostedGameNode::StartP2P(int virtualPort)
+	{
+		SteamFriends()->SetRichPresence("status", "Hosting a game of Pyxis!");
+		SteamFriends()->SetRichPresence("connect", "gameinfo");
+		HostP2P(virtualPort);
+	}
+
+	void HostedGameNode::StartIP(uint16_t port)
+	{
+		bool success = HostIP(port);
+		if (success) PX_TRACE("Succeeded in hosting!"); else PX_TRACE("Failed to host");
+	}
+
+	void HostedGameNode::HandleMessages()
 	{
 		Ref<Network::Message> msg;
 		while (PollMessage(msg))
@@ -99,12 +109,27 @@ namespace Pyxis
 				*msg >> m_ClientDataMap[msg->clientHConnection];
 				break;
 			}
+			case GameMessage::Client_ClientDataMousePosition:
+			{
+				//when sent to clients, we include the HSteamNetConnection, and when clients send to us it is just the world position
+
+				//Update the position on our end, and send it as unreliable to other clients
+				m_ClientDataMap[msg->clientHConnection];
+				*msg >> m_ClientDataMap[msg->clientHConnection].m_CursorWorldPosition;
+				Network::Message mousePosMsg;
+				mousePosMsg.header.id = static_cast<uint32_t>(GameMessage::Server_ClientDataMousePosition);
+				mousePosMsg << m_ClientDataMap[msg->clientHConnection].m_CursorWorldPosition;
+				mousePosMsg << msg->clientHConnection;
+				SendMessageToAllClients(mousePosMsg, msg->clientHConnection, k_nSteamNetworkingSend_Unreliable);
+				break;
+			}
 			case GameMessage::Client_RequestAllClientData:
 			{
 				PX_TRACE("Recieved request for client data from: [{0}]:{1}", msg->clientHConnection, m_ClientDataMap[msg->clientHConnection].m_Name);
 				Network::Message clientDataMsg;
 				clientDataMsg.header.id = static_cast<uint32_t>(GameMessage::Server_AllClientData);
 				uint32_t numClients = 0;
+				m_ClientDataMap[0] = m_ClientData;
 				for (auto& clientPair : m_ClientDataMap)
 				{
 					if (clientPair.first != msg->clientHConnection)
@@ -129,8 +154,8 @@ namespace Pyxis
 				//that is the reasoning for the calculation below
 				//basically, the difference between the current tick and how far back
 				//the request is, is how far back from the end of the storage to grab from
-				
-				
+
+
 				uint64_t tick;
 				*msg >> tick;
 				int diff = m_InputTick - tick;
@@ -142,7 +167,7 @@ namespace Pyxis
 					DisconnectClient(msg->clientHConnection, "Client Became Desynced (Requested a tick we no longer had!)");
 				}
 				else
-					SendCompressedStringToClient(msg->clientHConnection, m_TickRequestStorage.at(position));				
+					SendCompressedStringToClient(msg->clientHConnection, m_TickRequestStorage.at(position));
 
 				break;
 			}
@@ -156,7 +181,7 @@ namespace Pyxis
 				// then, send the initializing message, saying how many chunks need
 				// to be sent, and how many rigid bodies?
 				// then send all the chunks individually and send pixel bodies in groups as well? or maybe individually.
-				
+
 
 				//now, lets send that initial message describing how many chunks we will send
 				//and how many pixel bodies there are.
@@ -167,11 +192,12 @@ namespace Pyxis
 
 				//now lets populate a vector of messages to be sent,
 				//being the chunks and pixel bodies
+				//this is also how we track pausing to let someone download
 				m_DownloadingClients[msg->clientHConnection] = std::vector<Network::Message>();
 				PX_WARN("Created a vector of messages for client");
 				m_World.GetGameData(m_DownloadingClients[msg->clientHConnection]);
 				//send the first and wait for it to be acknowledged
-				
+
 				if (!m_DownloadingClients[msg->clientHConnection].empty())
 				{
 					PX_TRACE("Sent GameDataMsg: ID[{0}], Size[{1}]", m_DownloadingClients[msg->clientHConnection].back().header.id, m_DownloadingClients[msg->clientHConnection].back().size());
@@ -221,88 +247,20 @@ namespace Pyxis
 
 		}
 	}
-	
 
-	void PixelGameServer::OnImGuiRender()
+	void HostedGameNode::OnClientDisconnect(HSteamNetConnection& client)
 	{
-
-		auto dock = ImGui::DockSpaceOverViewport(ImGui::GetID("MainDock"), (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-
-		//top menu bar
-		if (ImGui::BeginMainMenuBar())
-		{
-			//ImGui::DockSpaceOverViewport();
-			if (ImGui::BeginMenu("File"))
-			{
-				ImGui::Text("nothing here yet!");
-				ImGui::EndMenu();
-			}
-			ImGui::EndMainMenuBar();
-		}
-
-		ImGui::SetNextWindowDockID(dock);
-		if (ImGui::Begin("Server"))
-		{
-			//ImGui::Text("Sleep Timer");
-			//ImGui::ProgressBar(static_cast<float>(m_SleepDelay) / static_cast<float>(m_SleepDelayMax));
-			ImGui::Text(("Players:" + std::to_string(m_ClientDataMap.size())).c_str());
-		}
-		ImGui::End();
-
+		if (m_ClientDataMap.contains(client))
+			m_ClientDataMap.erase(client);
 	}
 
-	void PixelGameServer::OnEvent(Pyxis::Event& e)
+	void HostedGameNode::ReturnToMenu()
 	{
-		//m_OrthographicCameraController.OnEvent(e);
-		//Pyxis::EventDispatcher dispatcher(e);
-		//dispatcher.Dispatch<Pyxis::WindowResizeEvent>(PX_BIND_EVENT_FN(Sandbox2D::OnWindowResizeEvent));
-	}
-
-	bool PixelGameServer::OnWindowResizeEvent(Pyxis::WindowResizeEvent& event) {
-		//m_OrthographicCameraController.SetAspect((float)event.GetHeight() / (float)event.GetWidth());
-		//Pyxis::Renderer::OnWindowResize(event.GetWidth(), event.GetHeight());
-		////Pyxis::Renderer::OnWindowResize(event.GetWidth(), event.GetHeight());
-		return false;
-	}
-
-	void PixelGameServer::DisconnectClient(HSteamNetConnection client, std::string Reason)
-	{
-		OnClientDisconnect(client);
-		m_SteamNetworkingSockets->CloseConnection(client, 0, Reason.c_str(), true);
-	}
-
-	//bool PixelGameServer::OnClientConnect(std::shared_ptr<Network::Connection<GameMessage>> client)
-	//{
-	//	//I am able to block the incoming connection if i desire here
-	//	m_PlayerCount++;
-
-	//	return true;
-	//}
-
-	/*void PixelGameServer::OnClientDisconnect(std::shared_ptr<Network::Connection<GameMessage>> client)
-	{
-		PX_TRACE("Removing Client [{0}]", client->GetID());
-		m_PlayerCount--;
-		m_ClientsNeededForTick.erase(client->GetID());
-
-		Network::Message<GameMessage> disconnectMsg;
-		disconnectMsg.header.id = GameMessage::Server_ClientDisconnected;
-		disconnectMsg << client->GetID();
-		MessageAllClients(disconnectMsg, client);
-		return;
-	}*/
-
-	
-	void PixelGameServer::OnClientDisconnect(HSteamNetConnection client)
-	{
-		//remove client from map
-		m_ClientDataMap.erase(client);
-
-		if (m_DownloadingClients.contains(client))
-		{
-			PX_WARN("Popped DLCL Back. Size: {0}", m_DownloadingClients.size());
-			m_DownloadingClients.erase(client);
-		}
+		ServerInterface::Stop();
+		
+		auto menu = CreateRef<MenuNode>();
+		m_Parent->AddChild(menu);
+		QueueFree();
 	}
 
 }
