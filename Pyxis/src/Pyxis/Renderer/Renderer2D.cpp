@@ -1334,9 +1334,7 @@ namespace Pyxis
 
 	void Renderer2D::DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, UI::Direction alignment, bool scaleToWidth, const glm::vec4& color, uint32_t nodeID)
 	{
-		float size = fontSize;
-		float newLineShift = lineHeight * size * font->m_CharacterHeight;
-		float spaceWidth = (font->m_Characters[' '].Advance >> 6) * size * 2;
+		float spaceWidth = (font->m_Characters[' '].Advance >> 6) * fontSize * 2;
 
 		//main writing position
 		glm::vec2 pos = { 0,0 };
@@ -1347,7 +1345,22 @@ namespace Pyxis
 		{
 			totalLength += spaceWidth + word.physicalLength;
 		}
-		pos.x -= (totalLength / 2);
+		
+
+		float size = fontSize;
+		if (scaleToWidth)
+		{
+			//float lengthWithSpaces = totalLength + (words.size() - 1) * spaceWidth;
+			float scaleFactor = std::min(maxWidth / totalLength, 1.0f);
+			size *= scaleFactor;
+			spaceWidth = (font->m_Characters[' '].Advance >> 6) * size * 2;
+			pos.x -= (scaleFactor * totalLength) / 2;
+			//pos.x -= maxWidth / 2;
+		}
+		else
+		{
+			pos.x -= (totalLength / 2);
+		}
 
 		for (int i = 0; i < words.size(); i++)
 		{
