@@ -1,10 +1,10 @@
 #source files, all of them!
 add_executable(Pyxis-Game 
-    "../Pixel-Game-Core/src/GameLayer.cpp"
+    
     "src/PyxisGameApp.cpp"
     "src/MenuNode.cpp"
 
- "../Pixel-Game-Core/src/SingleplayerGameLayer.h" "../Pixel-Game-Core/src/SingleplayerGameLayer.cpp" "../Pixel-Game-Core/src/HostingGameLayer.h" "../Pixel-Game-Core/src/HostingGameLayer.cpp" "../Pixel-Game-Core/src/MultiplayerGameLayer.h" "../Pixel-Game-Core/src/MultiplayerGameLayer.cpp"
+      
  "../Pyxis/src/Pyxis/Nodes/UIScreenSpace.h" "src/MultiplayerGameNode.h" "src/MultiplayerGameNode.cpp" "src/HostedGameNode.h" "src/HostedGameNode.cpp" "src/SteamManagerNode.h")
 
 if(WIN32)

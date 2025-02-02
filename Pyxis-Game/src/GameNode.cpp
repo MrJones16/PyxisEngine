@@ -92,34 +92,28 @@ namespace Pyxis
 		container->AddChild(BrushOptions);		
 
 		auto ElementButtonContainer = CreateRef<UI::Container>("Element Buttons Container");
-		ElementButtonContainer->m_Size = {400, 32};
+		ElementButtonContainer->m_Size = {700, 32};
 		ElementButtonContainer->m_Gap = 8;
 		for (int i = 0; i < m_World.m_ElementData.size(); i++)
 		{
 			ElementData& ed = m_World.m_ElementData[i];
-			auto ElementButton = CreateRef<UI::UIButton>("ElementButton" + ed.name,
-				std::bind(&GameNode::SetBrushElement, this, i));
-			int r = (ed.color & 0xFF000000) >> 24;
-			int g = (ed.color & 0x00FF0000) >> 16;
-			int b = (ed.color & 0x0000FF00) >> 8;
-			int a = (ed.color & 0x000000FF) >> 0;
 
 			//abgr
-			r = (ed.color & 0x000000FF) >> 0;
-			g = (ed.color & 0x0000FF00) >> 8;
-			b = (ed.color & 0x00FF0000) >> 16;
-			a = (ed.color & 0xFF000000) >> 24;
+			int r = (ed.color & 0x000000FF) >> 0;
+			int g = (ed.color & 0x0000FF00) >> 8;
+			int b = (ed.color & 0x00FF0000) >> 16;
+			int a = (ed.color & 0xFF000000) >> 24;
 
-			ElementButton->m_Color = glm::vec4(r, g, b, a);
-			ElementButton->m_Color /= 255.0f;
-			ElementButton->m_Size = { 32, 9 };
-			auto ElementButtonText = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
-			ElementButtonText->m_Text = ed.name;
-			ElementButtonText->m_Size = { 32, 9 };
-			ElementButtonText->m_FontSize = 800;
-			ElementButtonText->Translate({ 0,0,-0.01f });
-			ElementButton->AddChild(ElementButtonText);
-			ElementButtonContainer->AddChild(ElementButton);
+			auto ElementTextButton = CreateRef<UI::TextButton>("ElementTextButton", FontLibrary::GetFont("Aseprite"), std::bind(&GameNode::SetBrushElement, this, i));
+			ElementTextButton->m_Color = glm::vec4(r, g, b, a) / 255.0f;
+			ElementTextButton->m_TextColor = glm::vec4(1 - ElementTextButton->m_Color.r, 1 - ElementTextButton->m_Color.g, 1 - ElementTextButton->m_Color.b, 1);
+			//ElementTextButton->m_TextColor.a = 255;
+			ElementTextButton->m_Size = { 32, 9 };
+
+			ElementTextButton->m_Text = ed.name;
+			ElementTextButton->m_FontSize = 0.5f;
+			ElementTextButton->Translate({ 0,0,-0.01f });			
+			ElementButtonContainer->AddChild(ElementTextButton);
 		}
 		container->AddChild(ElementButtonContainer);
 

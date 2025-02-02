@@ -115,6 +115,7 @@ namespace Pyxis
 
 	void OpenGLFrameBuffer::Invalidate()
 	{
+		if (m_Specification.Width == 0 || m_Specification.Height == 0) return;
 		if (m_RendererID) //already exists, remove previous
 		{
 			glDeleteFramebuffers(1, &m_RendererID);

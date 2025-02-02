@@ -1,5 +1,6 @@
 #pragma once
-#include "UIRect.h"
+#include "UIButton.h"
+#include "imgui_stdlib.h"
 #include <Pyxis/Core/InputCodes.h>
 
 namespace Pyxis
@@ -10,48 +11,41 @@ namespace Pyxis
 		/// A UI Node that functions as a button. can definitely be made into a templated if i need
 		/// to have more complex arguments or return types?
 		/// </summary>
-		class UIButton : public UIRect
+		class TextButton : public UIButton
 		{
-		protected:
-			std::function<void()> m_Function = nullptr;
-			bool m_Pressed = false;
+		public:
+			
+			std::string m_Text = "Text";
+			glm::vec4 m_TextColor = glm::vec4(0, 0, 0, 1);
+			float m_FontSize = 20;
+			Ref<Font> m_Font;
+			bool m_ScaleText = true;
 
 		public:
 
-			Ref<Texture2DResource> m_TexturePressedResource = nullptr;
-
-			UIButton(const std::string& name = "UIButton", const std::function<void()>& function = nullptr) : 
-				UIRect(name), m_Function(function)
+			TextButton(const std::string& name = "TextButton", Ref<Font> font = nullptr, const std::function<void()>& function = nullptr) :
+				UIButton(name, function),
+				m_Font(font)
 			{
 
 			}
+			
 
-			UIButton(const std::string& name = "UIButton", Ref<Texture2DResource> texture = nullptr, const std::function<void()>& function = nullptr) : 
-				UIRect(texture, name), m_Function(function)
-			{
-
-			}
-
-			UIButton(const std::string& name = "UIButton", const glm::vec4& color = glm::vec4(1), const std::function<void()>& function = nullptr) :
-				UIRect(color, name), m_Function(function)
-			{
-
-			}
-
-			void SetFunction(const std::function<void()>& function)
-			{
-				m_Function = function;
-			}
-
-			virtual ~UIButton() = default;
+			virtual ~TextButton() = default;
 
 			virtual void InspectorRender() override
 			{
 				UIRect::InspectorRender();
-				if (ImGui::TreeNodeEx("Button", ImGuiTreeNodeFlags_DefaultOpen))
+				if (ImGui::TreeNodeEx("TextButton", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					//Size
-					ImGui::DragFloat2("Size", glm::value_ptr(m_Size));
+					ImGui::ColorEdit4("Color", glm::value_ptr(m_Color));
+
+					ImGui::DragFloat("Font Size", &m_FontSize);
+					ImGui::ColorEdit4("Text Color", glm::value_ptr(m_TextColor));
+					ImGui::Checkbox("Scale Text", &m_ScaleText);
+
+					ImGui::InputTextMultiline("##Text", &m_Text);
+					//ImGui::InputText("##Text", &m_Text);
 
 					ImGui::TreePop();
 				}
@@ -75,13 +69,8 @@ namespace Pyxis
 						m_Function();
 					}
 				}
-				
+
 			}
-
-			/*virtual void OnUpdate(Timestep ts)
-			{
-
-			}*/
 
 			virtual void OnRender() override
 			{
@@ -102,8 +91,8 @@ namespace Pyxis
 						{
 							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID(), 1, m_Color);
 						}
-						
-						
+
+
 					}
 					else
 					{
@@ -111,8 +100,13 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
 					}
+
+					
+					float characterHeight = m_FontSize * m_Font->m_CharacterHeight * 1.3f;
+					
+					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), { 0, -characterHeight / 2, 0 }), m_Font, m_FontSize, 1.3f, m_Size.x, UI::Left, m_ScaleText, m_TextColor, GetID());
 				}
-				
+
 			}
 		};
 

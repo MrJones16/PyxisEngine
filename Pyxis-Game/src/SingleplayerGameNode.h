@@ -12,7 +12,6 @@ namespace Pyxis
 		SinglePlayerGameNode() 
 		{
 			//scene heirarchy done in constructor since we have no scene serialization
-			
 		};
 		virtual ~SinglePlayerGameNode() {};
 
@@ -42,7 +41,7 @@ namespace Pyxis
 
 		virtual void OnRender()
 		{
-			Renderer2D::DrawText("Testing Font size", glm::mat4(1), FontLibrary::GetFont("Aseprite"));
+			
 		}
 
 		virtual void OnFixedUpdate() override
@@ -61,7 +60,7 @@ namespace Pyxis
 
 		virtual void OnImGuiRender() override
 		{
-			ClientImGuiRender();
+			//ClientImGuiRender();
 		}
 
 	};

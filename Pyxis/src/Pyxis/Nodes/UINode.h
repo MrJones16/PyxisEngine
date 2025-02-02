@@ -10,13 +10,6 @@ namespace Pyxis
 	namespace UI
 	{
 
-		enum Direction : int
-		{
-			None,
-
-			Up, Down, Left, Right, Center
-		};
-
 		/// <summary>
 		/// A Base UI Node that can act as a root
 		/// </summary>

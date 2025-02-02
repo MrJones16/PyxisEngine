@@ -10,6 +10,50 @@
 namespace Pyxis
 {
 
+	namespace Utils
+	{
+		//possible Optimization: instead of using find(), iterate manually and get the word and word length in one go.
+
+		//Gets a vector of words (a word being an std::pair with the word, and the physical length of the word)
+		std::vector<Word> TextToWords(const std::string& text, Ref<Font> font, float fontSize)
+		{
+			std::vector<Word> result;
+			size_t index = std::min(text.find(' '), text.find('\n'));
+			size_t initialPos = 0;
+			while (index != std::string::npos) {
+				//create the word substring
+				bool hasNewLine = text[index] == '\n';
+				result.push_back({ text.substr(initialPos, index - initialPos), 0 , hasNewLine });
+				initialPos = index + 1;
+				index = std::min(text.find(' ', initialPos), text.find('\n', initialPos));
+			}
+			// Add the last one
+			int len = std::min(index, text.size()) - initialPos + 1;
+			if (len > 0)
+				result.push_back({ text.substr(initialPos, len), 0 , false });
+
+			for (auto& word : result)
+			{
+				if (word.string == "")
+				{
+					word.physicalLength = (font->m_Characters[' '].Advance >> 6) * fontSize * 2;
+					continue;
+				}
+				//get the length of the word
+				for (auto c : word.string)
+				{
+					if (c == '\n')
+					{
+						word.ContainsNewLine = true;
+					}
+					word.physicalLength += (font->m_Characters[c].Advance >> 6) * fontSize;
+				}
+			}
+			return result;
+		}
+
+	}
+
 	struct ScreenQuadVertex
 	{
 		glm::vec2 Position;
@@ -1210,67 +1254,105 @@ namespace Pyxis
 
 	}
 
-
-	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, const glm::vec4& color, uint32_t nodeID)
+	void Renderer2D::DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, UI::Direction alignment, const glm::vec4& color, uint32_t nodeID)
 	{
-		float size = fontSize / 1000.0f;
+
+		//method:
+		// gets all the words in text seperated into list
+		// sees how many words will fit into a single line or until new line
+		// writes those words until finished
+		// gets next set of words (repeat)
+		//
+
+		float size = fontSize;
 		float newLineShift = lineHeight * size * font->m_CharacterHeight;
-		// iterate through all characters
-		glm::vec2 pos = {0,0};
-		std::string::const_iterator c;
+		float spaceWidth = (font->m_Characters[' '].Advance >> 6) * size * 2;
 
-		std::vector<std::string> words;
-		size_t index = text.find(' ');
-		size_t initialPos = 0;
-		while (index != std::string::npos) {
-			//create the word substring
-			words.push_back(text.substr(initialPos, index - initialPos));
-			initialPos = index + 1;
-			index = text.find(' ', initialPos);
-		}
-		// Add the last one
-		int len = std::min(index, text.size()) - initialPos + 1;
-		if (len > 0)
-			words.push_back(text.substr(initialPos, len));
-		
-		bool startOfLine = true;
-		for (std::string& word : words)
+		// Main Writing Position
+		glm::vec2 pos = { 0,0 };
+
+		//gather words, their lengths, and if they have a new line
+		std::vector<Word> words = Utils::TextToWords(text, font, fontSize);
+
+		//the word we are at in the iteration 
+		int wordIndex = 0;
+
+		//loop until we write all words
+		while (wordIndex < words.size())
 		{
-			//PX_TRACE("Word: {0}", word);
-
-			if (word == "")
+			//vars to track how many we can write in one go
+			float lengthSum = 0;
+			int wordsToWrite = 0;
+			//count how many words we can write based on length
+			for (int i = wordIndex; i < words.size(); i++)
 			{
-				pos.x += (font->m_Characters[' '].Advance >> 6) * size * 2;
-				continue;
-			}
-
-			//get the length of the word
-			float wordLength = 0;
-			for (auto c : word)
-			{
-				wordLength += (font->m_Characters[c].Advance >> 6) * size;
-			}
-
-			//check if we need to shift for a new line
-			if ((wordLength + pos.x) > maxWidth && !startOfLine)
-			{
-				//this word makes it go past the max length. we need to do a new line before this word
-				//(new line)
-				pos.x = 0;
-				pos.y -= newLineShift;
-				startOfLine = true;
-			}
-
-			for (c = word.begin(); c != word.end(); c++)
-			{
-				if (*c == '\n')
+				if ((lengthSum + words[i].physicalLength) > maxWidth && wordsToWrite > 0) // > 0 keeps track if this is the first word
 				{
-					//(new line)
-					pos.x = 0;
-					pos.y -= newLineShift;
-					continue;
+					//this word won't fit with how many we have
+					break;
 				}
+				else
+				{
+					wordsToWrite++;
+					lengthSum += words[i].physicalLength + spaceWidth;
+					if (words[i].ContainsNewLine)
+						break;
+					
+				}
+			}
 
+			//we now have how many words we should write, so lets iterate over them and write!
+			int maxIndex = wordsToWrite + wordIndex;
+			for (int i = wordIndex; (i < maxIndex) && (i < words.size()); i++)
+			{
+				for (std::string::const_iterator c = words[i].string.begin(); c != words[i].string.end(); c++)
+				{
+					Font::Character ch = font->m_Characters[*c];
+					//create a transform for the character
+					float xpos = pos.x + ch.Bearing.x * size;
+					float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * size;
+
+					glm::mat4 charTransform = glm::translate(glm::mat4(1), { xpos, ypos, 0 });
+					charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });
+					charTransform = transform * charTransform;
+
+					DrawBitMap(charTransform, ch.Texture, nodeID, color);
+
+					// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+					pos.x += (ch.Advance >> 6) * size; // bitshift by 6 to get value in pixels (2^6 = 64)
+				}
+				//put the space for a space
+				pos.x += spaceWidth;
+				wordIndex++;
+			}
+			//(new line)
+			pos.x = 0;
+			pos.y -= newLineShift;
+
+		}
+	}
+
+	void Renderer2D::DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, UI::Direction alignment, bool scaleToWidth, const glm::vec4& color, uint32_t nodeID)
+	{
+		float size = fontSize;
+		float newLineShift = lineHeight * size * font->m_CharacterHeight;
+		float spaceWidth = (font->m_Characters[' '].Advance >> 6) * size * 2;
+
+		//main writing position
+		glm::vec2 pos = { 0,0 };
+
+		std::vector<Word> words = Utils::TextToWords(text, font, fontSize);
+		float totalLength = -spaceWidth; // neg space width for first word not having a space
+		for (auto& word : words)
+		{
+			totalLength += spaceWidth + word.physicalLength;
+		}
+		pos.x -= (totalLength / 2);
+
+		for (int i = 0; i < words.size(); i++)
+		{
+			for (std::string::const_iterator c = words[i].string.begin(); c != words[i].string.end(); c++)
+			{
 				Font::Character ch = font->m_Characters[*c];
 				//create a transform for the character
 				float xpos = pos.x + ch.Bearing.x * size;
@@ -1286,10 +1368,8 @@ namespace Pyxis
 				pos.x += (ch.Advance >> 6) * size; // bitshift by 6 to get value in pixels (2^6 = 64)
 			}
 			//put the space for a space
-			pos.x += (font->m_Characters[' '].Advance >> 6) * size * 2;
-			startOfLine = false;
-		}
-		
+			pos.x += spaceWidth;
+		}				
 	}
 
 	void Renderer2D::ResetStats()

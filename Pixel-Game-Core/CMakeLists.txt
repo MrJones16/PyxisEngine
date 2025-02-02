@@ -11,14 +11,14 @@ target_sources(Pixel-Game-Core PRIVATE
 	src/World.cpp
 	src/World.h
 
-	src/GameLayer.cpp
-	src/GameLayer.h
-	src/SingleplayerGameLayer.cpp
-	src/SingleplayerGameLayer.h
-	src/MultiplayerGameLayer.cpp
-	src/MultiplayerGameLayer.h
-	src/HostingGameLayer.cpp
-	src/HostingGameLayer.h
+	
+	
+	
+	
+	
+	
+	
+	
 
 
  "src/PixelNetworking.h" "../Pyxis-Game/src/GameNode.cpp" "../Pyxis-Game/src/GameNode.h" "../Pyxis-Game/src/SingleplayerGameNode.h")

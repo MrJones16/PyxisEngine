@@ -7,6 +7,30 @@
 
 namespace Pyxis
 {
+	namespace UI
+	{
+		enum Direction : int
+		{
+			None,
+
+			Up, Down, Left, Right, Center
+		};
+	}
+
+	struct Word
+	{
+		std::string string;
+		float physicalLength;
+		bool ContainsNewLine;
+
+		Word(const std::string& word, float length, bool hasNewLine)
+		{
+			string = word;
+			physicalLength = length;
+			ContainsNewLine = hasNewLine;
+		}
+	};
+
 	class Renderer2D
 	{
 	public:
@@ -51,9 +75,13 @@ namespace Pyxis
 		static void DrawBitMap(glm::mat4 transform, const Ref<Texture2D>& texture, uint32_t nodeID = 0, const glm::vec4& tintColor = { 1,1,1,1 });
 		static void DrawBitMap(glm::mat4 transform, const Ref<SubTexture2D>& subTexture, uint32_t nodeID = 0, const glm::vec4& tintColor = { 1,1,1,1 });
 
-		static void DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize = 20.0f, float lineHeight = 1.3f, float maxWidth = 10, const glm::vec4& color = { 0,0,0,1 }, uint32_t nodeID = 0);
+		static void DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize = 1.0f, float lineHeight = 1.3f, float maxWidth = 10, UI::Direction alignment = UI::Direction::Left, const glm::vec4& color = { 0,0,0,1 }, uint32_t nodeID = 0);
 
+		//Only writes on one line, and will shrink to fit into the given width if scaleToWidth = true
+		static void DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize = 20.0f, float lineHeight = 1.3f, float maxWidth = 10, UI::Direction alignment = UI::Direction::Center, bool scaleToWidth = true, const glm::vec4& color = { 0,0,0,1 }, uint32_t nodeID = 0);
 		
+
+
 		//Stats
 		struct Statistics
 		{
@@ -67,4 +95,5 @@ namespace Pyxis
 		static void ResetStats();
 		static Statistics GetStats();
 	};
+
 }
