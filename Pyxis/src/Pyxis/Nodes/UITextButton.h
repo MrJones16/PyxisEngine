@@ -20,6 +20,7 @@ namespace Pyxis
 			float m_FontSize = 20;
 			Ref<Font> m_Font;
 			bool m_ScaleText = true;
+			glm::vec2 m_TextBorderSize = glm::vec2(0,0);
 
 		public:
 
@@ -43,6 +44,7 @@ namespace Pyxis
 					ImGui::DragFloat("Font Size", &m_FontSize);
 					ImGui::ColorEdit4("Text Color", glm::value_ptr(m_TextColor));
 					ImGui::Checkbox("Scale Text", &m_ScaleText);
+					ImGui::InputFloat2("Text Border Size", glm::value_ptr(m_TextBorderSize));
 
 					ImGui::InputTextMultiline("##Text", &m_Text);
 					//ImGui::InputText("##Text", &m_Text);
@@ -91,8 +93,6 @@ namespace Pyxis
 						{
 							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID(), 1, m_Color);
 						}
-
-
 					}
 					else
 					{
@@ -103,8 +103,9 @@ namespace Pyxis
 
 					
 					float characterHeight = m_FontSize * m_Font->m_CharacterHeight * 1.3f;
-					
-					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), { 0, -characterHeight / 2, 0 }), m_Font, m_FontSize, 1.3f, m_Size.x, UI::Left, m_ScaleText, m_TextColor, GetID());
+					// -characterHeight / 2
+					glm::vec2 maxSize = m_Size - (m_TextBorderSize * 2.0f);
+					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), { 0, 00, 0 }), m_Font, maxSize, m_FontSize, UI::Left, m_ScaleText, m_TextColor, GetID());
 				}
 
 			}

@@ -29,7 +29,7 @@ namespace Pyxis
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
 	}
 
-	const glm::mat3& CameraNode::GetRotationMatrix() const
+	const glm::mat4& CameraNode::GetRotationMatrix() const
 	{
 		return	glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f)) *
 				glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.y), glm::vec3(0.0f, -1.0f, 0.0f)) *

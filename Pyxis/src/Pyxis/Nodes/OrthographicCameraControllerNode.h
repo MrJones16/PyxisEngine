@@ -48,46 +48,29 @@ namespace Pyxis
 
 		inline virtual void OnUpdate(Timestep ts) override
 		{
-			glm::mat3 RotationMatrix = GetRotationMatrix();
+			glm::mat4 RotationMatrix = GetRotationMatrix();
 			//movement
-			glm::vec3 direction = glm::vec3(0.0f, 0.0f, 0.0f);
-
-			//PX_CORE_INFO("angle is {0}", m_Camera->GetRotation().z);
+			glm::vec4 direction = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
 
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_W)) {
-				direction += RotationMatrix * glm::vec3(0, 1, 0);
+				direction += RotationMatrix * glm::vec4(0, 1, 0, 1);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_A)) {
-				direction -= RotationMatrix * glm::vec3(1, 0, 0);
+				direction -= RotationMatrix * glm::vec4(1, 0, 0, 1);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_S)) {
-				direction -= RotationMatrix * glm::vec3(0, 1, 0);
+				direction -= RotationMatrix * glm::vec4(0, 1, 0, 1);
 			}
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_D)) {
-				direction += RotationMatrix * glm::vec3(1, 0, 0);
+				direction += RotationMatrix * glm::vec4(1, 0, 0, 1);
 			}
+			
 
-			Translate(direction * m_CameraSpeed * ts.GetSeconds());
 
-			//rotation
-			/*float angle = 0;
-			BYTE center = 0;
-			if (Pyxis::Input::IsKeyPressed(PX_KEY_Q)) {
-				angle -= 30;
-				center++;
-			}
-			if (Pyxis::Input::IsKeyPressed(PX_KEY_E)) {
-				angle += 30;
-				center++;
-			}
-			if (center == 2)
-			{
-				m_Camera->SetRotation(glm::vec3(0));
-			}
-			else m_Camera->SetRotation(m_Camera->GetRotation() + glm::vec3(0,0, angle * ts.GetSeconds()));*/
+			PX_TRACE("Input Direction: {},{},{}", direction.x, direction.y, direction.z);
 
-			//if (direction.x != 0 || direction.y != 0 || direction.z != 0)
-			//	direction = glm::normalize(direction);
+			Translate((glm::vec3)direction * m_CameraSpeed * ts.GetSeconds());
+
 		}
 
 	};

@@ -78,7 +78,7 @@ namespace Pyxis
 		static void DrawText(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize = 1.0f, float lineHeight = 1.3f, float maxWidth = 10, UI::Direction alignment = UI::Direction::Left, const glm::vec4& color = { 0,0,0,1 }, uint32_t nodeID = 0);
 
 		//Only writes on one line, and will shrink to fit into the given width if scaleToWidth = true
-		static void DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize = 20.0f, float lineHeight = 1.3f, float maxWidth = 10, UI::Direction alignment = UI::Direction::Center, bool scaleToWidth = true, const glm::vec4& color = { 0,0,0,1 }, uint32_t nodeID = 0);
+		static void DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, const glm::vec2& maxSize, float fontSize = 20.0f, UI::Direction alignment = UI::Direction::Center, bool scaleToWidth = true, const glm::vec4& color = { 0,0,0,1 }, uint32_t nodeID = 0);
 		
 
 

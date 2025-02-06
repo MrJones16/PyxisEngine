@@ -1,6 +1,7 @@
 #pragma once
 
 //From glfw3.h
+#include <GLFW/glfw3.h>
 
 /* Mouse keys */
 

@@ -60,13 +60,12 @@ namespace Pyxis
 					float characterHeight = m_FontSize * m_Font->m_CharacterHeight * 1.3f;
 					if (m_Centered)
 					{
-						Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), { 0, -characterHeight/2, 0 }), m_Font, m_FontSize, 1.3f, m_Size.x, UI::Left, false, m_Color, nodeID);
+						Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), { 0, -characterHeight/2, 0 }), m_Font, m_Size, m_FontSize, UI::Left, false, m_Color, nodeID);
 					}
 					else
 					{
 						Renderer2D::DrawText(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), {-m_Size.x / 2, (m_Size.y / 2) - characterHeight, 0}), m_Font, m_FontSize, 1.3f, m_Size.x, UI::Left, m_Color, nodeID);
 					}
-
 
 					glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 					if (m_ShowRegion)

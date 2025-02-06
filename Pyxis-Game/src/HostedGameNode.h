@@ -14,7 +14,17 @@ namespace Pyxis
 		static const int MaxTickStorage = 500;
 
 
-		HostedGameNode(std::string name = "Hosted Game Node") : GameNode(name) {}
+		HostedGameNode(std::string name = "Hosted Game Node") : GameNode(name) 
+		{
+			for (int x = -1; x <= 1; x++)
+			{
+				for (int y = -1; y <= 1; y++)
+				{
+					m_World.AddChunk({ x,y });
+					m_World.GenerateChunk(m_World.GetChunk({ x,y }));
+				}
+			}
+		}
 		virtual ~HostedGameNode() = default;
 
 

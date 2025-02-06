@@ -1332,7 +1332,7 @@ namespace Pyxis
 		}
 	}
 
-	void Renderer2D::DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, float fontSize, float lineHeight, float maxWidth, UI::Direction alignment, bool scaleToWidth, const glm::vec4& color, uint32_t nodeID)
+	void Renderer2D::DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, const glm::vec2& maxSize, float fontSize, UI::Direction alignment, bool scaleToWidth, const glm::vec4& color, uint32_t nodeID)
 	{
 		float spaceWidth = (font->m_Characters[' '].Advance >> 6) * fontSize * 2;
 
@@ -1351,7 +1351,8 @@ namespace Pyxis
 		if (scaleToWidth)
 		{
 			//float lengthWithSpaces = totalLength + (words.size() - 1) * spaceWidth;
-			float scaleFactor = std::min(maxWidth / totalLength, 1.0f);
+			
+			float scaleFactor = std::min(maxSize.x / totalLength, maxSize.y / (font->m_CharacterHeight * fontSize));
 			size *= scaleFactor;
 			spaceWidth = (font->m_Characters[' '].Advance >> 6) * size * 2;
 			pos.x -= (scaleFactor * totalLength) / 2;
@@ -1370,6 +1371,8 @@ namespace Pyxis
 				//create a transform for the character
 				float xpos = pos.x + ch.Bearing.x * size;
 				float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * size;
+				ypos -= font->m_CharacterHeight * size * 0.77f;
+				
 
 				glm::mat4 charTransform = glm::translate(glm::mat4(1), { xpos, ypos, 0 });
 				charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });

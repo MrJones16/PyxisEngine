@@ -3,6 +3,10 @@
 #include <memory>
 #include <chrono>
 #include <functional>
+#include <glm/glm.hpp>
+//#include <fmt/ostream.h>
+
+//template <> struct fmt::formatter<glm::mat4> : ostream_formatter {};
 
 #ifdef PX_PLATFORM_WINDOWS
 	#if PX_DYNAMIC_LINK
