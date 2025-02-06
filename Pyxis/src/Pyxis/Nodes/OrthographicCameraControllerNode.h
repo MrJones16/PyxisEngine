@@ -65,10 +65,6 @@ namespace Pyxis
 				direction += RotationMatrix * glm::vec4(1, 0, 0, 1);
 			}
 			
-
-
-			PX_TRACE("Input Direction: {},{},{}", direction.x, direction.y, direction.z);
-
 			Translate((glm::vec3)direction * m_CameraSpeed * ts.GetSeconds());
 
 		}

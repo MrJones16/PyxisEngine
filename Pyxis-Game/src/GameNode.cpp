@@ -30,19 +30,18 @@ namespace Pyxis
 		m_CameraController->Translate({ 0,1,0 });
 		AddChild(m_CameraController);
 
-		auto screenSpace = CreateRef<UI::UIScreenSpace>();
+		auto screenSpace = CreateRef<UI::ScreenSpace>();
 		AddChild(screenSpace);
 
-		m_Hotbar = CreateRef<UI::UICanvas>();
+		m_Hotbar = CreateRef<UI::Canvas>();
 		m_Hotbar->m_AutomaticSizing = true;
 		m_Hotbar->m_AutomaticSizingPercent = { 1, 1 };//10 % height
-		m_Hotbar->m_FixedSize.y = 64;
+		m_Hotbar->m_FixedSize.y = 112;
 		//full x, 1/10th up the screen
 		m_Hotbar->m_AutomaticPositioning = true;
 		m_Hotbar->m_VerticalAlignment = UI::Down;
 		m_Hotbar->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		m_Hotbar->m_PPU = 32;
-		m_Hotbar->m_TextureScale = m_Hotbar->m_PPU;
 		screenSpace->AddChild(m_Hotbar);
 
 
@@ -59,15 +58,15 @@ namespace Pyxis
 		auto ButtonHolder = CreateRef<UI::UIRect>("Button Holder");
 		ButtonHolder->m_Enabled = false;
 		ButtonHolder->m_Size = { 32, 32 };
-		m_PlayButton = CreateRef<UI::UIButton>("Play Button", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PlayButton.png"));
+		m_PlayButton = CreateRef<UI::Button>("Play Button", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PlayButton.png"));
 		m_PlayButton->SetFunction(std::bind(&GameNode::PlayButtonFunc, this));
-		m_PlayButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PlayButtonPressed.png");
+		m_PlayButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PlayButtonPressed.png");
 		m_PlayButton->m_Size = { 32,32 };
 		m_PlayButton->m_Enabled = false;
 		ButtonHolder->AddChild(m_PlayButton);
-		m_PauseButton = CreateRef<UI::UIButton>("Pause Button", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PauseButton.png"));
+		m_PauseButton = CreateRef<UI::Button>("Pause Button", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PauseButton.png"));
 		m_PauseButton->SetFunction(std::bind(&GameNode::PauseButtonFunc, this));
-		m_PauseButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PauseButtonPressed.png");
+		m_PauseButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/PauseButtonPressed.png");
 		m_PauseButton->m_Size = { 32,32 };
 		ButtonHolder->AddChild(m_PauseButton);
 		container->AddChild(ButtonHolder);
@@ -76,24 +75,26 @@ namespace Pyxis
 		auto BrushOptions = CreateRef<UI::UIRect>("Button Holder");
 		BrushOptions->m_Enabled = false;
 		BrushOptions->m_Size = { 72, 32 };
-		auto brushCircle = CreateRef<UI::UIButton>("BrushCircle", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButton.png"));
+		auto brushCircle = CreateRef<UI::Button>("BrushCircle", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButton.png"));
 		brushCircle->SetFunction(std::bind(&GameNode::SetBrushType, this, BrushType::circle));
-		brushCircle->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButtonPressed.png");
+		brushCircle->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButtonPressed.png");
 		brushCircle->m_Size = { 32,32 };
 		brushCircle->Translate({ -20, 0, 0 });
 		BrushOptions->AddChild(brushCircle);
 
-		auto brushSquare = CreateRef<UI::UIButton>("BrushSquare", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButton.png"));
+		auto brushSquare = CreateRef<UI::Button>("BrushSquare", ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButton.png"));
 		brushSquare->SetFunction(std::bind(&GameNode::SetBrushType, this, BrushType::square));
-		brushSquare->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButtonPressed.png");
+		brushSquare->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButtonPressed.png");
 		brushSquare->m_Size = { 32,32 };
 		brushSquare->Translate({ 20, 0, 0 });
 		BrushOptions->AddChild(brushSquare);
 		container->AddChild(BrushOptions);		
 
 		auto ElementButtonContainer = CreateRef<UI::Container>("Element Buttons Container");
-		ElementButtonContainer->m_Size = {900, 32};
-		ElementButtonContainer->m_Gap = 8;
+		//ElementButtonContainer->m_Size = {900, 32};
+		ElementButtonContainer->m_AutomaticSizing = true;
+		ElementButtonContainer->m_AutomaticSizingOffset = { -300, 0 };
+		ElementButtonContainer->m_Gap = 0;
 		for (int i = 0; i < m_World.m_ElementData.size(); i++)
 		{
 			ElementData& ed = m_World.m_ElementData[i];
@@ -105,6 +106,9 @@ namespace Pyxis
 			int a = (ed.color & 0xFF000000) >> 24;
 
 			auto ElementTextButton = CreateRef<UI::TextButton>("ElementTextButton", FontLibrary::GetFont("Aseprite"), std::bind(&GameNode::SetBrushElement, this, i));
+			ElementTextButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateWhite.png");
+			ElementTextButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateWhitePressed.png");
+			ElementTextButton->m_TextBorderSize = glm::vec2(6);
 			ElementTextButton->m_Color = glm::vec4(r, g, b, a) / 255.0f;
 			ElementTextButton->m_TextColor = glm::vec4(ElementTextButton->m_Color.r, ElementTextButton->m_Color.g, ElementTextButton->m_Color.b, 1);
 
@@ -121,7 +125,8 @@ namespace Pyxis
 					ElementTextButton->m_TextColor[i] = std::min(ElementTextButton->m_TextColor[i] + 0.50f, 1.0f);
 			}
 			//ElementTextButton->m_TextColor.a = 255;
-			ElementTextButton->m_Size = { 48, 14 };
+			ElementTextButton->m_PPU = 0.5f;
+			ElementTextButton->UpdateSizeFromTexture();
 
 			ElementTextButton->m_Text = ed.name;
 			ElementTextButton->m_FontSize = 0.5f;
@@ -130,12 +135,19 @@ namespace Pyxis
 		}
 		container->AddChild(ElementButtonContainer);
 
-		auto QuitButton = CreateRef<UI::UIButton>("Back To Menu Button", ResourceSystem::Load<Texture2DResource>("assets/textures/UI/QuitButton.png"));
-		QuitButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/QuitButtonPressed.png");
-		QuitButton->SetFunction(std::bind(&GameNode::ReturnToMenu, this));
-		QuitButton->m_PPU = 0.5;
-		QuitButton->UpdateSizeFromTexture();
-		container->AddChild(QuitButton);
+		//Quit Button		
+		auto quitButton = CreateRef<UI::TextButton>("Quit Game Button", FontLibrary::GetFont("Aseprite"), std::bind(&GameNode::ReturnToMenu, this));
+		quitButton->m_PPU = 0.5;
+		quitButton->m_Text = "Quit Game";
+		quitButton->m_TextColor = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);
+		quitButton->Translate({ 0,0,1 });
+		quitButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+		quitButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+		quitButton->UpdateSizeFromTexture();
+		quitButton->m_TextBorderSize = glm::vec2(5,5);
+		quitButton->m_TextOffset = { 0, 3, 0 };
+		quitButton->m_TextOffsetPressed = { 0, 1, 0 };
+		container->AddChild(quitButton);
 
 
 		screenSpace->PropagateUpdate(); // simple way to tell the hotbar to fix itself

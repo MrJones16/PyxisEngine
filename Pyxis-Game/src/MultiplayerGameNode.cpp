@@ -6,23 +6,23 @@ namespace Pyxis
 	MultiplayerGameNode::MultiplayerGameNode() : GameNode("Multiplayer Game Node")
 	{
 		//initialize the connecting screen nodes
-		m_LSScreenSpace = CreateRef<UI::UIScreenSpace>();
+		m_LSScreenSpace = CreateRef<UI::ScreenSpace>();
 		m_LSScreenSpace->Translate({ 0,0,-0.2 });
 		AddChild(m_LSScreenSpace);
-		m_LSCanvas = CreateRef<UI::UICanvas>();
+		m_LSCanvas = CreateRef<UI::Canvas>();
 		m_LSCanvas->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		m_LSCanvas->m_AutomaticSizing = true;
 
 		m_LSScreenSpace->AddChild(m_LSCanvas);
-		m_LSText = CreateRef<UI::UIText>(FontLibrary::GetFont("Aseprite"));
+		m_LSText = CreateRef<UI::Text>(FontLibrary::GetFont("Aseprite"));
 		m_LSText->Translate({ 0,0,-0.01 });
 		m_LSText->m_Text = "Connecting";
 		m_LSText->m_Size = { 128, 32 };
 		m_LSText->m_FontSize = 800;
 		m_LSCanvas->AddChild(m_LSText);
 
-		m_LSButton = CreateRef<UI::UIButton>("OkayButton", ResourceSystem::Load<Texture2DResource>("assets/textures/UI/OkayButton.png"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
-		m_LSButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/OkayButtonPressed.png");
+		m_LSButton = CreateRef<UI::Button>("OkayButton", ResourceSystem::Load<Texture2DResource>("assets/textures/UI/OkayButton.png"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
+		m_LSButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/OkayButtonPressed.png");
 		m_LSButton->m_PPU = 1;
 		m_LSButton->UpdateSizeFromTexture();
 		m_LSButton->Translate({ 0,-64,-0.01 });
@@ -158,31 +158,6 @@ namespace Pyxis
 			
 	}
 
-	//on multiplayer node creation, immediately start the connecting screen overlay. 
-	/*case MultiplayerState::GatheringPlayerData:
-	{
-		ImGui::SetNextWindowDockID(dock);
-		if (ImGui::Begin("Connecting To Server"))
-		{
-			ImGui::Text("Gathering Player Data");
-			ImGui::End();
-		}
-
-		break;
-	}*/
-
-	/*case MultiplayerState::DownloadingWorld:
-	{
-		ImGui::SetNextWindowDockID(dock);
-		if (ImGui::Begin("Connecting To Server"))
-		{
-			ImGui::Text("Downloading World");
-			ImGui::ProgressBar((float)m_DownloadCount / (float)m_DownloadTotal);
-			ImGui::End();
-		}
-		break;
-	}*/
-
 	void MultiplayerGameNode::OnConnectionSuccess()
 	{
 		Network::Message clientDataMsg;
@@ -200,12 +175,6 @@ namespace Pyxis
 		m_LSText->m_Text = "Requesting Client Data";
 	}
 	
-	/*
-	* m_LSScreenSpace
-		m_LSCanvas
-		m_LSText
-	*/
-
 	void MultiplayerGameNode::OnConnectionLost(const std::string& reasonText)
 	{
 		////m_ConnectionStatus = ConnectionStatus::Disconnected;

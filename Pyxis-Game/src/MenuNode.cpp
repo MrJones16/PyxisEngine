@@ -1,7 +1,7 @@
 #include "MenuNode.h"
 #include <steam/steam_api.h>
 
-#include <Pyxis/Nodes/UI.h>
+#include <Pyxis/Nodes/UI/UI.h>
 
 #include "SingleplayerGameNode.h"
 #include "MultiplayerGameNode.h"
@@ -17,10 +17,7 @@ namespace Pyxis
 	{
 		//since I don't have scenes to set up an actual heirarchy, and an editor to do things
 		//scenes are set in a constructor...
-
-		//EventSignal::s_WindowResizeEventSignal.AddReciever(m_WindowResizeReciever);
-
-		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
+		glm::vec4 themeYellow = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);
 
 		auto camera = CreateRef<CameraNode>();
 		camera->SetMainCamera();
@@ -28,18 +25,16 @@ namespace Pyxis
 		camera->m_LockAspect = false;
 		AddChild(camera);
 
-		auto screenNode = CreateRef<UI::UIScreenSpace>();
+		auto screenNode = CreateRef<UI::ScreenSpace>();
 		AddChild(screenNode);
 
-		auto canvasNode = CreateRef<UI::UICanvas>();
+		auto canvasNode = CreateRef<UI::Canvas>();
 		canvasNode->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		canvasNode->m_PPU = 32;
-		canvasNode->m_TextureScale = 32;
 		screenNode->AddChild(canvasNode);
 		canvasNode->m_AutomaticSizing = true;
 		canvasNode->m_AutomaticSizingOffset;
 
-		
 
 		//container
 		auto container = CreateRef<UI::Container>();
@@ -52,58 +47,159 @@ namespace Pyxis
 		container->m_VerticalAlignment = UI::Up;
 		canvasNode->AddChild(container);
 
+
+		//logo
 		auto logo = CreateRef<UI::UIRect>(ResourceSystem::Load<Texture2DResource>("assets/textures/UI/InsetPyxisLogo.png"), "Logo");
 		logo->m_PPU = 0.25f;
 		logo->UpdateSizeFromTexture();
 		container->AddChild(logo);
 
+
+		//singleplayer button
+		{
+			auto playButton = CreateRef<UI::TextButton>("Singleplayer Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::PlaySinglePlayer, this));
+			playButton->m_PPU = 0.25f;
+			playButton->m_Text = "Singleplayer";
+			playButton->m_TextColor = themeYellow;
+			playButton->Translate({ 0,0,1 });
+			playButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+			playButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+			playButton->UpdateSizeFromTexture();
+			playButton->m_TextBorderSize = glm::vec2(5, 5);
+			playButton->m_TextOffset = { 0, 3, 0 };
+			playButton->m_TextOffsetPressed = { 0, 1, 0 };
+			container->AddChild(playButton);
+		}
+
+
+		//client data input
+		{
+			//name
+			auto nameInput = CreateRef<UI::InputText>("Name Text Input", FontLibrary::GetFont("Aseprite"));
+			nameInput->m_FontSize = 5;
+			nameInput->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlate.png");
+			nameInput->m_TextureResourceSelected = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSelected.png");
+			nameInput->m_Text = "Pyxis Enjoyer";
+			nameInput->m_PPU = 0.25;
+			nameInput->m_TextBorderSize = glm::vec2(3);
+			nameInput->m_Alignment = UI::Direction::Center;
+			nameInput->UpdateSizeFromTexture();
+			container->AddChild(nameInput);
+
+
+			////color select canvas
+			//auto colorCanvas = CreateRef<UI::Canvas>();
+			//colorCanvas->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
+			//colorCanvas->m_PPU = 64;
+			//colorCanvas->m_Size = { 512, 128 };
+			//container->AddChild(colorCanvas);
+
+			//color select container
+			auto colorSelectContainer = CreateRef<UI::Container>("Color Select Container");
+			colorSelectContainer->m_VerticalAlignment = UI::Direction::Center;
+	/*		colorSelectContainer->m_AutomaticSizing = true;
+			colorSelectContainer->m_AutomaticSizingOffset = { -48,-48 };*/
+			colorSelectContainer->m_Size = { 470, 64 };
+			colorSelectContainer->Translate({ 0, 0, -0.01 });
+			colorSelectContainer->m_Gap = 4;
+			container->AddChild(colorSelectContainer);
+
+			auto colorDisplay = CreateRef<UI::UIRect>("Color Rect");
+			m_PlayerColorDisplay = colorDisplay; // grab weak ref
+			colorDisplay->m_Size = { 64, 64 };
+
+			auto colorRedInput = CreateRef<UI::InputInt>("Color Red Input", FontLibrary::GetFont("Aseprite"), &m_PlayerColor[0]); // &red color
+			colorRedInput->m_MaxValue = 255;
+			colorRedInput->m_MinValue = 0;
+			colorRedInput->m_FontSize = 5;
+			colorRedInput->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSmall.png");
+			colorRedInput->m_TextureResourceSelected = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSmallSelected.png");
+			colorRedInput->m_PPU = 0.25;
+			colorRedInput->m_TextBorderSize = glm::vec2(3);
+			colorRedInput->m_Alignment = UI::Direction::Center;
+			colorRedInput->UpdateSizeFromTexture();
+			colorSelectContainer->AddChild(colorRedInput);
+
+			auto colorGreenInput = CreateRef<UI::InputInt>("Color Green Input", FontLibrary::GetFont("Aseprite"), &m_PlayerColor[1]); // &Green color
+			colorGreenInput->m_MaxValue = 255;
+			colorGreenInput->m_MinValue = 0;
+			colorGreenInput->m_FontSize = 5;
+			colorGreenInput->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSmall.png");
+			colorGreenInput->m_TextureResourceSelected = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSmallSelected.png");
+			colorGreenInput->m_PPU = 0.25;
+			colorGreenInput->m_TextBorderSize = glm::vec2(3);
+			colorGreenInput->m_Alignment = UI::Direction::Center;
+			colorGreenInput->UpdateSizeFromTexture();
+			colorSelectContainer->AddChild(colorGreenInput);
+
+			auto colorBlueInput = CreateRef<UI::InputInt>("Color Blue Input", FontLibrary::GetFont("Aseprite"), &m_PlayerColor[2]); // &Blue color
+			colorBlueInput->m_MaxValue = 255;
+			colorBlueInput->m_MinValue = 0;
+			colorBlueInput->m_FontSize = 5;
+			colorBlueInput->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSmall.png");
+			colorBlueInput->m_TextureResourceSelected = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSmallSelected.png");
+			colorBlueInput->m_PPU = 0.25;
+			colorBlueInput->m_TextBorderSize = glm::vec2(3);
+			colorBlueInput->m_Alignment = UI::Direction::Center;
+			colorBlueInput->UpdateSizeFromTexture();
+			colorSelectContainer->AddChild(colorBlueInput);
+
+			
+			colorSelectContainer->AddChild(colorDisplay);
+
+		}
 		
 
-		//Singleplayer button
-		auto playButton = CreateRef<UI::UIButton>("Play-Singleplayer-Button", std::bind(&MenuNode::PlaySinglePlayer, this));
-		playButton->m_PPU = 0.25f;
-		playButton->Translate({ 0,0,1 });
-		playButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/SingleplayerButtonVertical.png");
-		playButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/SingleplayerButtonVerticalPressed.png");
-		playButton->UpdateSizeFromTexture();
-		container->AddChild(playButton);
+		//multiplayer button
+		{
+			auto multiButton = CreateRef<UI::TextButton>("Multiplayer Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::PlayMultiplayer, this));
+			multiButton->m_PPU = 0.25f;
+			multiButton->m_Text = "Multiplayer";
+			multiButton->m_TextColor = themeYellow;
+			multiButton->Translate({ 0,0,1 });
+			multiButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+			multiButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+			multiButton->UpdateSizeFromTexture();
+			multiButton->m_TextBorderSize = glm::vec2(5, 5);
+			multiButton->m_TextOffset = { 0, 3, 0 };
+			multiButton->m_TextOffsetPressed = { 0, 1, 0 };
+			container->AddChild(multiButton);
+		}
 
-		//Multiplayer button
-		auto multiButton = CreateRef<UI::UIButton>("Play-Multiplayer-Button", std::bind(&MenuNode::PlayMultiplayer, this));
-		multiButton->m_PPU = 0.25f;
-		multiButton->Translate({ 0,0,1 });
-		multiButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/MultiplayerButtonVertical.png");
-		multiButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/MultiplayerButtonVerticalPressed.png");
-		multiButton->UpdateSizeFromTexture();
-		container->AddChild(multiButton);
 
 		//Host Game button
-		auto hostButton = CreateRef<UI::UIButton>("Host-Button", std::bind(&MenuNode::HostGameP2P, this));
-		hostButton->m_PPU = 0.25f;
-		hostButton->Translate({ 0,0,1 });
-		hostButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/HostGameButtonVertical.png");
-		hostButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/HostGameButtonVerticalPressed.png");
-		hostButton->UpdateSizeFromTexture();
-		container->AddChild(hostButton);
+		{
+			auto hostButton = CreateRef<UI::TextButton>("Host Game Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::HostGameP2P, this));
+			hostButton->m_PPU = 0.25f;
+			hostButton->m_Text = "Host Game";
+			hostButton->m_TextColor = themeYellow;
+			hostButton->Translate({ 0,0,1 });
+			hostButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+			hostButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+			hostButton->UpdateSizeFromTexture();
+			hostButton->m_TextBorderSize = glm::vec2(5, 5);
+			hostButton->m_TextOffset = { 0, 3, 0 };
+			hostButton->m_TextOffsetPressed = { 0, 1, 0 };
+			container->AddChild(hostButton);
+		}
 
-		////Host Game IP button
-		//auto hostButtonIP = CreateRef<UI::UIButton>("Host-Button-IP", std::bind(&MenuNode::HostGameIP, this));
-		//hostButtonIP->m_PPU = 0.25f;
-		//hostButtonIP->Translate({ 0,0,1 });
-		//hostButtonIP->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/HostGameButtonVertical.png");
-		//hostButtonIP->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/HostGameButtonVerticalPressed.png");
-		//hostButtonIP->UpdateSizeFromTexture();
-		//hostButtonIP->m_Color = { 0.8,0.8,0.8,1 };
-		//container->AddChild(hostButtonIP);
 
-		//Quit Button
-		auto quitButton = CreateRef<UI::UIButton>("QuitButton", std::bind(&MenuNode::QuitGame, this));
-		quitButton->m_PPU = 0.25f;
-		quitButton->Translate({ 0,0,1 });
-		quitButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/QuitButton.png");
-		quitButton->m_TexturePressedResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/QuitButtonPressed.png");
-		quitButton->UpdateSizeFromTexture();
-		container->AddChild(quitButton);
+		//Quit Button	
+		{
+				
+			auto quitButton = CreateRef<UI::TextButton>("Quit Game Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::QuitGame, this));
+			quitButton->m_PPU = 0.25f;
+			quitButton->m_Text = "Quit Game";
+			quitButton->m_TextColor = themeYellow;
+			quitButton->Translate({ 0,0,1 });
+			quitButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+			quitButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+			quitButton->UpdateSizeFromTexture();
+			quitButton->m_TextBorderSize = glm::vec2(5, 5);
+			quitButton->m_TextOffset = { 0, 3, 0 };
+			quitButton->m_TextOffsetPressed = { 0, 1, 0 };
+			container->AddChild(quitButton);
+		}
 
 
 		//manually calling the propagate update so the container and canvas can do their thing :)
@@ -119,6 +215,11 @@ namespace Pyxis
 	void MenuNode::OnUpdate(Timestep ts)
 	{
 		SteamAPI_RunCallbacks();
+
+		if (auto colorDisplay = m_PlayerColorDisplay.lock())
+		{
+			colorDisplay->m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
+		}
 	}
 
 
@@ -133,13 +234,6 @@ namespace Pyxis
 
 	void MenuNode::PlayMultiplayer()
 	{
-		/*PX_WARN("Pressed Multiplayer!");
-		PX_WARN("Connecting to 127.0.0.1:21218");
-		auto MultiplayerGame = CreateRef<MultiplayerGameNode>();
-		MultiplayerGame->Connect("127.0.0.1:21218");
-		m_Parent->AddChild(MultiplayerGame);
-		QueueFree();*/
-
 		SteamFriends()->ActivateGameOverlay("friends");
 	}
 
@@ -166,54 +260,24 @@ namespace Pyxis
 		Application::Get().Close();
 	}
 
-	/*void MenuNode::OnWindowResize(WindowResizeEvent& event)
-	{
-		m_CanvasNode->m_Size = { Camera::s_MainCamera->GetWidth(), Camera::s_MainCamera->GetHeight() };
-		m_CanvasNode->UpdateCanvasTransforms();
-		if (auto container = dynamic_cast<UI::Container*>(m_CanvasNode->m_Children.front().get()))
-		{
-			container->m_Size = m_CanvasNode->m_Size - glm::vec2(1);
-			container->RearrangeChildren();
-		}
-	}*/
 
 	void MenuNode::FailedToConnect()
 	{
 
 	}
 
-	//void MenuNode::OnGameLayerStarted(GameLayer& layer)
-	//{
-	//	layer.m_ClientData.m_Color = glm::vec4(m_PlayerColor[0], m_PlayerColor[1], m_PlayerColor[2], 1);
-	//	memcpy(layer.m_ClientData.m_Name, m_PlayerName, 64);
-	//}
-
 	void MenuNode::OnGameRichPresenceJoinRequested(GameRichPresenceJoinRequested_t* pCallback)
 	{
-		/////start with killing any active instance
-		//Application& app = Application::Get();
-		//if (!m_SinglePlayerLayer.expired())
-		//{
-		//	app.PopLayerQueue(m_SinglePlayerLayer.lock());
-		//}
-		//if (!m_MultiplayerLayer.expired())
-		//{
-		//	app.PopLayerQueue(m_MultiplayerLayer.lock());
-		//}
-		//if (!m_HostingLayer.expired())
-		//{
-		//	app.PopLayerQueue(m_HostingLayer.lock());
-		//}
 
-		////create a multiplayer instance and connect
-		//SteamNetworkingIdentity identity;
-		//identity.SetSteamID(pCallback->m_steamIDFriend);
-		//Ref<MultiplayerGameLayer> ref = CreateRef<MultiplayerGameLayer>();
-		//ref->Connect(identity);
-		//Application::Get().PushLayer(ref);
-		//m_MultiplayerLayer = ref;
-		//m_AnyGameLayerAttached = true;
-
+		//Get steam identity, create a multiplayer instance, and connect, and kill menu node.
+		SteamNetworkingIdentity identity;
+		identity.SetSteamID(pCallback->m_steamIDFriend);
+		auto MultiplayerGame = CreateRef<MultiplayerGameNode>();
+		MultiplayerGame->m_ClientData.m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
+		std::memcpy(MultiplayerGame->m_ClientData.m_Name, m_PlayerName, 64);
+		MultiplayerGame->Connect(identity);				
+		m_Parent->AddChild(MultiplayerGame);
+		QueueFree();
 	}
 	void MenuNode::OnGameOverlayActivated(GameOverlayActivated_t* pCallback)
 	{

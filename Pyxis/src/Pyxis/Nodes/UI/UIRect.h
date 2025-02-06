@@ -65,10 +65,55 @@ namespace Pyxis
 				UINode::InspectorRender();
 				if (ImGui::TreeNodeEx("Rect", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					//Size
+					
 					ImGui::DragFloat2("Size", glm::value_ptr(m_Size));
 
 					ImGui::ColorEdit4("Color", glm::value_ptr(m_Color));
+
+					if (ImGui::InputFloat("PPU", &m_PPU))
+					{
+						if (m_TextureResource != nullptr) UpdateSizeFromTexture();
+					}
+					ImGui::SetItemTooltip("Pixels Per Unit");
+
+					if (ImGui::Button("Auto Rect")) AutoRect();
+
+
+					if (ImGui::TreeNodeEx("Automatic Sizing", ImGuiTreeNodeFlags_DefaultOpen))
+					{					
+
+						ImGui::Checkbox("Automatic Sizing", &m_AutomaticSizing);
+
+						ImGui::DragFloat2("Automatic Sizing Percent", glm::value_ptr(m_AutomaticSizingPercent), 0.1f, 0.0f, 1.0f);
+
+						ImGui::InputFloat2("Automatic Sizing Offset", glm::value_ptr(m_AutomaticSizingOffset));
+
+						ImGui::InputFloat2("Fixed Size", glm::value_ptr(m_FixedSize));
+
+						ImGui::TreePop();
+					}
+
+					if (ImGui::TreeNodeEx("Automatic Positioning", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+
+						ImGui::Checkbox("Automatic Positioning", &m_AutomaticPositioning);
+
+						ImGui::InputFloat3("Automatic Position Offset", glm::value_ptr(m_AutomaticPositionOffset));
+
+						if (ImGui::TreeNodeEx("Anchoring", ImGuiTreeNodeFlags_DefaultOpen))
+						{
+							//horiz & vert alignment
+							ImGui::Text("Do this in the code i can't be bothered rn");
+							
+
+							ImGui::TreePop();
+						}
+
+						
+
+						ImGui::TreePop();
+					}
+
 
 					ImGui::TreePop();
 				}

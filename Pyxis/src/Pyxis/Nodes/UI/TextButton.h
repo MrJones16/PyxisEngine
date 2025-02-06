@@ -1,5 +1,5 @@
 #pragma once
-#include "UIButton.h"
+#include "Button.h"
 #include "imgui_stdlib.h"
 #include <Pyxis/Core/InputCodes.h>
 
@@ -11,21 +11,23 @@ namespace Pyxis
 		/// A UI Node that functions as a button. can definitely be made into a templated if i need
 		/// to have more complex arguments or return types?
 		/// </summary>
-		class TextButton : public UIButton
+		class TextButton : public Button
 		{
 		public:
 			
 			std::string m_Text = "Text";
 			glm::vec4 m_TextColor = glm::vec4(0, 0, 0, 1);
-			float m_FontSize = 20;
+			float m_FontSize = 1;
 			Ref<Font> m_Font;
 			bool m_ScaleText = true;
 			glm::vec2 m_TextBorderSize = glm::vec2(0,0);
+			glm::vec3 m_TextOffset = glm::vec3(0, 0, 0);
+			glm::vec3 m_TextOffsetPressed = glm::vec3(0, 0, 0);
 
 		public:
 
 			TextButton(const std::string& name = "TextButton", Ref<Font> font = nullptr, const std::function<void()>& function = nullptr) :
-				UIButton(name, function),
+				Button(name, function),
 				m_Font(font)
 			{
 
@@ -45,6 +47,9 @@ namespace Pyxis
 					ImGui::ColorEdit4("Text Color", glm::value_ptr(m_TextColor));
 					ImGui::Checkbox("Scale Text", &m_ScaleText);
 					ImGui::InputFloat2("Text Border Size", glm::value_ptr(m_TextBorderSize));
+
+					ImGui::InputFloat3("Text Offset", glm::value_ptr(m_TextOffset));
+					ImGui::InputFloat3("Text Pressed Offset", glm::value_ptr(m_TextOffsetPressed));
 
 					ImGui::InputTextMultiline("##Text", &m_Text);
 					//ImGui::InputText("##Text", &m_Text);
@@ -85,9 +90,9 @@ namespace Pyxis
 
 						//TODO: Test ordering
 
-						if (m_TexturePressedResource != nullptr && m_Pressed)
+						if (m_TextureResourcePressed != nullptr && m_Pressed)
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TexturePressedResource->m_Texture, GetID(), 1, m_Color);
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResourcePressed->m_Texture, GetID(), 1, m_Color);
 						}
 						else
 						{
@@ -104,8 +109,9 @@ namespace Pyxis
 					
 					float characterHeight = m_FontSize * m_Font->m_CharacterHeight * 1.3f;
 					// -characterHeight / 2
-					glm::vec2 maxSize = m_Size - (m_TextBorderSize * 2.0f);
-					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), { 0, 00, 0 }), m_Font, maxSize, m_FontSize, UI::Left, m_ScaleText, m_TextColor, GetID());
+					glm::vec2 maxSize = m_Size - (m_TextBorderSize * (2.0f / m_PPU));
+					glm::vec3 offset = (m_Pressed ? m_TextOffsetPressed : m_TextOffset) * (1.0f/m_PPU);
+					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), offset), m_Font, maxSize, m_FontSize, UI::Center, m_ScaleText, m_TextColor, GetID());
 				}
 
 			}

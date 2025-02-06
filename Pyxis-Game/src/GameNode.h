@@ -10,7 +10,7 @@
 #include <Pyxis/Events/EventSignals.h>
 
 #include <Pyxis/Nodes/OrthographicCameraControllerNode.h>
-#include <Pyxis/Nodes/UI.h>
+#include <Pyxis/Nodes/UI/UI.h>
 
 
 
@@ -45,10 +45,10 @@ namespace Pyxis
 
 
 		//UI
-		Ref<UI::UICanvas> m_Hotbar;
+		Ref<UI::Canvas> m_Hotbar;
 
-		Ref<UI::UIButton> m_PlayButton;
-		Ref<UI::UIButton> m_PauseButton;
+		Ref<UI::Button> m_PlayButton;
+		Ref<UI::Button> m_PauseButton;
 		void PlayButtonFunc();		
 		void PauseButtonFunc();
 		

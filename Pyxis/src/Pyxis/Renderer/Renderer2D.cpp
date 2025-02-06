@@ -1332,7 +1332,7 @@ namespace Pyxis
 		}
 	}
 
-	void Renderer2D::DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, const glm::vec2& maxSize, float fontSize, UI::Direction alignment, bool scaleToWidth, const glm::vec4& color, uint32_t nodeID)
+	void Renderer2D::DrawTextLine(const std::string& text, glm::mat4 transform, Ref<Font> font, const glm::vec2& maxSize, float fontSize, UI::Direction alignment, bool scaleToFit, const glm::vec4& color, uint32_t nodeID)
 	{
 		float spaceWidth = (font->m_Characters[' '].Advance >> 6) * fontSize * 2;
 
@@ -1348,19 +1348,24 @@ namespace Pyxis
 		
 
 		float size = fontSize;
-		if (scaleToWidth)
+		if (scaleToFit)
 		{
 			//float lengthWithSpaces = totalLength + (words.size() - 1) * spaceWidth;
 			
 			float scaleFactor = std::min(maxSize.x / totalLength, maxSize.y / (font->m_CharacterHeight * fontSize));
 			size *= scaleFactor;
 			spaceWidth = (font->m_Characters[' '].Advance >> 6) * size * 2;
-			pos.x -= (scaleFactor * totalLength) / 2;
-			//pos.x -= maxWidth / 2;
+			totalLength *= scaleFactor;
 		}
-		else
+
+
+		if (alignment == UI::Direction::Left)
 		{
-			pos.x -= (totalLength / 2);
+			pos.x -= (maxSize.x / 2.0f);
+		}
+		else if (alignment == UI::Direction::Center)
+		{
+			pos.x -= totalLength / 2.0f;
 		}
 
 		for (int i = 0; i < words.size(); i++)
@@ -1368,6 +1373,10 @@ namespace Pyxis
 			for (std::string::const_iterator c = words[i].string.begin(); c != words[i].string.end(); c++)
 			{
 				Font::Character ch = font->m_Characters[*c];
+				//skip if this character is missing from the font
+				if (ch.Texture == nullptr) continue;
+
+
 				//create a transform for the character
 				float xpos = pos.x + ch.Bearing.x * size;
 				float ypos = pos.y - (ch.Size.y - ch.Bearing.y) * size;
@@ -1377,6 +1386,7 @@ namespace Pyxis
 				glm::mat4 charTransform = glm::translate(glm::mat4(1), { xpos, ypos, 0 });
 				charTransform = glm::scale(charTransform, { ch.Size.x * size, ch.Size.y * size, 1 });
 				charTransform = transform * charTransform;
+
 
 				DrawBitMap(charTransform, ch.Texture, nodeID, color);
 

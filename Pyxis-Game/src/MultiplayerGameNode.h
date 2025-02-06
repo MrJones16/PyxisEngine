@@ -18,10 +18,10 @@ namespace Pyxis
 
 		virtual void OnRender() override;
 
-		Ref<UI::UIScreenSpace> m_LSScreenSpace;
-		Ref<UI::UICanvas> m_LSCanvas;
-		Ref<UI::UIText> m_LSText;
-		Ref<UI::UIButton> m_LSButton;
+		Ref<UI::ScreenSpace> m_LSScreenSpace;
+		Ref<UI::Canvas> m_LSCanvas;
+		Ref<UI::Text> m_LSText;
+		Ref<UI::Button> m_LSButton;
 		virtual void ReturnToMenu() override;
 
 		//////////////////////////////////////

@@ -5,7 +5,7 @@
 #include <Pyxis/Renderer/FrameBuffer.h>
 
 #include <Pyxis/Nodes/Node.h>
-#include <Pyxis/Nodes/UI.h>
+#include <Pyxis/Nodes/UI/UI.h>
 #include <Pyxis/Nodes/CameraNode.h>
 
 #include <Pyxis/Events/EventSignals.h>

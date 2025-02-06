@@ -1,5 +1,5 @@
 #pragma once
-#include <Pyxis/Nodes/UIRect.h>
+#include <Pyxis/Nodes/UI/UIRect.h>
 #include <Pyxis/Renderer/Camera.h>
 #include <Pyxis/Events/EventSignals.h>
 #include <Pyxis/Core/Application.h>
@@ -16,14 +16,14 @@ namespace Pyxis
 		/// 
 		/// the Z axis in screen space is inverted, so a negative value is closer / viewed first
 		/// </summary>
-		class UIScreenSpace : public UIRect
+		class ScreenSpace : public UIRect
 		{
 		private:
 			Reciever<void(WindowResizeEvent&)> m_WindowResizeReciever;
 		public:
-			UIScreenSpace(const std::string& name = "UIScreenSpace") : 
+			ScreenSpace(const std::string& name = "ScreenSpace") : 
 				UIRect(name),
-				m_WindowResizeReciever(this, &UIScreenSpace::OnWindowResizeEvent)
+				m_WindowResizeReciever(this, &ScreenSpace::OnWindowResizeEvent)
 			{
 				EventSignal::s_WindowResizeEventSignal.AddReciever(m_WindowResizeReciever);
 				auto& window = Application::Get().GetWindow();

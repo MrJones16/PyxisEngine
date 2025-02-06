@@ -74,6 +74,7 @@
 ///		-	[Done!] make it so one player isnt super far ahead on input ticks
 ///		-	[Done!] Pixel bodies having a hidden bit
 ///		-	[Done!][hard]	Pixel bodies deforming, splitting
+///		-	[Done!][hard]	UI Rework (text rendering, UI interaction, buttons, signals, ect)
 /// 
 /// 
 ///		-	Easier building of rigid and kinematic bodies. instead of a selection box...
@@ -105,9 +106,13 @@ namespace Pyxis
 			PX_CORE_ASSERT(success, "Failed to init steam api!");
 			SteamNetworkingUtils()->InitRelayNetworkAccess();
 
+
 			//overlay instead of layer so it is on top
 			auto scene = CreateRef<SceneLayer>(false);//Set True for Debug!
 			PushOverlay(scene);
+
+
+			FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
 
 			//create game nodes
 

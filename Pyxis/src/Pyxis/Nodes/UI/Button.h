@@ -10,7 +10,7 @@ namespace Pyxis
 		/// A UI Node that functions as a button. can definitely be made into a templated if i need
 		/// to have more complex arguments or return types?
 		/// </summary>
-		class UIButton : public UIRect
+		class Button : public UIRect
 		{
 		protected:
 			std::function<void()> m_Function = nullptr;
@@ -18,21 +18,21 @@ namespace Pyxis
 
 		public:
 
-			Ref<Texture2DResource> m_TexturePressedResource = nullptr;
+			Ref<Texture2DResource> m_TextureResourcePressed = nullptr;
 
-			UIButton(const std::string& name = "UIButton", const std::function<void()>& function = nullptr) : 
+			Button(const std::string& name = "Button", const std::function<void()>& function = nullptr) : 
 				UIRect(name), m_Function(function)
 			{
 
 			}
 
-			UIButton(const std::string& name = "UIButton", Ref<Texture2DResource> texture = nullptr, const std::function<void()>& function = nullptr) : 
+			Button(const std::string& name = "Button", Ref<Texture2DResource> texture = nullptr, const std::function<void()>& function = nullptr) : 
 				UIRect(texture, name), m_Function(function)
 			{
 
 			}
 
-			UIButton(const std::string& name = "UIButton", const glm::vec4& color = glm::vec4(1), const std::function<void()>& function = nullptr) :
+			Button(const std::string& name = "Button", const glm::vec4& color = glm::vec4(1), const std::function<void()>& function = nullptr) :
 				UIRect(color, name), m_Function(function)
 			{
 
@@ -43,7 +43,7 @@ namespace Pyxis
 				m_Function = function;
 			}
 
-			virtual ~UIButton() = default;
+			virtual ~Button() = default;
 
 			virtual void InspectorRender() override
 			{
@@ -94,9 +94,9 @@ namespace Pyxis
 
 						//TODO: Test ordering
 
-						if (m_TexturePressedResource != nullptr && m_Pressed)
+						if (m_TextureResourcePressed != nullptr && m_Pressed)
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TexturePressedResource->m_Texture, GetID(), 1, m_Color);
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResourcePressed->m_Texture, GetID(), 1, m_Color);
 						}
 						else
 						{

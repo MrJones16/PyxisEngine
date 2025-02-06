@@ -11,7 +11,7 @@ namespace Pyxis
 		/// A UI Node that functions as a button. can definitely be made into a templated if i need
 		/// to have more complex arguments or return types?
 		/// </summary>
-		class UISignalButton : public UIRect
+		class SignalButton : public UIRect
 		{
 		private:
 			Signal<void()> m_Signal;
@@ -24,17 +24,17 @@ namespace Pyxis
 			/*glm::vec4 m_Color = glm::vec4(0.1f, 0.8f, 0.2f, 1);
 			glm::vec2 m_Size = glm::vec2(1, 0.5f);*/
 
-			UISignalButton(const std::string& name = "UISignalButton") : UIRect(name)
+			SignalButton(const std::string& name = "SignalButton") : UIRect(name)
 			{
 
 			}
 
-			UISignalButton(Ref<Texture2D> texture, const std::string& name = "UISignalButton") : UIRect(texture, name)
+			SignalButton(Ref<Texture2D> texture, const std::string& name = "SignalButton") : UIRect(texture, name)
 			{
 
 			}
 
-			UISignalButton(const glm::vec4& color, const std::string& name = "UISignalButton") : UIRect(color, name)
+			SignalButton(const glm::vec4& color, const std::string& name = "SignalButton") : UIRect(color, name)
 			{
 
 			}
@@ -44,7 +44,7 @@ namespace Pyxis
 				m_Signal.AddReciever(reciever);
 			}
 
-			virtual ~UISignalButton() = default;
+			virtual ~SignalButton() = default;
 
 			virtual void InspectorRender() override
 			{

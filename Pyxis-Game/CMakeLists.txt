@@ -5,7 +5,7 @@ add_executable(Pyxis-Game
     "src/MenuNode.cpp"
 
       
- "../Pyxis/src/Pyxis/Nodes/UIScreenSpace.h" "src/MultiplayerGameNode.h" "src/MultiplayerGameNode.cpp" "src/HostedGameNode.h" "src/HostedGameNode.cpp" "src/SteamManagerNode.h")
+ "../Pyxis/src/Pyxis/Nodes/UI/ScreenSpace.h" "src/MultiplayerGameNode.h" "src/MultiplayerGameNode.cpp" "src/HostedGameNode.h" "src/HostedGameNode.cpp" "src/SteamManagerNode.h")
 
 if(WIN32)
     # for Windows operating system in general
