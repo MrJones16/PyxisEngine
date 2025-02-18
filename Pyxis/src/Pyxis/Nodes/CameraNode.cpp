@@ -1,7 +1,34 @@
 #include "CameraNode.h"
+#include "CameraNode.h"
+#include "CameraNode.h"
 
 namespace Pyxis
 {
+	void CameraNode::Serialize(json& j)
+	{
+		Node3D::Serialize(j);
+		j["Type"] = "CameraNode"; // Override type identifier
+		j["m_Size"] = m_Size;
+		j["m_Aspect"] = m_Aspect;
+		j["m_FOV"] = m_FOV;
+		j["m_Near"] = m_Near;
+		j["m_Far"] = m_Far;
+	}
+	void CameraNode::Deserialize(json& j)
+	{
+		// Deserialize base class (Node3D)
+		Node3D::Deserialize(j);
+
+		// Read CameraNode-specific properties
+		if (j.contains("m_Size")) j.at("m_Size").get_to(m_Size);
+		if (j.contains("m_Aspect")) j.at("m_Aspect").get_to(m_Aspect);
+		if (j.contains("m_FOV")) j.at("m_FOV").get_to(m_FOV);
+		if (j.contains("m_Near")) j.at("m_Near").get_to(m_Near);
+		if (j.contains("m_Far")) j.at("m_Far").get_to(m_Far);
+
+		//Recalculate projection mat with new data & for init
+		RecalculateProjectionMatrix();
+	}
 	glm::vec2 CameraNode::MouseToWorldPos(glm::vec2 mousePos)
 	{
 		Window& window = Application::Get().GetWindow();

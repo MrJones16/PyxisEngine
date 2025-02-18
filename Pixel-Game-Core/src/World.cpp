@@ -7,14 +7,15 @@
 #include <box2d/b2_math.h>
 #include <poly2tri.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <PixelBody2D.h>
+#include <Pyxis/Game/Physics2D.h>
+
 
 namespace Pyxis
 {
 	World::World(std::string assetPath, int seed)
 	{
-		
-		m_Box2DWorld = new b2World({ 0, -9.8f });
-
+		Physics2D::GetWorld();//make sure that the physics world is made
 		if (!LoadElementData(assetPath))
 		{
 			PX_ASSERT(false, "Failed to load element data, shutting down.");
@@ -543,6 +544,7 @@ namespace Pyxis
 	///		chunk pos			| ivec2
 	///		chunk dirtyrects	| pair<glm::ivec2,glm::ivec2>
 	///		chunk data			| Element...
+	/// //is probably different now!
 	/// how many pixel bodies	| uint32
 	///		rigid body data		| 
 	///			id				| uint64_t
@@ -567,39 +569,39 @@ namespace Pyxis
 
 	void World::DownloadWorld(Network::Message& msg)
 	{
-		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataPixelBody)
-		{
-			//lets load the pixel body! just reverse the upload order.
-			
-			uint64_t uuid;
-			glm::ivec2 size;
-			int count;
-			msg >> uuid >> size >> count;
+		//if ((GameMessage)msg.header.id == GameMessage::Server_GameDataPixelBody)
+		//{
+		//	//lets load the pixel body! just reverse the upload order.
+		//	
+		//	uint64_t uuid;
+		//	glm::ivec2 size;
+		//	int count;
+		//	msg >> uuid >> size >> count;
 
-			std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-			for (int i = 0; i < count; i++)
-			{
-				glm::ivec2 localpos;
-				RigidBodyElement rbe;
-				msg >> localpos >> rbe;
-				elements[localpos] = rbe;
-			}
-			glm::vec2 position;
-			float rotation;
-			b2BodyType type;
-			float angularVelocity;
-			b2Vec2 linearVelocity;
-			msg >> position >> rotation >> type >> angularVelocity >> linearVelocity;
-			PixelRigidBody* body = new PixelRigidBody(uuid, size, elements, type, m_Box2DWorld);
-			m_PixelBodyMap[uuid] = body;
-			body->SetTransform(position, rotation);
-			body->SetAngularVelocity(angularVelocity);
-			body->SetLinearVelocity(linearVelocity);
-			PX_TRACE("Loaded Pixel Body #{0}", uuid);
-			// can safely ignore putting it in the world, since when we got the world
-			// data it is already there!
-		}
-		else if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk)
+		//	std::unordered_map<glm::ivec2, PixelBodyElement, HashVector> elements;
+		//	for (int i = 0; i < count; i++)
+		//	{
+		//		glm::ivec2 localpos;
+		//		PixelBodyElement rbe;
+		//		msg >> localpos >> rbe;
+		//		elements[localpos] = rbe;
+		//	}
+		//	glm::vec2 position;
+		//	float rotation;
+		//	b2BodyType type;
+		//	float angularVelocity;
+		//	b2Vec2 linearVelocity;
+		//	msg >> position >> rotation >> type >> angularVelocity >> linearVelocity;
+		//	PixelRigidBody* body = new PixelRigidBody(uuid, size, elements, type, m_Box2DWorld);
+		//	m_PixelBodyMap[uuid] = body;
+		//	body->SetTransform(position, rotation);
+		//	body->SetAngularVelocity(angularVelocity);
+		//	body->SetLinearVelocity(linearVelocity);
+		//	PX_TRACE("Loaded Pixel Body #{0}", uuid);
+		//	// can safely ignore putting it in the world, since when we got the world
+		//	// data it is already there!
+		//}
+		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk)
 		{
 			glm::ivec2 chunkPos;
 			msg >> chunkPos;
@@ -628,8 +630,8 @@ namespace Pyxis
 		msg.header.id = static_cast<uint32_t>(GameMessage::Server_GameDataInit);
 		msg << static_cast<uint32_t>(m_Chunks.size());
 		PX_TRACE("# Chunks: {0}", m_Chunks.size());
-		msg << static_cast<uint32_t>(m_PixelBodyMap.size());
-		PX_TRACE("# PixelBodies: {0}", m_PixelBodyMap.size());
+		//msg << static_cast<uint32_t>(m_PixelBodyMap.size());
+		//PX_TRACE("# PixelBodies: {0}", m_PixelBodyMap.size());
 		msg << m_SimulationTick;
 		msg << m_UpdateBit;
 		msg << m_WorldSeed;
@@ -639,28 +641,28 @@ namespace Pyxis
 	void World::GetGameData(std::vector<Network::Message>& messages)
 	{
 		
-		//for each pixel body, lets create a unique message
-		for (auto& pair : m_PixelBodyMap)
-		{
-			messages.emplace_back();
-			messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
-			messages.back() << pair.second->m_B2Body->GetLinearVelocity();
-			messages.back() << pair.second->m_B2Body->GetAngularVelocity();
-			messages.back() << pair.second->m_B2Body->GetType();
-			messages.back() << pair.second->m_B2Body->GetAngle();
-			messages.back() << pair.second->m_B2Body->GetPosition();
-			//msg << pair.second->m_Elements;
-			int elementCount = 0;
-			for (auto& pair : pair.second->m_Elements)
-			{
-				messages.back() << pair.second;
-				messages.back() << pair.first;
-				elementCount++;
-			}
-			glm::ivec2 size = { pair.second->m_Width, pair.second->m_Height };
+		////for each pixel body, lets create a unique message
+		//for (auto& pair : m_PixelBodyMap)
+		//{
+		//	messages.emplace_back();
+		//	messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
+		//	messages.back() << pair.second->m_B2Body->GetLinearVelocity();
+		//	messages.back() << pair.second->m_B2Body->GetAngularVelocity();
+		//	messages.back() << pair.second->m_B2Body->GetType();
+		//	messages.back() << pair.second->m_B2Body->GetAngle();
+		//	messages.back() << pair.second->m_B2Body->GetPosition();
+		//	//msg << pair.second->m_Elements;
+		//	int elementCount = 0;
+		//	for (auto& pair : pair.second->m_Elements)
+		//	{
+		//		messages.back() << pair.second;
+		//		messages.back() << pair.first;
+		//		elementCount++;
+		//	}
+		//	glm::ivec2 size = { pair.second->m_Width, pair.second->m_Height };
 
-			messages.back() << elementCount << size << pair.first;
-		}
+		//	messages.back() << elementCount << size << pair.first;
+		//}
 
 		//now we create a separate message for each chunk 
 		for (auto& pair : m_Chunks)
@@ -708,12 +710,12 @@ namespace Pyxis
 		PX_TRACE("Deleting World");
 
 		//delete pixel bodies
-		for (auto pixelBody : m_PixelBodyMap)
+		/*for (auto pixelBody : m_PixelBodyMap)
 		{
 			delete pixelBody.second;
-		}
-		delete m_Box2DWorld;
-		m_Box2DWorld = nullptr;
+		}*/
+
+		Physics2D::DeleteWorld();
 		for (auto& pair : m_Chunks)
 		{
 			delete(pair.second);
@@ -930,189 +932,94 @@ namespace Pyxis
 			thread.join();
 		}*/
 
-		
-		//keep a vector of new bodies to add to the simulation if any get split
-		std::vector<PixelRigidBody*> newPixelBodies;
-		//keep a vector of new bodies to remove from the simulation if any get erased
-		std::vector<uint64_t> erasedPixelBodies;
 
-		//pull pixel bodies out of the simulation
-		for (auto pair : m_PixelBodyMap)
-		{
-			if (!pair.second->m_B2Body->IsAwake()) 
-			{
-				//skip sleeping bodies
-				continue;
-			}
-			glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
+		Physics2D::Step();
 
+		//int velocityIterations = 6;
+		//int positionIterations = 2;
+		//m_Box2DWorld->Step(1.0f / 60.0f, velocityIterations, positionIterations);
 
-			std::vector<glm::ivec2> elementsToRemove;
-			for (auto mappedElement : pair.second->m_Elements)
-			{
-				//the world position of the element is already known
-				Element& worldElement = GetElement(mappedElement.second.worldPos);
-				ElementData& elementData = m_ElementData[worldElement.m_ID];
-				if (!mappedElement.second.hidden) // make sure we aren't hidden before trying to pull
-				if (mappedElement.second.element.m_ID != worldElement.m_ID || !worldElement.m_Rigid)
-				{
+		////put pixel bodies back into the simulation, and solve collisions
+		//for (auto pair : m_PixelBodyMap)
+		//{
+		//	//skip bodies left in the world that were sleeping
+		//	if (pair.second->m_InWorld) continue;
+		//	pair.second->m_InWorld = true;
 
-					//element has changed over the last update, could have been removed
-					//or melted or something of the sort.
-					// if it isn't just hidden, we need to re-create our rigid body!
-					
-					if (elementData.cell_type == ElementType::solid || (elementData.cell_type == ElementType::movableSolid && worldElement.m_Rigid))
-					{
-						//replaced element is able to continue being part of the solid!
-						//this could be the player replacing the blocks, or a solid block
-						//reacts with something and stays solid, like getting stained or something
-						//idk
-						//either way, in this situation we just pull the new element
-						pair.second->m_Elements[mappedElement.first].element = worldElement;
-						SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos, Element());
-					}
-					else
-					{
-						//the element that has taken over the spot is not able to be
-						//a solid, so we need to re-construct the rigid body without that
-						//element! so we leave it in the sim, and erase the previous from
-						//the body
-						elementsToRemove.push_back(mappedElement.first);
-					}
-					PX_TRACE("Element changed over update at ({0},{1})", mappedElement.second.worldPos.x, mappedElement.second.worldPos.y);
-				}
-				else
-				{
-					//element should be the same, so nothing has changed, pull the element out
-					pair.second->m_Elements[mappedElement.first].element = worldElement;
-					SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos, Element());
-				}
-			}
-			m_PixelBodyMap[pair.first]->m_InWorld = false;
-			//now that we pulled all the elements out, try to re-construct the body if needed:
-			if (elementsToRemove.size() > 0)
-			{
-				//we need to reconstruct!
+		//	glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
 
-				//remove the outdated elements
-				for (auto localPos : elementsToRemove)
-				{
-					pair.second->m_Elements.erase(localPos);
-				}
+		//	float angle = pair.second->m_B2Body->GetAngle();
+		//	auto rotationMatrix = glm::mat2x2(1);
 
-				//TODO: get this out of the iteration...
-				
-				auto newBodies = pair.second->RecreateB2Body(m_SimulationTick * 11, m_Box2DWorld);
-				if (pair.second->m_B2Body == nullptr)
-				{
-					//we need to delete the pixel body, since it is now empty!
-					erasedPixelBodies.push_back(pair.first);
-				}
-				for (auto body : newBodies)
-				{
-					newPixelBodies.push_back(body);
-				}
-			}
-		}
-		//add the new bodies to the simulation, because they are not in the world and don't
-		//need to be pulled out!
-		for (auto body : newPixelBodies)
-		{
-			m_PixelBodyMap[body->m_ID] = body;
-		}
+		//	//if angle gets above 45 degrees, apply a 90 deg rotation first
+		//	while (angle > 0.78539816339f)
+		//	{
+		//		angle -= 1.57079632679f;
+		//		rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
+		//	}
+		//	while (angle < -0.78539816339f)
+		//	{
+		//		angle += 1.57079632679f;
+		//		rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
+		//	}
 
-		//erase the erased bodies
-		for (auto ID : erasedPixelBodies)
-		{
-			delete m_PixelBodyMap[ID];
-			m_PixelBodyMap.erase(ID);
-		}
+		//	float A = -std::tan(angle / 2);
+		//	float B = std::sin(angle);
+		//	auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1);//0 a
+		//	auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);// b 0
+		//	for (auto mappedElement : pair.second->m_Elements)
+		//	{
+		//		//find the element in the world by using the transform of the body and
+		//		//the position of the element in the array
+		//		glm::ivec2 skewedPos = mappedElement.first * rotationMatrix;
 
-		int velocityIterations = 6;
-		int positionIterations = 2;
-		m_Box2DWorld->Step(1.0f / 60.0f, velocityIterations, positionIterations);
+		//		//horizontal skew:
+		//		int horizontalSkewAmount = (float)skewedPos.y * A;
+		//		skewedPos.x += horizontalSkewAmount;
 
-		//put pixel bodies back into the simulation, and solve collisions
-		for (auto pair : m_PixelBodyMap)
-		{
-			//skip bodies left in the world that were sleeping
-			if (pair.second->m_InWorld) continue;
-			pair.second->m_InWorld = true;
+		//		//vertical skew
+		//		int skewAmount = (float)skewedPos.x * B;
+		//		skewedPos.y += skewAmount;
 
-			glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
+		//		//horizontal skew:
+		//		horizontalSkewAmount = (float)skewedPos.y * A;
+		//		skewedPos.x += horizontalSkewAmount;
 
-			float angle = pair.second->m_B2Body->GetAngle();
-			auto rotationMatrix = glm::mat2x2(1);
+		//		//pixel pos is the pixel at the center of the array, so lets use it
+		//		//the new position of the element is the skewed position + center offsef
+		//		glm::ivec2 worldPixelPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+		//		//now that we know the world position, cache it for pulling it out later
+		//		pair.second->m_Elements[mappedElement.first].worldPos = worldPixelPos;
+		//		//PX_TRACE("placed world pos: ({0},{1})", worldPixelPos.x, worldPixelPos.y);
+		//		//set the world element from the array at the found position
+		//		if (GetElement(worldPixelPos).m_ID != 0)
+		//		{
+		//			//we are replacing something that is in the way!
 
-			//if angle gets above 45 degrees, apply a 90 deg rotation first
-			while (angle > 0.78539816339f)
-			{
-				angle -= 1.57079632679f;
-				rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
-			}
-			while (angle < -0.78539816339f)
-			{
-				angle += 1.57079632679f;
-				rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
-			}
+		//			//TODO: instead of always hiding, throw liquids ect as a particle!
+		//			pair.second->m_Elements[mappedElement.first].hidden = true;
 
-			float A = -std::tan(angle / 2);
-			float B = std::sin(angle);
-			auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1);//0 a
-			auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);// b 0
-			for (auto mappedElement : pair.second->m_Elements)
-			{
-				//find the element in the world by using the transform of the body and
-				//the position of the element in the array
-				glm::ivec2 skewedPos = mappedElement.first * rotationMatrix;
+		//		}
+		//		else
+		//		{
+		//			//we are no longer hidden!
+		//			pair.second->m_Elements[mappedElement.first].hidden = false;
+		//			if (std::abs(pair.second->m_B2Body->GetAngularVelocity()) > 0.01f || pair.second->m_B2Body->GetLinearVelocity().LengthSquared() > 0.01f)
+		//			{
+		//				//we are moving, so update dirty rect
+		//				//PX_TRACE("we are moving!: angular: {0}, linear: {1}", pair.second->m_B2Body->GetAngularVelocity(), pair.second->m_B2Body->GetLinearVelocity().LengthSquared());
+		//				SetElement(worldPixelPos, mappedElement.second.element);
+		//			}
+		//			else
+		//			{
+		//				//we are still, so stop updating region!
+		//				SetElementWithoutDirtyRectUpdate(worldPixelPos, mappedElement.second.element);
+		//			}
+		//			
+		//		}
 
-				//horizontal skew:
-				int horizontalSkewAmount = (float)skewedPos.y * A;
-				skewedPos.x += horizontalSkewAmount;
-
-				//vertical skew
-				int skewAmount = (float)skewedPos.x * B;
-				skewedPos.y += skewAmount;
-
-				//horizontal skew:
-				horizontalSkewAmount = (float)skewedPos.y * A;
-				skewedPos.x += horizontalSkewAmount;
-
-				//pixel pos is the pixel at the center of the array, so lets use it
-				//the new position of the element is the skewed position + center offsef
-				glm::ivec2 worldPixelPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
-				//now that we know the world position, cache it for pulling it out later
-				pair.second->m_Elements[mappedElement.first].worldPos = worldPixelPos;
-				//PX_TRACE("placed world pos: ({0},{1})", worldPixelPos.x, worldPixelPos.y);
-				//set the world element from the array at the found position
-				if (GetElement(worldPixelPos).m_ID != 0)
-				{
-					//we are replacing something that is in the way!
-
-					//TODO: instead of always hiding, throw liquids ect as a particle!
-					pair.second->m_Elements[mappedElement.first].hidden = true;
-
-				}
-				else
-				{
-					//we are no longer hidden!
-					pair.second->m_Elements[mappedElement.first].hidden = false;
-					if (std::abs(pair.second->m_B2Body->GetAngularVelocity()) > 0.01f || pair.second->m_B2Body->GetLinearVelocity().LengthSquared() > 0.01f)
-					{
-						//we are moving, so update dirty rect
-						//PX_TRACE("we are moving!: angular: {0}, linear: {1}", pair.second->m_B2Body->GetAngularVelocity(), pair.second->m_B2Body->GetLinearVelocity().LengthSquared());
-						SetElement(worldPixelPos, mappedElement.second.element);
-					}
-					else
-					{
-						//we are still, so stop updating region!
-						SetElementWithoutDirtyRectUpdate(worldPixelPos, mappedElement.second.element);
-					}
-					
-				}
-
-			}
-		}
+		//	}
+		//}
 
 
 		for (auto & pair : m_Chunks)
@@ -1261,7 +1168,7 @@ namespace Pyxis
 		queryRegion.lowerBound = b2Vec2(lower.x, lower.y);
 		queryRegion.upperBound = b2Vec2(upper.x, upper.y);
 		WakeUpQueryCallback callback;
-		m_Box2DWorld->QueryAABB(&callback, queryRegion);
+		Physics2D::GetWorld()->QueryAABB(&callback, queryRegion);
 
 		//instead of resetting completely, just shrink by 1. This allows elements that cross borders to update, since otherwise the dirty rect would
 		//forget about it instead of shrinking and still hitting it.
@@ -2419,14 +2326,8 @@ namespace Pyxis
 		}
 		m_Chunks.clear();
 
-		m_Box2DWorld->~b2World();
-		for (auto pair : m_PixelBodyMap)
-		{
-			delete pair.second;
-		}
-		m_PixelBodyMap.clear();
-
-		m_Box2DWorld = new b2World({ 0, -9.8f });
+		Physics2D::DeleteWorld();
+		Physics2D::GetWorld();
 
 		//AddChunk(glm::ivec2(0, 0));
 		//m_Chunks[{0, 0}]->Clear();
@@ -2477,41 +2378,41 @@ namespace Pyxis
 				}
 			}*/
 
-			auto count = m_Box2DWorld->GetBodyCount();
-			for (auto body = m_Box2DWorld->GetBodyList(); body != nullptr; body = body->GetNext())
-			{
-				auto& T = body->GetTransform();
-				for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
-				{
-					auto shape = (b2PolygonShape*)(fixture->GetShape());
-					for (int i = 0; i < shape->m_count - 1; i++)
-					{
-						auto v = shape->m_vertices[i];
-						float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
-						float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
+			//auto count = m_Box2DWorld->GetBodyCount();
+			//for (auto body = m_Box2DWorld->GetBodyList(); body != nullptr; body = body->GetNext())
+			//{
+			//	auto& T = body->GetTransform();
+			//	for (auto fixture = body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
+			//	{
+			//		auto shape = (b2PolygonShape*)(fixture->GetShape());
+			//		for (int i = 0; i < shape->m_count - 1; i++)
+			//		{
+			//			auto v = shape->m_vertices[i];
+			//			float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
+			//			float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
 
-						auto e = shape->m_vertices[i + 1];
-						float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
-						float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-						glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
-						glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
+			//			auto e = shape->m_vertices[i + 1];
+			//			float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
+			//			float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
+			//			glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
+			//			glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
 
-						Renderer2D::DrawLine(start, end);
-					}
-					//draw the last line to connect the shape
-					auto v = shape->m_vertices[shape->m_count - 1];
-					float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
-					float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
+			//			Renderer2D::DrawLine(start, end);
+			//		}
+			//		//draw the last line to connect the shape
+			//		auto v = shape->m_vertices[shape->m_count - 1];
+			//		float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
+			//		float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
 
-					auto e = shape->m_vertices[0];
-					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
-					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
-					glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
+			//		auto e = shape->m_vertices[0];
+			//		float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
+			//		float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
+			//		glm::vec2 start = glm::vec3(x1, y1, 10) / (PPU);
+			//		glm::vec2 end = glm::vec3(x2, y2, 10) / (PPU);
 
-					Renderer2D::DrawLine(start, end);
-				}
-			}
+			//		Renderer2D::DrawLine(start, end);
+			//	}
+			//}
 		}
 
 	}
@@ -2520,35 +2421,36 @@ namespace Pyxis
 	void World::ResetBox2D()
 	{
 		PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);
-		//struct to hold the data of the b2 bodies
-		std::unordered_map<uint64_t, PixelBodyData> storage;
-		for (auto pair : m_PixelBodyMap)
-		{
-			//store the data to re-apply later
-			PixelBodyData data;
-			data.linearVelocity = pair.second->m_B2Body->GetLinearVelocity();
-			data.angularVelocity = pair.second->m_B2Body->GetAngularVelocity();
-			data.angle = pair.second->m_B2Body->GetAngle();
-			data.position = pair.second->m_B2Body->GetPosition();
-			//data.elementArray = pair.second->m_ElementArray;
-			storage[pair.first] = data;
-			//delete each b2body
-			m_Box2DWorld->DestroyBody(pair.second->m_B2Body);
-		}
-		//in theory this should delete the bodies so the above
-		//step is unnecessary but it is nicer like this
-		m_Box2DWorld->~b2World();
-		m_Box2DWorld = new b2World({ 0, -9.8f });
-		for (auto pair : m_PixelBodyMap)
-		{
-			//recreate the box2d body for each rigid body!
-			pair.second->CreateB2Body(m_Box2DWorld);
+		Physics2D::ResetWorld();
+		////struct to hold the data of the b2 bodies
+		//std::unordered_map<uint64_t, PixelBodyData> storage;
+		//for (auto pair : m_PixelBodyMap)
+		//{
+		//	//store the data to re-apply later
+		//	PixelBodyData data;
+		//	data.linearVelocity = pair.second->m_B2Body->GetLinearVelocity();
+		//	data.angularVelocity = pair.second->m_B2Body->GetAngularVelocity();
+		//	data.angle = pair.second->m_B2Body->GetAngle();
+		//	data.position = pair.second->m_B2Body->GetPosition();
+		//	//data.elementArray = pair.second->m_ElementArray;
+		//	storage[pair.first] = data;
+		//	//delete each b2body
+		//	m_Box2DWorld->DestroyBody(pair.second->m_B2Body);
+		//}
+		////in theory this should delete the bodies so the above
+		////step is unnecessary but it is nicer like this
+		//m_Box2DWorld->~b2World();
+		//m_Box2DWorld = new b2World({ 0, -9.8f });
+		//for (auto pair : m_PixelBodyMap)
+		//{
+		//	//recreate the box2d body for each rigid body!
+		//	pair.second->CreateB2Body(m_Box2DWorld);
 
-			PixelBodyData& data = storage[pair.first];
-			pair.second->m_B2Body->SetTransform(data.position, data.angle);
-			pair.second->m_B2Body->SetLinearVelocity(data.linearVelocity);
-			pair.second->m_B2Body->SetAngularVelocity(data.angularVelocity);
-		}
+		//	PixelBodyData& data = storage[pair.first];
+		//	pair.second->m_B2Body->SetTransform(data.position, data.angle);
+		//	pair.second->m_B2Body->SetLinearVelocity(data.linearVelocity);
+		//	pair.second->m_B2Body->SetAngularVelocity(data.angularVelocity);
+		//}
 	}
 
 	/// <summary>
@@ -2616,36 +2518,6 @@ namespace Pyxis
 	//	m_PixelBodyMap.insert({ uuid, body });
 	//	return body;
 	//}
-
-	void World::PutPixelBodyInWorld(PixelRigidBody& body)
-	{
-		glm::ivec2 pixelPosition = glm::ivec2(body.m_B2Body->GetPosition().x * PPU, body.m_B2Body->GetPosition().y * PPU);
-		//PX_TRACE("pixel body put in world at: ({0},{1})", pixelPosition.x, pixelPosition.y);
-		for (auto mappedElement : body.m_Elements)
-		{
-			SetElement(mappedElement.second.worldPos, mappedElement.second.element);
-		}
-		body.m_InWorld = true;
-	}
-
-	Player* World::CreatePlayer(uint64_t playerID, glm::ivec2 pixelPosition)
-	{
-		std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-		for (int x = 0; x < 10; x++)
-		{
-			for (int y = 0; y < 20; y++)
-			{
-				Element flesh = GetElementByName("flesh", x, y);
-				flesh.m_Rigid = true;
-				auto localPos = glm::ivec2(x - 5, y - 10);
-				elements[localPos] = RigidBodyElement(flesh, localPos + pixelPosition);
-			}
-		}
-		Player* player = new Player(playerID, glm::ivec2(10,20), elements, b2_dynamicBody, m_Box2DWorld);
-		player->SetPixelPosition(pixelPosition);
-		PutPixelBodyInWorld(*player);
-		return player;
-	}
 
 
 	/// <summary>

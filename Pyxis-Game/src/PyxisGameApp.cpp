@@ -108,7 +108,7 @@ namespace Pyxis
 
 
 			//overlay instead of layer so it is on top
-			auto scene = CreateRef<SceneLayer>(false);//Set True for Debug!
+			auto scene = CreateRef<SceneLayer>(true);//Set True for Debug!
 			PushOverlay(scene);
 
 

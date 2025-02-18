@@ -21,7 +21,7 @@ namespace Pyxis
 		Ref<UI::ScreenSpace> m_LSScreenSpace;
 		Ref<UI::Canvas> m_LSCanvas;
 		Ref<UI::Text> m_LSText;
-		Ref<UI::Button> m_LSButton;
+		Ref<UI::TextButton> m_LSButton;
 		virtual void ReturnToMenu() override;
 
 		//////////////////////////////////////

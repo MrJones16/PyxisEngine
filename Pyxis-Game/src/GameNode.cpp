@@ -6,7 +6,8 @@
 #include <chrono>
 #include <variant>
 #include "MenuNode.h"
-
+#include "PixelBody2D.h"
+#include <Pyxis/Game/Physics2D.h>
 
 namespace Pyxis
 {
@@ -93,7 +94,7 @@ namespace Pyxis
 		auto ElementButtonContainer = CreateRef<UI::Container>("Element Buttons Container");
 		//ElementButtonContainer->m_Size = {900, 32};
 		ElementButtonContainer->m_AutomaticSizing = true;
-		ElementButtonContainer->m_AutomaticSizingOffset = { -300, 0 };
+		ElementButtonContainer->m_AutomaticSizingOffset = { -350, 0 };
 		ElementButtonContainer->m_Gap = 0;
 		for (int i = 0; i < m_World.m_ElementData.size(); i++)
 		{
@@ -108,8 +109,8 @@ namespace Pyxis
 			auto ElementTextButton = CreateRef<UI::TextButton>("ElementTextButton", FontLibrary::GetFont("Aseprite"), std::bind(&GameNode::SetBrushElement, this, i));
 			ElementTextButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateWhite.png");
 			ElementTextButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateWhitePressed.png");
-			ElementTextButton->m_TextBorderSize = glm::vec2(6);
-			ElementTextButton->m_Color = glm::vec4(r, g, b, a) / 255.0f;
+			ElementTextButton->m_TextBorderSize = glm::vec2(2);
+			ElementTextButton->m_Color = glm::vec4(r, g, b, std::max(128, a)) / 255.0f;
 			ElementTextButton->m_TextColor = glm::vec4(ElementTextButton->m_Color.r, ElementTextButton->m_Color.g, ElementTextButton->m_Color.b, 1);
 
 			if (ElementTextButton->m_Color.r + ElementTextButton->m_Color.g + ElementTextButton->m_Color.b / 3.0f > 0.8f)
@@ -145,8 +146,8 @@ namespace Pyxis
 		quitButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
 		quitButton->UpdateSizeFromTexture();
 		quitButton->m_TextBorderSize = glm::vec2(5,5);
-		quitButton->m_TextOffset = { 0, 3, 0 };
-		quitButton->m_TextOffsetPressed = { 0, 1, 0 };
+		quitButton->m_TextOffset = { 0, 3, -0.0001f };
+		quitButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
 		container->AddChild(quitButton);
 
 
@@ -170,7 +171,7 @@ namespace Pyxis
 	void GameNode::GameUpdate(Timestep ts)
 	{
 
-		m_Hovering = (Node::s_HoveredNodeID == GetID()) || (Node::s_HoveredNodeID == 0);
+		m_Hovering = (Node::s_HoveredNodeID == GetUUID()) || (Node::s_HoveredNodeID == 0);
 		//PX_TRACE("Hovered Node: {0}", Node::s_HoveredNodeID);
 
 		{
@@ -234,213 +235,6 @@ namespace Pyxis
 			Renderer2D::DrawLine({ worldMax.x, worldMin.y }, { worldMax.x, worldMax.y});
 		}
 
-	}
-
-
-	void GameNode::ClientImGuiRender()
-	{
-		if (ImGui::Begin("Game"))
-		{
-			ImGui::SetNextItemOpen(true);
-			if (ImGui::TreeNode("Simulation"))
-			{
-				//ImGui::DragFloat("Updates Per Second", &m_UpdatesPerSecond, 1, 0, 244);
-				//ImGui::SetItemTooltip("Default: 60");
-				if (m_World.m_Running)
-				{
-					if (ImGui::Button("Pause"))
-					{
-						m_CurrentTickClosure.AddInputAction(InputAction::PauseGame);
-					}
-					ImGui::SetItemTooltip("Shortcut: Space");
-				}
-				else
-				{
-					if (ImGui::Button("Play"))
-					{
-						m_CurrentTickClosure.AddInputAction(InputAction::ResumeGame);
-					}
-					ImGui::SetItemTooltip("Shortcut: Space");
-					//ImGui::EndTooltip();
-				}
-			
-				if (ImGui::Button("Clear"))
-				{
-					m_CurrentTickClosure.AddInputAction(InputAction::ClearWorld);
-				}
-			
-				if (ImGui::Button("Toggle Collider View"))
-				{
-					m_World.m_DebugDrawColliders = !m_World.m_DebugDrawColliders;
-				}
-							
-				if (m_BuildingRigidBody)
-				{
-					if (ImGui::Button("Build Rigid Body"))
-					{
-						srand(time(0));
-						uint64_t uuid = std::rand();
-						while (m_World.m_PixelBodyMap.find(uuid) != m_World.m_PixelBodyMap.end())
-						{
-							srand(time(0));
-							uint64_t uuid = std::rand();
-						}
-						if (m_RigidMin.x < m_RigidMax.x)
-							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_dynamicBody, m_RigidMin, m_RigidMax, uuid);
-						m_RigidMin = { 9999999, 9999999 };
-						m_RigidMax = { -9999999, -9999999 };
-					}
-					if (ImGui::Button("Build Kinematic Rigid Body"))
-					{
-						srand(time(0));
-						uint64_t uuid = std::rand();
-						while (m_World.m_PixelBodyMap.find(uuid) != m_World.m_PixelBodyMap.end())
-						{
-							srand(time(0));
-							uint64_t uuid = std::rand();
-						}
-						if (m_RigidMin.x < m_RigidMax.x)
-							m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, b2_kinematicBody, m_RigidMin, m_RigidMax, uuid);
-						m_RigidMin = { 9999999, 9999999 };
-						m_RigidMax = { -9999999, -9999999 };
-					}
-			
-					if (ImGui::Button("Stop Building Rigid Body"))
-					{
-						m_RigidMin = { 9999999, 9999999 };
-						m_RigidMax = { -9999999, -9999999 };
-						m_BuildingRigidBody = false;
-					}
-				}
-				else
-				{
-					if (ImGui::Button("Start Building Rigid Body"))
-					{
-						m_BuildingRigidBody = true;
-					}
-				}
-			
-				/*ImGui::SliderFloat("Douglas-Peucker Threshold", &m_DouglasThreshold, 0, 2);
-			
-				if (ImGui::Button("UpdateOutline"))
-				{
-					for each (auto body in m_World.m_PixelBodies)
-					{
-						auto contour = body->GetContourPoints();
-						body->m_ContourVector = body->SimplifyPoints(contour, 0, contour.size() - 1, m_DouglasThreshold);
-					}
-				}*/
-							
-							
-				ImGui::TreePop();
-			}
-			
-			ImGui::SetNextItemOpen(true);
-			if (ImGui::TreeNode("Hovered Element Properties"))
-			{
-				glm::ivec2 pixelPos = m_World.WorldToPixel(GetMousePosWorld());
-				ImGui::Text(("(" + std::to_string(pixelPos.x) + ", " + std::to_string(pixelPos.y) + ")").c_str());
-				ElementData& elementData = m_World.m_ElementData[m_HoveredElement.m_ID];
-				ImGui::Text("Element: %s", elementData.name.c_str());
-				ImGui::Text("- Temperature: %f", m_HoveredElement.m_Temperature);
-			
-				ImGui::TreePop();
-			}
-			
-			ImGui::SetNextItemOpen(true);
-			if (ImGui::TreeNode("Building Mode"))
-			{
-				if (ImGui::Selectable("~", m_BuildMode == BuildMode::Normal, 0, ImVec2(25, 25)))
-				{
-					m_BuildMode = BuildMode::Normal;
-				}
-				if (ImGui::Selectable("()", m_BuildMode == BuildMode::Dynamic, 0, ImVec2(25, 25)))
-				{
-					m_BuildMode = BuildMode::Dynamic;
-				}
-				if (ImGui::Selectable("[]", m_BuildMode == BuildMode::Kinematic, 0, ImVec2(25, 25)))
-				{
-					m_BuildMode = BuildMode::Kinematic;
-				}
-				ImGui::TreePop();
-			}
-			
-			ImGui::SetNextItemOpen(true);
-			if (ImGui::TreeNode("Brush Shape"))
-			{
-				if (ImGui::Selectable("Circle", m_BrushType == BrushType::circle))
-				{
-					m_BrushType = BrushType::circle;
-				}
-				if (ImGui::Selectable("Square", m_BrushType == BrushType::square))
-				{
-					m_BrushType = BrushType::square;
-				}
-				ImGui::TreePop();
-			}
-						
-			
-			ImGui::DragFloat("Brush Size", &m_BrushSize, 1.0f, 1.0f, 10.0f);
-			
-			
-			ImGui::SetNextItemOpen(true);
-			if (ImGui::TreeNode("Element Type"))
-			{
-				float width = ImGui::GetContentRegionAvail().x / 5;
-				for (int y = 0; y < (m_World.m_TotalElements / 4) + 1; y++)
-					for (int x = 0; x < 4; x++)
-					{
-						if (x > 0)
-							ImGui::SameLine();
-						int index = y * 4 + x;
-						if (index >= m_World.m_TotalElements) continue;
-						ImGui::PushID(index);
-						auto color = m_World.m_ElementData[index].color;
-						int r = (color & 0x000000FF) >> 0;
-						int g = (color & 0x0000FF00) >> 8;
-						int b = (color & 0x00FF0000) >> 16;
-						int a = (color & 0xFF000000) >> 24;
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f));
-						std::string name = (m_World.m_ElementData[index].name);
-						
-						if (ImGui::Selectable(name.c_str(), m_SelectedElementIndex == index, 0, ImVec2(width, 25)))
-						{
-							// Toggle clicked cell
-							m_SelectedElementIndex = index;
-						}
-						ImGui::PopStyleColor();
-						ImGui::PopID();
-					}
-				ImGui::TreePop();
-			}
-						
-		}
-		ImGui::End();
-			
-		/*if (ImGui::Begin("NetworkDebug"))
-		{
-			ImGui::Text(("Input Tick:" + std::to_string(m_InputTick)).c_str());
-			ImGui::Text(("Last Recieved Merged Tick: " + std::to_string(d_LastRecievedInputTick)).c_str());
-		}
-		ImGui::End();*/
-			
-		for (Ref<Panel> panel : m_Panels)
-		{
-			panel->OnImGuiRender();
-		}
-			
-			
-#if STATISTICS
-		Renderer2D::Statistics stats = Renderer2D::GetStats();
-		ImGui::Begin("Rendering Statistics");
-		ImGui::Text("Draw Calls: %d", stats.DrawCalls);
-		ImGui::Text("Quads: %d", stats.QuadCount);
-		ImGui::Text("Vertices: %d", stats.GetTotalVertexCount());
-		ImGui::Text("Indices: %d", stats.GetTotalIndexCount());
-		ImGui::End();
-#endif
-
-		
 	}
 
 
@@ -706,91 +500,91 @@ namespace Pyxis
 					Play();
 					break;
 				}
-				case InputAction::TransformRegionToRigidBody:
-				{
-					uint64_t UUID;
-					tc >> UUID;
+				//case InputAction::TransformRegionToRigidBody:
+				//{
+				//	uint64_t UUID;
+				//	tc >> UUID;
 
-					glm::ivec2 maximum;
-					tc >> maximum;
+				//	glm::ivec2 maximum;
+				//	tc >> maximum;
 
-					glm::ivec2 minimum;
-					tc >> minimum;
+				//	glm::ivec2 minimum;
+				//	tc >> minimum;
 
-					b2BodyType type;
-					tc >> type;
+				//	b2BodyType type;
+				//	tc >> type;
 
-					int width = (maximum.x - minimum.x) + 1;
-					int height = (maximum.y - minimum.y) + 1;
-					if (width * height <= 0) break;
-					glm::ivec2 newMin = maximum;
-					glm::ivec2 newMax = minimum;
-					//iterate over section and find the width, height, center, ect
-					int mass = 0;
-					for (int x = 0; x < width; x++)
-					{
-						for (int y = 0; y < height; y++)
-						{
-							glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-							auto& element = m_World.GetElement(pixelPos);
-							auto& elementData = m_World.m_ElementData[element.m_ID];
-							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-							{
-								if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-								if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-								if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-								if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-								mass++;
-							}
-						}
-					}
-					if (mass < 2) continue;//skip if we are 1 element or 0
-					PX_TRACE("transforming {0} elements to a rigid body", mass);
+				//	int width = (maximum.x - minimum.x) + 1;
+				//	int height = (maximum.y - minimum.y) + 1;
+				//	if (width * height <= 0) break;
+				//	glm::ivec2 newMin = maximum;
+				//	glm::ivec2 newMax = minimum;
+				//	//iterate over section and find the width, height, center, ect
+				//	int mass = 0;
+				//	for (int x = 0; x < width; x++)
+				//	{
+				//		for (int y = 0; y < height; y++)
+				//		{
+				//			glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
+				//			auto& element = m_World.GetElement(pixelPos);
+				//			auto& elementData = m_World.m_ElementData[element.m_ID];
+				//			if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+				//			{
+				//				if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
+				//				if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
+				//				if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
+				//				if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
+				//				mass++;
+				//			}
+				//		}
+				//	}
+				//	if (mass < 2) continue;//skip if we are 1 element or 0
+				//	PX_TRACE("transforming {0} elements to a rigid body", mass);
 
-					width = (newMax.x - newMin.x) + 1;
-					height = (newMax.y - newMin.y) + 1;
+				//	width = (newMax.x - newMin.x) + 1;
+				//	height = (newMax.y - newMin.y) + 1;
 
-					glm::ivec2 origin = { width / 2, height / 2 };
-					std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-					for (int x = 0; x < width; x++)
-					{
-						for (int y = 0; y < height; y++)
-						{
-							glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
+				//	glm::ivec2 origin = { width / 2, height / 2 };
+				//	std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
+				//	for (int x = 0; x < width; x++)
+				//	{
+				//		for (int y = 0; y < height; y++)
+				//		{
+				//			glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
 
-							//loop over every element, grab it, and make it rigid if it is a movable Solid
-							auto& element = m_World.GetElement(pixelPos);
-							auto& elementData = m_World.m_ElementData[element.m_ID];
-							if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-							{
-								element.m_Rigid = true;
-								//set the elements at the local position to be the element pulled from world
-								elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-								m_World.SetElement(pixelPos, Element());
-							}
-						}
-					}
-					glm::ivec2 size = newMax - newMin;
-					PX_TRACE("Mass is: {0}", mass);
-					PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World.m_Box2DWorld);
-					if (body->m_B2Body == nullptr)
-					{
-						PX_TRACE("Failed to create rigid body");
-						continue;
-					}
-					else
-					{
-						m_World.m_PixelBodyMap[body->m_ID] = body;
-						auto pixelPos = (newMin + newMax) / 2;
-						if (width % 2 == 0) pixelPos.x += 1;
-						if (height % 2 == 0) pixelPos.y += 1;
-						body->SetPixelPosition(pixelPos);
-						m_World.PutPixelBodyInWorld(*body);
-					}
+				//			//loop over every element, grab it, and make it rigid if it is a movable Solid
+				//			auto& element = m_World.GetElement(pixelPos);
+				//			auto& elementData = m_World.m_ElementData[element.m_ID];
+				//			if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
+				//			{
+				//				element.m_Rigid = true;
+				//				//set the elements at the local position to be the element pulled from world
+				//				elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
+				//				m_World.SetElement(pixelPos, Element());
+				//			}
+				//		}
+				//	}
+				//	glm::ivec2 size = newMax - newMin;
+				//	PX_TRACE("Mass is: {0}", mass);
+				//	PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World.m_Box2DWorld);
+				//	if (body->m_B2Body == nullptr)
+				//	{
+				//		PX_TRACE("Failed to create rigid body");
+				//		continue;
+				//	}
+				//	else
+				//	{
+				//		m_World.m_PixelBodyMap[body->m_ID] = body;
+				//		auto pixelPos = (newMin + newMax) / 2;
+				//		if (width % 2 == 0) pixelPos.x += 1;
+				//		if (height % 2 == 0) pixelPos.y += 1;
+				//		body->SetPixelPosition(pixelPos);
+				//		m_World.PutPixelBodyInWorld(*body);
+				//	}
 
 
-					break;
-				}
+				//	break;
+				//}
 				case Pyxis::InputAction::Input_Move:
 				{
 					//PX_TRACE("input action: Input_Move");
@@ -878,9 +672,40 @@ namespace Pyxis
 	}
 
 	void GameNode::OnKeyPressedEvent(KeyPressedEvent& event) {
+		if (event.GetKeyCode() == PX_KEY_R)
+		{
+			Physics2D::ResetWorld();
+		}
 		if (event.GetKeyCode() == PX_KEY_F)
 		{
-			//SendStringToServer("Respects Paid!");
+			//Testing rigidbody creation
+			glm::vec2 mousePos = GetMousePosWorld();
+			glm::ivec2 pixelPos = m_World.WorldToPixel(mousePos);
+
+
+			std::vector<PixelBodyElement> elements;
+			//make a region around the mouse, and turn it into a pixel body
+			for (int x = pixelPos.x - m_BrushSize; x < pixelPos.x + m_BrushSize + 1; x++)
+			{
+				for (int y = pixelPos.y - m_BrushSize; y < pixelPos.y + m_BrushSize + 1; y++)
+				{
+					glm::ivec2 elementPos = glm::ivec2(x, y);
+					Element& e = m_World.GetElement(elementPos);
+					if (m_World.m_ElementData[e.m_ID].cell_type == ElementType::solid)
+						elements.push_back(PixelBodyElement(m_World.GetElement(elementPos), elementPos));
+				}
+			}
+			Ref<PixelBody2D> newBody;
+			if (Pyxis::Input::IsKeyPressed(PX_KEY_LEFT_SHIFT))
+			{
+				newBody = CreateRef<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_staticBody, &m_World, elements, false);
+			}
+			else
+			{
+				newBody = CreateRef<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_dynamicBody, &m_World, elements, false);
+			}
+			
+			AddChild(newBody);
 		}
 		if (event.GetKeyCode() == PX_KEY_SPACE)
 		{

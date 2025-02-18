@@ -9,6 +9,10 @@ namespace Pyxis
 		/// <summary>
 		/// A UI Node that functions as a button. can definitely be made into a templated if i need
 		/// to have more complex arguments or return types?
+		/// 
+		/// Buttons that need to point to a function, that you want serialized, need to be
+		/// member variables, and not children, and you should manually serialize & de-serialize
+		/// in order to hook up the function pointer!
 		/// </summary>
 		class Button : public UIRect
 		{
@@ -26,6 +30,11 @@ namespace Pyxis
 
 			}
 
+			Button(UUID id) : UIRect(id)
+			{
+
+			}
+
 			Button(const std::string& name = "Button", Ref<Texture2DResource> texture = nullptr, const std::function<void()>& function = nullptr) : 
 				UIRect(texture, name), m_Function(function)
 			{
@@ -38,6 +47,29 @@ namespace Pyxis
 
 			}
 
+			//Serialization
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "Button";
+
+				//Add new member variables
+				if (m_TextureResourcePressed != nullptr)
+					j["m_TextureResourcePressed"] = m_TextureResourcePressed->GetPath();
+			}
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+
+				//Extract new member variables
+				if (j.contains("m_TextureResourcePressed"))
+				{
+					std::string filepath = "";
+					j.at("m_TextureResourcePressed").get_to(filepath);
+					m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>(filepath);
+				}
+			}
+
 			void SetFunction(const std::function<void()>& function)
 			{
 				m_Function = function;
@@ -45,9 +77,9 @@ namespace Pyxis
 
 			virtual ~Button() = default;
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UIRect::InspectorRender();
+				UIRect::OnInspectorRender();
 				if (ImGui::TreeNodeEx("Button", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					//Size
@@ -96,11 +128,11 @@ namespace Pyxis
 
 						if (m_TextureResourcePressed != nullptr && m_Pressed)
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResourcePressed->m_Texture, GetID(), 1, m_Color);
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResourcePressed->m_Texture, GetUUID(), 1, m_Color);
 						}
 						else
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID(), 1, m_Color);
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetUUID(), 1, m_Color);
 						}
 						
 						
@@ -109,12 +141,14 @@ namespace Pyxis
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetUUID());
 					}
 				}
 				
 			}
 		};
+
+		REGISTER_SERIALIZABLE_NODE(Button)
 
 	}
 }

@@ -44,9 +44,9 @@ namespace Pyxis
 
 			virtual ~Text() = default;
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UIRect::InspectorRender();
+				UIRect::OnInspectorRender();
 				if (ImGui::TreeNodeEx("Text", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::ColorEdit4("Text Color", glm::value_ptr(m_TextColor));
@@ -78,7 +78,7 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					uint32_t nodeID = (m_Parent && m_SelectParentID) ? m_Parent->GetID() : GetID();
+					uint32_t nodeID = (m_Parent && m_SelectParentID) ? m_Parent->GetUUID() : GetUUID();
 
 					glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 					if (m_RenderRect)

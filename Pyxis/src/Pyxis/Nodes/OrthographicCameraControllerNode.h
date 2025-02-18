@@ -1,9 +1,6 @@
 #pragma once
 
-//#include <Pyxis/Renderer/Renderer2D.h>
-//#include <glm/gtc/matrix_transform.hpp>
 #include <Pyxis/Core/Input.h>
-
 #include "Pyxis/Nodes/CameraNode.h"
 #include <Pyxis/Events/EventSignals.h>
 
@@ -29,8 +26,31 @@ namespace Pyxis
 			EventSignal::s_MouseScrolledEventSignal.AddReciever(m_MouseScrolledReciever);
 		};
 
+		OrthographicCameraControllerNode(UUID id) :
+			CameraNode(id),
+			m_MouseScrolledReciever(this, &OrthographicCameraControllerNode::OnMouseScrolledEvent)
+		{
+			EventSignal::s_MouseScrolledEventSignal.AddReciever(m_MouseScrolledReciever);
+		};
+
 
 		virtual ~OrthographicCameraControllerNode() = default;
+
+		//Serialization
+		virtual void Serialize(json& j)
+		{
+			CameraNode::Serialize(j);
+			j["Type"] = "OrthographicCameraControllerNode"; // Override type identifier
+			j["m_CameraSpeed"] = m_CameraSpeed;
+			j["m_Sensitivity"] = m_Sensitivity;
+		}
+
+		virtual void Deserialize(json& j)
+		{
+			CameraNode::Deserialize(j);
+			if (j.contains("m_CameraSpeed")) j.at("m_CameraSpeed").get_to(m_CameraSpeed);
+			if (j.contains("m_Sensitivity")) j.at("m_Sensitivity").get_to(m_Sensitivity);
+		}
 
 		void OnMouseScrolledEvent(MouseScrolledEvent& e)
 		{
@@ -71,5 +91,5 @@ namespace Pyxis
 
 	};
 	
-
+	REGISTER_SERIALIZABLE_NODE(OrthographicCameraControllerNode);
 }

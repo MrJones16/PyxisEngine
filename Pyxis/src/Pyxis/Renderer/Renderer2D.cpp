@@ -89,6 +89,7 @@ namespace Pyxis
 		glm::vec2 TexCoord;
 		float TexIndex;
 		float TilingFactor;
+		uint32_t NodeID;
 	};
 
 	
@@ -329,12 +330,14 @@ namespace Pyxis
 		s_Data.LineVertexBufferData[0].TexCoord = {0,0};
 		s_Data.LineVertexBufferData[0].TexIndex = 0.0f;
 		s_Data.LineVertexBufferData[0].TilingFactor = 1;
+		s_Data.LineVertexBufferData[0].NodeID = 0;
 
 		s_Data.LineVertexBufferData[1].Position = s_Data.LineVertexPositions[1];
 		s_Data.LineVertexBufferData[1].Color = { 1,1,1,1 };
 		s_Data.LineVertexBufferData[1].TexCoord = { 1,1 };
 		s_Data.LineVertexBufferData[1].TexIndex = 0.0f;
 		s_Data.LineVertexBufferData[1].TilingFactor = 1;
+		s_Data.LineVertexBufferData[1].NodeID = 0;
 
 	}
 
@@ -389,7 +392,8 @@ namespace Pyxis
 		///////////////////////
 		/// Flush BitMap Quads
 		///////////////////////
-		RenderCommand::DisableDepthTesting();
+		// 
+		//RenderCommand::DisableDepthTesting();
 
 		s_Data.BitMapShader->Bind();
 		//send data to buffer
@@ -406,7 +410,8 @@ namespace Pyxis
 		s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
 		s_Data.BitMapIndexCount = 0;
 		s_Data.BitMapSlotsIndex = 0;
-		RenderCommand::EnableDepthTesting();
+
+		//RenderCommand::EnableDepthTesting();
 
 
 #if STATISTICS

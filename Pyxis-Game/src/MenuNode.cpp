@@ -66,8 +66,8 @@ namespace Pyxis
 			playButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
 			playButton->UpdateSizeFromTexture();
 			playButton->m_TextBorderSize = glm::vec2(5, 5);
-			playButton->m_TextOffset = { 0, 3, 0 };
-			playButton->m_TextOffsetPressed = { 0, 1, 0 };
+			playButton->m_TextOffset = { 0, 3, -0.0001f };
+			playButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
 			container->AddChild(playButton);
 		}
 
@@ -75,11 +75,10 @@ namespace Pyxis
 		//client data input
 		{
 			//name
-			auto nameInput = CreateRef<UI::InputText>("Name Text Input", FontLibrary::GetFont("Aseprite"));
+			auto nameInput = CreateRef<UI::InputText>("Name Text Input", FontLibrary::GetFont("Aseprite"), &m_PlayerName);
 			nameInput->m_FontSize = 5;
 			nameInput->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlate.png");
 			nameInput->m_TextureResourceSelected = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSelected.png");
-			nameInput->m_Text = "Pyxis Enjoyer";
 			nameInput->m_PPU = 0.25;
 			nameInput->m_TextBorderSize = glm::vec2(3);
 			nameInput->m_Alignment = UI::Direction::Center;
@@ -152,18 +151,51 @@ namespace Pyxis
 
 		//multiplayer button
 		{
-			auto multiButton = CreateRef<UI::TextButton>("Multiplayer Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::PlayMultiplayer, this));
+			auto multiButton = CreateRef<UI::TextButton>("Join Friends Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::PlayMultiplayer, this));
 			multiButton->m_PPU = 0.25f;
-			multiButton->m_Text = "Multiplayer";
+			multiButton->m_Text = "Join Friend";
 			multiButton->m_TextColor = themeYellow;
 			multiButton->Translate({ 0,0,1 });
 			multiButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
 			multiButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
 			multiButton->UpdateSizeFromTexture();
 			multiButton->m_TextBorderSize = glm::vec2(5, 5);
-			multiButton->m_TextOffset = { 0, 3, 0 };
-			multiButton->m_TextOffsetPressed = { 0, 1, 0 };
+			multiButton->m_TextOffset = { 0, 3, -0.0001f };
+			multiButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
 			container->AddChild(multiButton);
+		}
+
+		//LAN Join button
+		{
+			auto horizContainer = CreateRef<UI::HorizontalContainer>("Connect&IP HContainer");
+			horizContainer->m_Arrangement = UI::Right;
+			horizContainer->m_Gap = 8;
+			container->AddChild(horizContainer);
+
+			auto multiButton = CreateRef<UI::TextButton>("Join LAN Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::PlayLAN, this));
+			multiButton->m_PPU = 0.25f;
+			multiButton->m_Text = "Connect";
+			multiButton->m_TextColor = themeYellow;
+			multiButton->Translate({ 0,0,1 });
+			multiButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+			multiButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+			multiButton->UpdateSizeFromTexture();
+			multiButton->m_TextBorderSize = glm::vec2(5, 5);
+			multiButton->m_TextOffset = { 0, 3, -0.0001f };
+			multiButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
+			horizContainer->AddChild(multiButton);
+
+			//IP Input
+			auto IPInput = CreateRef<UI::InputText>("IP Input", FontLibrary::GetFont("Aseprite"), &m_InputAddress);
+			IPInput->m_FontSize = 5;
+			IPInput->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlate.png");
+			IPInput->m_TextureResourceSelected = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/TextPlateSelected.png");
+			IPInput->m_PPU = 0.25;
+			IPInput->m_TextBorderSize = glm::vec2(3);
+			IPInput->m_Alignment = UI::Direction::Center;
+			IPInput->UpdateSizeFromTexture();
+			horizContainer->AddChild(IPInput);
+			horizContainer->SetSizeFromChildren();
 		}
 
 
@@ -178,8 +210,24 @@ namespace Pyxis
 			hostButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
 			hostButton->UpdateSizeFromTexture();
 			hostButton->m_TextBorderSize = glm::vec2(5, 5);
-			hostButton->m_TextOffset = { 0, 3, 0 };
-			hostButton->m_TextOffsetPressed = { 0, 1, 0 };
+			hostButton->m_TextOffset = { 0, 3, -0.0001f };
+			hostButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
+			container->AddChild(hostButton);
+		}
+
+		//Host LAN Game button
+		{
+			auto hostButton = CreateRef<UI::TextButton>("Host LAN Button", FontLibrary::GetFont("Aseprite"), std::bind(&MenuNode::HostGameIP, this));
+			hostButton->m_PPU = 0.25f;
+			hostButton->m_Text = "Host LAN";
+			hostButton->m_TextColor = themeYellow;
+			hostButton->Translate({ 0,0,1 });
+			hostButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+			hostButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+			hostButton->UpdateSizeFromTexture();
+			hostButton->m_TextBorderSize = glm::vec2(5, 5);
+			hostButton->m_TextOffset = { 0, 3, -0.0001f };
+			hostButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
 			container->AddChild(hostButton);
 		}
 
@@ -196,8 +244,8 @@ namespace Pyxis
 			quitButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
 			quitButton->UpdateSizeFromTexture();
 			quitButton->m_TextBorderSize = glm::vec2(5, 5);
-			quitButton->m_TextOffset = { 0, 3, 0 };
-			quitButton->m_TextOffsetPressed = { 0, 1, 0 };
+			quitButton->m_TextOffset = { 0, 3, -0.0001f };
+			quitButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
 			container->AddChild(quitButton);
 		}
 
@@ -214,8 +262,6 @@ namespace Pyxis
 
 	void MenuNode::OnUpdate(Timestep ts)
 	{
-		SteamAPI_RunCallbacks();
-
 		if (auto colorDisplay = m_PlayerColorDisplay.lock())
 		{
 			colorDisplay->m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
@@ -237,6 +283,17 @@ namespace Pyxis
 		SteamFriends()->ActivateGameOverlay("friends");
 	}
 
+	void MenuNode::PlayLAN()
+	{
+		//Get steam identity, create a multiplayer instance, and connect, and kill menu node.
+		auto MultiplayerGame = CreateRef<MultiplayerGameNode>();
+		MultiplayerGame->m_ClientData.m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
+		std::memcpy(MultiplayerGame->m_ClientData.m_Name, m_PlayerName.c_str(), 64);
+		MultiplayerGame->Connect("127.0.0.1:21218");
+		m_Parent->AddChild(MultiplayerGame);
+		QueueFree();
+	}
+
 	void MenuNode::HostGameP2P()
 	{
 		
@@ -248,7 +305,7 @@ namespace Pyxis
 
 	void MenuNode::HostGameIP()
 	{
-		PX_WARN("Host!");
+		
 		auto HostGame = CreateRef<HostedGameNode>();
 		HostGame->StartIP();
 		m_Parent->AddChild(HostGame);
@@ -274,7 +331,7 @@ namespace Pyxis
 		identity.SetSteamID(pCallback->m_steamIDFriend);
 		auto MultiplayerGame = CreateRef<MultiplayerGameNode>();
 		MultiplayerGame->m_ClientData.m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
-		std::memcpy(MultiplayerGame->m_ClientData.m_Name, m_PlayerName, 64);
+		std::memcpy(MultiplayerGame->m_ClientData.m_Name, m_PlayerName.c_str(), 64);
 		MultiplayerGame->Connect(identity);				
 		m_Parent->AddChild(MultiplayerGame);
 		QueueFree();

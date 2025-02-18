@@ -8,25 +8,39 @@ namespace Pyxis
 		//initialize the connecting screen nodes
 		m_LSScreenSpace = CreateRef<UI::ScreenSpace>();
 		m_LSScreenSpace->Translate({ 0,0,-0.2 });
+		m_LSScreenSpace->m_Name = "Loading Screen Space";
 		AddChild(m_LSScreenSpace);
+
 		m_LSCanvas = CreateRef<UI::Canvas>();
 		m_LSCanvas->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		m_LSCanvas->m_AutomaticSizing = true;
-
+		m_LSCanvas->m_PPU = 32;
 		m_LSScreenSpace->AddChild(m_LSCanvas);
+
+
 		m_LSText = CreateRef<UI::Text>(FontLibrary::GetFont("Aseprite"));
 		m_LSText->Translate({ 0,0,-0.01 });
 		m_LSText->m_Text = "Connecting";
 		m_LSText->m_Size = { 128, 32 };
-		m_LSText->m_FontSize = 800;
+		m_LSText->m_FontSize = 1;
+		m_LSText->m_Alignment = UI::Center;
+		m_LSText->m_MultiLine = false;
 		m_LSCanvas->AddChild(m_LSText);
 
-		m_LSButton = CreateRef<UI::Button>("OkayButton", ResourceSystem::Load<Texture2DResource>("assets/textures/UI/OkayButton.png"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
-		m_LSButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/OkayButtonPressed.png");
-		m_LSButton->m_PPU = 1;
-		m_LSButton->UpdateSizeFromTexture();
+		m_LSButton = CreateRef<UI::TextButton>("Okay Button", FontLibrary::GetFont("Aseprite"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
+		m_LSButton->m_PPU = 0.5f;
+		m_LSButton->m_Text = "Okay";
+		m_LSButton->m_TextColor = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);;
 		m_LSButton->Translate({ 0,-64,-0.01 });
+		m_LSButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+		m_LSButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+		m_LSButton->UpdateSizeFromTexture();
+		m_LSButton->m_TextBorderSize = glm::vec2(5, 5);
+		m_LSButton->m_TextOffset = { 0, 3, -0.0001f };
+		m_LSButton->m_TextOffsetPressed = { 0, 1, -0.0001f };
+		m_LSButton->m_Enabled = false;
 		m_LSCanvas->AddChild(m_LSButton);
+
 		m_LSScreenSpace->PropagateUpdate();
 	}
 
@@ -153,7 +167,7 @@ namespace Pyxis
 	{
 		if (m_MultiplayerState == MultiplayerState::DownloadingWorld)
 		{
-			m_LSText->m_Text = "Downloading World: { " + std::to_string((float)m_DownloadCount / (float)m_DownloadTotal)  + "% }";
+			m_LSText->m_Text = "Downloading World: { " + std::to_string(((float)m_DownloadCount / (float)m_DownloadTotal) * 100.0f)  + "% }";
 		}
 			
 	}

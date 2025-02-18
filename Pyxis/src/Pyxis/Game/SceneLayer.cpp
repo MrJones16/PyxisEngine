@@ -26,7 +26,6 @@ namespace Pyxis
 		m_ViewportSize = { Application::Get().GetWindow().GetWidth(), Application::Get().GetWindow().GetHeight() };
 		Renderer2D::Init();
 
-
 		FrameBufferSpecification fbspec;
 		fbspec.Attachments =
 		{
@@ -48,7 +47,28 @@ namespace Pyxis
 	{
 		PROFILE_SCOPE("SceneLayer OnUpdate");
 
-		//PX_TRACE("Node Count: {0}", Node::Nodes.size());
+		//clear dead nodes
+		while (Node::NodesToDestroyQueue.size() > 0)
+		{
+			Node* node = Node::Nodes[Node::NodesToDestroyQueue.front()];			
+			
+			if (node != nullptr)
+			{
+				//clear parent for children
+				for (auto child : node->m_Children)
+				{
+					
+					child->m_Parent = nullptr;
+				}
+				//clear parent's child of this
+				if (node->m_Parent != nullptr)
+				{
+					node->m_Parent->RemoveChild(node->shared_from_this());
+				}
+			}			
+			Node::Nodes.erase(Node::NodesToDestroyQueue.front());
+			Node::NodesToDestroyQueue.pop();
+		}
 
 		//rendering
 		#if STATISTICS
@@ -82,6 +102,8 @@ namespace Pyxis
 			
 			for (auto node : Node::Nodes)
 			{
+				
+				
 				if (node.second != nullptr)
 				{
 					node.second->OnUpdate(ts);
@@ -150,7 +172,7 @@ namespace Pyxis
 	{
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ((Node == m_SelectedNode) ? ImGuiTreeNodeFlags_Selected : 0);
 
-		bool opened = ImGui::TreeNodeEx((void*)(uint32_t)Node->GetID(), flags, Node->m_Name.c_str());
+		bool opened = ImGui::TreeNodeEx((void*)(uint32_t)Node->GetUUID(), flags, Node->m_Name.c_str());
 
 		if (ImGui::IsItemClicked())
 		{
@@ -188,7 +210,7 @@ namespace Pyxis
 			{
 				if (m_SelectedNode != nullptr)
 				{
-					m_SelectedNode->InspectorRender();
+					m_SelectedNode->OnInspectorRender();
 				}
 			}
 			ImGui::End();
@@ -289,6 +311,23 @@ namespace Pyxis
 
 	bool SceneLayer::OnKeyPressedEvent(KeyPressedEvent& event)
 	{
+		if (event.GetKeyCode() == PX_KEY_O)
+		{
+			json j;
+			m_RootNode.Serialize(j);
+			std::cout << j.dump(4) << std::endl;
+			PX_CORE_TRACE("De-Serializing the collected nodes...");
+			Ref<Node> newNode = Node::DeserializeNode(j);
+
+			if (newNode != nullptr)
+			{
+				Ref<Node> clonedNode = CreateRef<Node>("Cloned Nodes");
+				m_RootNode.AddChild(clonedNode);
+				clonedNode->AddChild(newNode);
+			}
+			
+			
+		}
 		return false;
 	}
 

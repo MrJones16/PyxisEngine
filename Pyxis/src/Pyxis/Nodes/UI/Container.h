@@ -42,9 +42,9 @@ namespace Pyxis
 				RearrangeChildren();
 			}
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UIRect::InspectorRender();
+				UIRect::OnInspectorRender();
 				if (ImGui::TreeNodeEx("Container", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					//Size
@@ -101,13 +101,13 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetUUID());
 					}
 					else
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetUUID());
 					}
 
 				}

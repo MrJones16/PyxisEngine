@@ -26,9 +26,3 @@
 #include "Pyxis/Renderer/Texture.h"
 #include "Pyxis/Renderer/SubTexture2D.h"
 #include "Pyxis/Renderer/FrameBuffer.h"
-
-#include "Pyxis/Renderer/Camera.h"
-
-
-//---------- Game ----------//
-#include "Pyxis/Game/Scene.h"

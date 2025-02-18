@@ -21,8 +21,8 @@ namespace Pyxis
 			Ref<Font> m_Font;
 			bool m_ScaleText = true;
 			glm::vec2 m_TextBorderSize = glm::vec2(0,0);
-			glm::vec3 m_TextOffset = glm::vec3(0, 0, 0);
-			glm::vec3 m_TextOffsetPressed = glm::vec3(0, 0, 0);
+			glm::vec3 m_TextOffset = glm::vec3(0, 0, -0.0001f);
+			glm::vec3 m_TextOffsetPressed = glm::vec3(0, 0, -0.0001f);
 
 		public:
 
@@ -36,9 +36,9 @@ namespace Pyxis
 
 			virtual ~TextButton() = default;
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UIRect::InspectorRender();
+				UIRect::OnInspectorRender();
 				if (ImGui::TreeNodeEx("TextButton", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					ImGui::ColorEdit4("Color", glm::value_ptr(m_Color));
@@ -92,18 +92,18 @@ namespace Pyxis
 
 						if (m_TextureResourcePressed != nullptr && m_Pressed)
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResourcePressed->m_Texture, GetID(), 1, m_Color);
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResourcePressed->m_Texture, GetUUID(), 1, m_Color);
 						}
 						else
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID(), 1, m_Color);
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetUUID(), 1, m_Color);
 						}
 					}
 					else
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetUUID());
 					}
 
 					
@@ -111,7 +111,7 @@ namespace Pyxis
 					// -characterHeight / 2
 					glm::vec2 maxSize = m_Size - (m_TextBorderSize * (2.0f / m_PPU));
 					glm::vec3 offset = (m_Pressed ? m_TextOffsetPressed : m_TextOffset) * (1.0f/m_PPU);
-					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), offset), m_Font, maxSize, m_FontSize, UI::Center, m_ScaleText, m_TextColor, GetID());
+					Renderer2D::DrawTextLine(m_Text, GetWorldTransform() * glm::translate(glm::mat4(1), offset), m_Font, maxSize, m_FontSize, UI::Center, m_ScaleText, m_TextColor, GetUUID());
 				}
 
 			}

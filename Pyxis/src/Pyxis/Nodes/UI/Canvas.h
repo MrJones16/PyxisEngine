@@ -30,7 +30,61 @@ namespace Pyxis
 
 			}
 
+			Canvas(UUID id) : UIRect(id)
+			{
+
+			}
+
 			virtual ~Canvas() = default;
+
+			/*
+			EdgeMode m_EdgeMode = Repeat;
+			Ref<Texture2DResource> m_CanvasTextures[9];
+			glm::mat4 m_Matrices[9] = { glm::mat4(1) };
+			*/
+
+			//Serialization
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "Canvas";
+
+				//Add new member variables
+				for (int i = 0; i < 9; i++)
+				{
+					if (m_CanvasTextures[i] != nullptr)
+						j["m_CanvasTextures"][std::to_string(i)] = m_CanvasTextures[i]->GetPath();
+				}
+				
+
+				j["m_EdgeMode"] = m_EdgeMode;
+				
+			}
+
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+
+				//Extract new member variables
+
+				//Add new member variables
+				if (j.contains("m_CanvasTextures"))
+				{
+					for (int i = 0; i < 9; i++)
+					{
+						if (j["m_CanvasTextures"].contains(std::to_string(i)))
+						{
+							std::string filepath = "";
+							j["m_CanvasTextures"][std::to_string(i)].get_to(filepath);
+							m_TextureResource = ResourceSystem::Load<Texture2DResource>(filepath);
+						}
+					}
+				}
+				
+				if (j.contains("m_EdgeMode")) j.at("m_EdgeMode").get_to(m_EdgeMode);
+				
+				
+			}
 
 			/*void UpdateSubTextures()
 			{
@@ -125,9 +179,9 @@ namespace Pyxis
 				UINode::PropagateUpdate();
 			}
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UIRect::InspectorRender();
+				UIRect::OnInspectorRender();
 				if (ImGui::TreeNodeEx("Canvas", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 				
@@ -197,7 +251,7 @@ namespace Pyxis
 						//now, we should render the outside edges, 
 						for (int i = 0; i < 9; i++)
 						{
-							Renderer2D::DrawQuadEntity(worldTransform * m_Matrices[i], m_CanvasTextures[i]->m_Texture, GetID());
+							Renderer2D::DrawQuadEntity(worldTransform * m_Matrices[i], m_CanvasTextures[i]->m_Texture, GetUUID());
 						}
 					}
 					else if (m_TextureResource != nullptr)
@@ -206,13 +260,13 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetUUID());
 					}
 					else
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetUUID());
 					}
 
 				}
@@ -220,6 +274,8 @@ namespace Pyxis
 			}
 
 		};
+
+		REGISTER_SERIALIZABLE_NODE(Canvas);
 
 	}
 }

@@ -46,9 +46,9 @@ namespace Pyxis
 
 			virtual ~SignalButton() = default;
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UIRect::InspectorRender();
+				UIRect::OnInspectorRender();
 				if (ImGui::TreeNodeEx("Button", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					//Size

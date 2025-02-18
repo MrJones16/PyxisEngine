@@ -40,9 +40,6 @@ namespace Pyxis
 		Reciever<void(MouseScrolledEvent&)> m_MouseScrolledReciever;
 		void OnMouseScrolledEvent(MouseScrolledEvent& event);
 
-		/*Reciever<void(WindowResizeEvent&)> m_WindowResizeReciever;
-		void OnWindowResizeEvent(WindowResizeEvent& event);*/
-
 
 		//UI
 		Ref<UI::Canvas> m_Hotbar;
@@ -74,7 +71,7 @@ namespace Pyxis
 		/// Game Functions
 		//////////////////////////////////////
 		void GameUpdate(Timestep ts);
-		virtual void ClientImGuiRender();
+		//virtual void ClientImGuiRender();
 		void HandleTickClosure(MergedTickClosure& tc);
 		
 		

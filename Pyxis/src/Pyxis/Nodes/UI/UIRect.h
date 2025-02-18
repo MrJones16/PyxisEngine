@@ -32,6 +32,11 @@ namespace Pyxis
 
 			UIRect(const std::string& name = "UIRect") : UINode(name) 
 			{
+				
+			}
+
+			UIRect(UUID id) : UINode(id)
+			{
 
 			}
 
@@ -47,6 +52,61 @@ namespace Pyxis
 
 			}
 
+			//Serialization
+			virtual void Serialize(json& j) override
+			{
+				UINode::Serialize(j);
+				j["Type"] = "UIRect";
+
+				//Add new member variables
+				if (m_TextureResource != nullptr)
+					j["m_TextureResource"] = m_TextureResource->GetPath();
+				j["m_Color"] = m_Color;
+				j["m_Size"] = m_Size;
+				j["m_PPU"] = m_PPU;
+
+				j["m_AutomaticSizing"] = m_AutomaticSizing;
+				j["m_AutomaticSizingPercent"] = m_AutomaticSizingPercent;
+				j["m_AutomaticSizingOffset"] = m_AutomaticSizingOffset;
+				j["m_FixedSize"] = m_FixedSize;
+
+				j["m_AutomaticPositioning"] = m_AutomaticPositioning;
+				j["m_AutomaticPositionOffset"] = m_AutomaticPositionOffset;
+				j["m_HorizontalAlignment"] = m_HorizontalAlignment;
+				j["m_VerticalAlignment"] = m_VerticalAlignment;
+			}
+
+			virtual void Deserialize(json& j) override
+			{
+				UINode::Deserialize(j);
+
+				//Extract new member variables
+				
+				if (j.contains("m_TextureResource"))
+				{
+					std::string filepath = "";
+					j.at("m_TextureResource").get_to(filepath);
+					m_TextureResource = ResourceSystem::Load<Texture2DResource>(filepath);
+				}
+				if (j.contains("m_Color")) j.at("m_Color").get_to(m_Color);
+				if (j.contains("m_Size")) j.at("m_Size").get_to(m_Size);
+				if (j.contains("m_PPU"))
+				{
+					j.at("m_PPU").get_to(m_PPU);
+					UpdateSizeFromTexture();
+				}
+
+				if (j.contains("m_AutomaticSizing")) j.at("m_AutomaticSizing").get_to(m_AutomaticSizing);
+				if (j.contains("m_AutomaticSizingPercent")) j.at("m_AutomaticSizingPercent").get_to(m_AutomaticSizingPercent);
+				if (j.contains("m_AutomaticSizingOffset")) j.at("m_AutomaticSizingOffset").get_to(m_AutomaticSizingOffset);
+				if (j.contains("m_FixedSize")) j.at("m_FixedSize").get_to(m_FixedSize);
+
+				if (j.contains("m_AutomaticPositioning")) j.at("m_AutomaticPositioning").get_to(m_AutomaticPositioning);
+				if (j.contains("m_AutomaticPositionOffset")) j.at("m_AutomaticPositionOffset").get_to(m_AutomaticPositionOffset);
+				if (j.contains("m_HorizontalAlignment")) j.at("m_HorizontalAlignment").get_to(m_HorizontalAlignment);
+				if (j.contains("m_VerticalAlignment")) j.at("m_VerticalAlignment").get_to(m_VerticalAlignment);
+			}
+
 
 
 			//uses the PPU and the texture to set the size of the object
@@ -60,9 +120,9 @@ namespace Pyxis
 
 			virtual ~UIRect() = default;
 
-			virtual void InspectorRender() override
+			virtual void OnInspectorRender() override
 			{
-				UINode::InspectorRender();
+				UINode::OnInspectorRender();
 				if (ImGui::TreeNodeEx("Rect", ImGuiTreeNodeFlags_DefaultOpen))
 				{
 					
@@ -182,18 +242,20 @@ namespace Pyxis
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetID(), 1, m_Color);
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetUUID(), 1, m_Color);
 					}
 					else
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetUUID());
 					}
 				}
 				
 			}
 		};
+
+		REGISTER_SERIALIZABLE_NODE(UIRect);
 
 	}
 }

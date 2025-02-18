@@ -2,7 +2,7 @@
 
 #include <vector>
 #include <Pyxis/Renderer/Renderer2D.h>
-#include <Pyxis/Nodes/Node.h>
+#include <Pyxis/Nodes/Node3D.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis
@@ -13,19 +13,20 @@ namespace Pyxis
 		/// <summary>
 		/// A Base UI Node that can act as a root
 		/// </summary>
-		class UINode : public Node
+		class UINode : public Node3D
 		{
 		public:
-			inline static uint32_t s_MousePressedNodeID = 0;
+			inline static UUID s_MousePressedNodeID = 0;
 
-			UINode(const std::string& name = "UINode") : Node(name) {};
+			UINode(const std::string& name = "UINode") : Node3D(name) {};
+			UINode(UUID id) : Node3D(id) {};
 			virtual  ~UINode() = default;
 
 			virtual void OnMousePressed(int mouseButton) {};
 			virtual void OnMouseReleased(int mouseButton, bool continuous) {};
 			//virtual void OnClick() {};
 
-			//virtual void InspectorRender() override {};
+			//virtual void OnInspectorRender() override {};
 			virtual void OnUpdate(Timestep ts) override {};
 			virtual void OnRender() override {};
 
@@ -42,9 +43,18 @@ namespace Pyxis
 				}
 			}
 
+			//Serialization
+			virtual void Serialize(json& j) override
+			{
+				Node3D::Serialize(j);
+				j["Type"] = "UINode";
+			}
+			//virtual void Deserialize(json& j) override;
+
+
 			virtual void UpdateLocalTransform() override
 			{
-				Node::UpdateLocalTransform();
+				Node3D::UpdateLocalTransform();
 				for (auto& child : m_Children)
 				{
 					if (UINode* node = dynamic_cast<UINode*>(child.get()))
@@ -56,6 +66,7 @@ namespace Pyxis
 			}
 			
 		};
+		REGISTER_SERIALIZABLE_NODE(UINode);
 	}
 
 }

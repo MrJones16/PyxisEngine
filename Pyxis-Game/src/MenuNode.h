@@ -25,6 +25,7 @@ namespace Pyxis
 		//reciever functions for buttons & UI
 		void PlaySinglePlayer();
 		void PlayMultiplayer();
+		void PlayLAN();
 		void HostGameP2P();
 		void HostGameIP();
 
@@ -48,11 +49,11 @@ namespace Pyxis
 
 		std::weak_ptr<UI::UIRect> m_PlayerColorDisplay;
 		int m_PlayerColor[4] = {210,210,210,255};
-		char m_PlayerName[64] = "name";
+		std::string m_PlayerName = "name";
 
 		//UI things
 		bool m_InMainMenu = true;
-		char m_InputAddress[22] = "127.0.0.1:21218";
+		std::string m_InputAddress = "127.0.0.1:21218";
 
 	};
 }

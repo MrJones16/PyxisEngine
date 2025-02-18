@@ -1,28 +1,45 @@
-#include "pxpch.h"
 #include "Node.h"
+#include "Node.h"
+#include "Node.h"
+#include "pxpch.h"
 #include "Pyxis/Renderer/Renderer2D.h"
 #include "imgui.h"
 #include "imgui_stdlib.h"
-#define GLM_ENABLE_EXPERIMENTAL
-#include "glm/gtx/matrix_decompose.hpp"
+
+
 
 
 namespace Pyxis
 {
-
-	Node::Node(const std::string& name)
-		: m_ID(++NodeCounter), m_Name(name)
+	Ref<Node> Node::DeserializeNode(json& j)
 	{
-		Node::Nodes[m_ID] = this;
+		if (j.contains("Type"))
+		{
+			UUID ID = j.contains("UUID") ? j["UUID"].get<UUID>() : 0;
+			Ref<Node> newNode = NodeRegistry::getInstance().createInstance(j["Type"], ID);
+			if (newNode != nullptr)
+			{
+				newNode->Deserialize(j);				
+			}
+			return newNode;
+		}
+		return nullptr;
+	}
+	Node::Node(const std::string& name)
+		: m_UUID(GenerateUUID()), m_Name(name)
+	{
+		Node::Nodes[m_UUID] = this;
+	}
+
+	Node::Node(UUID id)
+		: m_UUID(UseExistingUUID(id))
+	{
+		Node::Nodes[m_UUID] = this;
 	}
 
 	Node::~Node()
-	{
-		Nodes[m_ID] = nullptr;//won't actuall remove from the collection since this might happen during iteration
-		for (auto child : m_Children)
-		{
-			child->m_Parent = nullptr;
-		}
+	{				
+		Node::Nodes[m_UUID] = nullptr;
 	}
 
 	/*void Node::OnUpdate(Timestep ts)
@@ -67,6 +84,44 @@ namespace Pyxis
 		}
 	}
 
+	void Node::Serialize(json& j)
+	{
+		j["Type"] = "Node";
+		j["UUID"] = m_UUID;
+		j["m_Name"] = m_Name;
+		//j["m_Parent"] = m_Parent ? m_Parent->m_UUID : (UUID)0;
+		j["m_Enabled"] = m_Enabled;
+
+		for (auto child : m_Children)
+		{
+			json cj;
+			child->Serialize(cj);
+			j["m_Children"] += cj;
+		}
+	}
+
+	void Node::Deserialize(json& j)
+	{
+		if (j.contains("m_Name")) j.at("m_Name").get_to(m_Name);
+		if (j.contains("m_Enabled")) j.at("m_Enabled").get_to(m_Enabled);
+		for (auto jc : j["m_Children"])
+		{
+			if (j.contains("Type"))
+			{
+				std::string type = jc["Type"];
+				UUID ID = jc.contains("UUID") ? jc["UUID"].get<UUID>() : 0;
+				Ref<Node> newNode = NodeRegistry::getInstance().createInstance(type, ID);
+				if (newNode != nullptr)
+				{
+					m_Children.push_back(newNode);
+					newNode->m_Parent = this;
+					newNode->Deserialize(jc);
+				}
+				
+			}			
+		}
+	}
+
 	void Node::OnUpdate(Timestep ts)
 	{
 
@@ -85,128 +140,14 @@ namespace Pyxis
 	/// <summary>
 	/// The base Inspector Render which allows editing of Translation, Rotation, and Scale.
 	/// </summary>
-	void Node::InspectorRender()
+	void Node::OnInspectorRender()
 	{
-		std::string ID = "ID: " + std::to_string(m_ID);
+		std::string ID = "ID: " + std::to_string(m_UUID);
 		ImGui::Text(ID.c_str());
 		ImGui::InputText("##Name", &m_Name);
-		ImGui::Checkbox("Enabled", &m_Enabled);
-		if (ImGui::TreeNodeEx("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			if (ImGui::DragFloat3("Position", glm::value_ptr(m_Position)))
-			{
-				UpdateLocalTransform();
-			}
-			if (ImGui::DragFloat3("Rotation", glm::value_ptr(m_Rotation)))
-			{
-				UpdateLocalTransform();
-			}
-			if (ImGui::DragFloat3("Scale", glm::value_ptr(m_Scale)))
-			{
-				UpdateLocalTransform();
-			}
-			ImGui::TreePop();
-		}
+		ImGui::Checkbox("Enabled", &m_Enabled);		
 	}
 
-	void Node::UpdateLocalTransform()
-	{
-		//PX_TRACE("Updated Transform");
-		m_LocalTransform = glm::translate(glm::mat4(1), m_Position);
-		m_LocalTransform = glm::rotate(m_LocalTransform, glm::radians(m_Rotation.x), {-1, 0, 0});
-		m_LocalTransform = glm::rotate(m_LocalTransform, glm::radians(m_Rotation.y), { 0,-1, 0 });
-		m_LocalTransform = glm::rotate(m_LocalTransform, glm::radians(m_Rotation.z), { 0, 0,-1 });
-		m_LocalTransform = glm::scale(m_LocalTransform, m_Scale);
-	}
-
-	glm::mat4 Node::GetWorldTransform()
-	{
-		if (m_Parent != nullptr)
-		{
-			//TODO: Test if this is the correct order
-			return m_Parent->GetWorldTransform() * m_LocalTransform;
-		}
-		else
-		{
-			return m_LocalTransform;
-		}
-
-	}
-
-	void Node::ResetLocalTransform()
-	{
-		m_Position = glm::vec3(0);
-		m_Scale = glm::vec3(1);
-		m_Rotation = glm::vec3(0);
-		m_LocalTransform = glm::mat4(1);
-	}
-
-	void Node::SetLocalTransform(const glm::mat4& transform)
-	{
-		glm::quat rotation;
-		glm::vec3 skew;
-		glm::vec4 perspective;
-		glm::decompose(transform, m_Scale, rotation, m_Position, skew, perspective);
-
-		m_Rotation = -glm::degrees(glm::eulerAngles(rotation));
-
-		UpdateLocalTransform();
-	}
-
-
-	glm::mat4& Node::GetLocalTransform()
-	{
-		return m_LocalTransform;
-	}
-
-	void Node::Translate(glm::vec3 translation)
-	{
-		m_Position += translation;
-		UpdateLocalTransform();
-	}
-
-	void Node::Rotate(glm::vec3 rotation)
-	{
-		m_Rotation += rotation;
-		UpdateLocalTransform();
-	}
-
-	void Node::SetScale(glm::vec3 scale)
-	{
-		m_Scale = scale;
-		UpdateLocalTransform();
-	}
-
-	void Node::Scale(glm::vec3 scale)
-	{
-		m_Scale *= scale;
-		UpdateLocalTransform();
-	}
-
-
-	//NodeWithSprite::NodeWithSprite(const std::string& name) : Node(name)
-	//{
-	//	//Node::Node(name);
-	//	m_Name = name;
-	//	m_Transform = glm::mat4(1);
-	//	m_Texture = nullptr;
-	//}
-	//NodeWithSprite::NodeWithSprite(Ref<Texture2D> texture, const std::string& name)
-	//{
-	//	m_Transform = glm::mat4(1);
-	//	m_Texture = texture;
-	//}
-	//void NodeWithSprite::OnUpdate(Timestep ts)
-	//{
-	//	Node::OnUpdate(ts);
-	//	if (m_Texture)
-	//	{
-	//		Renderer2D::DrawQuad(m_Transform, m_Texture);
-	//	}
-	//	else
-	//	{
-	//		Renderer2D::DrawQuad(m_Transform, { 1,1,1,1 });
-	//	}
-	//}
+	
 
 }

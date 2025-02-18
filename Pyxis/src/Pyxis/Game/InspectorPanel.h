@@ -24,7 +24,7 @@ namespace Pyxis
 				Ref<Node> node = m_Hierarchy->GetSelectedNode();
 				if (node != nullptr)
 				{
-					node->InspectorRender();
+					node->OnInspectorRender();
 				}
 			}
 			ImGui::End();

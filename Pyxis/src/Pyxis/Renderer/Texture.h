@@ -89,7 +89,6 @@ namespace Pyxis
 		{
 			m_Texture = Texture2D::Create(filePath);
 		}
-
 		Ref<Texture2D> m_Texture;
 	};
 

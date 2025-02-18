@@ -17,6 +17,8 @@ namespace Pyxis
         }
         virtual ~Resource() = default;
 
+        std::string& GetPath() { return m_FilePath; };
+
     private:
         std::string m_FilePath = "";
         friend class ResourceSystem;

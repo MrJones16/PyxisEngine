@@ -6,8 +6,10 @@
 
 //all box2d things
 #include <box2d/b2_world.h>
-#include "PixelRigidBody.h"
+#include <box2d/b2_fixture.h>
+//#include "PixelRigidBody.h"
 #include <box2d/b2_math.h>
+
 
 //networking game messages / input actions
 #include "PixelNetworking.h"
@@ -43,7 +45,7 @@ namespace Pyxis
 		void DownloadWorld(Network::Message& msg);
 		void GetGameDataInit(Network::Message& msg);
 		void GetGameData(std::vector<Network::Message>& messages);
-		void GetWorldData(Network::Message& msg);
+		//void GetWorldData(Network::Message& msg);
 
 		~World();
 
@@ -69,12 +71,12 @@ namespace Pyxis
 	public:
 		void ResetBox2D();
 		//PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2& size, Element* ElementArray, b2BodyType type = b2_dynamicBody);
-		void PutPixelBodyInWorld(PixelRigidBody& body);
+		//void PutPixelBodyInWorld(PixelRigidBody& body);
 
 	public:
 		//moved to game layer and server respectively
 		//void HandleTickClosure(MergedTickClosure& tc);
-		Player* CreatePlayer(uint64_t playerID, glm::ivec2 position);
+		//Player* CreatePlayer(uint64_t playerID, glm::ivec2 position);
 
 
 		//helper functions
@@ -89,11 +91,6 @@ namespace Pyxis
 		bool StringContainsTag(const std::string& string);
 		std::string TagFromString(const std::string& stringWithTag);
 		std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
-
-
-		b2World* m_Box2DWorld;
-		std::unordered_map<uint64_t, PixelRigidBody*> m_PixelBodyMap;
-		//std::vector<PixelRigidBody*> m_PixelBodies;
 
 		//
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
