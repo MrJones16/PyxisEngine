@@ -76,7 +76,7 @@ namespace Pyxis
 						{
 							std::string filepath = "";
 							j["m_CanvasTextures"][std::to_string(i)].get_to(filepath);
-							m_TextureResource = ResourceSystem::Load<Texture2DResource>(filepath);
+							m_TextureResource = ResourceManager::Load<Texture2DResource>(filepath);
 						}
 					}
 				}
@@ -165,7 +165,7 @@ namespace Pyxis
 					}
 					}
 
-					m_CanvasTextures[i] = ResourceSystem::Load<Texture2DResource>((folderPath + filePrefix + std::to_string(i + 1) + fileSuffix));
+					m_CanvasTextures[i] = ResourceManager::Load<Texture2DResource>((folderPath + filePrefix + std::to_string(i + 1) + fileSuffix));
 					m_CanvasTextures[i]->m_Texture->SetTextureSpecification(canvasSpec);
 					//m_CanvasTextures[i] = Texture2D::Create(folderPath + filePrefix + std::to_string(i + 1) + fileSuffix, canvasSpec);
 

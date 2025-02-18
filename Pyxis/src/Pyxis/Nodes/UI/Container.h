@@ -28,7 +28,39 @@ namespace Pyxis
 				
 			}
 
+			Container(UUID id) : UIRect(id)
+			{
+
+			}
+
 			virtual ~Container() = default;
+
+			//Serialization
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "Container";
+
+
+				j["m_Padding"] = m_Padding;
+				j["m_Gap"] = m_Gap;
+				j["m_ShowRegion"] = m_ShowRegion;
+				j["m_HorizontalAlignment"] = m_HorizontalAlignment;
+				j["m_VerticalAlignment"] = m_VerticalAlignment;
+				j["m_Direction"] = m_Direction;
+			}
+			
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+
+				m_Padding = j["m_Padding"];
+				m_Gap = j["m_Gap"];
+				m_ShowRegion = j["m_ShowRegion"];
+				m_HorizontalAlignment = j["m_HorizontalAlignment"];
+				m_VerticalAlignment = j["m_VerticalAlignment"];
+				m_Direction = j["m_Direction"];
+			}
 
 			virtual void AddChild(const Ref<Node>& child) override
 			{
@@ -346,6 +378,7 @@ namespace Pyxis
 				}
 			}
 		};
+		REGISTER_SERIALIZABLE_NODE(Container);
 
 	}
 }

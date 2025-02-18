@@ -8,7 +8,8 @@ namespace Pyxis
 	//	std::cout << "ERROR::FREETYPE: Could not init FreeType Library" << std::endl;
 	//	return -1;
 	//}
-	Font::Font(std::string name, std::string pathToFont)
+	Font::Font(std::string filePath)
+		: Resource(filePath)
 	{
 		//initialize freetype
 		FT_Library FTLib;
@@ -20,7 +21,7 @@ namespace Pyxis
 
 		//create a freetype face
 		FT_Face face;
-		if (FT_New_Face(FTLib, pathToFont.c_str(), 0, &face))
+		if (FT_New_Face(FTLib, filePath.c_str(), 0, &face))
 		{
 			PX_CORE_ERROR("FREETYPE: Failed to load font");
 		}
@@ -50,32 +51,6 @@ namespace Pyxis
 		FT_Done_Face(face);
 		FT_Done_FreeType(FTLib);
 
-	}
-
-	std::map<std::string, Ref<Font>> FontLibrary::s_FontMap;
-
-	Ref<Font> FontLibrary::AddFont(std::string name, std::string pathToFont)
-	{
-		if (s_FontMap.contains(name))
-		{
-			PX_CORE_WARN("Font {0} is already in the library!", name);
-			return s_FontMap[name];
-		}
-
-		//add this font to the map
-		s_FontMap[name] = CreateRef<Font>(name, pathToFont);
-
-		return s_FontMap[name];
-
-	}
-
-	Ref<Font> FontLibrary::GetFont(std::string name)
-	{
-		if (!s_FontMap.contains(name))
-		{
-			return nullptr;
-		}
-		return s_FontMap[name];
 	}
 
 }

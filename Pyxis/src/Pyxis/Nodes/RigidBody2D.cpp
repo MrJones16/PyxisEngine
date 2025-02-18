@@ -13,6 +13,7 @@ namespace Pyxis
 
 	RigidBody2D::RigidBody2D(UUID id) : Node2D(id)
 	{
+		m_B2World = Physics2D::GetWorld();
 		m_HasBody = false;
 	}
 

@@ -1,6 +1,10 @@
 #pragma once
 
 #include <Pyxis.h>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
+
 
 namespace Pyxis
 {
@@ -80,6 +84,25 @@ namespace Pyxis
 		bool m_Rigid = false;
 		//uint32_t m_LifeTime = 0;
 		bool m_Updated = false;
+
+		//Serialization of element
+		friend void to_json(json& j, const Element& e)
+		{
+			j = json{ {"ID", e.m_ID}, {"Color", e.m_Color}, {"BaseColor", e.m_BaseColor}, {"Ignited", e.m_Ignited}, {"Health", e.m_Health}, {"Temperature", e.m_Temperature}, {"Horizontal", e.m_Horizontal}, {"Sliding", e.m_Sliding}, {"Rigid", e.m_Rigid}, {"Updated", e.m_Updated} };
+		}
+		friend void from_json(const json& j, Element& e)
+		{
+			j.at("ID").get_to(e.m_ID);
+			j.at("Color").get_to(e.m_Color);
+			j.at("BaseColor").get_to(e.m_BaseColor);
+			j.at("Ignited").get_to(e.m_Ignited);
+			j.at("Health").get_to(e.m_Health);
+			j.at("Temperature").get_to(e.m_Temperature);
+			j.at("Horizontal").get_to(e.m_Horizontal);
+			j.at("Sliding").get_to(e.m_Sliding);
+			j.at("Rigid").get_to(e.m_Rigid);
+			j.at("Updated").get_to(e.m_Updated);
+		}
 	};
 
 	/// <summary>

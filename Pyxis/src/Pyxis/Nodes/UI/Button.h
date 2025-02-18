@@ -66,7 +66,7 @@ namespace Pyxis
 				{
 					std::string filepath = "";
 					j.at("m_TextureResourcePressed").get_to(filepath);
-					m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>(filepath);
+					m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>(filepath);
 				}
 			}
 

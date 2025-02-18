@@ -1,4 +1,5 @@
 #pragma once
+#include <forward_list>
 
 namespace Pyxis
 {
@@ -46,9 +47,9 @@ namespace Pyxis
 	template<typename FunctionLayout>
 	class Signal {
 	private:
-		std::forward_list<std::weak_ptr<Callable<FunctionLayout>>> m_Callbacks;
 
 	public:
+		std::forward_list<std::weak_ptr<Callable<FunctionLayout>>> m_Callbacks;
 		// Add a listener to the event
 		void AddReciever(const Reciever<FunctionLayout>& listener) {
 			m_Callbacks.push_front(listener.m_Callable);

@@ -36,9 +36,44 @@ namespace Pyxis
 				EventSignal::s_KeyPressedEventSignal.AddReciever(m_KeyPressedReciever);
 			}
 
+			InputBase(UUID id) : UIRect(id),
+				m_KeyTypedReciever(this, &InputBase::OnKeyTyped),
+				m_KeyPressedReciever(this, &InputBase::OnKeyPressed)
+			{
+				//add our reciever to the key pressed signal
+				EventSignal::s_KeyTypedEventSignal.AddReciever(m_KeyTypedReciever);
+				EventSignal::s_KeyPressedEventSignal.AddReciever(m_KeyPressedReciever);
+			}
+
 			virtual ~InputBase()
 			{
 				
+			}
+
+			//Serialize
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "InputBase";
+
+
+				if (m_TextureResourceSelected != nullptr)
+				{
+					j["m_TextureResourceSelected"] = m_TextureResourceSelected->GetPath();
+				}
+				j["m_DisableRect"] = m_DisableRect;
+			}
+			//Deserialize
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+				if (j.contains("m_TextureResourceSelected"))
+				{
+					std::string filepath = "";
+					j.at("m_TextureResourceSelected").get_to(filepath);
+					m_TextureResourceSelected = ResourceManager::Load<Texture2DResource>(filepath);
+				}
+				if (j.contains("m_DisableRect")) j.at("m_DisableRect").get_to(m_DisableRect);
 			}
 
 			virtual void OnInspectorRender() override
@@ -97,5 +132,6 @@ namespace Pyxis
 			}
 
 		};
+		REGISTER_SERIALIZABLE_NODE(InputBase);
 	}
 }

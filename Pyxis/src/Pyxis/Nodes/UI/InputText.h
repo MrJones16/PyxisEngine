@@ -7,7 +7,15 @@ namespace Pyxis
 	namespace UI
 	{
 
-		//if you give it a pointer to a string, be sure to keep that string in memory while this is alive!
+		
+
+		/// <summary>
+		/// Needs to be serialized separately from children if you want
+		/// to hook up the value's pointer
+		/// 
+		/// if you give it a pointer to a string, be sure to keep that
+		/// string in memory while this is alive
+		/// </summary>
 		class InputText : public InputBase
 		{
 		protected:
@@ -32,7 +40,6 @@ namespace Pyxis
 			UI::Direction m_Alignment = UI::Direction::Left;
 
 
-
 		public:
 			InputText(const std::string& name, Ref<Font> font, std::string* value = nullptr) : InputBase(name),
 				m_Font(font)
@@ -53,9 +60,62 @@ namespace Pyxis
 				}
 			}
 
+			InputText(UUID id) : InputBase(id)
+			{
+				//standard input text settings
+				m_Multiline = false;
+				m_Alignment = Direction::Left;
+				m_RenderRect = true;
+
+				m_Font = ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf");
+				m_Value = new std::string();
+				m_OwnsValue = true;
+				
+			}
+
 			virtual ~InputText()
 			{
 				if (m_OwnsValue) delete m_Value;
+			}
+
+			virtual void SetValue(std::string* s)
+			{
+				if (s == nullptr) return;
+				if (m_OwnsValue) delete m_Value;
+				m_Value = s;
+				m_OwnsValue = false;
+			}
+
+			//Serialize
+			virtual void Serialize(json& j) override
+			{
+				InputBase::Serialize(j);
+				j["Type"] = "InputText";
+
+				//Add new member variables
+				j["m_TextColor"] = m_TextColor;
+				j["m_TextBorderSize"] = m_TextBorderSize;
+				j["m_Font"] = m_Font->GetPath();
+				j["m_FontSize"] = m_FontSize;
+				j["m_RenderRect"] = m_RenderRect;
+				j["m_Multiline"] = m_Multiline;
+				j["m_ScaleToFit"] = m_ScaleToFit;
+				j["m_Alignment"] = m_Alignment;
+			}
+			//Deserialize
+			virtual void Deserialize(json& j) override
+			{
+				InputBase::Deserialize(j);
+
+				//Extract new member variables
+				if (j.contains("m_TextColor")) j.at("m_TextColor").get_to(m_TextColor);
+				if (j.contains("m_TextBorderSize")) j.at("m_TextBorderSize").get_to(m_TextBorderSize);
+				if (j.contains("m_Font")) m_Font = ResourceManager::Load<Font>(j.at("m_Font").get<std::string>());
+				if (j.contains("m_FontSize")) j.at("m_FontSize").get_to(m_FontSize);
+				if (j.contains("m_RenderRect")) j.at("m_RenderRect").get_to(m_RenderRect);
+				if (j.contains("m_Multiline")) j.at("m_Multiline").get_to(m_Multiline);
+				if (j.contains("m_ScaleToFit")) j.at("m_ScaleToFit").get_to(m_ScaleToFit);
+				if (j.contains("m_Alignment")) j.at("m_Alignment").get_to(m_Alignment);
 			}
 
 			virtual void OnInspectorRender() override
@@ -139,5 +199,6 @@ namespace Pyxis
 			}
 
 		};
+		REGISTER_SERIALIZABLE_NODE(InputText);
 	}
 }

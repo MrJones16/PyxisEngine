@@ -27,7 +27,7 @@ namespace Pyxis
 		//Position Functions
 		virtual const glm::vec3& GetPosition() const = 0;
 		virtual const glm::vec3& GetRotation() const = 0;
-		virtual const glm::mat4& GetRotationMatrix() const = 0;
+		virtual const glm::mat3 GetRotationMatrix() const = 0;
 
 		//Camera Settings Functions
 		virtual const float GetFOV() const { return m_FOV; }
@@ -117,7 +117,7 @@ namespace Pyxis
 		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
 		virtual const glm::mat4& GetViewMatrix() const override { return m_ViewMatrix; }
 		virtual const glm::mat4& GetViewProjectionMatrix() const override { return m_ViewProjectionMatrix; }
-		virtual const glm::mat4& GetRotationMatrix() const override { return m_RotationMatrix; }
+		virtual const glm::mat3 GetRotationMatrix() const override { return m_RotationMatrix; }
 
 	private:
 		void RecalculateProjectionMatrix() override;
@@ -151,7 +151,7 @@ namespace Pyxis
 		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }
 		virtual const glm::mat4& GetViewMatrix() const override  { return m_ViewMatrix; }
 		virtual const glm::mat4& GetViewProjectionMatrix() const override  { return m_ViewProjectionMatrix; }
-		virtual const glm::mat4& GetRotationMatrix() const override { return m_RotationMatrix; }
+		virtual const glm::mat3 GetRotationMatrix() const override { return m_RotationMatrix; }
 
 
 	private:

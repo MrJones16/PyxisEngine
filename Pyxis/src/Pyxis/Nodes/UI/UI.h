@@ -12,22 +12,3 @@
 #include "InputText.h"
 #include "InputInt.h"
 #include "InputFloat.h"
-
-//Need To Finish:
-// Container
-// HorizontalContainger
-// InputBase?
-// InputFloat
-// InputInt
-// InputText
-// ScreenSpace
-// Text
-// TextButton
-//
-
-//Finished:
-// UINode
-// UIRect
-// Button
-// Canvas
-//

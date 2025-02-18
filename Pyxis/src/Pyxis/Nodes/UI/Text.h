@@ -17,7 +17,7 @@ namespace Pyxis
 			glm::vec4 m_TextColor = glm::vec4(0,0,0,1);
 			glm::vec2 m_TextBorderSize = glm::vec2(0, 0);
 			float m_FontSize = 20;
-			Ref<Font> m_Font;
+			Ref<Font> m_Font = nullptr;
 			bool m_RenderRect = false;
 			bool m_MultiLine = true;
 			/// <summary>
@@ -42,7 +42,51 @@ namespace Pyxis
 				
 			}
 
+			Text(UUID id) : UIRect(id)
+			{
+				
+			}
+
 			virtual ~Text() = default;
+
+			//Override the Serialize and Deserialize functions
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "Text";
+				j["m_Text"] = m_Text;
+				j["m_TextColor"] = m_TextColor;
+				j["m_TextBorderSize"] = m_TextBorderSize;
+				j["m_FontSize"] = m_FontSize;
+				j["m_Font"] = m_Font->GetPath();
+				j["m_RenderRect"] = m_RenderRect;
+				j["m_MultiLine"] = m_MultiLine;
+				j["m_ScaleToFit"] = m_ScaleToFit;
+				j["m_Alignment"] = m_Alignment;
+				j["m_SelectParentID"] = m_SelectParentID;
+				j["m_TextAlignment"] = m_TextAlignment;
+			}
+
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+				if (j.contains("m_Text")) j.at("m_Text").get_to(m_Text);
+				if (j.contains("m_TextColor")) j.at("m_TextColor").get_to(m_TextColor);
+				if (j.contains("m_TextBorderSize")) j.at("m_TextBorderSize").get_to(m_TextBorderSize);
+				if (j.contains("m_FontSize")) j.at("m_FontSize").get_to(m_FontSize);
+				if (j.contains("m_Font"))
+				{
+					std::string filepath = "";
+					j.at("m_Font").get_to(filepath);
+					m_Font = ResourceManager::Load<Font>(filepath);
+				}
+				if (j.contains("m_RenderRect")) j.at("m_RenderRect").get_to(m_RenderRect);
+				if (j.contains("m_MultiLine")) j.at("m_MultiLine").get_to(m_MultiLine);
+				if (j.contains("m_ScaleToFit")) j.at("m_ScaleToFit").get_to(m_ScaleToFit);
+				if (j.contains("m_Alignment")) j.at("m_Alignment").get_to(m_Alignment);
+				if (j.contains("m_SelectParentID")) j.at("m_SelectParentID").get_to(m_SelectParentID);
+				if (j.contains("m_TextAlignment")) j.at("m_TextAlignment").get_to(m_TextAlignment);
+			}
 
 			virtual void OnInspectorRender() override
 			{

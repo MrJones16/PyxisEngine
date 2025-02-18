@@ -10,12 +10,10 @@
 
 namespace Pyxis
 {
-	class Font
+	class Font : public Resource
 	{
 	public:
-		Font(std::string name, std::string pathToFont);
-
-		std::string m_FontName = "font";
+		Font(std::string filePath);
 
 		unsigned int m_CharacterHeight = 16;
 
@@ -30,17 +28,5 @@ namespace Pyxis
 		Ref<Texture2D> m_BitMap;
 
 	};
-
-	class FontLibrary
-	{
-		static FT_Library s_FTLibrary;
-		static std::map<std::string, Ref<Font>> s_FontMap;
-
-	public:
-		
-		static Ref<Font> AddFont(std::string name, std::string pathToFont);
-		static Ref<Font> GetFont(std::string name);
-	};
-
 	
 }

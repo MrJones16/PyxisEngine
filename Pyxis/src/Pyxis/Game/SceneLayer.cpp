@@ -12,8 +12,7 @@ namespace Pyxis
 	SceneLayer::SceneLayer(bool debug) :
 		m_Debug(debug)
 	{
-		//EventSignal::s_WindowResizeEventSignal.AddReciever(m_ResizeEventReciever);
-		FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
+
 	}
 
 	SceneLayer::~SceneLayer()
@@ -146,7 +145,7 @@ namespace Pyxis
 		PX_TRACE("Mouse Pos: ({0},{1})", x, y);
 		PX_TRACE("World Pos: ({0},{1})", worldPos.x, worldPos.y);
 
-		Renderer2D::DrawText("Hello!", glm::mat4(1), FontLibrary::GetFont("Aseprite"));*/
+		Renderer2D::DrawText("Hello!", glm::mat4(1), ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));*/
 
 
 

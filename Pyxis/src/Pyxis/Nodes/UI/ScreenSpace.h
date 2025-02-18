@@ -32,9 +32,28 @@ namespace Pyxis
 				SetScale((glm::vec3(1) / glm::vec3(window.GetWidth() / 2.0f, window.GetHeight() / 2.0f, 1)));
 			}
 
+			ScreenSpace(UUID id) : UIRect(id),
+				m_WindowResizeReciever(this, &ScreenSpace::OnWindowResizeEvent)
+			{
+				EventSignal::s_WindowResizeEventSignal.AddReciever(m_WindowResizeReciever);
+				auto& window = Application::Get().GetWindow();
+				m_Size = { window.GetWidth(), window.GetHeight() };
+				m_Position = { 0,0,-0.5f };
+				SetScale((glm::vec3(1) / glm::vec3(window.GetWidth() / 2.0f, window.GetHeight() / 2.0f, 1)));
+			}
+
 			virtual void OnRender() override
 			{
 
+			}
+
+			//Serialize is the same as UIRect
+			 
+			//Deserialze
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+				PropagateUpdate();
 			}
 
 			void OnWindowResizeEvent(WindowResizeEvent& e)
@@ -58,5 +77,6 @@ namespace Pyxis
 
 
 		};
+		REGISTER_SERIALIZABLE_NODE(ScreenSpace);
 	}
 }

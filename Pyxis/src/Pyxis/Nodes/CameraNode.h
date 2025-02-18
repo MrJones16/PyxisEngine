@@ -32,7 +32,7 @@ namespace Pyxis
 		virtual void RecalculateViewMatrix() override;
 		inline virtual const glm::vec3& GetPosition() const override { return m_Position; };
 		inline virtual const glm::vec3& GetRotation() const override { return m_Rotation; };
-		virtual const glm::mat4& GetRotationMatrix() const override;
+		virtual const glm::mat3 GetRotationMatrix() const override;
 
 	};
 	

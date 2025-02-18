@@ -14,7 +14,11 @@ find_package(imgui CONFIG REQUIRED)
 find_package(poly2tri CONFIG REQUIRED)
 find_package(Snappy CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+
+set(FPHSA_NAME_MISMATCHED ON)
 find_package(stb REQUIRED)
+set(FPHSA_NAME_MISMATCHED OFF)
+
 find_package(tinyxml2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(freetype CONFIG REQUIRED)

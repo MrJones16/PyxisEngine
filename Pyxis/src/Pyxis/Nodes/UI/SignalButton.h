@@ -19,7 +19,7 @@ namespace Pyxis
 
 		public:
 
-			Ref<Texture2D> m_TexturePressed = nullptr;
+			Ref<Texture2DResource> m_TexturePressedResource = nullptr;
 			//overriding default color so easier to see
 			/*glm::vec4 m_Color = glm::vec4(0.1f, 0.8f, 0.2f, 1);
 			glm::vec2 m_Size = glm::vec2(1, 0.5f);*/
@@ -29,7 +29,7 @@ namespace Pyxis
 
 			}
 
-			SignalButton(Ref<Texture2D> texture, const std::string& name = "SignalButton") : UIRect(texture, name)
+			SignalButton(Ref<Texture2DResource> texture, const std::string& name = "SignalButton") : UIRect(texture, name)
 			{
 
 			}
@@ -39,12 +39,37 @@ namespace Pyxis
 
 			}
 
+			SignalButton(UUID id) : UIRect(id)
+			{
+
+			}
+
+			virtual ~SignalButton() = default;
+
 			void AddReciever(const Reciever<void()>& reciever)
 			{
 				m_Signal.AddReciever(reciever);
 			}
 
-			virtual ~SignalButton() = default;
+			//Serialize
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "SignalButton";
+
+				//Add new member variables
+				if (m_TexturePressedResource != nullptr)
+					j["m_TexturePressedResource"] = m_TexturePressedResource->GetPath();
+			}
+
+			//Deserialize
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+				//Extract new member variables
+				if (j.contains("m_TexturePressedResource")) m_TexturePressedResource = 
+					ResourceManager::Load<Texture2DResource>(j.at("m_TexturePressedResource").get<std::string>());
+			}
 
 			virtual void OnInspectorRender() override
 			{
@@ -85,20 +110,20 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					if (m_Texture != nullptr)
+					if (m_TextureResource != nullptr)
 					{
 						//we have a texture, so display it!
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 
 						//TODO: Test ordering
 
-						if (m_TexturePressed != nullptr && m_Pressed)
+						if (m_TexturePressedResource != nullptr && m_Pressed)
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TexturePressed, GetID());
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TexturePressedResource->m_Texture, GetUUID());
 						}
 						else
 						{
-							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Texture, GetID());
+							Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_TextureResource->m_Texture, GetUUID());
 						}
 						
 						
@@ -107,12 +132,13 @@ namespace Pyxis
 					{
 						//just draw the color as the square
 						glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
-						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetID());
+						Renderer2D::DrawQuadEntity(GetWorldTransform() * sizeMat, m_Color, GetUUID());
 					}
 				}
 				
 			}
 		};
+		REGISTER_SERIALIZABLE_NODE(SignalButton);
 
 	}
 }

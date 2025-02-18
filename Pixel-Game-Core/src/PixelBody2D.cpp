@@ -1,4 +1,5 @@
 #include "PixelBody2D.h"
+#include <Pyxis/Game/Physics2D.h>
 
 namespace Pyxis
 {
@@ -36,6 +37,52 @@ namespace Pyxis
 
 
 		GeneratePixelBody(CreatedFromSplit);
+	}
+
+	PixelBody2D::PixelBody2D(UUID id) : RigidBody2D(id)
+	{
+
+	}
+
+	void PixelBody2D::Serialize(json& j)
+	{
+		RigidBody2D::Serialize(j);
+		j["Type"] = "PixelBody2D";
+
+
+		j["m_InWorld"] = m_InWorld;
+		j["m_Width"] = m_Width;
+		j["m_Height"] = m_Height;
+		for (auto& [key, value] : m_Elements)
+		{
+			j["m_Elements"] += {{"Key", key}, { "Value", value } };
+		}
+		j["m_DebugDisplay"] = m_DebugDisplay;
+	}
+
+	void PixelBody2D::Deserialize(json& j)
+	{
+		RigidBody2D::Deserialize(j);
+
+		//Extract new member variables
+		if (j.contains("m_InWorld")) j.at("m_InWorld").get_to(m_InWorld);
+		if (j.contains("m_Width")) j.at("m_Width").get_to(m_Width);
+		if (j.contains("m_Height")) j.at("m_Height").get_to(m_Height);
+		if (j.contains("m_Elements"))
+		{
+			for (auto& element : j.at("m_Elements"))
+			{
+				glm::ivec2 key;
+				PixelBodyElement value;
+				element.at("Key").get_to(key);
+				element.at("Value").get_to(value);
+				m_Elements[key] = value;
+			}
+		}
+		if (j.contains("m_DebugDisplay")) j.at("m_DebugDisplay").get_to(m_DebugDisplay);
+
+		if (!m_HasBody) CreateBody(Physics2D::GetWorld());
+		GeneratePixelBody(true);
 	}
 
 	void PixelBody2D::OnPhysicsUpdate()
@@ -276,7 +323,7 @@ namespace Pyxis
 		}
 	}
 
-	void PixelBody2D::GeneratePixelBody(bool CreatedFromSplit)
+	void PixelBody2D::GeneratePixelBody(bool SkipCalculations)
 	{
 
 		//step 1 make sure we aren't completely erased!
@@ -287,7 +334,7 @@ namespace Pyxis
 
 		//if we weren't created from a split, we need to check if we have been split or are not 
 		//contiguous to begin with
-		if (!CreatedFromSplit)
+		if (!SkipCalculations)
 		{
 			b2Vec2 linearVelocity = m_B2Body->GetLinearVelocity();
 			float angularVelocity = m_B2Body->GetAngularVelocity();

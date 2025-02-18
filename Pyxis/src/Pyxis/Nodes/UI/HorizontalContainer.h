@@ -25,7 +25,34 @@ namespace Pyxis
 				
 			}
 
+			HorizontalContainer(UUID id) : UIRect(id)
+			{
+
+			}
+
 			virtual ~HorizontalContainer() = default;
+
+			// Serialization
+			virtual void Serialize(json& j) override
+			{
+				UIRect::Serialize(j);
+				j["Type"] = "HorizontalContainer";
+
+				j["m_Padding"] = m_Padding;
+				j["m_Gap"] = m_Gap;
+				j["m_ShowRegion"] = m_ShowRegion;
+				j["m_Arrangement"] = (int)m_Arrangement;
+			}
+			virtual void Deserialize(json& j) override
+			{
+				UIRect::Deserialize(j);
+
+				if (j.contains("m_Padding")) j.at("m_Padding").get_to(m_Padding);
+				if (j.contains("m_Gap")) j.at("m_Gap").get_to(m_Gap);
+				if (j.contains("m_ShowRegion")) j.at("m_ShowRegion").get_to(m_ShowRegion);
+				if (j.contains("m_Arrangement")) j.at("m_Arrangement").get_to(m_Arrangement);
+			}
+
 
 			virtual void AddChild(const Ref<Node>& child) override
 			{
@@ -210,6 +237,7 @@ namespace Pyxis
 				}
 			}
 		};
+		REGISTER_SERIALIZABLE_NODE(HorizontalContainer);
 
 	}
 }

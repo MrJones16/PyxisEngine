@@ -41,6 +41,18 @@ namespace Pyxis
 		Element element = Element();
 		bool hidden = false;
 		glm::ivec2 worldPos = { 0,0 };
+
+		//Write to_json and from_json functions
+		friend void to_json(json& j, const PixelBodyElement& pbe)
+		{
+			j = json{ {"Element", pbe.element}, {"Hidden", pbe.hidden}, {"WorldPos", pbe.worldPos} };
+		}
+		friend void from_json(const json& j, PixelBodyElement& pbe)
+		{
+			j.at("Element").get_to(pbe.element);
+			j.at("Hidden").get_to(pbe.hidden);
+			j.at("WorldPos").get_to(pbe.worldPos);
+		}
 	};
 
 	/*struct PixelBodyData
@@ -54,11 +66,12 @@ namespace Pyxis
 	/// <summary>
 	/// A rigid body, but it is tied to elements in the simulation.
 	/// 
+	/// When deserializing, you must set the m_PXWorld afterwards.
 	/// </summary>
 	class PixelBody2D : public RigidBody2D
 	{
 	protected:
-		World* m_PXWorld;
+		World* m_PXWorld = nullptr;
 		bool m_InWorld = true;
 
 		float m_Width = 0;
@@ -84,6 +97,12 @@ namespace Pyxis
 		/// <param name="world"></param>
 		/// <param name="elements"> elements should contain the element, and their pixel position in the world</param>
 		PixelBody2D(const std::string& name, b2BodyType type, World* world, std::vector<PixelBodyElement>& elements, bool CreatedFromSplit = false);
+
+		PixelBody2D(UUID id);
+
+		//Serialize & Deserialize
+		virtual void Serialize(json& j) override;
+		virtual void Deserialize(json& j) override;
 
 		/// <summary>
 		/// Update called by Physics2D steps
@@ -121,7 +140,7 @@ namespace Pyxis
 		/// takes the current map of elements of the pixel body, and creates the b2body 
 		/// fixtures and such based on them
 		/// </summary>
-		void GeneratePixelBody(bool CreatedFromSplit = false);
+		void GeneratePixelBody(bool SkipCalculations = false);
 
 		
 		////////////////////////////////////////////////
@@ -192,5 +211,7 @@ namespace Pyxis
 		std::vector<p2t::Point> SimplifyPoints(const std::vector<p2t::Point>& contourVector, int startIndex, int endIndex, float threshold);
 
 	};
+
+	REGISTER_SERIALIZABLE_NODE(PixelBody2D);
 
 }

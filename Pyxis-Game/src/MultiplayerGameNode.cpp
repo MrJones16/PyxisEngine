@@ -18,7 +18,7 @@ namespace Pyxis
 		m_LSScreenSpace->AddChild(m_LSCanvas);
 
 
-		m_LSText = CreateRef<UI::Text>(FontLibrary::GetFont("Aseprite"));
+		m_LSText = CreateRef<UI::Text>(ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));
 		m_LSText->Translate({ 0,0,-0.01 });
 		m_LSText->m_Text = "Connecting";
 		m_LSText->m_Size = { 128, 32 };
@@ -27,13 +27,13 @@ namespace Pyxis
 		m_LSText->m_MultiLine = false;
 		m_LSCanvas->AddChild(m_LSText);
 
-		m_LSButton = CreateRef<UI::TextButton>("Okay Button", FontLibrary::GetFont("Aseprite"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
+		m_LSButton = CreateRef<UI::TextButton>("Okay Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
 		m_LSButton->m_PPU = 0.5f;
 		m_LSButton->m_Text = "Okay";
 		m_LSButton->m_TextColor = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);;
 		m_LSButton->Translate({ 0,-64,-0.01 });
-		m_LSButton->m_TextureResource = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
-		m_LSButton->m_TextureResourcePressed = ResourceSystem::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
+		m_LSButton->m_TextureResource = ResourceManager::Load<Texture2DResource>("assets/textures/UI/ButtonWide.png");
+		m_LSButton->m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>("assets/textures/UI/ButtonWidePressed.png");
 		m_LSButton->UpdateSizeFromTexture();
 		m_LSButton->m_TextBorderSize = glm::vec2(5, 5);
 		m_LSButton->m_TextOffset = { 0, 3, -0.0001f };

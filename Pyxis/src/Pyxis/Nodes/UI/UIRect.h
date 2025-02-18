@@ -82,12 +82,8 @@ namespace Pyxis
 
 				//Extract new member variables
 				
-				if (j.contains("m_TextureResource"))
-				{
-					std::string filepath = "";
-					j.at("m_TextureResource").get_to(filepath);
-					m_TextureResource = ResourceSystem::Load<Texture2DResource>(filepath);
-				}
+				if (j.contains("m_TextureResource")) m_TextureResource = 
+					ResourceManager::Load<Texture2DResource>(j.at("m_TextureResource").get<std::string>());				
 				if (j.contains("m_Color")) j.at("m_Color").get_to(m_Color);
 				if (j.contains("m_Size")) j.at("m_Size").get_to(m_Size);
 				if (j.contains("m_PPU"))

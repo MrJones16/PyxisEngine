@@ -6,7 +6,10 @@ namespace Pyxis
 {
 	namespace UI
 	{
-
+		/// <summary>
+		/// Similar to how a button must be de-serialized separately from children,
+		/// the input float must as well.
+		/// </summary>
 		class InputFloat : public InputBase
 		{
 		protected:
@@ -40,6 +43,7 @@ namespace Pyxis
 			{
 				if (value == nullptr)
 				{
+					m_OwnsValue = true;
 					m_Value = new float();
 					m_Text = std::to_string(*m_Value);
 				}
@@ -49,6 +53,57 @@ namespace Pyxis
 					m_Text = std::to_string(*m_Value);
 				}
 			}
+
+			InputFloat(UUID id) : InputBase(id)
+			{
+				//defaults
+				m_Value = new float();
+				m_Text = std::to_string(*m_Value);				
+				m_Font = ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf");				
+			}
+
+			void SetValue(float* f)
+			{
+				if (f == nullptr) return;
+				if (m_OwnsValue) delete m_Value;
+				m_Value = f;
+				m_Text = std::to_string(*m_Value);
+				m_OwnsValue = false;
+			}
+
+			//Serialize
+			virtual void Serialize(json& j) override
+			{
+				InputBase::Serialize(j);
+				j["Type"] = "InputFloat";
+
+
+				j["m_MinValue"] = m_MinValue;
+				j["m_MaxValue"] = m_MaxValue;
+				j["m_TextColor"] = m_TextColor;
+				j["m_TextBorderSize"] = m_TextBorderSize;
+				j["m_FontSize"] = m_FontSize;
+				j["m_Font"] = m_Font->GetPath();
+				j["m_Multiline"] = m_Multiline;
+				j["m_ScaleToFit"] = m_ScaleToFit;
+				j["m_Alignment"] = (int)m_Alignment;
+			}
+			//Deserialize
+			virtual void Deserialize(json& j) override
+			{
+				InputBase::Deserialize(j);
+
+				if (j.contains("m_MinValue")) j.at("m_MinValue").get_to(m_MinValue);
+				if (j.contains("m_MaxValue")) j.at("m_MaxValue").get_to(m_MaxValue);
+				if (j.contains("m_TextColor")) j.at("m_TextColor").get_to(m_TextColor);
+				if (j.contains("m_TextBorderSize")) j.at("m_TextBorderSize").get_to(m_TextBorderSize);
+				if (j.contains("m_FontSize")) j.at("m_FontSize").get_to(m_FontSize);
+				if (j.contains("m_Font")) m_Font = ResourceManager::Load<Font>(j.at("m_Font").get<std::string>());
+				if (j.contains("m_Multiline")) j.at("m_Multiline").get_to(m_Multiline);
+				if (j.contains("m_ScaleToFit")) j.at("m_ScaleToFit").get_to(m_ScaleToFit);
+				if (j.contains("m_Alignment")) j.at("m_Alignment").get_to(m_Alignment);
+			}
+
 
 			~InputFloat()
 			{
@@ -149,5 +204,6 @@ namespace Pyxis
 			}
 
 		};
+		REGISTER_SERIALIZABLE_NODE(InputFloat);
 	}
 }

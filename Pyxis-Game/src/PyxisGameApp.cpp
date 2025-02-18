@@ -111,9 +111,6 @@ namespace Pyxis
 			auto scene = CreateRef<SceneLayer>(true);//Set True for Debug!
 			PushOverlay(scene);
 
-
-			FontLibrary::AddFont("Aseprite", "assets/fonts/Aseprite.ttf");
-
 			//create game nodes
 
 			scene->m_RootNode.AddChild(CreateRef<MenuNode>());

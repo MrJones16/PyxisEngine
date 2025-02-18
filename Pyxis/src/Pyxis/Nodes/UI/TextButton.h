@@ -27,14 +27,51 @@ namespace Pyxis
 		public:
 
 			TextButton(const std::string& name = "TextButton", Ref<Font> font = nullptr, const std::function<void()>& function = nullptr) :
-				Button(name, function),
-				m_Font(font)
+				Button(name, function), m_Font(font)
 			{
 
 			}
-			
+
+			TextButton(UUID id) : Button(id)
+			{
+				m_Font = ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf");
+			}			
 
 			virtual ~TextButton() = default;
+
+			//Serialize
+			virtual void Serialize(json& j) override
+			{
+				Button::Serialize(j);
+				j["Type"] = "TextButton";
+
+				//Add new member variables
+				if (m_Font != nullptr) 
+					j["m_Font"] = m_Font->GetPath();
+				j["m_Text"] = m_Text;
+				j["m_FontSize"] = m_FontSize;
+				j["m_TextColor"] = m_TextColor;
+				j["m_ScaleText"] = m_ScaleText;
+				j["m_TextBorderSize"] = m_TextBorderSize;
+				j["m_TextOffset"] = m_TextOffset;
+				j["m_TextOffsetPressed"] = m_TextOffsetPressed;
+			}
+
+			//Deserialize
+			virtual void Deserialize(json& j) override
+			{
+				Button::Deserialize(j);
+
+				if (j.contains("m_Font")) m_Font = ResourceManager::Load<Font>(j.at("m_Font").get<std::string>());
+				if (j.contains("m_Text")) j.at("m_Text").get_to(m_Text);
+				if (j.contains("m_FontSize")) j.at("m_FontSize").get_to(m_FontSize);
+				if (j.contains("m_TextColor")) j.at("m_TextColor").get_to(m_TextColor);
+				if (j.contains("m_ScaleText")) j.at("m_ScaleText").get_to(m_ScaleText);
+				if (j.contains("m_TextBorderSize")) j.at("m_TextBorderSize").get_to(m_TextBorderSize);
+				if (j.contains("m_TextOffset")) j.at("m_TextOffset").get_to(m_TextOffset);
+				if (j.contains("m_TextOffsetPressed")) j.at("m_TextOffsetPressed").get_to(m_TextOffsetPressed);
+			}
+
 
 			virtual void OnInspectorRender() override
 			{
@@ -116,6 +153,7 @@ namespace Pyxis
 
 			}
 		};
+		REGISTER_SERIALIZABLE_NODE(TextButton);
 
 	}
 }

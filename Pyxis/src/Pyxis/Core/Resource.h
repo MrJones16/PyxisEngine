@@ -7,6 +7,10 @@
 namespace Pyxis
 {
 	
+    /// <summary>
+    /// A resource is something that is loaded using a filepath, and subsequent calls to
+	/// load the same resource will return the same instance of the resource.
+    /// </summary>
     class Resource {
     public:
         
@@ -21,15 +25,15 @@ namespace Pyxis
 
     private:
         std::string m_FilePath = "";
-        friend class ResourceSystem;
+        friend class ResourceManager;
     };
 
     // Concept to ensure T is derived from Resource
     template<typename T>
     concept ResourceType = std::is_base_of_v<Resource, T>;
 
-    // ResourceSystem class
-    class ResourceSystem {
+    // ResourceManager class
+    class ResourceManager {
     public:
         template<ResourceType T>
         static Ref<T> Load(std::string filePath)
