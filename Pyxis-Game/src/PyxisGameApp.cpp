@@ -112,9 +112,8 @@ namespace Pyxis
 			PushOverlay(scene);
 
 			//create game nodes
-
-			scene->m_RootNode.AddChild(CreateRef<MenuNode>());
-			scene->m_RootNode.AddChild(CreateRef<SteamManagerNode>());
+			Instantiate<MenuNode>();
+			Instantiate<SteamManagerNode>();
 
 		}
 		~PyxisGame()

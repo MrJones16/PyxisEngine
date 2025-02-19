@@ -19,7 +19,7 @@ using json = nlohmann::json;
 namespace { \
     struct T##_Registrar { \
         T##_Registrar() { \
-            NodeRegistry::getInstance().registerType(#T, [](UUID id) -> Ref<Node> { return CreateRef<T>(id); }); \
+            NodeRegistry::getInstance().registerType(#T, [](UUID id) -> Ref<Node> { return Instantiate<T>(id); }); \
         } \
     }; \
     static T##_Registrar global_##T##_registrar; \
@@ -99,6 +99,7 @@ namespace glm {
 namespace Pyxis
 {
 
+
 	using UUID = uint32_t;
 	//Node is the base entity class that lives in a scene heirarchy.
 	//Nodes is a collection of all living nodes
@@ -109,7 +110,7 @@ namespace Pyxis
 	class Node : public std::enable_shared_from_this<Node>
 	{
 	public://static Node things
-		inline static std::unordered_map<UUID, Node*> Nodes;
+		inline static std::unordered_map<UUID, Ref<Node>> Nodes;
 		inline static std::queue<UUID> NodesToDestroyQueue;
 		inline static UUID s_HoveredNodeID = 0;
 		inline static UUID GenerateUUID() {
@@ -151,7 +152,7 @@ namespace Pyxis
 	public:
 		std::string m_Name = "Node";
 		Node* m_Parent = nullptr;
-		std::vector<std::shared_ptr<Node>> m_Children;
+		std::vector<Node*> m_Children;
 
 		bool m_Enabled = true;
 
@@ -163,13 +164,18 @@ namespace Pyxis
 		virtual ~Node();
 
 		/// <summary>
-		/// Tries to remove this object from its parent. However, if this is still referenced by something, it won't be deleted.
-		/// If you hold a shared pointer to a node, it will keep it alive! use weak if needed
+		/// Removes the node from the node map, its parent, and it's children's parent
+		/// 
+		/// Since its removed from the node map, the main shared_ptr reference is lost, 
+		/// and the node will be deleted unless there is another one held somewhere.
 		/// </summary>
-		virtual void QueueFree() 
-		{ 
-			Node::NodesToDestroyQueue.push(m_UUID);			
-		}
+		virtual void QueueFree();
+		
+
+		/// <summary>
+		/// Frees this object, and all of it's children.
+		/// </summary>
+		virtual void QueueFreeHierarchy();
 
 		virtual void OnUpdate(Timestep ts);
 		virtual void OnFixedUpdate();
@@ -186,8 +192,33 @@ namespace Pyxis
 		//Serialization
 		virtual void Serialize(json& j);
 		virtual void Deserialize(json& j);
+
+		std::vector<uint8_t> SerializeToMessagePack(const json& j) {
+			return json::to_msgpack(j);
+		}
+
+		std::vector<uint8_t> SerializeToCBOR(const json& j) {
+			return json::to_cbor(j);
+		}
+
+		std::vector<uint8_t> SerializeToUBJSON(const json& j) {
+			return json::to_ubjson(j);
+		}
+
+		//Compressed Binary Serialization
+		std::vector<uint8_t> SerializeBinary();
+
+		void DeserializeBinary(std::vector<uint8_t> msgpack);
 	
 	};
+
+	template<typename T, typename ... Args>
+	constexpr Ref<T> Instantiate(Args&& ... args)
+	{
+		Ref<T> result = CreateRef<T>(std::forward<Args>(args)...);
+		Node::Nodes[result->GetUUID()] = result;
+		return result;
+	}
 
 
 	// Factory function type

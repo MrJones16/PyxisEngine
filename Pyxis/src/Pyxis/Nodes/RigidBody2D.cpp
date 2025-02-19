@@ -86,6 +86,7 @@ namespace Pyxis
 		{
 			if (j["m_B2BodyDef"].contains("position")) j["m_B2BodyDef"].at("position").get_to(m_B2BodyDef.position);
 			if (j["m_B2BodyDef"].contains("type")) j["m_B2BodyDef"].at("type").get_to(m_B2BodyDef.type);
+			m_B2BodyDef.userData.pointer = (uintptr_t)this;
 		}
 
 		if (j.contains("m_B2Body"))

@@ -258,8 +258,7 @@ namespace Pyxis
 	{
 		ServerInterface::Stop();
 		
-		auto menu = CreateRef<MenuNode>();
-		m_Parent->AddChild(menu);
+		auto menu = Instantiate<MenuNode>();
 		QueueFree();
 	}
 

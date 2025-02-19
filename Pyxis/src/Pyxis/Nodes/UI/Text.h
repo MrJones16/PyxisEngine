@@ -122,7 +122,7 @@ namespace Pyxis
 			{
 				if (m_Enabled)
 				{
-					uint32_t nodeID = (m_Parent && m_SelectParentID) ? m_Parent->GetUUID() : GetUUID();
+					UUID nodeID = (m_Parent != nullptr && m_SelectParentID) ? m_Parent->GetUUID() : GetUUID();
 
 					glm::mat4 sizeMat = glm::scale(glm::mat4(1.0f), { m_Size.x, m_Size.y, 1 });
 					if (m_RenderRect)

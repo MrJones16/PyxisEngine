@@ -177,7 +177,7 @@ namespace Pyxis
 
 			void AutoRect()
 			{
-				if (auto parentRect = dynamic_cast<UIRect*>(m_Parent))
+				if (UIRect* parentRect = dynamic_cast<UIRect*>(m_Parent))
 				{
 					if (m_AutomaticSizing)
 					{

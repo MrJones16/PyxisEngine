@@ -42,7 +42,6 @@ namespace Pyxis
 
 	public:
 		//scene
-		Node m_RootNode;
 		std::queue<uint32_t> m_NullNodeQueue;
 		Ref<Camera> m_MainCamera;
 

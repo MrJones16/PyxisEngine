@@ -97,17 +97,21 @@ namespace Pyxis
 			return;
 		}
 
-		ExitWorld();
-
-		UpdateElementPositions();
-
-		if (m_RecreateBody)
+		if (m_HasBody)
 		{
-			GeneratePixelBody();
-			m_RecreateBody = false;
+			ExitWorld();
+
+			UpdateElementPositions();
+
+			if (m_RecreateBody)
+			{
+				GeneratePixelBody();
+				m_RecreateBody = false;
+			}
+
+			EnterWorld();
 		}
 
-		EnterWorld();
 		
 	}
 
@@ -363,7 +367,7 @@ namespace Pyxis
 				}
 				//const std::string& name, b2BodyType type, World* world, std::vector<PixelBodyElement>& elements, bool CreatedFromSplit = false);
 				//auto newPixelBody2D = PixelBody2D(m_Name, GetType(), m_PXWorld, elements, true);
-				auto newPixelBody2D = CreateRef<PixelBody2D>(m_Name, GetType(), m_PXWorld, elements, true);
+				auto newPixelBody2D = Instantiate<PixelBody2D>(m_Name, GetType(), m_PXWorld, elements, true);
 				newPixelBody2D->m_B2Body->SetLinearVelocity(linearVelocity);
 				newPixelBody2D->m_B2Body->SetAngularVelocity(angularVelocity);
 				newPixelBody2D->EnterWorld();
@@ -372,10 +376,7 @@ namespace Pyxis
 				{
 					m_Parent->AddChild(newPixelBody2D);
 				}
-				else
-				{
-					AddChild(newPixelBody2D);
-				}
+				
 
 				areas.pop_back();				
 			}

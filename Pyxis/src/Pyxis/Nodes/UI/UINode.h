@@ -34,8 +34,8 @@ namespace Pyxis
 			virtual void PropagateUpdate()
 			{
 				for (auto& child : m_Children)
-				{
-					if (UINode* node = dynamic_cast<UINode*>(child.get()))
+				{					
+					if (UINode* node = dynamic_cast<UINode*>(child))
 					{
 						//PX_TRACE("Sent Propagation to child");
 						node->PropagateUpdate();
@@ -57,7 +57,7 @@ namespace Pyxis
 				Node3D::UpdateLocalTransform();
 				for (auto& child : m_Children)
 				{
-					if (UINode* node = dynamic_cast<UINode*>(child.get()))
+					if (UINode* node = dynamic_cast<UINode*>(child))
 					{
 						//PX_TRACE("Sent Propagation to child");
 						node->PropagateUpdate();

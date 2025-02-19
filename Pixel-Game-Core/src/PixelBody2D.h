@@ -71,7 +71,6 @@ namespace Pyxis
 	class PixelBody2D : public RigidBody2D
 	{
 	protected:
-		World* m_PXWorld = nullptr;
 		bool m_InWorld = true;
 
 		float m_Width = 0;
@@ -88,6 +87,9 @@ namespace Pyxis
 	public:
 		float WorldToB2 = static_cast<float>(CHUNKSIZE) / PPU;
 		float B2ToWorld = PPU / static_cast<float>(CHUNKSIZE);
+
+
+		World* m_PXWorld = nullptr;
 
 		/// <summary>
 		/// 

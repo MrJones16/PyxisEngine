@@ -569,38 +569,26 @@ namespace Pyxis
 
 	void World::DownloadWorld(Network::Message& msg)
 	{
-		//if ((GameMessage)msg.header.id == GameMessage::Server_GameDataPixelBody)
-		//{
-		//	//lets load the pixel body! just reverse the upload order.
-		//	
-		//	uint64_t uuid;
-		//	glm::ivec2 size;
-		//	int count;
-		//	msg >> uuid >> size >> count;
+		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataPixelBody)
+		{
+			PX_TRACE("Recieved Pixel Body");
+			//lets load the pixel body! just reverse the upload order.
+			std::vector<uint8_t> msgpack;
+			msg >> msgpack;
+			json j = json::from_msgpack(msgpack);
+			auto PixelBodyNode = Node::DeserializeNode(j);
+			if (PixelBodyNode)
+			{
+				
+				///Note to self later: I need to make nodes normal pointers and not shared, and make lifetime managed by scene layer.
 
-		//	std::unordered_map<glm::ivec2, PixelBodyElement, HashVector> elements;
-		//	for (int i = 0; i < count; i++)
-		//	{
-		//		glm::ivec2 localpos;
-		//		PixelBodyElement rbe;
-		//		msg >> localpos >> rbe;
-		//		elements[localpos] = rbe;
-		//	}
-		//	glm::vec2 position;
-		//	float rotation;
-		//	b2BodyType type;
-		//	float angularVelocity;
-		//	b2Vec2 linearVelocity;
-		//	msg >> position >> rotation >> type >> angularVelocity >> linearVelocity;
-		//	PixelRigidBody* body = new PixelRigidBody(uuid, size, elements, type, m_Box2DWorld);
-		//	m_PixelBodyMap[uuid] = body;
-		//	body->SetTransform(position, rotation);
-		//	body->SetAngularVelocity(angularVelocity);
-		//	body->SetLinearVelocity(linearVelocity);
-		//	PX_TRACE("Loaded Pixel Body #{0}", uuid);
-		//	// can safely ignore putting it in the world, since when we got the world
-		//	// data it is already there!
-		//}
+				((PixelBody2D*)(PixelBodyNode.get()))->m_PXWorld = this;
+				//m_PixelBodyMap[body->m_UUID] = body;
+				PX_TRACE("Loaded Pixel Body ##{0}", PixelBodyNode->GetUUID());
+				// can safely ignore putting it in the world, since when we got the world
+				// data it is already there!
+			}
+		}
 		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk)
 		{
 			glm::ivec2 chunkPos;
@@ -630,8 +618,8 @@ namespace Pyxis
 		msg.header.id = static_cast<uint32_t>(GameMessage::Server_GameDataInit);
 		msg << static_cast<uint32_t>(m_Chunks.size());
 		PX_TRACE("# Chunks: {0}", m_Chunks.size());
-		//msg << static_cast<uint32_t>(m_PixelBodyMap.size());
-		//PX_TRACE("# PixelBodies: {0}", m_PixelBodyMap.size());
+		msg << static_cast<uint32_t>(Physics2D::GetWorld()->GetBodyCount());
+		PX_TRACE("# PixelBodies: {0}", Physics2D::GetWorld()->GetBodyCount());
 		msg << m_SimulationTick;
 		msg << m_UpdateBit;
 		msg << m_WorldSeed;
@@ -663,6 +651,20 @@ namespace Pyxis
 
 		//	messages.back() << elementCount << size << pair.first;
 		//}
+		b2Body* body = Physics2D::GetWorld()->GetBodyList();
+		while (body != nullptr)
+		{
+			RigidBody2D* rb = (RigidBody2D*)body->GetUserData().pointer;
+			if (rb)
+			{
+				PX_TRACE("Packing RigidBody2D {0}", rb->GetUUID());
+				messages.emplace_back();
+				messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
+				messages.back() << rb->SerializeBinary();
+			}
+			body = body->GetNext();
+		}
+
 
 		//now we create a separate message for each chunk 
 		for (auto& pair : m_Chunks)

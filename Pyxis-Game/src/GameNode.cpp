@@ -8,6 +8,7 @@
 #include "MenuNode.h"
 #include "PixelBody2D.h"
 #include <Pyxis/Game/Physics2D.h>
+#include <snappy.h>
 
 namespace Pyxis
 {
@@ -25,16 +26,16 @@ namespace Pyxis
 		//Set up the UI Heirarchy since we have no scenes
 
 		//I'm going to aim for a bottom hot bar for now.
-		m_CameraController = CreateRef<OrthographicCameraControllerNode>();
+		m_CameraController = Instantiate<OrthographicCameraControllerNode>();
 		m_CameraController->SetMainCamera();
 		m_CameraController->SetWidth(2);
 		m_CameraController->Translate({ 0,1,0 });
 		AddChild(m_CameraController);
 
-		auto screenSpace = CreateRef<UI::ScreenSpace>();
+		auto screenSpace = Instantiate<UI::ScreenSpace>();
 		AddChild(screenSpace);
 
-		m_Hotbar = CreateRef<UI::Canvas>();
+		m_Hotbar = Instantiate<UI::Canvas>();
 		m_Hotbar->m_AutomaticSizing = true;
 		m_Hotbar->m_AutomaticSizingPercent = { 1, 1 };//10 % height
 		m_Hotbar->m_FixedSize.y = 112;
@@ -46,7 +47,7 @@ namespace Pyxis
 		screenSpace->AddChild(m_Hotbar);
 
 
-		auto container = CreateRef<UI::Container>();
+		auto container = Instantiate<UI::Container>();
 		container->m_AutomaticSizing = true;
 		container->m_AutomaticSizingPercent = { 1,1 };
 		container->m_AutomaticSizingOffset = { -32, -32 };
@@ -56,16 +57,16 @@ namespace Pyxis
 		m_Hotbar->AddChild(container);
 
 		///Pause & Play Buttons
-		auto ButtonHolder = CreateRef<UI::UIRect>("Button Holder");
+		auto ButtonHolder = Instantiate<UI::UIRect>("Button Holder");
 		ButtonHolder->m_Enabled = false;
 		ButtonHolder->m_Size = { 32, 32 };
-		m_PlayButton = CreateRef<UI::Button>("Play Button", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/PlayButton.png"));
+		m_PlayButton = Instantiate<UI::Button>("Play Button", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/PlayButton.png"));
 		m_PlayButton->SetFunction(std::bind(&GameNode::PlayButtonFunc, this));
 		m_PlayButton->m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>("assets/Textures/UI/PlayButtonPressed.png");
 		m_PlayButton->m_Size = { 32,32 };
 		m_PlayButton->m_Enabled = false;
 		ButtonHolder->AddChild(m_PlayButton);
-		m_PauseButton = CreateRef<UI::Button>("Pause Button", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/PauseButton.png"));
+		m_PauseButton = Instantiate<UI::Button>("Pause Button", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/PauseButton.png"));
 		m_PauseButton->SetFunction(std::bind(&GameNode::PauseButtonFunc, this));
 		m_PauseButton->m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>("assets/Textures/UI/PauseButtonPressed.png");
 		m_PauseButton->m_Size = { 32,32 };
@@ -73,17 +74,17 @@ namespace Pyxis
 		container->AddChild(ButtonHolder);
 
 		//Brush Buttons
-		auto BrushOptions = CreateRef<UI::UIRect>("Button Holder");
+		auto BrushOptions = Instantiate<UI::UIRect>("Button Holder");
 		BrushOptions->m_Enabled = false;
 		BrushOptions->m_Size = { 72, 32 };
-		auto brushCircle = CreateRef<UI::Button>("BrushCircle", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButton.png"));
+		auto brushCircle = Instantiate<UI::Button>("BrushCircle", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButton.png"));
 		brushCircle->SetFunction(std::bind(&GameNode::SetBrushType, this, BrushType::circle));
 		brushCircle->m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>("assets/Textures/UI/BrushCircleButtonPressed.png");
 		brushCircle->m_Size = { 32,32 };
 		brushCircle->Translate({ -20, 0, 0 });
 		BrushOptions->AddChild(brushCircle);
 
-		auto brushSquare = CreateRef<UI::Button>("BrushSquare", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButton.png"));
+		auto brushSquare = Instantiate<UI::Button>("BrushSquare", ResourceManager::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButton.png"));
 		brushSquare->SetFunction(std::bind(&GameNode::SetBrushType, this, BrushType::square));
 		brushSquare->m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>("assets/Textures/UI/BrushSquareButtonPressed.png");
 		brushSquare->m_Size = { 32,32 };
@@ -91,7 +92,7 @@ namespace Pyxis
 		BrushOptions->AddChild(brushSquare);
 		container->AddChild(BrushOptions);		
 
-		auto ElementButtonContainer = CreateRef<UI::Container>("Element Buttons Container");
+		auto ElementButtonContainer = Instantiate<UI::Container>("Element Buttons Container");
 		//ElementButtonContainer->m_Size = {900, 32};
 		ElementButtonContainer->m_AutomaticSizing = true;
 		ElementButtonContainer->m_AutomaticSizingOffset = { -350, 0 };
@@ -106,7 +107,7 @@ namespace Pyxis
 			int b = (ed.color & 0x00FF0000) >> 16;
 			int a = (ed.color & 0xFF000000) >> 24;
 
-			auto ElementTextButton = CreateRef<UI::TextButton>("ElementTextButton", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&GameNode::SetBrushElement, this, i));
+			auto ElementTextButton = Instantiate<UI::TextButton>("ElementTextButton", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&GameNode::SetBrushElement, this, i));
 			ElementTextButton->m_TextureResource = ResourceManager::Load<Texture2DResource>("assets/textures/UI/TextPlateWhite.png");
 			ElementTextButton->m_TextureResourcePressed = ResourceManager::Load<Texture2DResource>("assets/textures/UI/TextPlateWhitePressed.png");
 			ElementTextButton->m_TextBorderSize = glm::vec2(2);
@@ -137,7 +138,7 @@ namespace Pyxis
 		container->AddChild(ElementButtonContainer);
 
 		//Quit Button		
-		auto quitButton = CreateRef<UI::TextButton>("Quit Game Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&GameNode::ReturnToMenu, this));
+		auto quitButton = Instantiate<UI::TextButton>("Quit Game Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&GameNode::ReturnToMenu, this));
 		quitButton->m_PPU = 0.5;
 		quitButton->m_Text = "Quit Game";
 		quitButton->m_TextColor = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);
@@ -259,211 +260,6 @@ namespace Pyxis
 		ImGui::PopTextWrapPos();
 	}
 
-	//void GameNode::ConnectionUpdate()
-	//{
-	//	//still connecting...
-
-	//	//make sure the socket is still open, and if it isn't then return to main menu
-	//	if (!m_ClientInterface.IsConnected())
-	//	{
-	//		m_ConnectionStatus = FailedToConnect;
-	//		return;
-	//	}
-
-	//	//since we know we are connected still, call handle messages.
-	//	//cant be called before since we aren't always connected to something
-	//	HandleMessages();
-
-	//	//while we are connecting, if we have the world data, it is still our
-	//	//job to catch up to the server, which means 
-	//	if (!m_WaitForWorldData)
-	//	{
-	//		//we are no longer waiting on the world data, so its time to catch up
-	//		//all the ticks we missed while getting game data
-	//		if (m_MTCQueue.size() > 0)
-	//		{
-	//			//as the client, i now need to remove the input actions from the 
-	//			//latency queue for the tick i recieved, but not
-	//			//in this section where i'm not sending any ticks
-
-
-	//			if (m_MTCQueue.front().m_Tick < m_InputTick)
-	//			{
-	//				//we were sent a merged tick closure before we requested data, so ignore this since
-	//				//the world state we recieved already had this tick applied
-	//				m_MTCQueue.pop_front();
-	//				return;
-	//			}
-	//			m_LatencyStateReset = true;
-	//			PX_TRACE("Applying tick {0} to sim {1}", m_MTCQueue.front().m_Tick, m_World.m_SimulationTick);
-	//			HandleTickClosure(m_MTCQueue.front());
-	//			m_MTCQueue.pop_front();
-	//			m_InputTick++;
-	//		}
-	//		if (m_InputTick == m_TickToEnter)
-	//		{
-	//			PX_TRACE("Reached Tick: {0}, I'm caught up!", m_TickToEnter);
-	//			//we loaded the world, and we are caught up to what the
-	//			//server has sent, since we reached the tick to enter
-
-	//			//begin the game and start sending ticks! 
-	//			//the server is waiting for us!
-	//			m_ConnectionStatus = Connected;
-	//			m_SimulationRunning = true;
-	//		}
-
-	//	}
-	//}
-
-	//void GameNode::HandleMessages()
-	//{
-	//	Ref<Network::Message> msg;
-	//	while (PollMessage(msg))
-	//	{
-	//		//PX_TRACE("Recieved message from Server");
-	//		switch (static_cast<GameMessage>(msg->header.id))
-	//		{
-	//		case GameMessage::Server_ClientData:
-	//		{
-	//			HSteamNetConnection clientID;
-	//			*msg >> clientID;
-	//			PX_TRACE("Recieved client Data for client {0}", clientID);
-	//			m_ClientDataMap[clientID];
-	//			*msg >> m_ClientDataMap[clientID];
-	//			break;
-	//		}
-	//		case GameMessage::Server_AllClientData:
-	//		{
-	//			uint32_t numClients;
-	//			*msg >> numClients;
-	//			PX_TRACE("Recieved all client Data. Player count: {0}", numClients);
-	//			for (int i = 0; i < numClients; i++)
-	//			{
-	//				HSteamNetConnection clientID;
-	//				*msg >> clientID;
-	//				m_ClientDataMap[clientID];
-	//				*msg >> m_ClientDataMap[clientID];
-	//			}
-	//			//now that we recieved the other player data, lets request the game data
-	//			Network::Message requestGameDataMsg;
-	//			requestGameDataMsg.header.id = static_cast<uint32_t>(GameMessage::Client_RequestGameData);
-	//			SendMessageToServer(requestGameDataMsg);
-	//			PX_TRACE("Requesting Game Data");
-	//			m_MultiplayerState = MultiplayerState::DownloadingWorld;
-	//			break;
-	//		}
-	//		case GameMessage::Server_ClientDisconnected:
-	//		{
-	//			HSteamNetConnection clientID;
-	//			*msg >> clientID;
-
-	//			m_ClientDataMap.erase(clientID);
-	//			break;
-	//		}
-	//		case GameMessage::Server_GameDataInit:
-	//		{
-	//			PX_TRACE("Recieved Game Data");
-	//			*msg >> m_InputTick;
-	//			CreateWorld();
-	//			
-	//			m_World.DownloadWorldInit(*msg);
-	//			uint32_t numPixelBodies;
-	//			uint32_t numChunks;
-	//			*msg >> numPixelBodies >> numChunks;
-
-	//			m_DownloadTotal = static_cast<uint64_t>(numPixelBodies) + static_cast<uint64_t>(numChunks);
-	//			m_DownloadCount = 0;
-
-	//			PX_TRACE("Downloading game at tick [{0}], simulation tick [{1}]", m_InputTick, m_World.m_SimulationTick);
-	//			if (m_DownloadTotal == 0)
-	//			{
-	//				PX_TRACE("The world is empty! hop on in!");
-	//				//tell the server we are finished, so it can resume the game
-	//				Network::Message finishedDownloadMsg;
-	//				finishedDownloadMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataComplete);
-	//				SendMessageToServer(finishedDownloadMsg);
-	//				//we are connected!
-	//				m_MultiplayerState = MultiplayerState::Connected;
-	//			}
-	//			else
-	//			{
-	//				PX_TRACE("Expecting {0} PixelBodies and {1} Chunks totalling {2} messages", numPixelBodies, numChunks, m_DownloadTotal);
-	//			}
-	//			break;
-	//		}
-	//		case GameMessage::Server_GameDataPixelBody:
-	//		case GameMessage::Server_GameDataChunk:
-	//		{
-	//			
-	//			//we recieved a pixel body, so lets count it, and add it to the world
-	//			m_DownloadCount++;
-	//			m_World.DownloadWorld(*msg);
-	//			if (m_DownloadCount == m_DownloadTotal)
-	//			{
-	//				PX_INFO("Downloading World: [100%]");
-	//				//tell the server we are finished, so it can resume the game
-	//				Network::Message gameDataCompleteMsg;
-	//				gameDataCompleteMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataComplete);
-	//				SendMessageToServer(gameDataCompleteMsg);
-
-	//				//now that we have finished recieving the game data and loading the world, start the game!
-	//				m_MultiplayerState = MultiplayerState::Connected;
-	//			}
-	//			else
-	//			{
-	//				Network::Message gameDataRecievedMsg;
-	//				gameDataRecievedMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataRecieved);
-	//				SendMessageToServer(gameDataRecievedMsg);
-	//				PX_INFO("Downloading World: [{0}%]", (double)m_DownloadCount / (double)m_DownloadTotal);
-	//			}
-	//			break;
-	//		}
-	//		case GameMessage::Game_MergedTickClosure:
-	//		{
-	//			MergedTickClosure mtc;
-	//			*msg >> mtc.m_Tick;
-	//			*msg >> mtc.m_ClientCount;
-	//			*msg >> mtc.m_Data;
-	//			d_LastRecievedInputTick = mtc.m_Tick;
-
-	//			//if this tick is the current one, handle it immediately,
-	//			// don't need to push it to the front of the buffer
-	//			if (mtc.m_Tick == m_InputTick)
-	//			{
-	//				HandleTickClosure(mtc);
-	//				m_InputTick++;
-	//			}
-	//			else if (mtc.m_Tick == m_InputTick)
-	//			{
-	//				//also, if the tick is old just discard it.
-	//				//we only want to hand onto new ones.
-	//			}
-	//			else
-	//			{
-	//				//this is a future tick, so lets throw it on the stack
-	//				m_MTCBuffer.push_back(mtc);
-	//			}
-
-	//			break;
-	//		}
-	//		case GameMessage::Game_ResetBox2D:
-	//		{
-	//			//gather all rigid body data, store it, and reload it!
-	//			//this has to be done once we are finished with all the previously
-	//			//collected mtc's, so we will mark when we are supposed to
-	//			//reset, and do it then!
-	//			*msg >> m_TickToResetBox2D;
-	//			PX_TRACE("Sim Tick to reset at: {0}", m_TickToResetBox2D);
-	//			PX_TRACE("current sim tick: {0}", m_World.m_SimulationTick);
-	//			break;
-	//		}
-
-	//		default:
-	//			break;
-	//		}
-	//	}
-	//}
-
 
 	void GameNode::HandleTickClosure(MergedTickClosure& tc)
 	{
@@ -500,91 +296,6 @@ namespace Pyxis
 					Play();
 					break;
 				}
-				//case InputAction::TransformRegionToRigidBody:
-				//{
-				//	uint64_t UUID;
-				//	tc >> UUID;
-
-				//	glm::ivec2 maximum;
-				//	tc >> maximum;
-
-				//	glm::ivec2 minimum;
-				//	tc >> minimum;
-
-				//	b2BodyType type;
-				//	tc >> type;
-
-				//	int width = (maximum.x - minimum.x) + 1;
-				//	int height = (maximum.y - minimum.y) + 1;
-				//	if (width * height <= 0) break;
-				//	glm::ivec2 newMin = maximum;
-				//	glm::ivec2 newMax = minimum;
-				//	//iterate over section and find the width, height, center, ect
-				//	int mass = 0;
-				//	for (int x = 0; x < width; x++)
-				//	{
-				//		for (int y = 0; y < height; y++)
-				//		{
-				//			glm::ivec2 pixelPos = glm::ivec2(x + minimum.x, y + minimum.y);
-				//			auto& element = m_World.GetElement(pixelPos);
-				//			auto& elementData = m_World.m_ElementData[element.m_ID];
-				//			if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-				//			{
-				//				if (pixelPos.x < newMin.x) newMin.x = pixelPos.x;
-				//				if (pixelPos.y < newMin.y) newMin.y = pixelPos.y;
-				//				if (pixelPos.x > newMax.x) newMax.x = pixelPos.x;
-				//				if (pixelPos.y > newMax.y) newMax.y = pixelPos.y;
-				//				mass++;
-				//			}
-				//		}
-				//	}
-				//	if (mass < 2) continue;//skip if we are 1 element or 0
-				//	PX_TRACE("transforming {0} elements to a rigid body", mass);
-
-				//	width = (newMax.x - newMin.x) + 1;
-				//	height = (newMax.y - newMin.y) + 1;
-
-				//	glm::ivec2 origin = { width / 2, height / 2 };
-				//	std::unordered_map<glm::ivec2, RigidBodyElement, HashVector> elements;
-				//	for (int x = 0; x < width; x++)
-				//	{
-				//		for (int y = 0; y < height; y++)
-				//		{
-				//			glm::ivec2 pixelPos = { x + newMin.x, y + newMin.y };
-
-				//			//loop over every element, grab it, and make it rigid if it is a movable Solid
-				//			auto& element = m_World.GetElement(pixelPos);
-				//			auto& elementData = m_World.m_ElementData[element.m_ID];
-				//			if ((elementData.cell_type == ElementType::solid || elementData.cell_type == ElementType::movableSolid) && element.m_Rigid == false)
-				//			{
-				//				element.m_Rigid = true;
-				//				//set the elements at the local position to be the element pulled from world
-				//				elements[glm::ivec2(x - origin.x, y - origin.y)] = RigidBodyElement(element, pixelPos);
-				//				m_World.SetElement(pixelPos, Element());
-				//			}
-				//		}
-				//	}
-				//	glm::ivec2 size = newMax - newMin;
-				//	PX_TRACE("Mass is: {0}", mass);
-				//	PixelRigidBody* body = new PixelRigidBody(UUID, size, elements, type, m_World.m_Box2DWorld);
-				//	if (body->m_B2Body == nullptr)
-				//	{
-				//		PX_TRACE("Failed to create rigid body");
-				//		continue;
-				//	}
-				//	else
-				//	{
-				//		m_World.m_PixelBodyMap[body->m_ID] = body;
-				//		auto pixelPos = (newMin + newMax) / 2;
-				//		if (width % 2 == 0) pixelPos.x += 1;
-				//		if (height % 2 == 0) pixelPos.y += 1;
-				//		body->SetPixelPosition(pixelPos);
-				//		m_World.PutPixelBodyInWorld(*body);
-				//	}
-
-
-				//	break;
-				//}
 				case Pyxis::InputAction::Input_Move:
 				{
 					//PX_TRACE("input action: Input_Move");
@@ -698,20 +409,17 @@ namespace Pyxis
 			Ref<PixelBody2D> newBody;
 			if (Pyxis::Input::IsKeyPressed(PX_KEY_LEFT_SHIFT))
 			{
-				newBody = CreateRef<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_staticBody, &m_World, elements, false);
+				newBody = Instantiate<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_staticBody, &m_World, elements, false);
 			}
 			else
 			{
-				newBody = CreateRef<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_dynamicBody, &m_World, elements, false);
+				newBody = Instantiate<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_dynamicBody, &m_World, elements, false);
 			}
 			
 			AddChild(newBody);
-			json j;
-			newBody->Serialize(j);
-			std::cout << j.dump(4) << std::endl;
 
-			json b = json::to_bson(j);
-			std::cout << b << std::endl;
+			SerializeBinary();
+
 		}
 		if (event.GetKeyCode() == PX_KEY_SPACE)
 		{
@@ -804,9 +512,9 @@ namespace Pyxis
 
 	void GameNode::ReturnToMenu()
 	{
-		auto menu = CreateRef<MenuNode>();
-		m_Parent->AddChild(menu);
-		QueueFree();
+		auto menu = Instantiate<MenuNode>();
+		//m_Parent->AddChild(menu);
+		QueueFreeHierarchy();
 	}
 
 	/*void GameNode::OnWindowResizeEvent(WindowResizeEvent& event)

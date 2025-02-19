@@ -63,7 +63,6 @@ namespace Pyxis
 	}
 
 
-
 	template <typename T> 
 	using Ref = std::shared_ptr<T>;
 
@@ -72,6 +71,17 @@ namespace Pyxis
 	{
 		return std::make_shared<T>(std::forward<Args>(args)...);
 	}
+
+	template <typename T>
+	using WeakRef = std::weak_ptr<T>;
+
+	template<typename T>
+	constexpr WeakRef<T> CreateWeakRef(const Ref<T>& ref)
+	{
+		return WeakRef<T>(ref);
+	}
+
+
 
 	template<typename Fn>
 	class Timer

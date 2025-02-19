@@ -49,14 +49,13 @@ namespace Pyxis
 		//clear dead nodes
 		while (Node::NodesToDestroyQueue.size() > 0)
 		{
-			Node* node = Node::Nodes[Node::NodesToDestroyQueue.front()];			
+			Ref<Node> node = Node::Nodes[Node::NodesToDestroyQueue.front()];			
 			
 			if (node != nullptr)
 			{
 				//clear parent for children
 				for (auto child : node->m_Children)
-				{
-					
+				{				
 					child->m_Parent = nullptr;
 				}
 				//clear parent's child of this
@@ -183,7 +182,7 @@ namespace Pyxis
 			//get child entities displayed as well
 			for (auto& node : Node->m_Children)
 			{
-				DrawNodeTree(node);
+				DrawNodeTree(node->shared_from_this());
 			}
 			ImGui::TreePop();
 		}
@@ -197,9 +196,10 @@ namespace Pyxis
 		{
 			if (ImGui::Begin("Scene Hierarchy"))
 			{
-				for (auto& node : m_RootNode.m_Children)
+				for (auto& [id, ref] : Node::Nodes)
 				{
-					DrawNodeTree(node);
+					if (ref->m_Parent == nullptr)
+						DrawNodeTree(ref);
 				}
 			}
 			ImGui::End();
@@ -310,22 +310,25 @@ namespace Pyxis
 
 	bool SceneLayer::OnKeyPressedEvent(KeyPressedEvent& event)
 	{
+		//Serialize Scene
 		if (event.GetKeyCode() == PX_KEY_O)
 		{
 			json j;
-			m_RootNode.Serialize(j);
-			std::cout << j.dump(4) << std::endl;
-			PX_CORE_TRACE("De-Serializing the collected nodes...");
-			Ref<Node> newNode = Node::DeserializeNode(j);
-
-			if (newNode != nullptr)
+			auto SceneNode = CreateRef<Node>("Scene");
+			SceneNode->Serialize(j);
+			
+			for (auto& [id, ref] : Node::Nodes)
 			{
-				Ref<Node> clonedNode = CreateRef<Node>("Cloned Nodes");
-				m_RootNode.AddChild(clonedNode);
-				clonedNode->AddChild(newNode);
-			}
-			
-			
+				if (ref->m_Parent == nullptr)
+				{
+					json c;
+					ref->Serialize(c);
+					j["m_Children"] += c;
+					
+				}
+			}			
+			PX_TRACE("Here is the serialized Scene: ");
+			std::cout << j.dump(4) << std::endl;
 		}
 		return false;
 	}
@@ -341,7 +344,7 @@ namespace Pyxis
 			//the hovered node is valid
 
 			//try to cast it to a UI node, and call onMousePressed
-			if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[Node::s_HoveredNodeID]))
+			if (Ref<UI::UINode> uinode = dynamic_pointer_cast<UI::UINode>(Node::Nodes[Node::s_HoveredNodeID]))
 			{
 				uinode->OnMousePressed(event.GetMouseButton());
 			}
@@ -368,7 +371,7 @@ namespace Pyxis
 				//the hovered node is valid
 				
 				//try to cast it to UI 
-				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[Node::s_HoveredNodeID]))
+				if (Ref<UI::UINode> uinode = dynamic_pointer_cast<UI::UINode>(Node::Nodes[Node::s_HoveredNodeID]))
 				{
 					uinode->OnMouseReleased(event.GetMouseButton(), true);
 				}
@@ -382,7 +385,7 @@ namespace Pyxis
 				//the hovered node is valid
 
 				//try to cast it to UI 
-				if (UI::UINode* uinode = dynamic_cast<UI::UINode*>(Node::Nodes[UI::UINode::s_MousePressedNodeID]))
+				if (Ref<UI::UINode> uinode = dynamic_pointer_cast<UI::UINode>(Node::Nodes[Node::s_HoveredNodeID]))
 				{
 					uinode->OnMouseReleased(event.GetMouseButton(), false);
 				}

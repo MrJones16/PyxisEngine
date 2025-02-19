@@ -85,7 +85,7 @@ namespace Pyxis
 
 
 		inline static void Step()
-		{			
+		{
 			m_World->Step(m_Step, m_VelocityIterations, m_PositionIterations);
 			b2Body* body = m_World->GetBodyList();
 			while (body != nullptr)

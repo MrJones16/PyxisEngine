@@ -19,16 +19,16 @@ namespace Pyxis
 		//scenes are set in a constructor...
 		glm::vec4 themeYellow = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);
 
-		auto camera = CreateRef<CameraNode>();
+		auto camera = Instantiate<CameraNode>();
 		camera->SetMainCamera();
 		camera->SetWidth(12.8);
 		camera->m_LockAspect = false;
 		AddChild(camera);
 
-		auto screenNode = CreateRef<UI::ScreenSpace>();
+		auto screenNode = Instantiate<UI::ScreenSpace>();
 		AddChild(screenNode);
 
-		auto canvasNode = CreateRef<UI::Canvas>();
+		auto canvasNode = Instantiate<UI::Canvas>();
 		canvasNode->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		canvasNode->m_PPU = 32;
 		screenNode->AddChild(canvasNode);
@@ -37,7 +37,7 @@ namespace Pyxis
 
 
 		//container
-		auto container = CreateRef<UI::Container>();
+		auto container = Instantiate<UI::Container>();
 		container->Translate({ 0,0,-0.001 });
 		container->m_AutomaticSizing = true;
 		container->m_AutomaticSizingOffset = { -64, -64 };
@@ -49,7 +49,7 @@ namespace Pyxis
 
 
 		//logo
-		auto logo = CreateRef<UI::UIRect>(ResourceManager::Load<Texture2DResource>("assets/textures/UI/InsetPyxisLogo.png"), "Logo");
+		auto logo = Instantiate<UI::UIRect>(ResourceManager::Load<Texture2DResource>("assets/textures/UI/InsetPyxisLogo.png"), "Logo");
 		logo->m_PPU = 0.25f;
 		logo->UpdateSizeFromTexture();
 		container->AddChild(logo);
@@ -57,7 +57,7 @@ namespace Pyxis
 
 		//singleplayer button
 		{
-			auto playButton = CreateRef<UI::TextButton>("Singleplayer Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::PlaySinglePlayer, this));
+			auto playButton = Instantiate<UI::TextButton>("Singleplayer Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::PlaySinglePlayer, this));
 			playButton->m_PPU = 0.25f;
 			playButton->m_Text = "Singleplayer";
 			playButton->m_TextColor = themeYellow;
@@ -75,7 +75,7 @@ namespace Pyxis
 		//client data input
 		{
 			//name
-			auto nameInput = CreateRef<UI::InputText>("Name Text Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerName);
+			auto nameInput = Instantiate<UI::InputText>("Name Text Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerName);
 			nameInput->m_FontSize = 5;
 			nameInput->m_TextureResource = ResourceManager::Load<Texture2DResource>("assets/textures/UI/TextPlate.png");
 			nameInput->m_TextureResourceSelected = ResourceManager::Load<Texture2DResource>("assets/textures/UI/TextPlateSelected.png");
@@ -94,7 +94,7 @@ namespace Pyxis
 			//container->AddChild(colorCanvas);
 
 			//color select container
-			auto colorSelectContainer = CreateRef<UI::Container>("Color Select Container");
+			auto colorSelectContainer = Instantiate<UI::Container>("Color Select Container");
 			colorSelectContainer->m_VerticalAlignment = UI::Direction::Center;
 	/*		colorSelectContainer->m_AutomaticSizing = true;
 			colorSelectContainer->m_AutomaticSizingOffset = { -48,-48 };*/
@@ -103,11 +103,11 @@ namespace Pyxis
 			colorSelectContainer->m_Gap = 4;
 			container->AddChild(colorSelectContainer);
 
-			auto colorDisplay = CreateRef<UI::UIRect>("Color Rect");
+			auto colorDisplay = Instantiate<UI::UIRect>("Color Rect");
 			m_PlayerColorDisplay = colorDisplay; // grab weak ref
 			colorDisplay->m_Size = { 64, 64 };
 
-			auto colorRedInput = CreateRef<UI::InputInt>("Color Red Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerColor[0]); // &red color
+			auto colorRedInput = Instantiate<UI::InputInt>("Color Red Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerColor[0]); // &red color
 			colorRedInput->m_MaxValue = 255;
 			colorRedInput->m_MinValue = 0;
 			colorRedInput->m_FontSize = 5;
@@ -119,7 +119,7 @@ namespace Pyxis
 			colorRedInput->UpdateSizeFromTexture();
 			colorSelectContainer->AddChild(colorRedInput);
 
-			auto colorGreenInput = CreateRef<UI::InputInt>("Color Green Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerColor[1]); // &Green color
+			auto colorGreenInput = Instantiate<UI::InputInt>("Color Green Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerColor[1]); // &Green color
 			colorGreenInput->m_MaxValue = 255;
 			colorGreenInput->m_MinValue = 0;
 			colorGreenInput->m_FontSize = 5;
@@ -131,7 +131,7 @@ namespace Pyxis
 			colorGreenInput->UpdateSizeFromTexture();
 			colorSelectContainer->AddChild(colorGreenInput);
 
-			auto colorBlueInput = CreateRef<UI::InputInt>("Color Blue Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerColor[2]); // &Blue color
+			auto colorBlueInput = Instantiate<UI::InputInt>("Color Blue Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_PlayerColor[2]); // &Blue color
 			colorBlueInput->m_MaxValue = 255;
 			colorBlueInput->m_MinValue = 0;
 			colorBlueInput->m_FontSize = 5;
@@ -151,7 +151,7 @@ namespace Pyxis
 
 		//multiplayer button
 		{
-			auto multiButton = CreateRef<UI::TextButton>("Join Friends Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::PlayMultiplayer, this));
+			auto multiButton = Instantiate<UI::TextButton>("Join Friends Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::PlayMultiplayer, this));
 			multiButton->m_PPU = 0.25f;
 			multiButton->m_Text = "Join Friend";
 			multiButton->m_TextColor = themeYellow;
@@ -167,12 +167,12 @@ namespace Pyxis
 
 		//LAN Join button
 		{
-			auto horizContainer = CreateRef<UI::HorizontalContainer>("Connect&IP HContainer");
+			auto horizContainer = Instantiate<UI::HorizontalContainer>("Connect&IP HContainer");
 			horizContainer->m_Arrangement = UI::Right;
 			horizContainer->m_Gap = 8;
 			container->AddChild(horizContainer);
 
-			auto multiButton = CreateRef<UI::TextButton>("Join LAN Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::PlayLAN, this));
+			auto multiButton = Instantiate<UI::TextButton>("Join LAN Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::PlayLAN, this));
 			multiButton->m_PPU = 0.25f;
 			multiButton->m_Text = "Connect";
 			multiButton->m_TextColor = themeYellow;
@@ -186,7 +186,7 @@ namespace Pyxis
 			horizContainer->AddChild(multiButton);
 
 			//IP Input
-			auto IPInput = CreateRef<UI::InputText>("IP Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_InputAddress);
+			auto IPInput = Instantiate<UI::InputText>("IP Input", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), &m_InputAddress);
 			IPInput->m_FontSize = 5;
 			IPInput->m_TextureResource = ResourceManager::Load<Texture2DResource>("assets/textures/UI/TextPlate.png");
 			IPInput->m_TextureResourceSelected = ResourceManager::Load<Texture2DResource>("assets/textures/UI/TextPlateSelected.png");
@@ -201,7 +201,7 @@ namespace Pyxis
 
 		//Host Game button
 		{
-			auto hostButton = CreateRef<UI::TextButton>("Host Game Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::HostGameP2P, this));
+			auto hostButton = Instantiate<UI::TextButton>("Host Game Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::HostGameP2P, this));
 			hostButton->m_PPU = 0.25f;
 			hostButton->m_Text = "Host Game";
 			hostButton->m_TextColor = themeYellow;
@@ -217,7 +217,7 @@ namespace Pyxis
 
 		//Host LAN Game button
 		{
-			auto hostButton = CreateRef<UI::TextButton>("Host LAN Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::HostGameIP, this));
+			auto hostButton = Instantiate<UI::TextButton>("Host LAN Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::HostGameIP, this));
 			hostButton->m_PPU = 0.25f;
 			hostButton->m_Text = "Host LAN";
 			hostButton->m_TextColor = themeYellow;
@@ -235,7 +235,7 @@ namespace Pyxis
 		//Quit Button	
 		{
 				
-			auto quitButton = CreateRef<UI::TextButton>("Quit Game Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::QuitGame, this));
+			auto quitButton = Instantiate<UI::TextButton>("Quit Game Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MenuNode::QuitGame, this));
 			quitButton->m_PPU = 0.25f;
 			quitButton->m_Text = "Quit Game";
 			quitButton->m_TextColor = themeYellow;
@@ -272,10 +272,9 @@ namespace Pyxis
 	void MenuNode::PlaySinglePlayer()
 	{
 		
-		auto spGame = CreateRef<SinglePlayerGameNode>();
+		auto spGame = Instantiate<SinglePlayerGameNode>();
 		spGame->Start();
-		m_Parent->AddChild(spGame);
-		QueueFree();
+		QueueFreeHierarchy();
 	}
 
 	void MenuNode::PlayMultiplayer()
@@ -286,30 +285,27 @@ namespace Pyxis
 	void MenuNode::PlayLAN()
 	{
 		//Get steam identity, create a multiplayer instance, and connect, and kill menu node.
-		auto MultiplayerGame = CreateRef<MultiplayerGameNode>();
+		auto MultiplayerGame = Instantiate<MultiplayerGameNode>();
 		MultiplayerGame->m_ClientData.m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
 		std::memcpy(MultiplayerGame->m_ClientData.m_Name, m_PlayerName.c_str(), 64);
 		MultiplayerGame->Connect("127.0.0.1:21218");
-		m_Parent->AddChild(MultiplayerGame);
-		QueueFree();
+		QueueFreeHierarchy();
 	}
 
 	void MenuNode::HostGameP2P()
 	{
 		
-		auto HostGame = CreateRef<HostedGameNode>();
+		auto HostGame = Instantiate<HostedGameNode>();
 		HostGame->StartP2P();
-		m_Parent->AddChild(HostGame);
-		QueueFree();
+		QueueFreeHierarchy();
 	}
 
 	void MenuNode::HostGameIP()
 	{
 		
-		auto HostGame = CreateRef<HostedGameNode>();
+		auto HostGame = Instantiate<HostedGameNode>();
 		HostGame->StartIP();
-		m_Parent->AddChild(HostGame);
-		QueueFree();
+		QueueFreeHierarchy();
 	}
 
 	void MenuNode::QuitGame()
@@ -329,12 +325,11 @@ namespace Pyxis
 		//Get steam identity, create a multiplayer instance, and connect, and kill menu node.
 		SteamNetworkingIdentity identity;
 		identity.SetSteamID(pCallback->m_steamIDFriend);
-		auto MultiplayerGame = CreateRef<MultiplayerGameNode>();
+		auto MultiplayerGame = Instantiate<MultiplayerGameNode>();
 		MultiplayerGame->m_ClientData.m_Color = glm::vec4((float)m_PlayerColor[0] / 255.0f, (float)m_PlayerColor[1] / 255.0f, (float)m_PlayerColor[2] / 255.0f, (float)m_PlayerColor[3] / 255.0f);
 		std::memcpy(MultiplayerGame->m_ClientData.m_Name, m_PlayerName.c_str(), 64);
 		MultiplayerGame->Connect(identity);				
-		m_Parent->AddChild(MultiplayerGame);
-		QueueFree();
+		QueueFreeHierarchy();
 	}
 	void MenuNode::OnGameOverlayActivated(GameOverlayActivated_t* pCallback)
 	{

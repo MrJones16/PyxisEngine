@@ -6,19 +6,19 @@ namespace Pyxis
 	MultiplayerGameNode::MultiplayerGameNode() : GameNode("Multiplayer Game Node")
 	{
 		//initialize the connecting screen nodes
-		m_LSScreenSpace = CreateRef<UI::ScreenSpace>();
+		m_LSScreenSpace = Instantiate<UI::ScreenSpace>();
 		m_LSScreenSpace->Translate({ 0,0,-0.2 });
 		m_LSScreenSpace->m_Name = "Loading Screen Space";
 		AddChild(m_LSScreenSpace);
 
-		m_LSCanvas = CreateRef<UI::Canvas>();
+		m_LSCanvas = Instantiate<UI::Canvas>();
 		m_LSCanvas->CreateTextures("assets/textures/UI/GreenCanvas/", "GreenCanvasTile_", ".png");
 		m_LSCanvas->m_AutomaticSizing = true;
 		m_LSCanvas->m_PPU = 32;
 		m_LSScreenSpace->AddChild(m_LSCanvas);
 
 
-		m_LSText = CreateRef<UI::Text>(ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));
+		m_LSText = Instantiate<UI::Text>(ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));
 		m_LSText->Translate({ 0,0,-0.01 });
 		m_LSText->m_Text = "Connecting";
 		m_LSText->m_Size = { 128, 32 };
@@ -27,7 +27,7 @@ namespace Pyxis
 		m_LSText->m_MultiLine = false;
 		m_LSCanvas->AddChild(m_LSText);
 
-		m_LSButton = CreateRef<UI::TextButton>("Okay Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
+		m_LSButton = Instantiate<UI::TextButton>("Okay Button", ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"), std::bind(&MultiplayerGameNode::ReturnToMenu, this));
 		m_LSButton->m_PPU = 0.5f;
 		m_LSButton->m_Text = "Okay";
 		m_LSButton->m_TextColor = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);;
@@ -48,8 +48,7 @@ namespace Pyxis
 	{
 		Disconnect();
 		m_MultiplayerState = MultiplayerState::Disconnected;
-		auto menu = CreateRef<MenuNode>();
-		m_Parent->AddChild(menu);
+		auto menu = Instantiate<MenuNode>();
 		QueueFree();
 	}
 

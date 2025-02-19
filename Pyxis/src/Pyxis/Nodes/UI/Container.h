@@ -177,7 +177,8 @@ namespace Pyxis
 					{
 						for (auto& child : m_Children)
 						{
-							if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+							
+							if (UIRect* rect = dynamic_cast<UIRect*>(child))
 							{
 								//keep adding a shift until a child is too big to fit
 								if (sumHorizontal + rect->m_Size.x + m_Gap > maxHorizontal)
@@ -210,7 +211,8 @@ namespace Pyxis
 					{
 						for (auto& child : m_Children)
 						{
-							if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+							
+							if (UIRect* rect = dynamic_cast<UIRect*>(child))
 							{
 								//keep adding a shift until a child is too big to fit
 								if (sumVertical + rect->m_Size.y + m_Gap > maxVertical)
@@ -236,7 +238,8 @@ namespace Pyxis
 				for (auto& child : m_Children)
 				{
 
-					if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+					
+					if (UIRect* rect = dynamic_cast<UIRect*>(child))
 					{
 
 						//first lets see if we are past the limit

@@ -1,6 +1,10 @@
 #include "Node.h"
 #include "Node.h"
 #include "Node.h"
+#include "Node.h"
+#include "Node.h"
+#include "Node.h"
+#include "Node.h"
 #include "pxpch.h"
 #include "Pyxis/Renderer/Renderer2D.h"
 #include "imgui.h"
@@ -28,18 +32,18 @@ namespace Pyxis
 	Node::Node(const std::string& name)
 		: m_UUID(GenerateUUID()), m_Name(name)
 	{
-		Node::Nodes[m_UUID] = this;
+
 	}
 
 	Node::Node(UUID id)
 		: m_UUID(UseExistingUUID(id))
 	{
-		Node::Nodes[m_UUID] = this;
+
 	}
 
 	Node::~Node()
 	{				
-		Node::Nodes[m_UUID] = nullptr;
+
 	}
 
 	/*void Node::OnUpdate(Timestep ts)
@@ -62,7 +66,9 @@ namespace Pyxis
 
 	void Node::AddChild(const Ref<Node>& child)
 	{
-		m_Children.push_back(child);
+		if (child == nullptr) return;
+
+		m_Children.push_back(child.get());
 		if (child->m_Parent != nullptr)
 		{
 			//child was already a child of another object, so un-parent it
@@ -73,13 +79,17 @@ namespace Pyxis
 
 	void Node::RemoveChild(const Ref<Node>& child) 
 	{
+		if (child == nullptr) return;
+
+		// iterates through children, removing the child
+		// when found
 		for (auto it = m_Children.begin(); it != m_Children.end(); it++)
 		{
-			if (it->get() == child.get())
+			if (*it == child.get())
 			{
 				m_Children.erase(it);
 				child->m_Parent = nullptr;
-				break;
+				return;				
 			}
 		}
 	}
@@ -94,9 +104,11 @@ namespace Pyxis
 
 		for (auto child : m_Children)
 		{
+			
 			json cj;
 			child->Serialize(cj);
 			j["m_Children"] += cj;
+			
 		}
 	}
 
@@ -113,13 +125,44 @@ namespace Pyxis
 				Ref<Node> newNode = NodeRegistry::getInstance().createInstance(type, ID);
 				if (newNode != nullptr)
 				{
-					m_Children.push_back(newNode);
+					m_Children.push_back(newNode.get());
 					newNode->m_Parent = this;
 					newNode->Deserialize(jc);
 				}
 				
 			}			
 		}
+	}
+
+	std::vector<uint8_t> Node::SerializeBinary()
+	{
+		json j;
+		Serialize(j);
+		//msgpack seems to be the most compact
+		//return json::to_bson(j);
+		return json::to_msgpack(j);
+	}
+
+	void Node::DeserializeBinary(std::vector<uint8_t> msgpack)
+	{
+		json j = json::from_msgpack(msgpack);
+		Deserialize(j);
+	}
+
+	
+
+	void Node::QueueFree()
+	{
+		Node::NodesToDestroyQueue.push(m_UUID);
+	}
+
+	void Node::QueueFreeHierarchy()
+	{
+		for (auto child : m_Children)
+		{
+			child->QueueFreeHierarchy();
+		}
+		Node::NodesToDestroyQueue.push(m_UUID);
 	}
 
 	void Node::OnUpdate(Timestep ts)

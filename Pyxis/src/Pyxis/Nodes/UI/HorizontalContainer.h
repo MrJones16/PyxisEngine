@@ -125,7 +125,7 @@ namespace Pyxis
 				float maxHeight = 0;
 				for (auto& child : m_Children)
 				{
-					if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+					if (UIRect* rect = dynamic_cast<UIRect*>(child))
 					{
 						if (rect->m_Size.y > maxHeight) maxHeight = rect->m_Size.y;
 					}
@@ -140,7 +140,7 @@ namespace Pyxis
 				float sumWidth = -m_Gap + (m_Padding * 2.0f);
 				for (auto& child : m_Children)
 				{
-					if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+					if (UIRect* rect = dynamic_cast<UIRect*>(child))
 					{
 						if (rect->m_Size.y > maxHeight) maxHeight = rect->m_Size.y;
 
@@ -178,7 +178,7 @@ namespace Pyxis
 					
 					for (auto& child : m_Children)
 					{
-						if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+						if (UIRect* rect = dynamic_cast<UIRect*>(child))
 						{					
 							sumHorizontal += rect->m_Size.x + m_Gap;
 						}
@@ -191,8 +191,7 @@ namespace Pyxis
 				glm::vec3 position = startPosition;
 				for (auto& child : m_Children)
 				{
-
-					if (UIRect* rect = dynamic_cast<UIRect*>(child.get()))
+					if (UIRect* rect = dynamic_cast<UIRect*>(child))
 					{										
 
 						//since we have adjusted the start position, lets reset the transform, and set it to the position
