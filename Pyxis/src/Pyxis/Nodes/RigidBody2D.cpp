@@ -99,7 +99,16 @@ namespace Pyxis
 			if (j["m_B2Body"].contains("linearDamping")) j["m_B2Body"].at("linearDamping").get_to(linearDamping);
 			if (j["m_B2Body"].contains("angularVelocity")) j["m_B2Body"].at("angularVelocity").get_to(angularVelocity);
 			if (j["m_B2Body"].contains("angularDamping")) j["m_B2Body"].at("angularDamping").get_to(angularDamping);
-			m_B2Body->SetTransform(b2Vec2(m_Position.x, m_Position.y), m_Rotation);
+
+			b2Vec2 position = {0,0};
+			float angle = 0;
+			if (j.contains("m_Position")) j.at("m_Position").get_to(position);
+			if (j.contains("m_Rotation")) j.at("m_Rotation").get_to(angle);
+
+			SetPosition({ position.x, position.y });
+			SetRotation(angle);
+			
+			//m_B2Body->SetTransform(b2Vec2(m_Position.x, m_Position.y), m_Rotation);
 			m_B2Body->SetLinearVelocity(linearVelocity);
 			m_B2Body->SetLinearDamping(linearDamping);
 			m_B2Body->SetAngularVelocity(angularVelocity);

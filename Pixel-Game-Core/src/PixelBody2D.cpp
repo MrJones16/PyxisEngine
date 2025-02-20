@@ -49,6 +49,10 @@ namespace Pyxis
 		RigidBody2D::Serialize(j);
 		j["Type"] = "PixelBody2D";
 
+		//Position for pixelbody2d is different than normal
+		j["m_Position"] = GetPosition();
+		PX_TRACE("Serializing position: ({0},{1})", GetPosition().x, GetPosition().y);
+		//j["m_Rotation"] = GetRotation();
 
 		j["m_InWorld"] = m_InWorld;
 		j["m_Width"] = m_Width;
@@ -63,6 +67,12 @@ namespace Pyxis
 	void PixelBody2D::Deserialize(json& j)
 	{
 		RigidBody2D::Deserialize(j);
+
+		//get the position
+		glm::vec2 position;
+		if (j.contains("m_Position")) j.at("m_Position").get_to(position);
+		SetPosition(position);
+		PX_TRACE("Deserializing position: ({0},{1})", position.x, position.y);
 
 		//Extract new member variables
 		if (j.contains("m_InWorld")) j.at("m_InWorld").get_to(m_InWorld);

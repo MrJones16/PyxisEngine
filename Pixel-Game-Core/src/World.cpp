@@ -579,9 +579,6 @@ namespace Pyxis
 			auto PixelBodyNode = Node::DeserializeNode(j);
 			if (PixelBodyNode)
 			{
-				
-				///Note to self later: I need to make nodes normal pointers and not shared, and make lifetime managed by scene layer.
-
 				((PixelBody2D*)(PixelBodyNode.get()))->m_PXWorld = this;
 				//m_PixelBodyMap[body->m_UUID] = body;
 				PX_TRACE("Loaded Pixel Body ##{0}", PixelBodyNode->GetUUID());
