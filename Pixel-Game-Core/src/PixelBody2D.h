@@ -200,7 +200,6 @@ namespace Pyxis
 		/// <returns></returns>
 		int GetMarchingSquareCase(glm::ivec2 localPosition);
 
-
 		/// <summary>
 		/// Uses a Douglass-Peucker line simplification to simplify points of the pixelbody perimeter to create a collision shape
 		/// 

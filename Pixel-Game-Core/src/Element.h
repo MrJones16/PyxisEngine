@@ -71,6 +71,8 @@ namespace Pyxis
 		}
 		uint32_t m_ID = 0;
 		uint32_t m_BaseColor = 0x00000000;
+
+		//Currently used for things like glowing from heat.
 		uint32_t m_Color = 0x00000000;
 
 		bool m_Ignited = false;
@@ -81,6 +83,8 @@ namespace Pyxis
 		int8_t m_Horizontal = 0;
 
 		bool m_Sliding = false;
+
+		//Rigid means it belongs to a rigid body
 		bool m_Rigid = false;
 		//uint32_t m_LifeTime = 0;
 		bool m_Updated = false;
@@ -88,7 +92,18 @@ namespace Pyxis
 		//Serialization of element
 		friend void to_json(json& j, const Element& e)
 		{
-			j = json{ {"ID", e.m_ID}, {"Color", e.m_Color}, {"BaseColor", e.m_BaseColor}, {"Ignited", e.m_Ignited}, {"Health", e.m_Health}, {"Temperature", e.m_Temperature}, {"Horizontal", e.m_Horizontal}, {"Sliding", e.m_Sliding}, {"Rigid", e.m_Rigid}, {"Updated", e.m_Updated} };
+			j = json{ 
+				{"ID", e.m_ID}, 
+				{"Color", e.m_Color}, 
+				{"BaseColor", e.m_BaseColor}, 
+				{"Ignited", e.m_Ignited}, 
+				{"Health", e.m_Health}, 
+				{"Temperature", e.m_Temperature}, 
+				{"Horizontal", e.m_Horizontal}, 
+				{"Sliding", e.m_Sliding}, 
+				{"Rigid", e.m_Rigid}, 
+				{"Updated", e.m_Updated} 
+			};
 		}
 		friend void from_json(const json& j, Element& e)
 		{
@@ -106,18 +121,115 @@ namespace Pyxis
 	};
 
 	/// <summary>
+	/// for tags, write the name of the tag in []'s like [meltable], and code will handle the rest
+	/// </summary>
+	struct Reaction
+	{
+	public:
+		Reaction()
+		{
+			probablility = 100;
+
+			input_cell_0 = "";
+			input_cell_1 = "";
+
+			output_cell_0 = "";
+			output_cell_1 = "";
+		}
+		Reaction(int prob, std::string in0, std::string in1, std::string out0, std::string out1)
+		{
+			probablility = prob;
+			input_cell_0 = in0;
+			input_cell_1 = in1;
+
+			output_cell_0 = out0;
+			output_cell_1 = out1;
+		}
+
+		int probablility = 100;
+
+		std::string input_cell_0 = "";
+		std::string input_cell_1 = "";
+
+		std::string output_cell_0 = "";
+		std::string output_cell_1 = "";
+
+		friend void to_json(json& j, const Reaction& r)
+		{
+			j = json{
+				{"Type", "Reaction"},
+				{"probability", r.probablility},
+				{"input_cell_0", r.input_cell_0},
+				{"input_cell_1", r.input_cell_1},
+				{"output_cell_0", r.output_cell_0},
+				{"output_cell_1", r.output_cell_1}
+			};
+		}
+		friend void from_json(const json& j, Reaction& r)
+		{
+			j.at("probability").get_to(r.probablility);
+			j.at("input_cell_0").get_to(r.input_cell_0);
+			j.at("input_cell_1").get_to(r.input_cell_1);
+			j.at("output_cell_0").get_to(r.output_cell_0);
+			j.at("output_cell_1").get_to(r.output_cell_1);
+		}
+
+	};
+
+	struct ReactionResult
+	{
+		ReactionResult() = default;
+		ReactionResult(uint32_t percentChance, uint32_t cell0, uint32_t cell1) {
+			probability = percentChance;
+			cell0ID = cell0;
+			cell1ID = cell1;
+		}
+		uint32_t probability = 100;
+		uint32_t cell0ID = 0;
+		uint32_t cell1ID = 0;
+	};
+
+	/// <summary>
 	/// all the properties of an element
 	/// </summary>
-	struct ElementData
+	class ElementData
 	{
+	public:
+
+		inline static std::vector<ElementData> s_ElementData;
+
+
+		inline static std::vector<Reaction> s_Reactions;
+		inline static std::unordered_map<uint32_t, std::unordered_map<uint32_t, ReactionResult>> s_ReactionTable;
+		inline static std::unordered_map<std::string, std::vector<uint32_t>> s_TagElements;
+
+		static ElementData& GetElementData(uint32_t id);
+		inline static std::map<std::string, uint32_t> s_ElementNameToID;
+		static ElementData& GetElementData(const std::string& name);
+		
+		static void LoadElementData(const std::string& path = "assets/data/CellData.json");
+
+		static Element GetElement(uint32_t id, int x = 0, int y = 0);
+		static Element GetElement(const std::string& name, int x = 0, int y = 0);
+		
+
+		//Building the reaction table so an element 
+		static void BuildReactionTable();
+		static bool StringContainsTag(const std::string& string);
+		static std::string TagFromString(const std::string& stringWithTag);
+		static std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
+
 		//Behavior and properties
 		std::string name = "default";
 
 		std::string texture_path = "";
-		Ref<Texture2D> texture = nullptr;
+		int width = 0;
+		int height = 0;
 		uint8_t* texture_data = nullptr;
 
 		ElementType cell_type = ElementType::gas;
+
+		std::vector<std::string> tags;
 
 		//solid, movablesolid, liquid, gas, fire
 		uint32_t color = 0xFFFF00FF;
@@ -136,14 +248,15 @@ namespace Pyxis
 		float ignition_temperature = 371.0f;
 		float fire_temperature = 1000;
 		uint32_t fire_color = RGBAtoABGR(0xf7e334FF);
-		float fire_temperature_increase = 1;
+		float fire_temperature_increase = 10;
 		std::string burnt = "air";
 
 
-
+		//Conductivity / Glowing
 		bool glow = false;
 		uint32_t conductivity = 0;
 		float temperature = 20;
+
 
 		//name of element to become if melted
 		std::string melted = "";
@@ -153,141 +266,23 @@ namespace Pyxis
 		std::string frozen = "";
 		int freezing_point = 0;
 
-		void SetTexture(std::string tex_path)
-		{
-			texture_path = tex_path;
-			texture = Texture2D::Create(tex_path);
-			texture_data = texture->GetData();
-		}
+		void SetTexture(std::string tex_path);
 
+		//Get the element data as an element
+		Element GetElement(int x = 0, int y = 0) const;
 		
-		void UpdateElementData(Element& element, int x, int y)
-		{
-			if (texture_data != nullptr)
-			{
-				int width = texture->GetWidth();
-				int height = texture->GetHeight();
-				glm::ivec2 result;
-				if (x < 0)
-				{
-					result.x = width - (std::abs(x) % width);
-					result.x = result.x % width;
-				}
-				else result.x = x % width;
-				if (y < 0)
-				{
-					result.y = height - (std::abs(y) % height);
-					result.y = result.y % height;
-				}
-				else result.y = y % height;
-				int index = (result.x * 4) + (result.y * width * 4);
 
-				uint8_t r = texture_data[index];
-				uint8_t g = texture_data[index + 1];
-				uint8_t b = texture_data[index + 2];
-				uint8_t a = texture_data[index + 3];
-
-				element.m_BaseColor = (a << 24) | (b << 16) | (g << 8) | r;
-			}
-			else
-			{
-				element.m_BaseColor = RandomizeABGRColor(color);
-			}
-			element.m_Color = element.m_BaseColor;
-			element.m_Temperature = temperature;
-			element.m_Ignited = ignited;
-			element.m_Health = health;
-		}
-
-		void UpdateElementData(Element* element, int x, int y, bool inBounds = false)
-		{
-			if (texture_data != nullptr)
-			{
-				int width = texture->GetWidth();
-				int height = texture->GetHeight();
-				glm::ivec2 result;
-				if (x < 0)
-				{
-					result.x = width - (std::abs(x) % width);
-					result.x = result.x % width;
-				}
-				else result.x = x % width;
-				if (y < 0)
-				{
-					result.y = height - (std::abs(y) % height);
-					result.y = result.y % height;
-				}
-				else result.y = y % height;
-
-				int index = (result.x * 4) + (y * width * 4);
-
-				uint8_t r = texture_data[index];
-				uint8_t g = texture_data[index + 1];
-				uint8_t b = texture_data[index + 2];
-				uint8_t a = texture_data[index + 3];
-
-				element->m_BaseColor = (a << 24) | (b << 16) | (g << 8) | r;
-			}
-			else
-			{
-				element->m_BaseColor = RandomizeABGRColor(color);
-			}
-			element->m_Color = element->m_BaseColor;
-			element->m_Temperature = temperature;
-			element->m_Ignited = ignited;
-			element->m_Health = health;
-		}
+		//Turns a given element into the element described by this data
+		//does not update the element's ID.
+		void UpdateElementData(Element& element, int x, int y) const;
+		void UpdateElementData(Element* element, int x, int y) const;
 		
-	};
-
-
-
-	/// <summary>
-	/// for tags, write the name of the tag in []'s like [meltable], and code will handle the rest
-	/// </summary>
-	struct Reaction
-	{
-		Reaction()
-		{
-			probablility = 100;
-
-			input_cell_0 = "";
-			input_cell_1 = "";
-
-			output_cell_0 = "";
-			output_cell_1 = "";
-		}
-		Reaction(int prob, std::string in0, std::string in1, std::string out0, std::string out1)
-		{
-			probablility = prob;
-			input_cell_0 = in0;
-			input_cell_1 = in1;
-			
-			output_cell_0 = out0;
-			output_cell_1 = out1;
-		}
-
-		int probablility;
-
-		std::string input_cell_0;
-		std::string input_cell_1;
-
-		std::string output_cell_0;
-		std::string output_cell_1;
+		
+		friend void to_json(json& j, const ElementData& e);
+		friend void from_json(const json& j, ElementData& e);
+		
 
 	};
 
-	struct ReactionResult
-	{
-		ReactionResult() = default;
-		ReactionResult(uint32_t percentChance, uint32_t cell0, uint32_t cell1) {
-			probability = percentChance;
-			cell0ID = cell0;
-			cell1ID = cell1;
-		}
-		uint32_t probability = 100;
-		uint32_t cell0ID = 0;
-		uint32_t cell1ID = 0;
-	};
 
 }

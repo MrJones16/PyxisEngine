@@ -16,7 +16,9 @@ namespace Pyxis
 	World::World(std::string assetPath, int seed)
 	{
 		Physics2D::GetWorld();//make sure that the physics world is made
-		if (!LoadElementData(assetPath))
+		//load the element data
+		//make sure the file exists
+		if (!std::filesystem::exists(assetPath + "/data/CellData.xml"))
 		{
 			PX_ASSERT(false, "Failed to load element data, shutting down.");
 			PX_ERROR("Failed to load element data, shutting down.");
@@ -26,7 +28,23 @@ namespace Pyxis
 			return;
 		}
 
-		BuildReactionTable();
+		//LoadXMLElementData(assetPath);
+
+		////Output the element data to a file
+		//std::ofstream file(assetPath + "/data/CellData.json");
+		//json j;
+		//for (auto& elementData : ElementData::s_ElementData)
+		//{
+		//	j += elementData;
+		//}
+		//for (auto& reaction : ElementData::s_Reactions)
+		//{
+		//	j += reaction;
+		//}
+
+		//file << j;
+
+		ElementData::LoadElementData(assetPath + "/data/CellData.json");
 
 		//set up world noise data
 		Initialize(seed);
@@ -38,7 +56,7 @@ namespace Pyxis
 		m_CaveNoise = FastNoiseLite(m_WorldSeed);
 	}
 
-	bool World::LoadElementData(std::string assetPath)
+	bool World::LoadXMLElementData(std::string assetPath)
 	{
 		//loading element data from xml
 		tinyxml2::XMLDocument doc;
@@ -50,6 +68,7 @@ namespace Pyxis
 		}
 		auto materials = doc.FirstChild();
 		auto data = materials->FirstChildElement();
+		int elementIndex = 0;
 		//loop over each element or reaction, and add them
 		while (data != nullptr)
 		{
@@ -63,7 +82,7 @@ namespace Pyxis
 				///////////////////////////////////////////////////
 				/// Basic Attributes
 				///////////////////////////////////////////////////
-				
+
 				//get the name
 				const char* name;
 				auto error = data->QueryAttribute("name", &name);
@@ -85,7 +104,7 @@ namespace Pyxis
 				else {
 					PX_ERROR("No texture given to element, using color");
 				}
-				
+
 				//gather each attribuite for the element and set the values
 				const char* cell_type;
 				error = data->QueryAttribute("cell_type", &cell_type);
@@ -177,7 +196,7 @@ namespace Pyxis
 					PX_INFO("Element {0} was given no spread_ignition attribute", elementData.name);
 				}
 
-				
+
 				uint32_t spread_ignition_chance = 0;
 				error = data->QueryUnsignedAttribute("spread_ignition_chance", &spread_ignition_chance);
 				if (!error) {
@@ -296,7 +315,7 @@ namespace Pyxis
 				{
 					//PX_INFO("Element {0} was given no _____", elementData.name);
 				}
-				
+
 				const char* frozenStr;
 				error = data->QueryAttribute("frozen", &frozenStr);
 				if (!error) {
@@ -336,7 +355,7 @@ namespace Pyxis
 				{
 					PX_INFO("Element {0} was given no freezing point", elementData.name);
 				}
-				
+
 				//end of attributes, read for children like tags and graphics
 				auto tags = data->FirstChildElement("Tags");
 				if (tags)
@@ -345,13 +364,13 @@ namespace Pyxis
 					{
 						std::string tag = tagElement->Value();
 						PX_TRACE("Added element {0} to tag {1}", elementData.name, tag);
-						m_TagElements[tag].push_back(m_TotalElements);
+						ElementData::s_TagElements[tag].push_back(elementIndex);
 					}
 				}
 
 				//finished reading data, add to the memory!
-				m_ElementData.push_back(elementData);
-				m_ElementIDs[elementData.name] = m_TotalElements++;
+				ElementData::s_ElementData.push_back(elementData);
+				ElementData::s_ElementNameToID[elementData.name] = elementIndex++;
 			}
 			//node is a reaction, so add to reaction input list for later
 			else if (nodeName == "Reaction")
@@ -362,7 +381,7 @@ namespace Pyxis
 				uint32_t probability;
 				auto error = data->QueryUnsignedAttribute("probability", &probability);
 				if (!error) {
-					reaction.probablility = probability; 
+					reaction.probablility = probability;
 				}
 
 				//input cell 0
@@ -408,9 +427,9 @@ namespace Pyxis
 				{
 					PX_INFO("Reaction missing output cell 1");
 				}
-				
+
 				//end of gathering data, so add to reaction list
-				m_Reactions.push_back(reaction);
+				ElementData::s_Reactions.push_back(reaction);
 			}
 			PX_TRACE("node name was: {0}", nodeName);
 			data = data->NextSiblingElement();
@@ -441,98 +460,6 @@ namespace Pyxis
 		//the reaction table can use it
 		return true;
 	}
-
-	void World::BuildReactionTable()
-	{
-		m_ReactionLookup = std::vector<std::unordered_map<uint32_t, ReactionResult>>(m_TotalElements);
-
-		std::string input0Tag, input1Tag;
-		//loop over each reaction
-		for (Reaction reaction : m_Reactions)
-		{
-			//get the first string, input 0
-			if (StringContainsTag(reaction.input_cell_0))
-			{
-				//contains a tag, so keep track of what the tag is and loop
-				input0Tag = TagFromString(reaction.input_cell_0);
-				for (uint32_t id0 : m_TagElements[input0Tag])
-				{
-					uint32_t idOut0;
-					if (StringContainsTag(reaction.output_cell_0))
-					{
-						idOut0 = m_ElementIDs[ReplaceTagInString(reaction.output_cell_0, m_ElementData[id0].name)];
-					}
-					else
-					{
-						idOut0 = m_ElementIDs[reaction.output_cell_0];
-					}
-					//id0 obtained, move onto next input
-					if (StringContainsTag(reaction.input_cell_1))
-					{
-						input1Tag = TagFromString(reaction.input_cell_1);
-						//input 1 has tag, so loop over tag elements again
-						for (uint32_t id1 : m_TagElements[input1Tag])
-						{
-							uint32_t idOut1;
-							//id0 and 1 obtained
-							if (StringContainsTag(reaction.output_cell_1))
-							{
-								idOut1 = m_ElementIDs[ReplaceTagInString(reaction.output_cell_1, m_ElementData[id1].name)];
-							}
-							else
-							{
-								idOut1 = m_ElementIDs[reaction.output_cell_1];
-							}
-							//all id's obtained
-							m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
-						}
-					}
-					else
-					{
-						uint32_t id1 = m_ElementIDs[reaction.input_cell_1];
-						uint32_t idOut1 = m_ElementIDs[reaction.output_cell_1];
-						//all id's obtained
-						m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
-						/*m_ReactionLookup[id1][id0] = ReactionResult(reaction.probablility, idOut1, idOut0);*/
-					}
-				}
-			}
-			else
-			{
-				//input 0 has no tag, so move on to next input
-				uint32_t id0 = m_ElementIDs[reaction.input_cell_0];
-				uint32_t idOut0 = m_ElementIDs[reaction.output_cell_0];
-				if (StringContainsTag(reaction.input_cell_1))
-				{
-					input1Tag = TagFromString(reaction.input_cell_1);
-					//input 1 has tag, so loop over tag elements again
-					for (uint32_t id1 : m_TagElements[input1Tag])
-					{
-						//id0 and 1 obtained
-						uint32_t idOut1;
-						if (StringContainsTag(reaction.output_cell_1))
-						{
-							idOut1 = m_ElementIDs[ReplaceTagInString(reaction.output_cell_1, m_ElementData[id1].name)];
-						}
-						else
-						{
-							idOut1 = m_ElementIDs[reaction.output_cell_1];
-						}
-						//all id's obtained
-						m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
-					}
-				}
-				else
-				{
-					uint32_t id1 = m_ElementIDs[reaction.input_cell_1];
-					uint32_t idOut1 = m_ElementIDs[reaction.output_cell_1];
-					//all id's obtained
-					m_ReactionLookup[id0][id1] = ReactionResult(reaction.probablility, idOut0, idOut1);
-				}
-			}
-		}
-	}
-
 
 	/// <summary>
 	/// Takes the message with the world data, and loads the world with it
@@ -593,10 +520,7 @@ namespace Pyxis
 
 			PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(), "Tried to load a chunk that already existed");
 			Chunk* chunk = new Chunk(chunkPos);
-			for (int ii = (BUCKETSWIDTH * BUCKETSWIDTH) - 1; ii >= 0; ii--)
-			{
-				msg >> chunk->m_DirtyRects[ii];
-			}
+			msg >> chunk->m_DirtyRect;
 			m_Chunks[chunkPos] = chunk;
 			for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--)
 			{
@@ -625,33 +549,18 @@ namespace Pyxis
 
 	void World::GetGameData(std::vector<Network::Message>& messages)
 	{
-		
-		////for each pixel body, lets create a unique message
-		//for (auto& pair : m_PixelBodyMap)
-		//{
-		//	messages.emplace_back();
-		//	messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
-		//	messages.back() << pair.second->m_B2Body->GetLinearVelocity();
-		//	messages.back() << pair.second->m_B2Body->GetAngularVelocity();
-		//	messages.back() << pair.second->m_B2Body->GetType();
-		//	messages.back() << pair.second->m_B2Body->GetAngle();
-		//	messages.back() << pair.second->m_B2Body->GetPosition();
-		//	//msg << pair.second->m_Elements;
-		//	int elementCount = 0;
-		//	for (auto& pair : pair.second->m_Elements)
-		//	{
-		//		messages.back() << pair.second;
-		//		messages.back() << pair.first;
-		//		elementCount++;
-		//	}
-		//	glm::ivec2 size = { pair.second->m_Width, pair.second->m_Height };
-
-		//	messages.back() << elementCount << size << pair.first;
-		//}
 		b2Body* body = Physics2D::GetWorld()->GetBodyList();
+
+		//FILO to swap order of sent pixel bodies, so box2d can stay synced?
+		std::deque<b2Body*> bodies;
 		while (body != nullptr)
 		{
-			RigidBody2D* rb = (RigidBody2D*)body->GetUserData().pointer;
+			bodies.push_back(body);			
+			body = body->GetNext();
+		}
+		while (!bodies.empty())
+		{
+			RigidBody2D* rb = (RigidBody2D*)bodies.back()->GetUserData().pointer;
 			if (rb)
 			{
 				PX_TRACE("Packing RigidBody2D {0}", rb->GetUUID());
@@ -659,7 +568,7 @@ namespace Pyxis
 				messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
 				messages.back() << rb->SerializeBinary();
 			}
-			body = body->GetNext();
+			bodies.pop_back();
 		}
 
 
@@ -672,68 +581,25 @@ namespace Pyxis
 			{
 				messages.back() << pair.second->m_Elements[i];
 			}
-			for (auto& minmax : pair.second->m_DirtyRects)
-			{
-				messages.back() << minmax;
-			}
+			messages.back() << pair.second->m_DirtyRect;
 			messages.back() << pair.first;
 		}
 
-	}
-
-
-	bool World::StringContainsTag(const std::string& string)
-	{
-		if (string.find("[") != std::string::npos && string.find("]") != std::string::npos) return true;
-		return false;
-	}
-
-	std::string World::TagFromString(const std::string& stringWithTag)
-	{
-		int start = stringWithTag.find("[");
-		int end = stringWithTag.find("]");
-		return stringWithTag.substr(start + 1, (end - start) - 1);
-	}
-
-	std::string World::ReplaceTagInString(const std::string& stringToFill, const std::string& name)
-	{
-		int start = stringToFill.find("[");
-		int end =   stringToFill.find("]");
-		std::string result = stringToFill.substr(0, start) + name;
-		if (end == stringToFill.size() - 1) return result;
-		return result + stringToFill.substr(end + 1, (stringToFill.size() - end) - 1);
 	}
 
 	World::~World()
 	{
 		PX_TRACE("Deleting World");
 
-		//delete pixel bodies
-		/*for (auto pixelBody : m_PixelBodyMap)
-		{
-			delete pixelBody.second;
-		}*/
-
 		Physics2D::DeleteWorld();
 		for (auto& pair : m_Chunks)
 		{
 			delete(pair.second);
 		}
-		/*for each (Chunk * chunk in m_Chunks_TR)
-		{
-			delete(chunk);
-		}
-		for each (Chunk * chunk in m_Chunks_BL)
-		{
-			delete(chunk);
-		}
-		for each (Chunk * chunk in m_Chunks_BR)
-		{
-			delete(chunk);
-		}*/
+		
 	}
 
-	void World::AddChunk(const glm::ivec2& chunkPos)
+	Chunk* World::AddChunk(const glm::ivec2& chunkPos)
 	{
 		//make sure chunk doesn't already exist
 		if (m_Chunks.find(chunkPos) == m_Chunks.end())
@@ -742,9 +608,10 @@ namespace Pyxis
 			m_Chunks[chunkPos] = chunk;
 			GenerateChunk(chunk);
 			chunk->UpdateWholeTexture();
+			return chunk;
 		}
-		
-		
+
+		return m_Chunks[chunkPos];				
 	}
 
 
@@ -753,8 +620,10 @@ namespace Pyxis
 		auto it = m_Chunks.find(chunkPos);
 		if (it != m_Chunks.end())
 			return it->second;
-		AddChunk(chunkPos);
-		return m_Chunks[chunkPos];
+		return nullptr;
+
+		/*AddChunk(chunkPos);
+		return m_Chunks[chunkPos];*/
 	}
 
 	void World::GenerateChunk(Chunk* chunk)
@@ -777,12 +646,12 @@ namespace Pyxis
 					}
 					else if (pixelPos.y > surfaceTop)
 					{
-						chunk->SetElement(x, y, GetElementByName("grass", x, y));
+						chunk->SetElement(x, y, ElementData::GetElement("grass", x, y));
 					}
 					else if (pixelPos.y > heightNoise)
 					{
 						//dirt
-						chunk->SetElement(x, y, GetElementByName("dirt", x, y));
+						chunk->SetElement(x, y, ElementData::GetElement("dirt", x, y));
 					}
 					else
 					{
@@ -790,7 +659,7 @@ namespace Pyxis
 						float caveNoise = (m_CaveNoise.GetNoise(pixelPos.x, pixelPos.y) + 1) / 2.0f;
 						if (caveNoise >= 0.25f)
 						{
-							chunk->SetElement(x, y, GetElementByName("stone", x, y));
+							chunk->SetElement(x, y, ElementData::GetElement("stone", x, y));
 						}
 					}
 					
@@ -801,20 +670,12 @@ namespace Pyxis
 					float caveNoise = (m_CaveNoise.GetNoise(pixelPos.x, pixelPos.y) + 1) / 2.0f;
 					if (caveNoise >= 0.25f)
 					{
-						chunk->SetElement(x, y, GetElementByName("stone", x, y));
+						chunk->SetElement(x, y, ElementData::GetElement("stone", x, y));
 					}
 				}
 			}
 		}
 		
-	}
-
-	Element World::GetElementByName(std::string elementName, int x, int y)
-	{
-		Element result = Element();
-		result.m_ID = m_ElementIDs[elementName];
-		m_ElementData[result.m_ID].UpdateElementData(result, x, y);
-		return result;
 	}
 
 	Element& World::GetElement(const glm::ivec2& pixelPos)
@@ -828,17 +689,17 @@ namespace Pyxis
 	{
 		Chunk* chunk = GetChunk(PixelToChunk(pixelPos));
 		auto index = PixelToIndex(pixelPos);
-		if (element.m_ID == m_ElementIDs["debug_heat"])
+		if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"])
 		{
 			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
 		}
-		else if (element.m_ID == m_ElementIDs["debug_cool"])
+		else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"])
 		{
 			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
 		}
 		else
 		{
-			chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+			chunk->SetElement(index.x, index.y, element);
 		}
 		UpdateChunkDirtyRect(index.x, index.y, chunk);
 
@@ -848,17 +709,17 @@ namespace Pyxis
 	{
 		Chunk* chunk = GetChunk(PixelToChunk(pixelPos));
 		auto index = PixelToIndex(pixelPos);
-		if (element.m_ID == m_ElementIDs["debug_heat"])
+		if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"])
 		{
 			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
 		}
-		else if (element.m_ID == m_ElementIDs["debug_cool"])
+		else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"])
 		{
 			chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
 		}
 		else
 		{
-			chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+			chunk->SetElement(index.x, index.y, element);
 		}
 
 	}
@@ -886,29 +747,34 @@ namespace Pyxis
 				}
 
 				//get chunk / index
-				chunk = GetChunk(PixelToChunk(newPos));
+				glm::ivec2 chunkPos = PixelToChunk(newPos);
+				chunk = GetChunk(chunkPos);
+				if (chunk == nullptr)
+				{
+					chunk = AddChunk(chunkPos);
+				}
 				chunksToUpdate.insert(chunk);
 				index = PixelToIndex(newPos);
 
 				//get element / color
 				Element element = Element();
-				ElementData& elementData = m_ElementData[elementID];
+				ElementData& elementData = ElementData::GetElementData(elementID);
 				element.m_ID = elementID;
 				element.m_Updated = !m_UpdateBit;
 				elementData.UpdateElementData(element, index.x, index.y);
 
 				//set the element
-				if (element.m_ID == m_ElementIDs["debug_heat"])
+				if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"])
 				{
 					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
 				}
-				else if (element.m_ID == m_ElementIDs["debug_cool"])
+				else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"])
 				{
 					chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
 				}
 				else
 				{
-					chunk->m_Elements[index.x + index.y * CHUNKSIZE] = element;
+					chunk->SetElement(index.x, index.y, element);
 				}
 				chunk->UpdateDirtyRect(index.x, index.y);
 			}
@@ -934,177 +800,12 @@ namespace Pyxis
 
 		Physics2D::Step();
 
-		//int velocityIterations = 6;
-		//int positionIterations = 2;
-		//m_Box2DWorld->Step(1.0f / 60.0f, velocityIterations, positionIterations);
+		
 
-		////put pixel bodies back into the simulation, and solve collisions
-		//for (auto pair : m_PixelBodyMap)
-		//{
-		//	//skip bodies left in the world that were sleeping
-		//	if (pair.second->m_InWorld) continue;
-		//	pair.second->m_InWorld = true;
-
-		//	glm::ivec2 centerPixelWorld = { pair.second->m_B2Body->GetPosition().x * PPU, pair.second->m_B2Body->GetPosition().y * PPU };
-
-		//	float angle = pair.second->m_B2Body->GetAngle();
-		//	auto rotationMatrix = glm::mat2x2(1);
-
-		//	//if angle gets above 45 degrees, apply a 90 deg rotation first
-		//	while (angle > 0.78539816339f)
-		//	{
-		//		angle -= 1.57079632679f;
-		//		rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
-		//	}
-		//	while (angle < -0.78539816339f)
-		//	{
-		//		angle += 1.57079632679f;
-		//		rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
-		//	}
-
-		//	float A = -std::tan(angle / 2);
-		//	float B = std::sin(angle);
-		//	auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1);//0 a
-		//	auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);// b 0
-		//	for (auto mappedElement : pair.second->m_Elements)
-		//	{
-		//		//find the element in the world by using the transform of the body and
-		//		//the position of the element in the array
-		//		glm::ivec2 skewedPos = mappedElement.first * rotationMatrix;
-
-		//		//horizontal skew:
-		//		int horizontalSkewAmount = (float)skewedPos.y * A;
-		//		skewedPos.x += horizontalSkewAmount;
-
-		//		//vertical skew
-		//		int skewAmount = (float)skewedPos.x * B;
-		//		skewedPos.y += skewAmount;
-
-		//		//horizontal skew:
-		//		horizontalSkewAmount = (float)skewedPos.y * A;
-		//		skewedPos.x += horizontalSkewAmount;
-
-		//		//pixel pos is the pixel at the center of the array, so lets use it
-		//		//the new position of the element is the skewed position + center offsef
-		//		glm::ivec2 worldPixelPos = glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
-		//		//now that we know the world position, cache it for pulling it out later
-		//		pair.second->m_Elements[mappedElement.first].worldPos = worldPixelPos;
-		//		//PX_TRACE("placed world pos: ({0},{1})", worldPixelPos.x, worldPixelPos.y);
-		//		//set the world element from the array at the found position
-		//		if (GetElement(worldPixelPos).m_ID != 0)
-		//		{
-		//			//we are replacing something that is in the way!
-
-		//			//TODO: instead of always hiding, throw liquids ect as a particle!
-		//			pair.second->m_Elements[mappedElement.first].hidden = true;
-
-		//		}
-		//		else
-		//		{
-		//			//we are no longer hidden!
-		//			pair.second->m_Elements[mappedElement.first].hidden = false;
-		//			if (std::abs(pair.second->m_B2Body->GetAngularVelocity()) > 0.01f || pair.second->m_B2Body->GetLinearVelocity().LengthSquared() > 0.01f)
-		//			{
-		//				//we are moving, so update dirty rect
-		//				//PX_TRACE("we are moving!: angular: {0}, linear: {1}", pair.second->m_B2Body->GetAngularVelocity(), pair.second->m_B2Body->GetLinearVelocity().LengthSquared());
-		//				SetElement(worldPixelPos, mappedElement.second.element);
-		//			}
-		//			else
-		//			{
-		//				//we are still, so stop updating region!
-		//				SetElementWithoutDirtyRectUpdate(worldPixelPos, mappedElement.second.element);
-		//			}
-		//			
-		//		}
-
-		//	}
-		//}
-
-
-		for (auto & pair : m_Chunks)
+		for (auto& [pos, chunk] : m_Chunks)
 		{
-			//BL
-			UpdateChunkBucket(pair.second, 0, 0);
-			UpdateChunkBucket(pair.second, 2, 0);
-			//UpdateChunkBucket(pair.second, 4, 0);
-			//UpdateChunkBucket(pair.second, 6, 0);
-			UpdateChunkBucket(pair.second, 0, 2);
-			UpdateChunkBucket(pair.second, 2, 2);
-			//UpdateChunkBucket(pair.second, 4, 2);
-			//UpdateChunkBucket(pair.second, 6, 2);
-			//UpdateChunkBucket(pair.second, 0, 4);
-			//UpdateChunkBucket(pair.second, 2, 4);
-			//UpdateChunkBucket(pair.second, 4, 4);
-			//UpdateChunkBucket(pair.second, 6, 4);
-			//UpdateChunkBucket(pair.second, 0, 6);
-			//UpdateChunkBucket(pair.second, 2, 6);
-			//UpdateChunkBucket(pair.second, 4, 6);
-			//UpdateChunkBucket(pair.second, 6, 6);
+			UpdateChunk(chunk);
 		}
-
-		for (auto & pair : m_Chunks)
-		{
-			//BR
-			UpdateChunkBucket(pair.second, 0 + 1, 0);
-			UpdateChunkBucket(pair.second, 2 + 1, 0);
-			//UpdateChunkBucket(pair.second, 4 + 1, 0);
-			//UpdateChunkBucket(pair.second, 6 + 1, 0);
-			UpdateChunkBucket(pair.second, 0 + 1, 2);
-			UpdateChunkBucket(pair.second, 2 + 1, 2);
-			//UpdateChunkBucket(pair.second, 4 + 1, 2);
-			//UpdateChunkBucket(pair.second, 6 + 1, 2);
-			//UpdateChunkBucket(pair.second, 0 + 1, 4);
-			//UpdateChunkBucket(pair.second, 2 + 1, 4);
-			//UpdateChunkBucket(pair.second, 4 + 1, 4);
-			//UpdateChunkBucket(pair.second, 6 + 1, 4);
-			//UpdateChunkBucket(pair.second, 0 + 1, 6);
-			//UpdateChunkBucket(pair.second, 2 + 1, 6);
-			//UpdateChunkBucket(pair.second, 4 + 1, 6);
-			//UpdateChunkBucket(pair.second, 6 + 1, 6);
-		}
-
-		for (auto & pair : m_Chunks)
-		{
-			//TL
-			UpdateChunkBucket(pair.second, 0, 0 + 1);
-			UpdateChunkBucket(pair.second, 2, 0 + 1);
-			//UpdateChunkBucket(pair.second, 4, 0 + 1);
-			//UpdateChunkBucket(pair.second, 6, 0 + 1);
-			UpdateChunkBucket(pair.second, 0, 2 + 1);
-			UpdateChunkBucket(pair.second, 2, 2 + 1);
-			//UpdateChunkBucket(pair.second, 4, 2 + 1);
-			//UpdateChunkBucket(pair.second, 6, 2 + 1);
-			//UpdateChunkBucket(pair.second, 0, 4 + 1);
-			//UpdateChunkBucket(pair.second, 2, 4 + 1);
-			//UpdateChunkBucket(pair.second, 4, 4 + 1);
-			//UpdateChunkBucket(pair.second, 6, 4 + 1);
-			//UpdateChunkBucket(pair.second, 0, 6 + 1);
-			//UpdateChunkBucket(pair.second, 2, 6 + 1);
-			//UpdateChunkBucket(pair.second, 4, 6 + 1);
-			//UpdateChunkBucket(pair.second, 6, 6 + 1);
-		}
-
-		for (auto & pair : m_Chunks)
-		{
-			//TR
-			UpdateChunkBucket(pair.second, 0 + 1, 0 + 1);
-			UpdateChunkBucket(pair.second, 2 + 1, 0 + 1);
-			//UpdateChunkBucket(pair.second, 4 + 1, 0 + 1);
-			//UpdateChunkBucket(pair.second, 6 + 1, 0 + 1);
-			UpdateChunkBucket(pair.second, 0 + 1, 2 + 1);
-			UpdateChunkBucket(pair.second, 2 + 1, 2 + 1);
-			//UpdateChunkBucket(pair.second, 4 + 1, 2 + 1);
-			//UpdateChunkBucket(pair.second, 6 + 1, 2 + 1);
-			//UpdateChunkBucket(pair.second, 0 + 1, 4 + 1);
-			//UpdateChunkBucket(pair.second, 2 + 1, 4 + 1);
-			//UpdateChunkBucket(pair.second, 4 + 1, 4 + 1);
-			//UpdateChunkBucket(pair.second, 6 + 1, 4 + 1);
-			//UpdateChunkBucket(pair.second, 0 + 1, 6 + 1);
-			//UpdateChunkBucket(pair.second, 2 + 1, 6 + 1);
-			//UpdateChunkBucket(pair.second, 4 + 1, 6 + 1);
-			//UpdateChunkBucket(pair.second, 6 + 1, 6 + 1);
-		}
-
 		
 		if (!m_ServerMode)
 		{
@@ -1113,9 +814,6 @@ namespace Pyxis
 				pair.second->UpdateTexture();
 			}
 		}
-		
-
-		//UpdateChunk(m_Chunks[{0, 0}]);
 
 		m_UpdateBit = !m_UpdateBit;
 		m_SimulationTick++;
@@ -1128,10 +826,6 @@ namespace Pyxis
 			pair.second->UpdateTexture();
 		}
 	}
-
-	//defines for easy to read code
-	#define SwapWithOther chunk->SetElement(xOther, yOther, currElement); chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
-	#define SwapWithOtherChunk otherChunk->m_Elements[indexOther] = currElement; chunk->SetElement(x, y, other); UpdateChunkDirtyRect(x, y, chunk);
 
 	/// <summary>
 	/// returns the percent value of the value between the points, from 0-1
@@ -1154,51 +848,75 @@ namespace Pyxis
 	/// const int BUCKETS = chunk->BUCKETS;
 	/// const int BUCKETSIZE = chunk->BUCKETSIZE;
 	/// </summary>
-	void World::UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY)
+	void World::UpdateChunk(Chunk* chunk)
 	{
+		//make a copy of the dirty rect before shrinking it
+		DirtyRect dirtyRect = chunk->m_DirtyRect;
+		//instead of resetting completely, just shrink by 1. This allows elements that cross borders to update, since otherwise the dirty rect would
+		//forget about it instead of shrinking and still hitting it.
+		chunk->m_DirtyRect.min = chunk->m_DirtyRect.min + 1;
+		chunk->m_DirtyRect.max = chunk->m_DirtyRect.max - 1;
 
-		//copy the dirty rect
-		std::pair<glm::ivec2, glm::ivec2> minmax = chunk->m_DirtyRects[bucketX + bucketY * BUCKETSWIDTH];
 
 		//make sure to wake up any pixel bodies in area
 		b2AABB queryRegion;
-		glm::vec2 lower = glm::vec2(minmax.first + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
-		glm::vec2 upper = glm::vec2(minmax.second + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
+		glm::vec2 lower = glm::vec2(dirtyRect.min + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
+		glm::vec2 upper = glm::vec2(dirtyRect.max + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
 		queryRegion.lowerBound = b2Vec2(lower.x, lower.y);
 		queryRegion.upperBound = b2Vec2(upper.x, upper.y);
 		WakeUpQueryCallback callback;
 		Physics2D::GetWorld()->QueryAABB(&callback, queryRegion);
 
-		//instead of resetting completely, just shrink by 1. This allows elements that cross borders to update, since otherwise the dirty rect would
-		//forget about it instead of shrinking and still hitting it.
-		chunk->m_DirtyRects[bucketX + bucketY * BUCKETSWIDTH] = std::pair<glm::ivec2, glm::ivec2>(
-			minmax.first + 1, //min grows
-			minmax.second - 1 //max shrinks
-		);
-		 
 		//get the min and max
 		//loop from min to max in both "axies"?
-		bool directionBit = m_UpdateBit;
+		bool minToMax = m_UpdateBit;
 
 		///////////////////////////////////////////////////////////////
 		/// Main Update Loop, back and forth bottom to top, left,right,left....
 		///////////////////////////////////////////////////////////////
-		int startNumy = m_UpdateBit ? std::max(minmax.first.y, bucketY * BUCKETSIZE) : std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1);
-		int compNumberY = m_UpdateBit ? std::min(minmax.second.y, ((bucketY + 1) * BUCKETSIZE) - 1) + 1 : std::max(minmax.first.y, bucketY * BUCKETSIZE) - 1;
-		if (minmax.first.x <= minmax.second.x && minmax.first.y <= minmax.second.y)
-		for (int y = startNumy; y != compNumberY; m_UpdateBit ? y++ : y--) //going y then x so we do criss crossing 
+		int startY;
+		int compareY;
+		if (minToMax)
 		{
-			directionBit = !directionBit;
-			int startNum   = directionBit ? std::max(minmax.first.x, bucketX * BUCKETSIZE) : std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1);
-			int compNumber = directionBit ? std::min(minmax.second.x, ((bucketX + 1) * BUCKETSIZE) - 1) + 1 : std::max(minmax.first.x, bucketX * BUCKETSIZE) - 1;
+			//start at the smallest, and go the largest
+			startY = std::max(dirtyRect.min.y, 0);
+			compareY = std::min(dirtyRect.max.y, CHUNKSIZE - 1) + 1;
+		}
+		else
+		{
+			//start at the largest, and go the smallest
+			startY = std::min(dirtyRect.max.y, CHUNKSIZE - 1);
+			compareY = std::max(dirtyRect.min.y, 0) - 1;
+		}
+
+
+		if (dirtyRect.min.x <= dirtyRect.max.x && dirtyRect.min.y <= dirtyRect.max.y)
+		for (int y = startY; y != compareY; m_UpdateBit ? y++ : y--) //going y then x so we do criss crossing 
+		{
+			
+			minToMax = !minToMax;
+			int startX;
+			int compareX;
+			if (minToMax)
+			{
+				//start at the smallest, and go the largest
+				startX = std::max(dirtyRect.min.x, 0);
+				compareX = std::min(dirtyRect.max.x, CHUNKSIZE - 1) + 1;
+			}
+			else
+			{
+				//start at the largest, and go the smallest
+				startX = std::min(dirtyRect.max.x, CHUNKSIZE - 1);
+				compareX = std::max(dirtyRect.min.x, 0) - 1;
+			}
 			//PX_TRACE("x is: {0}", x);
-			for (int x = startNum; x != compNumber; directionBit ? x++ : x--)
+			for (int x = startX; x != compareX; minToMax ? x++ : x--)
 			{
 				//we now have an x and y of the element in the array, so update it
 				//first lets seed random, so the simulation is deterministic!
 				SeedRandom(x, y);
 				Element& currElement = chunk->m_Elements[x + y * CHUNKSIZE];
-				ElementData& currElementData = m_ElementData[currElement.m_ID];
+				ElementData& currElementData = ElementData::GetElementData(currElement.m_ID);
 
 				//skip if already updated
 				if (currElement.m_Updated == m_UpdateBit) continue;
@@ -1222,6 +940,11 @@ namespace Pyxis
 				Element* elementBottom;
 				Element* elementRight;
 				Element* elementLeft;
+
+				Chunk* leftChunk = chunk;
+				Chunk* rightChunk = chunk;
+				Chunk* topChunk = chunk;
+				Chunk* bottomChunk = chunk;
 				
 				//get cardinal elements
 				{
@@ -1231,10 +954,18 @@ namespace Pyxis
 					}
 					else
 					{
+						//see if the chunk exists, if it does then get that element, otherwise nullptr
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x, y + 1);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((((x)+CHUNKSIZE) % CHUNKSIZE) + (((y + 1) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-						elementTop = otherChunk->m_Elements + indexOther;
+						topChunk = GetChunk(PixelToChunk(pixelSpace));
+						if (topChunk != nullptr)
+						{
+							int indexOther = ((((x)+CHUNKSIZE) % CHUNKSIZE) + (((y + 1) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+							elementTop = topChunk->m_Elements + indexOther;
+						}
+						else
+						{
+							elementTop = nullptr;
+						}
 					}
 
 					if (IsInBounds(x, y - 1))
@@ -1243,10 +974,18 @@ namespace Pyxis
 					}
 					else
 					{
+						//see if the chunk exists, if it does then get that element, otherwise nullptr
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x, y - 1);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((((x)+CHUNKSIZE) % CHUNKSIZE) + (((y - 1) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-						elementBottom = otherChunk->m_Elements + indexOther;
+						bottomChunk = GetChunk(PixelToChunk(pixelSpace));
+						if (bottomChunk != nullptr)
+						{
+							int indexOther = ((((x)+CHUNKSIZE) % CHUNKSIZE) + (((y - 1) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+							elementBottom = bottomChunk->m_Elements + indexOther;
+						}
+						else
+						{
+							elementBottom = nullptr;
+						}
 					}
 
 					if (IsInBounds(x + 1, y))
@@ -1255,10 +994,18 @@ namespace Pyxis
 					}
 					else
 					{
+						//see if the chunk exists, if it does then get that element, otherwise nullptr
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x + 1, y);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((((x + 1) + CHUNKSIZE) % CHUNKSIZE) + (((y)+CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-						elementRight = otherChunk->m_Elements + indexOther;
+						rightChunk = GetChunk(PixelToChunk(pixelSpace));
+						if (rightChunk != nullptr)
+						{
+							int indexOther = ((((x + 1) + CHUNKSIZE) % CHUNKSIZE) + (((y)+CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+							elementRight = rightChunk->m_Elements + indexOther;
+						}
+						else
+						{
+							elementRight = nullptr;
+						}
 					}
 
 					if (IsInBounds(x - 1, y))
@@ -1267,66 +1014,132 @@ namespace Pyxis
 					}
 					else
 					{
+						//see if the chunk exists, if it does then get that element, otherwise nullptr
 						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(x - 1, y);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((((x - 1) + CHUNKSIZE) % CHUNKSIZE) + (((y)+CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-						elementLeft = otherChunk->m_Elements + indexOther;
+						leftChunk = GetChunk(PixelToChunk(pixelSpace));
+						if (leftChunk != nullptr)
+						{
+							int indexOther = ((((x - 1) + CHUNKSIZE) % CHUNKSIZE) + (((y)+CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
+							elementLeft = leftChunk->m_Elements + indexOther;
+						}
+						else
+						{
+							elementLeft = nullptr;
+						}
 					}
 				}
 
-				ElementData& elementLeftData = m_ElementData[elementLeft->m_ID];
-				ElementData& elementRightData = m_ElementData[elementRight->m_ID];
-				ElementData& elementTopData = m_ElementData[elementTop->m_ID];
-				ElementData& elementBottomData = m_ElementData[elementBottom->m_ID];
+                ElementData* elementLeftData	= (elementLeft != nullptr)	? &ElementData::GetElementData(elementLeft->m_ID) : nullptr;
+                ElementData* elementRightData	= (elementRight != nullptr) ? &ElementData::GetElementData(elementRight->m_ID) : nullptr;
+                ElementData* elementTopData		= (elementTop != nullptr)	? &ElementData::GetElementData(elementTop->m_ID) : nullptr;
+                ElementData* elementBottomData	= (elementBottom != nullptr)? &ElementData::GetElementData(elementBottom->m_ID) : nullptr;
 				//check for reactions, left,up,right,down
 				{
-					it = m_ReactionLookup[currElement.m_ID].find(elementLeft->m_ID);
-					end = m_ReactionLookup[currElement.m_ID].end();
-					if (it != end && (std::rand() % 101) <= it->second.probability)
+					if (elementLeft != nullptr)
 					{
-						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
-						elementLeft->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementLeft, x-1, y);
-						UpdateChunkDirtyRect(x, y, chunk);
-						continue;
-					}
+						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementLeft->m_ID);
+						end = ElementData::s_ReactionTable[currElement.m_ID].end();
+						if (it != end && (std::rand() % 100) < it->second.probability)
+						{
+							currElement.m_ID = it->second.cell0ID;
+							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
+							ed0.UpdateElementData(currElement, x, y);
+							if (ed0.cell_type == ElementType::solid || ed0.cell_type == ElementType::movableSolid)
+							{
+								chunk->m_StaticColliderChanged = true;
+							}
 
-					it = m_ReactionLookup[currElement.m_ID].find(elementTop->m_ID);
-					end = m_ReactionLookup[currElement.m_ID].end();
-					if (it != end && (std::rand() % 101) <= it->second.probability)
-					{
-						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
-						elementTop->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementTop, x, y+1);
-						UpdateChunkDirtyRect(x, y, chunk);
-						continue;
+							elementLeft->m_ID = it->second.cell1ID;
+							ElementData& ed1 = ElementData::GetElementData(it->second.cell1ID);
+							if (ed1.cell_type == ElementType::solid || ed1.cell_type == ElementType::movableSolid)
+							{
+								leftChunk->m_StaticColliderChanged = true;
+							}
+							ed1.UpdateElementData(elementLeft, x - 1, y);
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
 					}
+					
+					if (elementTop != nullptr)
+					{
+						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementTop->m_ID);
+						end = ElementData::s_ReactionTable[currElement.m_ID].end();
+						if (it != end && (std::rand() % 100) < it->second.probability)
+						{
+							currElement.m_ID = it->second.cell0ID;
+							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
+							ed0.UpdateElementData(currElement, x, y);
+							if (ed0.cell_type == ElementType::solid || ed0.cell_type == ElementType::movableSolid)
+							{
+								chunk->m_StaticColliderChanged = true;
+							}
 
-					it = m_ReactionLookup[currElement.m_ID].find(elementRight->m_ID);
-					end = m_ReactionLookup[currElement.m_ID].end();
-					if (it != end && (std::rand() % 101) <= it->second.probability)
-					{
-						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
-						elementRight->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementRight, x+1, y);
-						UpdateChunkDirtyRect(x, y, chunk);
-						continue;
-					}
 
-					it = m_ReactionLookup[currElement.m_ID].find(elementBottom->m_ID);
-					end = m_ReactionLookup[currElement.m_ID].end();
-					if (it != end && (std::rand() % 101) <= it->second.probability)
-					{
-						currElement.m_ID = it->second.cell0ID;
-						m_ElementData[it->second.cell0ID].UpdateElementData(currElement, x, y);
-						elementBottom->m_ID = it->second.cell1ID;
-						m_ElementData[it->second.cell1ID].UpdateElementData(elementBottom, x, y-1);
-						UpdateChunkDirtyRect(x, y, chunk);
-						continue;
+							elementTop->m_ID = it->second.cell1ID;
+							ElementData& ed1 = ElementData::GetElementData(it->second.cell1ID);
+							if (ed1.cell_type == ElementType::solid || ed1.cell_type == ElementType::movableSolid)
+							{
+								topChunk->m_StaticColliderChanged = true;
+							}
+							ed1.UpdateElementData(elementTop, x - 1, y);
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
 					}
+					
+					if (elementRight != nullptr)
+					{
+						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementRight->m_ID);
+						end = ElementData::s_ReactionTable[currElement.m_ID].end();
+						if (it != end && (std::rand() % 100) < it->second.probability)
+						{
+							currElement.m_ID = it->second.cell0ID;
+							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
+							ed0.UpdateElementData(currElement, x, y);
+							if (ed0.cell_type == ElementType::solid || ed0.cell_type == ElementType::movableSolid)
+							{
+								chunk->m_StaticColliderChanged = true;
+							}
+
+							elementRight->m_ID = it->second.cell1ID;
+							ElementData& ed1 = ElementData::GetElementData(it->second.cell1ID);
+							if (ed1.cell_type == ElementType::solid || ed1.cell_type == ElementType::movableSolid)
+							{
+								rightChunk->m_StaticColliderChanged = true;
+							}
+							ed1.UpdateElementData(elementRight, x - 1, y);
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+					}
+					
+					if (elementBottom != nullptr)
+					{
+						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementBottom->m_ID);
+						end = ElementData::s_ReactionTable[currElement.m_ID].end();
+						if (it != end && (std::rand() % 100) < it->second.probability)
+						{
+							currElement.m_ID = it->second.cell0ID;
+							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
+							ed0.UpdateElementData(currElement, x, y);
+							if (ed0.cell_type == ElementType::solid || ed0.cell_type == ElementType::movableSolid)
+							{
+								chunk->m_StaticColliderChanged = true;
+							}
+
+							elementBottom->m_ID = it->second.cell1ID;
+							ElementData& ed1 = ElementData::GetElementData(it->second.cell1ID);
+							if (ed1.cell_type == ElementType::solid || ed1.cell_type == ElementType::movableSolid)
+							{
+								bottomChunk->m_StaticColliderChanged = true;
+							}
+							ed1.UpdateElementData(elementBottom, x - 1, y);
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+					}
+					
 				}
 
 				//handle universal element properties
@@ -1335,12 +1148,18 @@ namespace Pyxis
 					//melt
 					if (currElementData.melted != "")
 					{
-						int newID = m_ElementIDs[currElementData.melted];
+						int newID = ElementData::s_ElementNameToID[currElementData.melted];
 						int temp = currElement.m_Temperature;
-						m_ElementData[newID].UpdateElementData(currElement, x, y);
+						ElementData& newData = ElementData::GetElementData(newID);
+						newData.UpdateElementData(currElement, x, y);
+						if (newData.cell_type == ElementType::solid || newData.cell_type == ElementType::movableSolid)
+						{
+							chunk->m_StaticColliderChanged = true;
+						}
 						currElement.m_Temperature = temp;
 						currElement.m_ID = newID;
 						chunk->UpdateDirtyRect(x, y);
+						continue;
 					}
 				}
 
@@ -1349,12 +1168,20 @@ namespace Pyxis
 					//freeze
 					if (currElementData.frozen != "")
 					{
-						int newID = m_ElementIDs[currElementData.frozen];
+						int newID = ElementData::s_ElementNameToID[currElementData.frozen];
 						int temp = currElement.m_Temperature;
-						m_ElementData[newID].UpdateElementData(currElement, x, y);
+
+						ElementData& newData = ElementData::GetElementData(newID);
+						newData.UpdateElementData(currElement, x, y);
+						if (newData.cell_type == ElementType::solid || newData.cell_type == ElementType::movableSolid)
+						{
+							chunk->m_StaticColliderChanged = true;
+						}
+
 						currElement.m_Temperature = temp;
 						currElement.m_ID = newID;
 						chunk->UpdateDirtyRect(x, y);
+						continue;
 					}
 				}
 
@@ -1364,40 +1191,52 @@ namespace Pyxis
 					int minConductivity = 0;
 					float diff = 0;
 
-					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementLeft->m_ID].conductivity);
-					diff = ((currElement.m_Temperature - elementLeft->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
-					if (diff != 0)
+					if (elementLeft != nullptr)
 					{
-						currElement.m_Temperature -= diff / currElementData.density;
-						elementLeft->m_Temperature += diff / elementLeftData.density;
+						minConductivity = std::min(currElementData.conductivity, elementLeftData->conductivity);
+						diff = ((currElement.m_Temperature - elementLeft->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+						if (diff != 0)
+						{
+							currElement.m_Temperature -= diff / currElementData.density;
+							elementLeft->m_Temperature += diff / elementLeftData->density;
+						}
+					}
+					
+					if (elementTop != nullptr)
+					{
+						minConductivity = std::min(currElementData.conductivity, elementTopData->conductivity);
+						diff = ((float)(currElement.m_Temperature - elementTop->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+						if (diff != 0)
+						{
+							currElement.m_Temperature -= diff / currElementData.density;
+							elementTop->m_Temperature += diff / elementTopData->density;
+						}						
 					}
 
-					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementTop->m_ID].conductivity);
-					diff = ((float)(currElement.m_Temperature - elementTop->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
-					if (diff != 0)
+					if (elementRight != nullptr)
 					{
-						currElement.m_Temperature -= diff / currElementData.density;
-						elementTop->m_Temperature += diff / elementTopData.density;
+						minConductivity = std::min(currElementData.conductivity, elementRightData->conductivity);
+						diff = ((float)(currElement.m_Temperature - elementRight->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+						if (diff != 0)
+						{
+							currElement.m_Temperature -= diff / currElementData.density;
+							elementRight->m_Temperature += diff / elementRightData->density;
+						}
 					}
-
-					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementRight->m_ID].conductivity);
-					diff = ((float)(currElement.m_Temperature - elementRight->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
-					if (diff != 0)
+					
+					if (elementBottom != nullptr)
 					{
-						currElement.m_Temperature -= diff / currElementData.density;
-						elementRight->m_Temperature += diff / elementRightData.density;
+						minConductivity = std::min(currElementData.conductivity, elementBottomData->conductivity);
+						diff = ((float)(currElement.m_Temperature - elementBottom->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
+						if (diff != 0)
+						{
+							currElement.m_Temperature -= diff / currElementData.density;
+							elementBottom->m_Temperature += diff / elementBottomData->density;
+						}
 					}
-
-					minConductivity = std::min(currElementData.conductivity, m_ElementData[elementBottom->m_ID].conductivity);
-					diff = ((float)(currElement.m_Temperature - elementBottom->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
-					if (diff != 0)
-					{
-						currElement.m_Temperature -= diff / currElementData.density;
-						elementBottom->m_Temperature += diff / elementBottomData.density;
-					}
+					//if the temperature changed, update the dirty rect
 					if (std::abs(currElement.m_Temperature - tempBefore) > 0.01f) chunk->UpdateDirtyRect(x, y);
 					
-
 				}
 
 				if (currElementData.flammable)
@@ -1410,20 +1249,20 @@ namespace Pyxis
 						//if (elementTopData.flammable) 
 						if (currElementData.spread_ignition && std::rand() % 100 < currElementData.spread_ignition_chance)
 						{
-							if (elementLeftData.flammable) elementLeft->m_Ignited = true;
-							if (elementTopData.flammable) elementTop->m_Ignited = true;
-							if (elementRightData.flammable) elementRight->m_Ignited = true;
-							if (elementBottomData.flammable) elementBottom->m_Ignited = true;
+							if (elementLeft != nullptr && elementLeftData->flammable) elementLeft->m_Ignited = true;
+							if (elementTop != nullptr && elementTopData->flammable) elementTop->m_Ignited = true;
+							if (elementRight != nullptr && elementRightData->flammable) elementRight->m_Ignited = true;
+							if (elementBottom != nullptr && elementBottomData->flammable) elementBottom->m_Ignited = true;
 						}
 
 						//check for open air to burn
-						int fireID = m_ElementIDs["fire"];
-						ElementData& fireElementData = m_ElementData[fireID];
+						int fireID = ElementData::s_ElementNameToID["fire"];
+						ElementData& fireElementData = ElementData::GetElementData(fireID);
 						if (currElement.m_ID != fireID) //&& std::rand() % 101 < 5
 						{
 
 							int healthDiff = currElement.m_Health;
-							if (elementLeftData.cell_type == ElementType::gas || elementLeftData.cell_type == ElementType::fire)
+							if (elementLeft != nullptr && (elementLeftData->cell_type == ElementType::gas || elementLeftData->cell_type == ElementType::fire))
 							{
 								fireElementData.UpdateElementData(elementLeft, x-1, y);
 								elementLeft->m_ID = fireID;
@@ -1434,7 +1273,7 @@ namespace Pyxis
 								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
 							
-							if (elementTopData.cell_type == ElementType::gas || elementTopData.cell_type == ElementType::fire)
+							if (elementTop != nullptr && (elementTopData->cell_type == ElementType::gas || elementTopData->cell_type == ElementType::fire))
 							{
 								fireElementData.UpdateElementData(elementTop, x, y+1);
 								elementTop->m_ID = fireID;
@@ -1445,7 +1284,7 @@ namespace Pyxis
 								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
 							
-							if (elementRightData.cell_type == ElementType::gas || elementRightData.cell_type == ElementType::fire)
+							if (elementRight != nullptr && (elementRightData->cell_type == ElementType::gas || elementRightData->cell_type == ElementType::fire))
 							{
 								fireElementData.UpdateElementData(elementRight, x+1, y);
 								elementRight->m_ID = fireID;
@@ -1456,7 +1295,7 @@ namespace Pyxis
 								if (currElement.m_Temperature < currElementData.fire_temperature - currElementData.fire_temperature_increase) currElement.m_Temperature += currElementData.fire_temperature_increase;
 							}
 							
-							if (elementBottomData.cell_type == ElementType::gas || elementBottomData.cell_type == ElementType::fire)
+							if (elementBottom != nullptr && (elementBottomData->cell_type == ElementType::gas || elementBottomData->cell_type == ElementType::fire))
 							{
 								fireElementData.UpdateElementData(elementBottom, x, y-1);
 								elementBottom->m_ID = fireID;
@@ -1479,9 +1318,16 @@ namespace Pyxis
 					{
 						if (currElement.m_Health <= 0)
 						{
-							currElement.m_ID = m_ElementIDs[currElementData.burnt];
+							//burnt
 							int temp = currElement.m_Temperature;
-							m_ElementData[currElement.m_ID].UpdateElementData(currElement, x, y);
+							uint32_t burntID = ElementData::s_ElementNameToID[currElementData.burnt];
+							ElementData& burntData = ElementData::GetElementData(burntID);
+							if (burntData.cell_type == ElementType::solid || burntData.cell_type == ElementType::movableSolid)
+							{
+								chunk->m_StaticColliderChanged = true;
+							}
+							burntData.UpdateElementData(currElement, x, y);
+							currElement.m_ID = burntID;
 							currElement.m_Temperature = temp;
 							continue;
 						}
@@ -1523,23 +1369,26 @@ namespace Pyxis
 				case ElementType::solid:
 					break;
 				case ElementType::movableSolid:
-
+					//skip if we belong to a rigid body? although this isn't a thing yet.
 					if (currElement.m_Rigid) continue;
-					//check below, and move
+
+
+					//check below, and move					
+					if (elementBottom != nullptr && elementBottomData->cell_type != ElementType::solid && elementBottomData->cell_type != ElementType::movableSolid && elementBottomData->density <= currElementData.density)
 					{
-						ElementData& otherData = m_ElementData[elementBottom->m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid && otherData.density <= currElementData.density)
-						{
-							currElement.m_Sliding = true;
-							Element temp = currElement;
-							chunk->m_Elements[x + y * CHUNKSIZE] = *elementBottom;
-							*elementBottom = temp;
-							UpdateChunkDirtyRect(x, y, chunk);
-							elementLeft->m_Sliding = true;
-							elementRight->m_Sliding = true;
-							continue;
-						}
+						currElement.m_Sliding = true;
+						Element temp = currElement;
+						chunk->SetElement(x, y, *elementBottom);
+						//chunk->m_Elements[x + y * CHUNKSIZE] = *elementBottom;
+
+						bottomChunk->SetElement(x, (y - 1) % CHUNKSIZE, temp);
+						//*elementBottom = temp;
+						UpdateChunkDirtyRect(x, y, chunk);
+						if (elementLeft != nullptr) elementLeft->m_Sliding = true;
+						if (elementRight != nullptr) elementRight->m_Sliding = true;
+						continue;
 					}
+					
 					
 
 					if (currElement.m_Sliding)
@@ -1565,26 +1414,28 @@ namespace Pyxis
 					//try moving to the side
 					if (currElement.m_Horizontal > 0)
 					{
-						ElementData& otherData = m_ElementData[elementRight->m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid && otherData.density <= currElementData.density)
+						if (elementRight != nullptr && elementRightData->cell_type != ElementType::solid && elementRightData->cell_type != ElementType::movableSolid && elementRightData->density <= currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
-							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
-							*elementRight = temp;
+							chunk->SetElement(x, y, *elementRight);
+							//chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							rightChunk->SetElement((x + 1) % CHUNKSIZE, y, temp);
+							//*elementRight = temp;
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						ElementData& otherData = m_ElementData[elementLeft->m_ID];
-						if (otherData.cell_type != ElementType::solid && otherData.cell_type != ElementType::movableSolid && otherData.density <= currElementData.density)
+						if (elementLeft != nullptr && elementLeftData->cell_type != ElementType::solid && elementLeftData->cell_type != ElementType::movableSolid && elementLeftData->density <= currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
-							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
-							*elementLeft = temp;
+							chunk->SetElement(x, y, *elementLeft);
+							//chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							leftChunk->SetElement((x - 1) % CHUNKSIZE, y, temp);
+							//*elementLeft = temp;
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
@@ -1593,228 +1444,94 @@ namespace Pyxis
 					break;
 				case ElementType::liquid:
 					//check below, and move
-					xOther = x;
-					yOther = y - 1;
-					if (IsInBounds(xOther, yOther))
+					if (elementBottom != nullptr && elementBottomData->cell_type != ElementType::solid && elementBottomData->cell_type != ElementType::movableSolid && elementBottomData->density < currElementData.density)
 					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOther;
-							continue;
-						}
-					}
-					else
-					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOtherChunk;
-							continue;
-						}
+						Element temp = currElement;
+						chunk->m_Elements[x + y * CHUNKSIZE] = *elementBottom;
+						*elementBottom = temp;
+						UpdateChunkDirtyRect(x, y, chunk);
+						continue;
 					}
 						
 					r = std::rand() & 1 ? 1 : -1;
 					//int r = (x ^ 98252 + (m_UpdateBit * y) ^ 6234561) ? 1 : -1;
 
 					//try left/right then bottom left/right
-					xOther = x - r;
-					yOther = y;
-					if (IsInBounds(xOther, yOther))
+
+					if (r == 1)
 					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						//check right, and move
+						if (elementRight != nullptr && elementRightData->cell_type != ElementType::solid && elementRightData->cell_type != ElementType::movableSolid && elementRightData->density < currElementData.density)
 						{
-							SwapWithOther;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+						//check left, and move
+						if (elementLeft != nullptr && elementLeftData->cell_type != ElementType::solid && elementLeftData->cell_type != ElementType::movableSolid && elementLeftData->density < currElementData.density)
+						{
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 					else
 					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
+						//check left, and move
+						if (elementLeft != nullptr && elementLeftData->cell_type != ElementType::solid && elementLeftData->cell_type != ElementType::movableSolid && elementLeftData->density < currElementData.density)
 						{
-							SwapWithOtherChunk;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+						//check right, and move
+						if (elementRight != nullptr && elementRightData->cell_type != ElementType::solid && elementRightData->cell_type != ElementType::movableSolid && elementRightData->density < currElementData.density)
+						{
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
 					}
 
-					xOther = x + r;
-					//yOther = y;
-					if (IsInBounds(xOther, yOther))
-					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOther;
-							continue;
-						}
-					}
-					else
-					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOtherChunk;
-							continue;
-						}
-					}
+					
 
-					//bottom left/right
-					xOther = x - r;
-					yOther = y - 1;
-					if (IsInBounds(xOther, yOther))
-					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOther;
-							continue;
-						}
-					}
-					else
-					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOtherChunk;
-							continue;
-						}
-					}
+					//bottom left/right? lets try without for now.
 
-					xOther = x + r;
-					//yOther = y - 1;
-					if (IsInBounds(xOther, yOther))
-					{
-						//operate within the chunk, since we are in bounds
-						//Element& other = chunk->GetElement(xOther, yOther);
-						Element other = chunk->m_Elements[xOther + yOther * CHUNKSIZE];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOther;
-							continue;
-						}
-					}
-					else
-					{
-						//we need to get the element by finding the other chunk
-						glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-						Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-						int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-						Element other = otherChunk->m_Elements[indexOther];
-						ElementData& otherData = m_ElementData[other.m_ID];
-						if (otherData.cell_type == ElementType::gas || otherData.cell_type == ElementType::fire || (otherData.cell_type == ElementType::liquid && otherData.density < currElementData.density))
-						{
-							SwapWithOtherChunk;
-							continue;
-						}
-					}
-
-
-					////check if there is no momentum and add some if needed
-					//if (currElement.m_Vertical != 0 && currElement.m_Horizontal == 0) {
-					//	currElement.m_Horizontal = m_UpdateBit ? 1 : -1;
-					//	currElement.m_Vertical = 0;
-					//}
-					////skip if we are not needing to move
-					//if (currElement.m_Horizontal == 0) continue;
-					////try a side to move to based on horizontal
-					//if (currElement.m_Horizontal < 0)
-					//	//next check left and try to move
-					//	xOther = x - 1;
-					//else
-					//	xOther = x + 1;
-					//yOther = y;
-					//if (IsInBounds(xOther, yOther))
-					//{
-					//	//operate within the chunk, since we are in bounds
-					//	Element other = chunk->GetElement(xOther, yOther);
-					//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-					//	{
-					//		//other element is air so we move to it
-					//		chunk->SetElement(xOther, yOther, currElement);
-					//		chunk->SetElement(x, y, Element());
-					//		UpdateChunkDirtyRect(x, y, chunk);
-					//		continue;
-					//	}
-					//}
-					//else
-					//{
-					//	//we need to get the element by finding the other chunk
-					//	glm::ivec2 pixelSpace = chunk->m_ChunkPos * CHUNKSIZE + glm::ivec2(xOther, yOther);
-					//	Chunk* otherChunk = GetChunk(PixelToChunk(pixelSpace));
-					//	int indexOther = ((xOther + CHUNKSIZE) % CHUNKSIZE) + ((yOther + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE;
-					//	Element other = otherChunk->m_Elements[indexOther];
-					//	if (other.m_Type == ElementType::gas || other.m_Type == ElementType::fire)
-					//	{
-					//		//other element is air so we move to it
-					//		otherChunk->m_Elements[indexOther] = currElement;
-					//		chunk->SetElement(x, y, other);
-					//		UpdateChunkDirtyRect(x, y, chunk);
-					//		continue;
-					//	}
-					//}
-					////since the liquid didn't move, swap the horizontal
-					//currElement.m_Horizontal = -currElement.m_Horizontal;
 
 					break;
 				case ElementType::gas:
+
+					// note: using < doesn't make sense, but because air doesn't update,
+					// it itself doesn't move like a gas. therefore, density for gasses is inverted
 					r = (std::rand() % 3) - 1; //-1 0 1
 					if (r == 0)
 					{
 						//check above, and move
+						if (elementTop != nullptr && (elementTopData->cell_type == ElementType::gas || elementTopData->cell_type == ElementType::liquid) && elementTopData->density < currElementData.density)
 						{
-							ElementData& otherData = m_ElementData[elementTop->m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								currElement.m_Sliding = true;
-								Element temp = currElement;
-								chunk->m_Elements[x + y * CHUNKSIZE] = *elementTop;
-								*elementTop = temp;
-								UpdateChunkDirtyRect(x, y, chunk);
-								continue;
-							}
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementTop;
+							*elementTop = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
 						}
+						
 					}
 
 					//try left/right
 					if (r > 0)
 					{
-						ElementData& otherData = m_ElementData[elementRight->m_ID];
-						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						//check right, and move
+						if (elementRight != nullptr && (elementRightData->cell_type == ElementType::gas || elementRightData->cell_type == ElementType::liquid) && elementRightData->density < currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1823,23 +1540,8 @@ namespace Pyxis
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
-						{
-							ElementData& otherData = m_ElementData[elementLeft->m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								currElement.m_Sliding = true;
-								Element temp = currElement;
-								chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
-								*elementLeft = temp;
-								UpdateChunkDirtyRect(x, y, chunk);
-								continue;
-							}
-						}
-					}
-					else
-					{
-						ElementData& otherData = m_ElementData[elementLeft->m_ID];
-						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						//check left and move
+						if (elementLeft != nullptr && (elementLeftData->cell_type == ElementType::gas || elementLeftData->cell_type == ElementType::liquid) && elementLeftData->density < currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1848,17 +1550,29 @@ namespace Pyxis
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
+
+					}
+					else
+					{
+						//check left and move
+						if (elementLeft != nullptr && (elementLeftData->cell_type == ElementType::gas || elementLeftData->cell_type == ElementType::liquid) && elementLeftData->density < currElementData.density)
 						{
-							ElementData& otherData = m_ElementData[elementRight->m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								currElement.m_Sliding = true;
-								Element temp = currElement;
-								chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
-								*elementRight = temp;
-								UpdateChunkDirtyRect(x, y, chunk);
-								continue;
-							}
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+						//check right, and move
+						if (elementRight != nullptr && (elementRightData->cell_type == ElementType::gas || elementRightData->cell_type == ElementType::liquid) && elementRightData->density < currElementData.density)
+						{
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
 						}
 					}
 
@@ -1871,7 +1585,7 @@ namespace Pyxis
 					if (currElement.m_Temperature < currElementData.ignition_temperature)
 					{
 						currElement.m_ID = 0;//air
-						m_ElementData[0].UpdateElementData(currElement, x, y);
+						ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						continue;
 					}
 					//fire gets special color treatment, basically going from starting color, and
@@ -1891,34 +1605,30 @@ namespace Pyxis
 
 					currElement.m_Color = colorAlpha | (colorBlue << 16) | (colorGreen << 8) | colorRed;
 					
-					r = (std::rand() % 101);
-					if (r > 20 && r < 80) //60% to go up
+					r = (std::rand() % 100);
+					if (r > 20 && r < 80) //~60% to go up
 					{
-						//check above, and move
+						//check above, and move						
+						if (elementTop != nullptr && elementTopData->cell_type == ElementType::gas && elementTopData->density > currElementData.density)
 						{
-							ElementData& otherData = m_ElementData[elementTop->m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								currElement.m_Sliding = true;
-								Element temp = currElement;
-								chunk->m_Elements[x + y * CHUNKSIZE] = *elementTop;
-								*elementTop = temp;
-								UpdateChunkDirtyRect(x, y, chunk);
-								continue;
-							}
-							else if (otherData.cell_type == ElementType::fire)
-							{
-								//moving to fire, so combine temp and leave air
-								elementTop->m_Temperature = (elementTop->m_Temperature + currElement.m_Temperature) / 2;
-								currElement.m_ID = 0;
-								m_ElementData[0].UpdateElementData(currElement, x, y);
-							}
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementTop;
+							*elementTop = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
 						}
+						else if (elementTop != nullptr && elementTopData->cell_type == ElementType::fire)
+						{
+							//moving to fire, so combine temp and leave air
+							elementTop->m_Temperature = std::max(elementTop->m_Temperature, currElement.m_Temperature);
+							currElement.m_ID = 0;
+							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
+						}						
 					}
 					else if (r > 50) // left / right
 					{
-						ElementData& otherData = m_ElementData[elementRight->m_ID];
-						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						if (elementRight != nullptr && elementRightData->cell_type == ElementType::gas && elementRightData->density > currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1927,37 +1637,14 @@ namespace Pyxis
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
-						else if (otherData.cell_type == ElementType::fire)
+						else if (elementRight != nullptr && elementRightData->cell_type == ElementType::fire)
 						{
 							//moving to fire, so combine temp and leave air
-							elementRight->m_Temperature = (elementRight->m_Temperature + currElement.m_Temperature) / 2;
+							elementRight->m_Temperature = std::max(elementRight->m_Temperature, currElement.m_Temperature);
 							currElement.m_ID = 0;
-							m_ElementData[0].UpdateElementData(currElement, x, y);
+							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}
-						{
-							ElementData& otherData = m_ElementData[elementLeft->m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								currElement.m_Sliding = true;
-								Element temp = currElement;
-								chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
-								*elementLeft = temp;
-								UpdateChunkDirtyRect(x, y, chunk);
-								continue;
-							}
-							else if (otherData.cell_type == ElementType::fire)
-							{
-								//moving to fire, so combine temp and leave air
-								elementLeft->m_Temperature = (elementLeft->m_Temperature + currElement.m_Temperature) / 2;
-								currElement.m_ID = 0;
-								m_ElementData[0].UpdateElementData(currElement, x, y);
-							}
-						}
-					}
-					else
-					{
-						ElementData& otherData = m_ElementData[elementLeft->m_ID];
-						if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
+						if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::gas && elementLeftData->density > currElementData.density)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1966,31 +1653,47 @@ namespace Pyxis
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
 						}
-						else if (otherData.cell_type == ElementType::fire)
+						else if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::fire)
 						{
 							//moving to fire, so combine temp and leave air
-							elementLeft->m_Temperature = (elementLeft->m_Temperature + currElement.m_Temperature) / 2;
+							elementLeft->m_Temperature = std::max(elementLeft->m_Temperature, currElement.m_Temperature);
 							currElement.m_ID = 0;
-							m_ElementData[0].UpdateElementData(currElement, x, y);
+							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}
+					}
+					else
+					{
+						if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::gas && elementLeftData->density > currElementData.density)
 						{
-							ElementData& otherData = m_ElementData[elementRight->m_ID];
-							if (otherData.cell_type == ElementType::gas && otherData.density < currElementData.density)
-							{
-								currElement.m_Sliding = true;
-								Element temp = currElement;
-								chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
-								*elementRight = temp;
-								UpdateChunkDirtyRect(x, y, chunk);
-								continue;
-							}
-							else if (otherData.cell_type == ElementType::fire)
-							{
-								//moving to fire, so combine temp and leave air
-								elementRight->m_Temperature = (elementRight->m_Temperature + currElement.m_Temperature) / 2;
-								currElement.m_ID = 0;
-								m_ElementData[0].UpdateElementData(currElement, x, y);
-							}
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
+							*elementLeft = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+						else if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::fire)
+						{
+							//moving to fire, so combine temp and leave air
+							elementLeft->m_Temperature = std::max(elementLeft->m_Temperature, currElement.m_Temperature);
+							currElement.m_ID = 0;
+							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
+						}
+						if (elementRight != nullptr && elementRightData->cell_type == ElementType::gas && elementRightData->density > currElementData.density)
+						{
+							currElement.m_Sliding = true;
+							Element temp = currElement;
+							chunk->m_Elements[x + y * CHUNKSIZE] = *elementRight;
+							*elementRight = temp;
+							UpdateChunkDirtyRect(x, y, chunk);
+							continue;
+						}
+						else if (elementRight != nullptr && elementRightData->cell_type == ElementType::fire)
+						{
+							//moving to fire, so combine temp and leave air
+							elementRight->m_Temperature = std::max(elementRight->m_Temperature, currElement.m_Temperature);
+							currElement.m_ID = 0;
+							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}
 					}
 
@@ -1999,318 +1702,167 @@ namespace Pyxis
 
 			}
 		}
+
+		//check for pixel bodies that are in the surroundings, and if there is, update the collider if necessary.
+		b2AABB queryFullRegion;
+		glm::vec2 fullLower = glm::vec2(chunk->m_ChunkPos * CHUNKSIZE) / PPU;
+		glm::vec2 fullUpper = glm::vec2((chunk->m_ChunkPos + glm::ivec2(1, 1)) * CHUNKSIZE) / PPU;
+		queryFullRegion.lowerBound = b2Vec2(fullLower.x - 1, fullLower.y - 1);
+		queryFullRegion.upperBound = b2Vec2(fullUpper.x + 1, fullUpper.y + 1);
+
+		bool found = false;
+		FoundDynamicBodyQuery dynamicCallback(found);
+		Physics2D::GetWorld()->QueryAABB(&dynamicCallback, queryFullRegion);
+		if (found)
+		{
+			//Found Dynamic Body
+			if (chunk->m_StaticColliderChanged == true)
+			{
+				chunk->m_StaticColliderChanged = false;
+				chunk->GenerateStaticCollider();
+			}
+		}
+
 	}
 
 
 	/// <summary>
 	/// updated the chunks dirty rect, and will spread the
-	/// dirty rect to neighboring ones if it is touching the edge
+	/// dirty rect to neighboring chunks if it is touching the edge
+	/// 
+	/// The x and y are in index coordinates, not world.
 	/// </summary>
 	void World::UpdateChunkDirtyRect(int x, int y, Chunk* chunk)
 	{
-		//this needs to update the surrounding buckets if the coord is on the corresponding edge
-		//ex: if on top edge, also update that bucket using this x/y. this is fine since it clamps to
-		//bucket size anyway
-		std::pair<glm::ivec2, glm::ivec2>* minmax = (chunk->m_DirtyRects + (x / BUCKETSIZE) + (y / BUCKETSIZE) * BUCKETSWIDTH);
-		//update minimums
-		if (x < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = x - chunk->m_DirtyRectBorderWidth;
-		if (y < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = y - chunk->m_DirtyRectBorderWidth;
-		//update maximums
-		if (x > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = x + chunk->m_DirtyRectBorderWidth;
-		if (y > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = y + chunk->m_DirtyRectBorderWidth;
+		chunk->UpdateDirtyRect(x, y);		
 
 		//there are only 8 cases, so i will use a switch statement with bits?
 		int result = 0;
-		if (y % BUCKETSIZE == BUCKETSIZE - 1) result |= 8; //top
-		if (x % BUCKETSIZE == BUCKETSIZE - 1) result |= 4; //right
-		if (y % BUCKETSIZE == 0)			  result |= 2; //bottom
-		if (x % BUCKETSIZE == 0)			  result |= 1; //left
-
+		if (y == CHUNKSIZE - 1) result |= 8; //top
+		if (x == CHUNKSIZE - 1) result |= 4; //right
+		if (y == 0)			  result |= 2; //bottom
+		if (x == 0)			  result |= 1; //left
 		if (result == 0) return;
-		//since we are on an edge, see if we need to get a different chunk
+		
+		//since we are on an chunk edge, update the other chunk
 
 		//working on updating chunks
 		Chunk* ChunkToUpdate;
-		glm::ivec2 currentChunk = chunk->m_ChunkPos;
-		int xOther = 0, yOther = 0;
 
 		switch (result)
 		{
 		case 8:  // top
-			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y + 1) + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(0, 1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(x, -1);
 			}
-
 			break;
 		case 12: // top right
-			
 			//top
-			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y + 1) + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(0, 1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(x, -1);
 			}
-
 			//top right
-			currentChunk = chunk->m_ChunkPos;
-			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
-			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = ((x + 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y + 1) + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(1, 1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(-1, -1);
 			}
-
 			//right
-			currentChunk = chunk->m_ChunkPos;
-			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = ((x + 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = (y + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(1, 0));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(-1, y);
 			}
 			break;
 		case 4:  // right
-			if (x+1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = ((x + 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = (y + CHUNKSIZE) % CHUNKSIZE;
+			//right
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(1, 0));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(-1, y);
 			}
-
 			break;
 		case 6:  // right bottom
-
 			//right
-			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = ((x + 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = (y + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(1, 0));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(-1, y);
 			}
-
-			//br
-			currentChunk = chunk->m_ChunkPos;
-			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
-			if (x + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = ((x + 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y - 1) + CHUNKSIZE) % CHUNKSIZE;
+			//bottom right
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(1, -1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(-1, CHUNKSIZE - 1);
 			}
-
 			//bottom
-			currentChunk = chunk->m_ChunkPos;
-			currentChunk = chunk->m_ChunkPos;
-			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y - 1) + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(0, -1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(x, CHUNKSIZE - 1);
 			}
-
 			break;
 		case 2:  // bottom
-
-			currentChunk = chunk->m_ChunkPos;
-			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y - 1) + CHUNKSIZE) % CHUNKSIZE;
+			//bottom
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(0, -1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(x, CHUNKSIZE - 1);
 			}
-
 			break;
 		case 3:  // bottom left
 
-			//bottom
-			currentChunk = chunk->m_ChunkPos;
-			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y - 1) + CHUNKSIZE) % CHUNKSIZE;
-			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
-			}
-
-			//bottom left
-			currentChunk = chunk->m_ChunkPos;
-			if (y - 1 < 0) currentChunk += glm::ivec2(0, -1);
-			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = ((x - 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y - 1) + CHUNKSIZE) % CHUNKSIZE;
-			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
-			}
-
 			//left
-			currentChunk = chunk->m_ChunkPos;
-			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = ((x - 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = (y + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(-1, 0));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(CHUNKSIZE - 1, y);
 			}
-
+			//bottom left
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(-1, -1));
+			if (ChunkToUpdate != nullptr)
+			{
+				ChunkToUpdate->UpdateDirtyRect(CHUNKSIZE - 1, CHUNKSIZE - 1);
+			}
+			//bottom
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(0, -1));
+			if (ChunkToUpdate != nullptr)
+			{
+				ChunkToUpdate->UpdateDirtyRect(x, CHUNKSIZE - 1);
+			}
 			break;
 		case 1:  // left
-			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = ((x - 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = (y + CHUNKSIZE) % CHUNKSIZE;
+			//left
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(-1, 0));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(CHUNKSIZE - 1, y);
 			}
 			break;
 		case 9:  // top left
 			//left
-			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-
-			xOther = ((x - 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = (y + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(-1, 0));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(CHUNKSIZE - 1, y);
 			}
-
 			//top left
-			currentChunk = chunk->m_ChunkPos;
-			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
-			if (x - 1 < 0) currentChunk += glm::ivec2(-1, 0);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = ((x - 1) + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y + 1) + CHUNKSIZE) % CHUNKSIZE;
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(-1, 1));
+			if (ChunkToUpdate != nullptr)
 			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
+				ChunkToUpdate->UpdateDirtyRect(CHUNKSIZE - 1, -1);
+			}
+			//top
+			ChunkToUpdate = GetChunk(chunk->m_ChunkPos + glm::ivec2(0, 1));
+			if (ChunkToUpdate != nullptr)
+			{
+				ChunkToUpdate->UpdateDirtyRect(x, -1);
 			}
 			break;
-
-			//top
-			currentChunk = chunk->m_ChunkPos;
-			if (y + 1 >= CHUNKSIZE) currentChunk += glm::ivec2(0, 1);
-			ChunkToUpdate = (chunk->m_ChunkPos == currentChunk) ? chunk : GetChunk(currentChunk);
-			xOther = (x + CHUNKSIZE) % CHUNKSIZE;
-			yOther = ((y + 1) + CHUNKSIZE) % CHUNKSIZE;
-			{
-				minmax = ChunkToUpdate->m_DirtyRects + (xOther / BUCKETSIZE) + (yOther / BUCKETSIZE) * BUCKETSWIDTH;
-				//update minimums
-				if (xOther < minmax->first.x + chunk->m_DirtyRectBorderWidth) minmax->first.x = xOther - chunk->m_DirtyRectBorderWidth;
-				if (yOther < minmax->first.y + chunk->m_DirtyRectBorderWidth) minmax->first.y = yOther - chunk->m_DirtyRectBorderWidth;
-				//update maximums
-				if (xOther > minmax->second.x - chunk->m_DirtyRectBorderWidth) minmax->second.x = xOther + chunk->m_DirtyRectBorderWidth;
-				if (yOther > minmax->second.y - chunk->m_DirtyRectBorderWidth) minmax->second.y = yOther + chunk->m_DirtyRectBorderWidth;
-			}
 		}
 	}
 
@@ -2355,7 +1907,7 @@ namespace Pyxis
 		for (auto pair : m_Chunks)
 		{
 			Renderer2D::DrawQuad(glm::vec2(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f), { 1,1 }, pair.second->m_Texture);
-
+			pair.second->RenderChunk();
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
 		}
 

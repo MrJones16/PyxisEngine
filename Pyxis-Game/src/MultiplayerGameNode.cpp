@@ -49,7 +49,7 @@ namespace Pyxis
 		Disconnect();
 		m_MultiplayerState = MultiplayerState::Disconnected;
 		auto menu = Instantiate<MenuNode>();
-		QueueFree();
+		QueueFreeHierarchy();
 	}
 
 	void MultiplayerGameNode::Connect(const std::string& AddressAndPort)

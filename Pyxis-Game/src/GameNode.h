@@ -64,7 +64,7 @@ namespace Pyxis
 		{
 			m_SelectedElementIndex = ID;
 			if (m_SelectedElementIndex < 0) m_SelectedElementIndex = 0;
-			if (m_SelectedElementIndex > m_World.m_ElementData.size()) m_SelectedElementIndex = m_World.m_ElementData.size();
+			if (m_SelectedElementIndex > ElementData::s_ElementData.size()) m_SelectedElementIndex = ElementData::s_ElementData.size();
 		}
 
 		//////////////////////////////////////

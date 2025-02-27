@@ -9,7 +9,7 @@ target_sources(Pixel-Game-Core PRIVATE
 	src/World.cpp
 	src/World.h
 
- "src/PixelNetworking.h" "../Pyxis-Game/src/GameNode.cpp" "../Pyxis-Game/src/GameNode.h" "../Pyxis-Game/src/SingleplayerGameNode.h" "../Pyxis/src/Pyxis/Nodes/RigidBody2D.h"    "src/PixelBody2D.h" "src/PixelBody2D.cpp")
+ "src/PixelNetworking.h" "../Pyxis-Game/src/GameNode.cpp" "../Pyxis-Game/src/GameNode.h" "../Pyxis-Game/src/SingleplayerGameNode.h" "../Pyxis/src/Pyxis/Nodes/RigidBody2D.h"    "src/PixelBody2D.h" "src/PixelBody2D.cpp" "src/Element.cpp")
 
 target_include_directories(Pixel-Game-Core PUBLIC
 	src

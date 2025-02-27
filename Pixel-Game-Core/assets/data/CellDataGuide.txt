@@ -1,3 +1,58 @@
+Example Element, & all current properties 2/24/2025
+{
+        "Burnt": "air",
+        "CellType": 3,
+        "Color": 0,
+        "Conductivity": 0,
+        "Density": 0,
+        "FireColor": 4281656311,
+        "FireTemperature": 1000.0,
+        "FireTemperatureIncrease": 10.0,
+        "Flammable": false,
+        "FreezingPoint": 0,
+        "Friction": 60,
+        "Frozen": "",
+        "Glow": false,
+        "Health": 100,
+        "Ignited": false,
+        "IgnitedColor": 0,
+        "IgnitionTemperature": 371.0,
+        "Melted": "",
+        "MeltingPoint": 100,
+        "Name": "air",
+        "SpreadIgnition": false,
+        "SpreadIgnitionChance": 10,
+        "Tags": [],
+        "Temperature": 20.0,
+        "TexturePath": "",
+        "Type": "ElementData"
+    }
+
+
+	//example reaction
+	{
+        "Type": "Reaction",
+        "input_cell_0": "sand",
+        "input_cell_1": "water",
+        "output_cell_0": "wet_sand",
+        "output_cell_1": "air",
+        "probability": 100
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+//OLD GUIDE
+
 File node starts with <Materials></Materials>
 
 A node of "Reaction" describes the reaction between

@@ -33,8 +33,6 @@ namespace Pyxis
 			m_Elements[localPos] = pbe;
 		}
 		if (CreatedFromSplit) m_InWorld = false; else m_InWorld = true;
-		
-
 
 		GeneratePixelBody(CreatedFromSplit);
 	}
@@ -117,7 +115,7 @@ namespace Pyxis
 			{
 				GeneratePixelBody();
 				m_RecreateBody = false;
-			}
+			}			
 
 			EnterWorld();
 		}
@@ -138,6 +136,7 @@ namespace Pyxis
 			//draw center position
 			Renderer2D::DrawQuad({ GetPosition().x, GetPosition().y, 20 }, glm::vec2(0.75f / 256.0f, 0.75f / 256.0f), { 1,1,1,1 });
 
+			float scaling = PPU / (float)CHUNKSIZE;
 			
 			auto& T = m_B2Body->GetTransform();
 			for (auto fixture = m_B2Body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
@@ -152,8 +151,8 @@ namespace Pyxis
 					auto e = shape->m_vertices[i + 1];
 					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec3 start = glm::vec3(x1, y1, 10) / PPU;
-					glm::vec3 end = glm::vec3(x2, y2, 10) / PPU;
+					glm::vec3 start = glm::vec3(x1, y1, 10) * scaling;
+					glm::vec3 end = glm::vec3(x2, y2, 10) * scaling;
 
 					Renderer2D::DrawLine(start, end);
 				}
@@ -165,8 +164,8 @@ namespace Pyxis
 				auto e = shape->m_vertices[0];
 				float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 				float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-				glm::vec3 start = glm::vec3(x1, y1, 10) / PPU;
-				glm::vec3 end = glm::vec3(x2, y2, 10) / PPU;
+				glm::vec3 start = glm::vec3(x1, y1, 10) * scaling;
+				glm::vec3 end = glm::vec3(x2, y2, 10) * scaling;
 
 				Renderer2D::DrawLine(start, end);
 
@@ -185,15 +184,33 @@ namespace Pyxis
 			QueueFree();
 			return;
 		}
-		int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
+
+		//chunkloading
+		//get current chunk we are in, then get the chunks around us
+		glm::vec2 pixelPos = GetPosition() * (float)CHUNKSIZE;
+		glm::ivec2 chunkPos = m_PXWorld->PixelToChunk(glm::ivec2(pixelPos.x, pixelPos.y));
+		for (int x = -1; x <= 1; x++)
+		{
+			for (int y = -1; y <= 1; y++)
+			{
+				glm::ivec2 checkPos = chunkPos + glm::ivec2(x, y);
+				if (!m_PXWorld->m_Chunks.contains(checkPos))
+				{
+					m_PXWorld->AddChunk(checkPos);
+				}
+			}
+		}
+
+
+		//int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
 
 		for (auto& mappedElement : m_Elements)
 		{
-			minX = std::min(mappedElement.second.worldPos.x, minX);
-			maxX = std::max(mappedElement.second.worldPos.x, maxX);
-			minY = std::min(mappedElement.second.worldPos.y, minY);
-			maxY = std::max(mappedElement.second.worldPos.y, maxY);
-			if (m_PXWorld->GetElement(mappedElement.second.worldPos).m_ID != 0)
+			//minX = std::min(mappedElement.second.worldPos.x, minX);
+			//maxX = std::max(mappedElement.second.worldPos.x, maxX);
+			//minY = std::min(mappedElement.second.worldPos.y, minY);
+			//maxY = std::max(mappedElement.second.worldPos.y, maxY);
+ 			if (m_PXWorld->GetElement(mappedElement.second.worldPos).m_ID != 0)
 			{
 				//we are replacing something that is in the way!
 
@@ -232,14 +249,14 @@ namespace Pyxis
 		std::vector<glm::ivec2> elementsToRemove;
 
 		//loop over all elements, and attempt to take them out of the world
-		for (auto mappedElement : m_Elements)
+		for (auto& mappedElement : m_Elements)
 		{
 			if (mappedElement.second.hidden) // make sure we aren't hidden before trying to pull
 				continue;
 
 			//the world position of the element is already known, so just try to grab it
 			Element& worldElement = m_PXWorld->GetElement(mappedElement.second.worldPos);
-			ElementData& elementData = m_PXWorld->m_ElementData[worldElement.m_ID];
+			ElementData& elementData = ElementData::GetElementData(worldElement.m_ID);
 
 			if (mappedElement.second.element.m_ID != worldElement.m_ID)// || !worldElement.m_Rigid TODO re-implement rigid?
 			{
@@ -282,7 +299,7 @@ namespace Pyxis
 			//we need to reconstruct!
 
 			//remove the outdated elements
-			for (auto localPos : elementsToRemove)
+			for (auto& localPos : elementsToRemove)
 			{
 				m_Elements.erase(localPos);
 			}
@@ -294,7 +311,10 @@ namespace Pyxis
 	void PixelBody2D::UpdateElementPositions()
 	{
 		//center of the pixel body in the world
-		glm::ivec2 centerPixelWorld = { m_B2Body->GetPosition().x * PPU, m_B2Body->GetPosition().y * PPU };
+		b2Vec2 b2Position = m_B2Body->GetPosition();
+		glm::ivec2 centerPixelWorld = { b2Position.x * PPU, b2Position.y * PPU };
+		if (b2Position.x < 0) centerPixelWorld.x -= 1;
+		if (b2Position.y < 0) centerPixelWorld.y -= 1;
 
 		float angle = m_B2Body->GetAngle();
 		auto rotationMatrix = glm::mat2x2(1);
@@ -455,11 +475,11 @@ namespace Pyxis
 			contourVector = contour;
 		}
 
-		//auto simplified = body->SimplifyPoints(contour);
+		if (contourVector.size() < 3) return;
 
 		//run triangulation algorithm to create the needed triangles/fixtures
 		std::vector<p2t::Point*> polyLine;
-		for (auto point : contourVector)
+		for (auto& point : contourVector)
 		{
 			polyLine.push_back(new p2t::Point(point));
 		}
@@ -468,7 +488,7 @@ namespace Pyxis
 		p2t::CDT* cdt = new p2t::CDT(polyLine);
 		cdt->Triangulate();
 		auto triangles = cdt->GetTriangles();
-		for (auto triangle : triangles)
+		for (auto& triangle : triangles)
 		{
 			b2PolygonShape triangleShape;
 			b2Vec2 points[3] = {
@@ -476,6 +496,7 @@ namespace Pyxis
 				{(float)((triangle->GetPoint(1)->x) / PPU), (float)((triangle->GetPoint(1)->y) / PPU)},
 				{(float)((triangle->GetPoint(2)->x) / PPU), (float)((triangle->GetPoint(2)->y) / PPU)}
 			};
+			if (points[0] == points[1] || points[0] == points[2] || points[1] == points[2]) continue; // degenerate polygon, so skip.
 			triangleShape.Set(points, 3);
 			b2FixtureDef fixtureDef;
 			fixtureDef.density = 1;

@@ -31,14 +31,36 @@ namespace Pyxis
 		}
 	};
 
+	class FoundDynamicBodyQuery : public b2QueryCallback
+	{
+	public:
+		bool& m_FoundBool;
+		FoundDynamicBodyQuery(bool& foundBool) : m_FoundBool(foundBool) {};
+		bool ReportFixture(b2Fixture* fixture)
+		{
+			b2Body* body = fixture->GetBody();
+			if (body->GetType() == b2_dynamicBody)
+			{
+				//PX_TRACE("Dynamic body in the area.");
+				m_FoundBool = true;
+
+				//stop searching
+				return false;
+			}
+			
+			//continue searching.
+			return true;
+		}
+	};
+
 	class World
 	{
 	public:
 
 		World(std::string assetPath = "assets", int seed = 1337);
 		void Initialize(int worldSeed);
-		bool LoadElementData(std::string assetPath);
-		void BuildReactionTable();
+
+		bool LoadXMLElementData(std::string assetPath);
 
 		enum class GameDataMsgType : uint8_t { pixelbody, chunk };
 		void DownloadWorldInit(Network::Message& msg);
@@ -49,11 +71,10 @@ namespace Pyxis
 
 		~World();
 
-		void AddChunk(const glm::ivec2& chunkPos);
+		Chunk* AddChunk(const glm::ivec2& chunkPos);
 		Chunk* GetChunk(const glm::ivec2& chunkPos);
 		void GenerateChunk(Chunk* chunk);
 
-		Element GetElementByName(std::string elementName, int x, int y);
 		Element& GetElement(const glm::ivec2& pixelPos);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 		void SetElementWithoutDirtyRectUpdate(const glm::ivec2& pixelPos, const Element& element);
@@ -62,11 +83,19 @@ namespace Pyxis
 
 		void UpdateWorld();
 		void UpdateTextures();
-		void UpdateChunkBucket(Chunk* chunk, int bucketX, int bucketY);
+		void UpdateChunk(Chunk* chunk);
 		void UpdateChunkDirtyRect(int x, int y, Chunk* chunk);
 
 		void Clear();
 		void RenderWorld();
+
+		void TestStaticColliders()
+		{
+			for (auto& [key, chunk] : m_Chunks)
+			{
+				chunk->GenerateStaticCollider();
+			}
+		}
 
 	public:
 		void ResetBox2D();
@@ -88,23 +117,12 @@ namespace Pyxis
 		glm::ivec2 PixelToChunk(const glm::ivec2& pixelPos);
 		glm::ivec2 PixelToIndex(const glm::ivec2& pixelPos);
 
-		bool StringContainsTag(const std::string& string);
-		std::string TagFromString(const std::string& stringWithTag);
-		std::string ReplaceTagInString(const std::string& stringToFill, const std::string& name);
-
 		//
 		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
 
 		//keeping track of theads to join them
 		//std::vector<std::thread> m_Threads;
-
-		//keeping track of element data, tags, reactions, ect
-		int m_TotalElements = 0;
-		std::vector<ElementData> m_ElementData;
-		std::vector<Reaction> m_Reactions;
-		std::unordered_map<std::string, std::vector<uint32_t>> m_TagElements;
-		std::unordered_map<std::string, uint32_t> m_ElementIDs;
-		std::vector<std::unordered_map<uint32_t, ReactionResult>> m_ReactionLookup;
+		
 
 		//extra data needed
 		bool m_Running = true;				// Needs to be synchronized

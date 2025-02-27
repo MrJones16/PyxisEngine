@@ -50,15 +50,19 @@ namespace Pyxis
 		}
 
 		inline static void ResetWorld()
-		{
+		{			
+			PX_TRACE("new b2world made");
 			b2World* world = new b2World({ 0, -9.8f });
 			std::queue<b2Body*> IterateQueue;
 			b2Body* body = m_World->GetBodyList();
 			while (body != nullptr)
 			{
 				RigidBody2D* rb = (RigidBody2D*)(body->GetUserData().pointer);
-				rb->TransferWorld(world);
-				body = body->GetNext();
+				if (rb != nullptr)
+				{
+					rb->TransferWorld(world);
+					body = body->GetNext();
+				}
 			}
 			delete m_World;
 			m_World = world;
@@ -73,8 +77,12 @@ namespace Pyxis
 				{
 					RigidBody2D* rb = (RigidBody2D*)(body->GetUserData().pointer);
 					body = body->GetNext();
-					rb->DestroyBody();
-					rb->QueueFree();
+					if (rb != nullptr)
+					{
+						rb->DestroyBody();
+						rb->QueueFree();
+					}
+
 				}
 
 				//now delete the box2d world
@@ -92,7 +100,10 @@ namespace Pyxis
 			{
 				RigidBody2D* rb = (RigidBody2D*)(body->GetUserData().pointer);
 				body = body->GetNext();
-				rb->OnPhysicsUpdate();
+				if (rb != nullptr)
+				{
+					rb->OnPhysicsUpdate();
+				}
 			}
 		}
 

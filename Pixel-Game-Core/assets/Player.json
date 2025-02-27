@@ -1,0 +1,461 @@
+{
+    "Type": "Player",
+    "UUID": 3419400400,
+    "m_B2Body": {
+        "angularDamping": 0.0,
+        "angularVelocity": 0.0,
+        "linearDamping": 0.0,
+        "linearVelocity": {
+            "x": 0.0,
+            "y": -1.0356881618499756
+        }
+    },
+    "m_B2BodyDef": {
+        "position": {
+            "x": 0.0,
+            "y": 0.0
+        },
+        "type": 2
+    },
+    "m_CategoryBits": 1,
+    "m_DebugDisplay": false,
+    "m_Elements": [
+        {
+            "Key": {
+                "x": -1,
+                "y": -1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281620851,
+                    "Color": 4281620851,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 20,
+                    "y": 132
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 0,
+                "y": 0
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4278238559,
+                    "Color": 4278238559,
+                    "Health": 100,
+                    "Horizontal": 0,
+                    "ID": 5,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 21,
+                    "y": 133
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": -1,
+                "y": -2
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281620851,
+                    "Color": 4281620851,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 20,
+                    "y": 131
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 2,
+                "y": -1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4279839287,
+                    "Color": 4279839287,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 23,
+                    "y": 132
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 1,
+                "y": 0
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4280961886,
+                    "Color": 4280961886,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 22,
+                    "y": 133
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 1,
+                "y": -2
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281621106,
+                    "Color": 4281621106,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 22,
+                    "y": 131
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": -1,
+                "y": 0
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281620851,
+                    "Color": 4281620851,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 20,
+                    "y": 133
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 0,
+                "y": -1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281027169,
+                    "Color": 4281027169,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 21,
+                    "y": 132
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 0,
+                "y": 1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281620851,
+                    "Color": 4281620851,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 21,
+                    "y": 134
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 1,
+                "y": -1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281620851,
+                    "Color": 4281620851,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 22,
+                    "y": 132
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 2,
+                "y": 0
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4278242401,
+                    "Color": 4278242401,
+                    "Health": 100,
+                    "Horizontal": 0,
+                    "ID": 5,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 23,
+                    "y": 133
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 1,
+                "y": 1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281027422,
+                    "Color": 4281027422,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 22,
+                    "y": 134
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": -2,
+                "y": 0
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4283070873,
+                    "Color": 4283070873,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 19,
+                    "y": 133
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": -1,
+                "y": 1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4281620853,
+                    "Color": 4281620853,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 20,
+                    "y": 134
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": 2,
+                "y": 1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4282609809,
+                    "Color": 4282609809,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 23,
+                    "y": 134
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": -2,
+                "y": 1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4283070360,
+                    "Color": 4283070360,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 19,
+                    "y": 134
+                }
+            }
+        },
+        {
+            "Key": {
+                "x": -2,
+                "y": -1
+            },
+            "Value": {
+                "Element": {
+                    "BaseColor": 4282610322,
+                    "Color": 4282610322,
+                    "Health": 150,
+                    "Horizontal": 0,
+                    "ID": 6,
+                    "Ignited": false,
+                    "Rigid": true,
+                    "Sliding": false,
+                    "Temperature": 20.0,
+                    "Updated": true
+                },
+                "Hidden": false,
+                "WorldPos": {
+                    "x": 19,
+                    "y": 132
+                }
+            }
+        }
+    ],
+    "m_Enabled": true,
+    "m_Height": 4.0,
+    "m_InWorld": true,
+    "m_Layer": 0.0,
+    "m_MaskBits": 65535,
+    "m_Name": "player?!",
+    "m_Position": {
+        "x": 0.34049952030181885,
+        "y": 2.082569122314453
+    },
+    "m_Rotation": 0.0,
+    "m_Width": 5.0
+}

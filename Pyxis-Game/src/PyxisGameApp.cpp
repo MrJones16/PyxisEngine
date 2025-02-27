@@ -100,7 +100,7 @@ namespace Pyxis
 	class PyxisGame : public Pyxis::Application {
 	public:
 		PyxisGame()
-			: Application("Pixel Game", 1280, 720, "assets/Icon.png")
+			: Application("Pyxis", 1280, 720, "assets/Icon.png")
 		{
 			bool success = SteamAPI_Init();
 			PX_CORE_ASSERT(success, "Failed to init steam api!");
@@ -108,7 +108,7 @@ namespace Pyxis
 
 
 			//overlay instead of layer so it is on top
-			auto scene = CreateRef<SceneLayer>(true);//Set True for Debug!
+			auto scene = CreateRef<SceneLayer>(false);//Set True for Debug!
 			PushOverlay(scene);
 
 			//create game nodes

@@ -172,6 +172,7 @@ namespace Pyxis
 			m_HasBody = false;
 			CreateBody(world);
 			storage.TransferData(m_B2Body);
+			PX_TRACE("Transferred body to new world. Position: ({0},{1})", m_B2Body->GetPosition().x, m_B2Body->GetPosition().y);
 		}
 	}
 

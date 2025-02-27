@@ -6,9 +6,10 @@
 #include <chrono>
 #include <variant>
 #include "MenuNode.h"
-#include "PixelBody2D.h"
 #include <Pyxis/Game/Physics2D.h>
 #include <snappy.h>
+#include "PixelBody2D.h"
+#include "Player.h"
 
 namespace Pyxis
 {
@@ -97,9 +98,9 @@ namespace Pyxis
 		ElementButtonContainer->m_AutomaticSizing = true;
 		ElementButtonContainer->m_AutomaticSizingOffset = { -350, 0 };
 		ElementButtonContainer->m_Gap = 0;
-		for (int i = 0; i < m_World.m_ElementData.size(); i++)
+		for (int i = 0; i < ElementData::s_ElementData.size(); i++)
 		{
-			ElementData& ed = m_World.m_ElementData[i];
+			ElementData& ed = ElementData::GetElementData(i);
 
 			//abgr
 			int r = (ed.color & 0x000000FF) >> 0;
@@ -185,7 +186,7 @@ namespace Pyxis
 			{
 				auto index = m_World.PixelToIndex(mousePixelPos);
 				m_HoveredElement = it->second->m_Elements[index.x + index.y * CHUNKSIZE];
-				if (m_HoveredElement.m_ID >= m_World.m_TotalElements)
+				if (m_HoveredElement.m_ID >= ElementData::s_ElementData.size())
 				{
 					//something went wrong? how?
 					m_HoveredElement = Element();
@@ -314,6 +315,65 @@ namespace Pyxis
 					m_World.PaintBrushElement(pixelPos, elementID, brush, brushSize);
 					break;
 				}
+				case InputAction::TransformRegionToRigidBody:
+				{
+					bool makeCreature = false;
+					b2BodyType type;
+					BrushType b;
+					float brushSize;
+					glm::ivec2 pixelPos;
+					tc >> makeCreature;
+					tc >> type;
+					tc >> b;
+					tc >> brushSize;
+					tc >> pixelPos;
+
+					std::vector<PixelBodyElement> elements;
+					//make a region around the mouse, and turn it into a pixel body
+					for (int x = -brushSize; x <= brushSize; x++)
+					{
+						for (int y = -brushSize; y <= brushSize; y++)
+						{
+							switch (b)
+							{
+							case BrushType::circle:
+								//limit brush to circle
+								if (std::sqrt((float)(x * x) + (float)(y * y)) >= brushSize) continue;
+								break;
+							case BrushType::square:
+								break;
+							}
+
+							glm::ivec2 elementPos = glm::ivec2(x, y) + pixelPos;
+							glm::ivec2 chunkPos = m_World.PixelToChunk(elementPos);
+							
+							Chunk* chunk = m_World.GetChunk(chunkPos);
+							if (chunk == nullptr) chunk = m_World.AddChunk(chunkPos);
+
+							Element& e = chunk->GetElement(m_World.PixelToIndex(elementPos));
+							ElementData& ed = ElementData::GetElementData(e.m_ID);
+							if (ed.cell_type == ElementType::solid && !e.m_Rigid)
+							{
+								e.m_Rigid = true;
+								elements.push_back(PixelBodyElement(m_World.GetElement(elementPos), elementPos));
+								chunk->m_StaticColliderChanged = true;
+							}
+						}
+					}
+					if (elements.size() > 0)
+					{
+						if (!makeCreature)
+						{
+							Instantiate<PixelBody2D>("F-PlacedPixelBody", type, &m_World, elements, false);						
+						}
+						else
+						{
+							Instantiate<Player>("player?!", b2BodyType::b2_dynamicBody, &m_World, elements, false);
+						}
+					}
+					
+					break;
+				}
 				case Pyxis::InputAction::Input_StepSimulation:
 				{
 					PX_TRACE("input action: Input_StepSimulation");
@@ -387,38 +447,43 @@ namespace Pyxis
 		{
 			Physics2D::ResetWorld();
 		}
+		if (event.GetKeyCode() == PX_KEY_X)
+		{
+			m_World.TestStaticColliders();
+		}
+		if (event.GetKeyCode() == PX_KEY_K)
+		{
+			//Load the player from Player.json
+			
+			//verify that file exists
+			std::filesystem::path path("assets/Player.json");
+			if (!std::filesystem::exists(path))
+			{
+				PX_TRACE("Player.json does not exist!");
+				return;
+			}
+
+			std::ifstream file("assets/Player.json");
+			json j;
+			file >> j;
+			file.close();
+			auto pRef = Node::DeserializeNode(j);
+			Node::Nodes[pRef->GetUUID()] = pRef;
+			Player* p = dynamic_cast<Player*>(pRef.get());
+			p->m_PXWorld = &m_World;
+			p->UpdateElementPositions();
+			p->EnterWorld();
+		}
 		if (event.GetKeyCode() == PX_KEY_F)
 		{
 			//Testing rigidbody creation
 			glm::vec2 mousePos = GetMousePosWorld();
 			glm::ivec2 pixelPos = m_World.WorldToPixel(mousePos);
 
+			b2BodyType type = Input::IsKeyPressed(PX_KEY_LEFT_SHIFT) ? b2BodyType::b2_staticBody : b2BodyType::b2_dynamicBody;
 
-			std::vector<PixelBodyElement> elements;
-			//make a region around the mouse, and turn it into a pixel body
-			for (int x = pixelPos.x - m_BrushSize; x < pixelPos.x + m_BrushSize + 1; x++)
-			{
-				for (int y = pixelPos.y - m_BrushSize; y < pixelPos.y + m_BrushSize + 1; y++)
-				{
-					glm::ivec2 elementPos = glm::ivec2(x, y);
-					Element& e = m_World.GetElement(elementPos);
-					if (m_World.m_ElementData[e.m_ID].cell_type == ElementType::solid)
-						elements.push_back(PixelBodyElement(m_World.GetElement(elementPos), elementPos));
-				}
-			}
-			Ref<PixelBody2D> newBody;
-			if (Pyxis::Input::IsKeyPressed(PX_KEY_LEFT_SHIFT))
-			{
-				newBody = Instantiate<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_staticBody, &m_World, elements, false);
-			}
-			else
-			{
-				newBody = Instantiate<PixelBody2D>("F-PlacedPixelBody", b2BodyType::b2_dynamicBody, &m_World, elements, false);
-			}
-			
-			AddChild(newBody);
-
-			SerializeBinary();
+			bool makeCreature = Input::IsKeyPressed(PX_KEY_LEFT_CONTROL);
+			m_CurrentTickClosure.AddInputAction(InputAction::TransformRegionToRigidBody, pixelPos, m_BrushSize, m_BrushType, type, makeCreature);
 
 		}
 		if (event.GetKeyCode() == PX_KEY_SPACE)
@@ -450,9 +515,18 @@ namespace Pyxis
 		}
 		if (event.GetKeyCode() == PX_KEY_C)
 		{
-			int type = ((int)m_BrushType) + 1;
-			if (type >= (int)BrushType::end) type = (int)BrushType::end - 1;
-			m_BrushType = BrushType(type);
+			//if this is a debug command
+			if (Input::IsKeyPressed(PX_KEY_F3))
+			{
+				//toggle chunk debug
+				Chunk::s_DebugChunks = !Chunk::s_DebugChunks;
+			}
+			else
+			{
+				int type = ((int)m_BrushType) + 1;
+				if (type >= (int)BrushType::end) type = (int)BrushType::end - 1;
+				m_BrushType = BrushType(type);
+			}
 		}
 
 	}
@@ -552,7 +626,7 @@ namespace Pyxis
 					break;
 				}
 
-				uint32_t color = m_World.m_ElementData[m_SelectedElementIndex].color;
+				uint32_t color = ElementData::s_ElementData[m_SelectedElementIndex].color;
 
 				
 				float r = float(color & 0x000000FF) / 255.0f;
