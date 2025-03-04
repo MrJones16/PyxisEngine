@@ -27,10 +27,11 @@ namespace Pyxis
 		Server_ClientDataMousePosition,
 		Server_AllClientData,
 		Server_ClientDisconnected,
-		Server_GameDataInit,
-		Server_GameDataPixelBody,
-		Server_GameDataChunk,
 		Server_ClientDesynced,
+
+		Server_GameDataInit,
+		Server_GameDataRigidBody,
+		Server_GameDataChunk,
 
 		Server_Message,
 		Message_All,

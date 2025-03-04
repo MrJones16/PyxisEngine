@@ -133,6 +133,8 @@ namespace Pyxis
 		/// </summary>
 		virtual void DestroyBody();
 
+		void ClearFixtures();
+
 		void SetType(b2BodyType type);		
 		b2BodyType GetType();		
 

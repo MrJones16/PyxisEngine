@@ -121,6 +121,7 @@
         "MeltingPoint": 1700,
         "Name": "sand",
         "Tags": [],
+        "TexturePath": "assets/textures/sand_texture.png",
         "Type": "ElementData"
     },
     {

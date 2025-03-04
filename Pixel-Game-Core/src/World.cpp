@@ -496,21 +496,39 @@ namespace Pyxis
 
 	void World::DownloadWorld(Network::Message& msg)
 	{
-		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataPixelBody)
+		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataRigidBody)
 		{
-			PX_TRACE("Recieved Pixel Body");
 			//lets load the pixel body! just reverse the upload order.
 			std::vector<uint8_t> msgpack;
 			msg >> msgpack;
 			json j = json::from_msgpack(msgpack);
-			auto PixelBodyNode = Node::DeserializeNode(j);
-			if (PixelBodyNode)
+			auto RigidBodyNode = Node::DeserializeNode(j);
+			
+			if (j["Type"] == "PixelBody2D")
 			{
-				((PixelBody2D*)(PixelBodyNode.get()))->m_PXWorld = this;
+				//register to Node::Nodes
+				Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
+				PixelBody2D* body = (PixelBody2D*)RigidBodyNode.get();
+				body->m_PXWorld = this;
 				//m_PixelBodyMap[body->m_UUID] = body;
-				PX_TRACE("Loaded Pixel Body ##{0}", PixelBodyNode->GetUUID());
+				PX_TRACE("Loaded PixelBody2D: Pos[{},{}] UUID[{}]", body->GetPosition().x, body->GetPosition().y, RigidBodyNode->GetUUID());
 				// can safely ignore putting it in the world, since when we got the world
 				// data it is already there!
+			}
+			else if (j["Type"] == "ChunkChainBody")
+			{
+				//we don't register these to the "scene layer" aka node:nodes
+
+				Ref<ChunkChainBody> ccb = std::dynamic_pointer_cast<ChunkChainBody>(RigidBodyNode);
+				GetChunk(ccb->m_ChunkOwnerPos)->AddPreviousStaticCollider(ccb);
+				PX_TRACE("Loaded ChunkChainBody: Pos[{},{}] UUID[{}]", ccb->m_ChunkOwnerPos.x, ccb->m_ChunkOwnerPos.y, ccb->GetUUID());
+			}
+			else//"RigidBody2D")
+			{
+				//register to Node::Nodes
+				Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
+
+				PX_TRACE("Loaded Generic RigidBody2D, UUID[{0}]", RigidBodyNode->GetUUID());
 			}
 		}
 		if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk)
@@ -520,6 +538,7 @@ namespace Pyxis
 
 			PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(), "Tried to load a chunk that already existed");
 			Chunk* chunk = new Chunk(chunkPos);
+			msg >> chunk->m_StaticColliderChanged;
 			msg >> chunk->m_DirtyRect;
 			m_Chunks[chunkPos] = chunk;
 			for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--)
@@ -540,7 +559,7 @@ namespace Pyxis
 		msg << static_cast<uint32_t>(m_Chunks.size());
 		PX_TRACE("# Chunks: {0}", m_Chunks.size());
 		msg << static_cast<uint32_t>(Physics2D::GetWorld()->GetBodyCount());
-		PX_TRACE("# PixelBodies: {0}", Physics2D::GetWorld()->GetBodyCount());
+		PX_TRACE("# RigidBodies: {0}", Physics2D::GetWorld()->GetBodyCount());
 		msg << m_SimulationTick;
 		msg << m_UpdateBit;
 		msg << m_WorldSeed;
@@ -565,8 +584,12 @@ namespace Pyxis
 			{
 				PX_TRACE("Packing RigidBody2D {0}", rb->GetUUID());
 				messages.emplace_back();
-				messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataPixelBody);
+				messages.back().header.id = static_cast<uint32_t>(GameMessage::Server_GameDataRigidBody);
 				messages.back() << rb->SerializeBinary();
+			}
+			else
+			{
+				PX_ASSERT(false, "RigidBody2D has no user data!");
 			}
 			bodies.pop_back();
 		}
@@ -582,6 +605,7 @@ namespace Pyxis
 				messages.back() << pair.second->m_Elements[i];
 			}
 			messages.back() << pair.second->m_DirtyRect;
+			messages.back() << pair.second->m_StaticColliderChanged;
 			messages.back() << pair.first;
 		}
 
@@ -871,6 +895,8 @@ namespace Pyxis
 		//loop from min to max in both "axies"?
 		bool minToMax = m_UpdateBit;
 
+		//PX_TRACE("Update Bit: {0}", m_UpdateBit);
+
 		///////////////////////////////////////////////////////////////
 		/// Main Update Loop, back and forth bottom to top, left,right,left....
 		///////////////////////////////////////////////////////////////
@@ -1039,7 +1065,7 @@ namespace Pyxis
 					{
 						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementLeft->m_ID);
 						end = ElementData::s_ReactionTable[currElement.m_ID].end();
-						if (it != end && (std::rand() % 100) < it->second.probability)
+						if (it != end && GetRandom() < it->second.probability)
 						{
 							currElement.m_ID = it->second.cell0ID;
 							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
@@ -1065,7 +1091,7 @@ namespace Pyxis
 					{
 						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementTop->m_ID);
 						end = ElementData::s_ReactionTable[currElement.m_ID].end();
-						if (it != end && (std::rand() % 100) < it->second.probability)
+						if (it != end && GetRandom() < it->second.probability)
 						{
 							currElement.m_ID = it->second.cell0ID;
 							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
@@ -1092,7 +1118,7 @@ namespace Pyxis
 					{
 						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementRight->m_ID);
 						end = ElementData::s_ReactionTable[currElement.m_ID].end();
-						if (it != end && (std::rand() % 100) < it->second.probability)
+						if (it != end && GetRandom() < it->second.probability)
 						{
 							currElement.m_ID = it->second.cell0ID;
 							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
@@ -1118,7 +1144,7 @@ namespace Pyxis
 					{
 						it = ElementData::s_ReactionTable[currElement.m_ID].find(elementBottom->m_ID);
 						end = ElementData::s_ReactionTable[currElement.m_ID].end();
-						if (it != end && (std::rand() % 100) < it->second.probability)
+						if (it != end && GetRandom() < it->second.probability)
 						{
 							currElement.m_ID = it->second.cell0ID;
 							ElementData& ed0 = ElementData::GetElementData(it->second.cell0ID);
@@ -1247,7 +1273,7 @@ namespace Pyxis
 					{
 						//try to spread ignition to surrounding elements
 						//if (elementTopData.flammable) 
-						if (currElementData.spread_ignition && std::rand() % 100 < currElementData.spread_ignition_chance)
+						if (currElementData.spread_ignition && GetRandom() < currElementData.spread_ignition_chance)
 						{
 							if (elementLeft != nullptr && elementLeftData->flammable) elementLeft->m_Ignited = true;
 							if (elementTop != nullptr && elementTopData->flammable) elementTop->m_Ignited = true;
@@ -1258,7 +1284,7 @@ namespace Pyxis
 						//check for open air to burn
 						int fireID = ElementData::s_ElementNameToID["fire"];
 						ElementData& fireElementData = ElementData::GetElementData(fireID);
-						if (currElement.m_ID != fireID) //&& std::rand() % 101 < 5
+						if (currElement.m_ID != fireID) //&& GetRandom() < 5
 						{
 
 							int healthDiff = currElement.m_Health;
@@ -1381,7 +1407,7 @@ namespace Pyxis
 						chunk->SetElement(x, y, *elementBottom);
 						//chunk->m_Elements[x + y * CHUNKSIZE] = *elementBottom;
 
-						bottomChunk->SetElement(x, (y - 1) % CHUNKSIZE, temp);
+						bottomChunk->SetElement(x, (y + (CHUNKSIZE - 1)) % CHUNKSIZE, temp);
 						//*elementBottom = temp;
 						UpdateChunkDirtyRect(x, y, chunk);
 						if (elementLeft != nullptr) elementLeft->m_Sliding = true;
@@ -1394,7 +1420,7 @@ namespace Pyxis
 					if (currElement.m_Sliding)
 					{
 						//chance to stop sliding
-						int rand = std::rand() % 101;
+						int rand = GetRandom();
 						if (rand <= currElementData.friction)
 						{
 							currElement.m_Sliding = false;
@@ -1403,7 +1429,7 @@ namespace Pyxis
 						}
 						if (currElement.m_Horizontal == 0)
 						{
-							currElement.m_Horizontal = (std::rand() % 2 == 0) ? -1 : 1;
+							currElement.m_Horizontal = (GetRandom() % 2 == 0) ? -1 : 1;
 						}
 					}
 					else
@@ -1434,7 +1460,7 @@ namespace Pyxis
 							Element temp = currElement;
 							chunk->SetElement(x, y, *elementLeft);
 							//chunk->m_Elements[x + y * CHUNKSIZE] = *elementLeft;
-							leftChunk->SetElement((x - 1) % CHUNKSIZE, y, temp);
+							leftChunk->SetElement((x + (CHUNKSIZE - 1)) % CHUNKSIZE, y, temp);
 							//*elementLeft = temp;
 							UpdateChunkDirtyRect(x, y, chunk);
 							continue;
@@ -1453,7 +1479,7 @@ namespace Pyxis
 						continue;
 					}
 						
-					r = std::rand() & 1 ? 1 : -1;
+					r = GetRandom() & 1 ? 1 : -1;
 					//int r = (x ^ 98252 + (m_UpdateBit * y) ^ 6234561) ? 1 : -1;
 
 					//try left/right then bottom left/right
@@ -1511,7 +1537,7 @@ namespace Pyxis
 
 					// note: using < doesn't make sense, but because air doesn't update,
 					// it itself doesn't move like a gas. therefore, density for gasses is inverted
-					r = (std::rand() % 3) - 1; //-1 0 1
+					r = (GetRandom() % 3) - 1; //-1 0 1
 					if (r == 0)
 					{
 						//check above, and move
@@ -1605,7 +1631,7 @@ namespace Pyxis
 
 					currElement.m_Color = colorAlpha | (colorBlue << 16) | (colorGreen << 8) | colorRed;
 					
-					r = (std::rand() % 100);
+					r = GetRandom();
 					if (r > 20 && r < 80) //~60% to go up
 					{
 						//check above, and move						
@@ -1904,7 +1930,7 @@ namespace Pyxis
 	{
 
 		//PX_TRACE("Rendering world");
-		for (auto pair : m_Chunks)
+		for (auto& pair : m_Chunks)
 		{
 			Renderer2D::DrawQuad(glm::vec2(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f), { 1,1 }, pair.second->m_Texture);
 			pair.second->RenderChunk();
@@ -2080,8 +2106,17 @@ namespace Pyxis
 	{
 		unsigned int seed = ((xPos * 58102) << m_SimulationTick % 5)
 			+ (((yPos * 986124) * m_SimulationTick) >> 2);
-		std::srand(seed);
+		
 		//PX_TRACE("Seeded rand with: {0}", seed);
+		m_RandomEngine.seed(seed);
+		//std::srand(seed);
+	}
+
+	int World::GetRandom()
+	{
+		int result = m_Rand(m_RandomEngine);
+		//PX_TRACE("Got random number: {0}", result);
+		return result;
 	}
 
 	const bool World::IsInBounds(int x, int y)
@@ -2103,7 +2138,7 @@ namespace Pyxis
 	//Helper to get a chunk from a world pixel position
 	glm::ivec2 World::PixelToChunk(const glm::ivec2& pixelPos)
 	{
-		glm::ivec2 result;
+		glm::ivec2 result = {0,0};
 		if (pixelPos.x < 0)
 		{
 			result.x = (pixelPos.x + 1) / CHUNKSIZE;
@@ -2122,7 +2157,7 @@ namespace Pyxis
 	//Helper to get an index from a world pixel position
 	glm::ivec2 World::PixelToIndex(const glm::ivec2& pixelPos)
 	{
-		glm::ivec2 result;
+		glm::ivec2 result = {0,0};
 		if (pixelPos.x < 0)
 		{
 			result.x = CHUNKSIZE - (std::abs(pixelPos.x) % CHUNKSIZE);

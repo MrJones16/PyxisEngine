@@ -148,3 +148,20 @@ namespace Pyxis
 	};*/
 
 }
+
+namespace glm
+{
+	//override < operator for glm ivec2
+	inline bool operator<(const glm::ivec2& lhs, const glm::ivec2& rhs)
+	{
+		if (lhs.x < rhs.x) return true;
+		if (lhs.x > rhs.x) return false;
+		return lhs.y < rhs.y;
+	}
+
+	//override == operator for glm ivec2
+	inline bool operator==(const glm::ivec2& lhs, const glm::ivec2& rhs)
+	{
+		return lhs.x == rhs.x && lhs.y == rhs.y;
+	}
+}

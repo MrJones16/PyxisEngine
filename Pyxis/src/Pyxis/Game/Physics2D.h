@@ -58,10 +58,10 @@ namespace Pyxis
 			while (body != nullptr)
 			{
 				RigidBody2D* rb = (RigidBody2D*)(body->GetUserData().pointer);
+				body = body->GetNext();
 				if (rb != nullptr)
 				{
-					rb->TransferWorld(world);
-					body = body->GetNext();
+					rb->TransferWorld(world);					
 				}
 			}
 			delete m_World;

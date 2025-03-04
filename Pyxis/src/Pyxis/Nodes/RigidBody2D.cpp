@@ -200,6 +200,17 @@ namespace Pyxis
 		}
 	}
 
+	void RigidBody2D::ClearFixtures()
+	{
+		auto fixture = m_B2Body->GetFixtureList();
+		if (fixture != nullptr) do
+		{
+			b2Fixture* next = fixture->GetNext();
+			m_B2Body->DestroyFixture(fixture);
+			fixture = next;
+		} while (fixture != nullptr);
+	}
+
 	void RigidBody2D::SetType(b2BodyType type)
 	{
 		m_B2BodyDef.type = type;

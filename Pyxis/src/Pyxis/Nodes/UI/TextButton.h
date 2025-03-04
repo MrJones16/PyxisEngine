@@ -95,7 +95,7 @@ namespace Pyxis
 				}
 			}
 
-			virtual void OnMousePressed(int mouseButton) override
+			/*virtual void OnMousePressed(int mouseButton) override
 			{
 				if (mouseButton == PX_MOUSE_BUTTON_1)
 				{
@@ -114,7 +114,7 @@ namespace Pyxis
 					}
 				}
 
-			}
+			}*/
 
 			virtual void OnRender() override
 			{

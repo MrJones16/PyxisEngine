@@ -19,7 +19,7 @@ using json = nlohmann::json;
 namespace { \
     struct T##_Registrar { \
         T##_Registrar() { \
-            NodeRegistry::getInstance().registerType(#T, [](UUID id) -> Ref<Node> { return Instantiate<T>(id); }); \
+            NodeRegistry::getInstance().registerType(#T, [](UUID id) -> Ref<Node> { return CreateRef<T>(id); }); \
         } \
     }; \
     static T##_Registrar global_##T##_registrar; \
@@ -107,6 +107,14 @@ namespace Pyxis
 	// It belongs to Node{} because it helps to be accessible from nodes, to know if they are hovered / wanting to be 
 	// interacted with. 
 	//
+	// Instantiate is a way of creating nodes as part of the scene. 
+	// Nodes can be created normally and exist separately from the scene,
+	// but any deserialized children will be automatically scene-registered
+	// 
+	// Independent nodes will not be rendered or updated automatically.
+	// 
+	// The exception is Rigidbodies physics updates are called by the underlying b2body, so the physics update is called.
+	//
 	class Node : public std::enable_shared_from_this<Node>
 	{
 	public://static Node things
@@ -142,6 +150,7 @@ namespace Pyxis
 
 		//takes in a json, and creates a node ref if successful,
 		//otherwise returns nullptr.
+		//Does not Register to Node::Nodes
 		static Ref<Node> DeserializeNode(json& j);
 
 
@@ -212,6 +221,8 @@ namespace Pyxis
 	
 	};
 
+
+	//Creates an instance of a node, and registers it to Node::Nodes
 	template<typename T, typename ... Args>
 	constexpr Ref<T> Instantiate(Args&& ... args)
 	{
@@ -235,6 +246,7 @@ namespace Pyxis
 			registry[typeName] = factory;
 		}
 
+		//Create an instance of a registered type, does not register to Node::Nodes
 		Ref<Node> createInstance(const std::string& typeName, UUID id) {
 			if (registry.find(typeName) != registry.end()) {
 				return registry[typeName](id);

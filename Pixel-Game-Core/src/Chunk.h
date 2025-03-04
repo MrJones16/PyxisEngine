@@ -4,6 +4,7 @@
 #include "Element.h"
 #include <box2d/b2_body.h>
 #include "VectorHash.h"
+#include "ChunkChainBody.h"
 
 static const int CHUNKSIZE = 64;
 
@@ -42,6 +43,7 @@ namespace Pyxis
 		bool m_StaticColliderGenerated = false;
 		bool m_StaticColliderChanged = true;
 		void GenerateStaticCollider();
+		void AddPreviousStaticCollider(Ref<ChunkChainBody> previousChunkChainBody);
 
 		void QueuePull(glm::ivec2 startPos, std::unordered_set<glm::ivec2, HashVector>& result, std::unordered_set<glm::ivec2, HashVector>& source);		
 		std::vector<b2Vec2> GetContourPoints(const std::unordered_set<glm::ivec2, HashVector>& source);
@@ -64,7 +66,8 @@ namespace Pyxis
 		Ref<Texture2D> m_Texture;
 		uint32_t m_PixelBuffer[CHUNKSIZE * CHUNKSIZE];
 
-		b2Body* m_B2Body;
 
+		Ref<ChunkChainBody> m_OwnedChainBody2D = nullptr;
+		friend class ChainBody2D;
 	};
 }

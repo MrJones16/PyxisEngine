@@ -155,7 +155,7 @@ namespace Pyxis
 		mp.y = m_ViewportSize.y - mp.y;
 		if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 && mp.y < m_ViewportSize.y)
 		{
-			uint32_t nodeID; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
+			UUID nodeID; m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
 			Node::s_HoveredNodeID = nodeID;
 		}
 
@@ -170,7 +170,7 @@ namespace Pyxis
 	{
 		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ((Node == m_SelectedNode) ? ImGuiTreeNodeFlags_Selected : 0);
 
-		bool opened = ImGui::TreeNodeEx((void*)(uint32_t)Node->GetUUID(), flags, Node->m_Name.c_str());
+		bool opened = ImGui::TreeNodeEx((void*)(UUID)Node->GetUUID(), flags, Node->m_Name.c_str());
 
 		if (ImGui::IsItemClicked())
 		{
@@ -337,6 +337,7 @@ namespace Pyxis
 	{
 		//let the UI keep track of what has been pressed, so that way buttons can be on release!
 		UI::UINode::s_MousePressedNodeID = Node::s_HoveredNodeID;
+		PX_TRACE("Pressed Node: {0}", UI::UINode::s_MousePressedNodeID);
 
 		//see if the node is valid, and if it is then send the event through.
 		if (Node::Nodes.contains(Node::s_HoveredNodeID))
@@ -363,6 +364,7 @@ namespace Pyxis
 	/// <returns></returns>
 	bool SceneLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event)
 	{
+		PX_TRACE("Released when UINode is: {0}", UI::UINode::s_MousePressedNodeID);
 		if (UI::UINode::s_MousePressedNodeID == Node::s_HoveredNodeID)
 		{
 			//the hovered node is what we pressed last
@@ -379,16 +381,23 @@ namespace Pyxis
 		}
 		else
 		{
+			PX_TRACE("Searching for that ID");
 			//the hovered node is not what we pressed originally, so call released on original press
 			if (Node::Nodes.contains(UI::UINode::s_MousePressedNodeID))
 			{
+				PX_TRACE("Found valid object. Attempting cast to UINode");
 				//the hovered node is valid
 
 				//try to cast it to UI 
-				if (Ref<UI::UINode> uinode = dynamic_pointer_cast<UI::UINode>(Node::Nodes[Node::s_HoveredNodeID]))
+				if (Ref<UI::UINode> uinode = dynamic_pointer_cast<UI::UINode>(Node::Nodes[UI::UINode::s_MousePressedNodeID]))
 				{
+					PX_TRACE("Cast success, calling mose released");
 					uinode->OnMouseReleased(event.GetMouseButton(), false);
 				}
+			}
+			else
+			{
+				PX_TRACE("Could not find object.");
 			}
 
 			///here if we want to call released on UI nodes without having to press first?

@@ -309,7 +309,7 @@ namespace Pyxis
 				}
 				break;
 			}
-			case GameMessage::Server_GameDataPixelBody:
+			case GameMessage::Server_GameDataRigidBody:
 			case GameMessage::Server_GameDataChunk:
 			{
 
@@ -317,7 +317,7 @@ namespace Pyxis
 				m_DownloadCount++;
 				m_World.DownloadWorld(*msg);
 				if (m_DownloadCount == m_DownloadTotal)
-				{
+				{					
 					PX_INFO("Downloading World: [100%]");
 					//tell the server we are finished, so it can resume the game
 					Network::Message gameDataCompleteMsg;
@@ -335,7 +335,7 @@ namespace Pyxis
 					Network::Message gameDataRecievedMsg;
 					gameDataRecievedMsg.header.id = static_cast<uint32_t>(GameMessage::Client_GameDataRecieved);
 					SendMessageToServer(gameDataRecievedMsg);
-					PX_INFO("Downloading World: [{0}%]", (double)m_DownloadCount / (double)m_DownloadTotal);
+					//PX_INFO("Downloading World: [{0}%]", (double)m_DownloadCount / (double)m_DownloadTotal);
 				}
 				break;
 			}

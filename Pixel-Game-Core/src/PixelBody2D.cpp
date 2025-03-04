@@ -70,7 +70,7 @@ namespace Pyxis
 		glm::vec2 position;
 		if (j.contains("m_Position")) j.at("m_Position").get_to(position);
 		SetPosition(position);
-		PX_TRACE("Deserializing position: ({0},{1})", position.x, position.y);
+		//PX_TRACE("Deserializing position: ({0},{1})", position.x, position.y);
 
 		//Extract new member variables
 		if (j.contains("m_InWorld")) j.at("m_InWorld").get_to(m_InWorld);
@@ -646,6 +646,7 @@ namespace Pyxis
 		int halfHeight = (m_Height / 2) + 2;
 		glm::ivec2 cursor = glm::ivec2(halfWidth, halfHeight); // get top right local pos
 		//scroll through element array until you find an element to start at
+		while (!m_Elements.contains(cursor))
 		while (!m_Elements.contains(cursor))
 		{
 			cursor.x--;

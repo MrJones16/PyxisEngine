@@ -194,7 +194,7 @@ namespace Pyxis
 				//being the chunks and pixel bodies
 				//this is also how we track pausing to let someone download
 				m_DownloadingClients[msg->clientHConnection] = std::vector<Network::Message>();
-				PX_WARN("Created a vector of messages for client");
+				//PX_WARN("Created a vector of messages for client");
 				m_World.GetGameData(m_DownloadingClients[msg->clientHConnection]);
 				//send the first and wait for it to be acknowledged
 
@@ -257,9 +257,8 @@ namespace Pyxis
 	void HostedGameNode::ReturnToMenu()
 	{
 		ServerInterface::Stop();
-		
-		auto menu = Instantiate<MenuNode>();
-		QueueFree();
+
+		GameNode::ReturnToMenu();
 	}
 
 }

@@ -1,10 +1,4 @@
 #include "Node.h"
-#include "Node.h"
-#include "Node.h"
-#include "Node.h"
-#include "Node.h"
-#include "Node.h"
-#include "Node.h"
 #include "pxpch.h"
 #include "Pyxis/Renderer/Renderer2D.h"
 #include "imgui.h"
@@ -23,7 +17,7 @@ namespace Pyxis
 			Ref<Node> newNode = NodeRegistry::getInstance().createInstance(j["Type"], ID);
 			if (newNode != nullptr)
 			{
-				newNode->Deserialize(j);				
+				newNode->Deserialize(j);
 			}
 			return newNode;
 		}
@@ -125,6 +119,7 @@ namespace Pyxis
 				Ref<Node> newNode = NodeRegistry::getInstance().createInstance(type, ID);
 				if (newNode != nullptr)
 				{
+					Node::Nodes[newNode->GetUUID()] = newNode;
 					m_Children.push_back(newNode.get());
 					newNode->m_Parent = this;
 					newNode->Deserialize(jc);

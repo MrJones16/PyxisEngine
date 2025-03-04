@@ -23,10 +23,19 @@ namespace Pyxis
 
 	void ElementData::LoadElementData(const std::string& path)
 	{
+		//first, lets reset any current data we have.
+		s_ElementData.clear();
+		s_ElementNameToID.clear();
+		s_TagElements.clear();
+		s_Reactions.clear();
+		s_ReactionTable.clear();
+
+		//load the json file
 		std::ifstream file(path);
 		json j;
 		file >> j;
 		file.close();
+		//de-serialize element data & reactions.
 		for (auto& element : j)
 		{
 			if (element["Type"] == "ElementData")
@@ -231,7 +240,7 @@ namespace Pyxis
 		}
 		else
 		{
-			element.m_BaseColor = RandomizeABGRColor(color);
+			element.m_BaseColor = color;// RandomizeABGRColor(color);
 		}
 		element.m_Color = element.m_BaseColor;
 		element.m_Temperature = temperature;
@@ -268,7 +277,7 @@ namespace Pyxis
 		}
 		else
 		{
-			element->m_BaseColor = RandomizeABGRColor(color);
+			element->m_BaseColor = color;// RandomizeABGRColor(color);
 		}
 		element->m_Color = element->m_BaseColor;
 		element->m_Temperature = temperature;

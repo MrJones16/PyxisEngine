@@ -2,6 +2,12 @@
 #include "Pyxis/Renderer/Renderer2D.h"
 #include <Pyxis/Game/Physics2D.h>
 #include <box2d/b2_chain_shape.h>
+/*
+//create a static body for the chunk
+		float RBToWorld = ((float)CHUNKSIZE / PPU);
+		m_OwnedChainBody2D = new ChunkChainBody("ChunkChainBody", b2_staticBody);
+		m_OwnedChainBody2D->SetPosition({ m_ChunkPos.x, m_ChunkPos.y });
+*/
 
 
 namespace Pyxis
@@ -13,12 +19,7 @@ namespace Pyxis
 		{
 			m_Elements[i] = Element();
 		}
-		//create a static body for the chunk
-		float RBToWorld = ((float)CHUNKSIZE / PPU);
-		b2BodyDef bodyDef;
-		bodyDef.type = b2_staticBody;
-		bodyDef.position = b2Vec2(m_ChunkPos.x * RBToWorld, m_ChunkPos.y * RBToWorld);
-		m_B2Body = Physics2D::GetWorld()->CreateBody(&bodyDef);
+		
 
 		//reset dirty rect
 		ResetDirtyRect();
@@ -180,39 +181,10 @@ namespace Pyxis
 			Renderer2D::DrawQuad({ m_ChunkPos.x + 0.5f, m_ChunkPos.y + 0.5f, 20 }, glm::vec2(0.1f), chunkStatusColor);
 
 			float scaling = PPU / (float)CHUNKSIZE;
+
 			//Draw the collider
-			auto& T = m_B2Body->GetTransform();
-			for (auto fixture = m_B2Body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
-			{
-				auto shape = (b2ChainShape*)(fixture->GetShape());
-				for (int i = 0; i < shape->m_count - 1; i++)
-				{
-					auto v = shape->m_vertices[i];
-					float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
-					float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
-
-					auto e = shape->m_vertices[i + 1];
-					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
-					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec3 start = glm::vec3(x1, y1, 10) * scaling;
-					glm::vec3 end = glm::vec3(x2, y2, 10) * scaling;
-
-					Renderer2D::DrawLine(start, end);
-				}
-				//draw the last line to connect the shape
-				auto v = shape->m_vertices[shape->m_count - 1];
-				float x1 = (T.q.c * v.x - T.q.s * v.y) + T.p.x;
-				float y1 = (T.q.s * v.x + T.q.c * v.y) + T.p.y;
-
-				auto e = shape->m_vertices[0];
-				float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
-				float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-				glm::vec3 start = glm::vec3(x1, y1, 10) * scaling;
-				glm::vec3 end = glm::vec3(x2, y2, 10) * scaling;
-
-				Renderer2D::DrawLine(start, end);
-
-			}
+			if (m_OwnedChainBody2D != nullptr)
+				m_OwnedChainBody2D->DebugDraw(scaling, 10);
 
 
 			glm::vec2 min = {std::max(m_DirtyRect.min.x, 0), std::max(m_DirtyRect.min.y, 0) };
@@ -237,14 +209,18 @@ namespace Pyxis
 	void Chunk::GenerateStaticCollider()
 	{
 		m_StaticColliderGenerated = true;
-		//clear any previous fixtures
-		auto fixture = m_B2Body->GetFixtureList();
-		if (fixture != nullptr) do
+		if (m_OwnedChainBody2D == nullptr)
 		{
-			b2Fixture* next = fixture->GetNext();
-			m_B2Body->DestroyFixture(fixture);
-			fixture = next;
-		} while (fixture != nullptr);
+			//create a static body for the chunk
+			float RBToWorld = ((float)CHUNKSIZE / PPU);
+			m_OwnedChainBody2D = CreateRef<ChunkChainBody>("ChunkChainBody", b2_staticBody);
+			m_OwnedChainBody2D->m_ChunkOwnerPos = m_ChunkPos;
+			m_OwnedChainBody2D->SetPosition({ m_ChunkPos.x * RBToWorld, m_ChunkPos.y * RBToWorld });
+		}
+		else
+		{
+			m_OwnedChainBody2D->ClearFixtures();
+		}		
 
 		std::unordered_set<glm::ivec2, HashVector> source;
 		for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
@@ -299,18 +275,18 @@ namespace Pyxis
 
 			if (contourVector.size() >= 3)
 			{
-				b2ChainShape chainShape;
-				chainShape.CreateLoop((b2Vec2*)contourVector.data(), contourVector.size());
-
-				b2FixtureDef fixtureDef;
-				fixtureDef.density = 1;
-				fixtureDef.friction = 0.3f;
-				fixtureDef.shape = &chainShape;
-				m_B2Body->CreateFixture(&fixtureDef);
+				m_OwnedChainBody2D->CreateLoop((b2Vec2*)contourVector.data(), contourVector.size());
 			}
 
 		}
 
+	}
+
+	void Chunk::AddPreviousStaticCollider(Ref<ChunkChainBody> previousChunkChainBody)
+	{
+		m_StaticColliderGenerated = true;
+		m_OwnedChainBody2D = previousChunkChainBody;
+		
 	}
 
 

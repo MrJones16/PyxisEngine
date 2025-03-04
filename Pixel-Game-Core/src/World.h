@@ -110,15 +110,19 @@ namespace Pyxis
 
 		//helper functions
 
-		
+		std::mt19937 m_RandomEngine;
+		std::uniform_int_distribution<int> m_Rand = std::uniform_int_distribution<int>(0, 99);
+		std::uniform_int_distribution<uint32_t> dist;
 		void SeedRandom(int xPos, int yPos);
+		int GetRandom(); //0 - 99 as seen above
+
 		static const bool IsInBounds(int x, int y);
 		glm::ivec2 WorldToPixel(const glm::vec2& worldPos);
 		glm::ivec2 PixelToChunk(const glm::ivec2& pixelPos);
 		glm::ivec2 PixelToIndex(const glm::ivec2& pixelPos);
 
 		//
-		std::unordered_map<glm::ivec2, Chunk*, HashVector> m_Chunks;
+		std::map<glm::ivec2, Chunk*> m_Chunks;
 
 		//keeping track of theads to join them
 		//std::vector<std::thread> m_Threads;

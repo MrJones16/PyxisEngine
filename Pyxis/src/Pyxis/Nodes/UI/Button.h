@@ -91,6 +91,8 @@ namespace Pyxis
 
 			virtual void OnMousePressed(int mouseButton) override
 			{
+				PX_TRACE("Button was pressed! my id is: {0}", GetUUID());
+
 				if (mouseButton == PX_MOUSE_BUTTON_1)
 				{
 					m_Pressed = true;
@@ -99,6 +101,7 @@ namespace Pyxis
 
 			virtual void OnMouseReleased(int mouseButton, bool continuous) override
 			{
+				PX_TRACE("Button was released! my id is: {0}", GetUUID());
 				if (mouseButton == PX_MOUSE_BUTTON_1)
 				{
 					m_Pressed = false;
