@@ -13,6 +13,32 @@
 
 namespace Pyxis
 {
+	namespace Utils
+	{
+		std::vector<glm::ivec2> getLinePath(glm::ivec2 startPosition, glm::ivec2 endPosition) {
+			std::vector<glm::ivec2> positions;
+			glm::ivec2 current = startPosition;
+			positions.push_back(current);
+
+			int dx = endPosition.x - startPosition.x;
+			int dy = endPosition.y - startPosition.y;
+			int steps = std::max(std::abs(dx), std::abs(dy));
+
+			if (steps == 0) return positions;
+
+			float xInc = static_cast<float>(dx) / steps;
+			float yInc = static_cast<float>(dy) / steps;
+
+			for (int i = 0; i < steps; i++) {
+				current.x = startPosition.x + static_cast<int>(round(xInc * (i + 1)));
+				current.y = startPosition.y + static_cast<int>(round(yInc * (i + 1)));
+				positions.push_back(current);
+			}
+
+			return positions;
+		}
+	}
+
 	World::World(std::string assetPath, int seed)
 	{
 		Physics2D::GetWorld();//make sure that the physics world is made
@@ -709,6 +735,17 @@ namespace Pyxis
 		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
 	}
 
+	Element& World::ForceGetElement(const glm::ivec2& pixelPos)
+	{
+		auto chunkPos = PixelToChunk(pixelPos);
+		auto index = PixelToIndex(pixelPos);
+		if (!m_Chunks.contains(chunkPos))
+		{
+			AddChunk(chunkPos);
+		}
+		return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+	}
+
 	void World::SetElement(const glm::ivec2& pixelPos, const Element& element)
 	{
 		Chunk* chunk = GetChunk(PixelToChunk(pixelPos));
@@ -821,10 +858,14 @@ namespace Pyxis
 			thread.join();
 		}*/
 
+		UpdateParticles();
+
 
 		Physics2D::Step();
-
-		
+		//physiscs 2d updates the pixel bodies,
+		//and the pixel bodies manage their own insertion
+		//and deletion from the world, and throwing the
+		//particles on overlap
 
 		for (auto& [pos, chunk] : m_Chunks)
 		{
@@ -897,6 +938,9 @@ namespace Pyxis
 
 		//PX_TRACE("Update Bit: {0}", m_UpdateBit);
 
+		//first lets seed random, so the simulation is deterministic!
+		SeedRandom(chunk->m_ChunkPos.x, chunk->m_ChunkPos.y);
+
 		///////////////////////////////////////////////////////////////
 		/// Main Update Loop, back and forth bottom to top, left,right,left....
 		///////////////////////////////////////////////////////////////
@@ -939,8 +983,7 @@ namespace Pyxis
 			for (int x = startX; x != compareX; minToMax ? x++ : x--)
 			{
 				//we now have an x and y of the element in the array, so update it
-				//first lets seed random, so the simulation is deterministic!
-				SeedRandom(x, y);
+				
 				Element& currElement = chunk->m_Elements[x + y * CHUNKSIZE];
 				ElementData& currElementData = ElementData::GetElementData(currElement.m_ID);
 
@@ -1892,6 +1935,92 @@ namespace Pyxis
 		}
 	}
 
+	void World::CreateParticle(const glm::vec2& position, const glm::vec2& velocity, const Element& element)
+	{
+		m_ElementParticles.push_back(ElementParticle(position, velocity, element));
+	}
+
+	void World::UpdateParticles()
+	{
+		
+		// Use size_t for indices to avoid signed/unsigned mismatch
+		for (size_t particleIndex = 0; particleIndex < m_ElementParticles.size(); ) {
+			auto& particle = m_ElementParticles[particleIndex];
+
+			particle.Update();
+
+			// Move the particle along its velocity, checking for collisions
+			glm::vec2 newPos = particle.m_Position + particle.m_Velocity;
+			std::vector<glm::ivec2> path = Utils::getLinePath(particle.m_Position, newPos);
+			particle.m_Position = newPos;			
+
+
+			//checking first element to see if we started in collision
+			bool startedInCollision = false;
+			Chunk* chunk = GetChunk(PixelToChunk(path[0]));
+			if (chunk == nullptr) {
+				AddChunk(PixelToChunk(path[0]));
+			}
+			Element& element = GetElement(path[0]);
+			ElementData& ed = ElementData::GetElementData(element.m_ID);
+			if (static_cast<ElementTypeType>(ed.cell_type) & particle.m_CollisionFlags >= 1)
+			{
+				//the starting point is a collision, so we ignore collisions until we find a non-colliding point
+				startedInCollision = true;
+			}
+
+
+			bool shouldRemove = false;
+			int index = 1;
+			//loop over the path and see when we collide
+			for (auto it = path.begin() + 1; it != path.end(); it++) {
+				Chunk* chunk = GetChunk(PixelToChunk(*it));
+				if (chunk == nullptr) {
+					AddChunk(PixelToChunk(*it));
+				}
+				Element& element = GetElement(*it);
+				ElementData& ed = ElementData::GetElementData(element.m_ID);
+				// Check collision
+				if (static_cast<ElementTypeType>(ed.cell_type) & particle.m_CollisionFlags >= 1) {
+					// Collision detected
+					if (!startedInCollision)
+					{
+						// set element in world to previous position on path (although not sure what to do
+						// if the starting position was taken over by something, it just gets deleted)
+						SetElement(path[std::max(index - 1, 0)], particle.m_Element); // Set element at collision point
+						shouldRemove = true; // Mark for removal
+						break;
+					}					
+				}
+				else
+				{
+					//there was no collision, so clear startedInCollision
+					startedInCollision = false;
+				}
+				index++;
+			}
+
+			if (shouldRemove) {
+				// Swap with the last element and pop
+				std::swap(m_ElementParticles[particleIndex], m_ElementParticles.back());
+				m_ElementParticles.pop_back();
+				// Don’t increment particleIndex; the swapped-in element (if any) is now at particleIndex
+				// and hasn’t been processed yet
+			}
+			else {
+				// No collision, move to the next particle
+				++particleIndex;
+			}
+		}
+	}
+
+	void World::RenderParticles()
+	{
+		for (auto& particle : m_ElementParticles) {
+			particle.Render();
+		}
+	}
+
 	/// <summary>
 	/// wipes the world, and makes the first chunk empty
 	/// </summary>
@@ -1937,6 +2066,8 @@ namespace Pyxis
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
 		}
 
+		RenderParticles();
+
 		//float pixelSize = (1.0f / CHUNKSIZE);
 		if (m_DebugDrawColliders)
 		{
@@ -1948,7 +2079,7 @@ namespace Pyxis
 					glm::ivec2 pixelPos = { pixelBody->m_B2Body->GetPosition().x * PPU , pixelBody->m_B2Body->GetPosition().y * PPU };
 					pixelPos -= pixelBody->m_Origin;
 					pixelPos.y += 1;
-					glm::vec2 worldPos = { pixelPos.x / (float)CHUNKSIZE, pixelPos.y / (float)CHUNKSIZE };
+					glm::vec2 worldPos = { pixelPos.x / CHUNKSIZEF, pixelPos.y / CHUNKSIZEF };
 					glm::vec2 start = (glm::vec2(pixelBody->m_ContourVector[i].x, pixelBody->m_ContourVector[i].y) / 512.0f) + worldPos;
 					glm::vec2 end = (glm::vec2(pixelBody->m_ContourVector[i + 1].x, pixelBody->m_ContourVector[i + 1].y) / 512.0f) + worldPos;
 					Renderer2D::DrawLine(start, end, { 0,1,0,1 });

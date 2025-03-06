@@ -6,10 +6,6 @@
 #include "VectorHash.h"
 #include "ChunkChainBody.h"
 
-static const int CHUNKSIZE = 64;
-
-static const float PPU = 16.0f; // pixels per unit for box2d sim
-
 namespace Pyxis
 {
 	struct DirtyRect

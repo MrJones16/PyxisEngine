@@ -228,8 +228,8 @@ namespace Pyxis
 			PaintBrushHologram();
 			//draw rigid body outline
 			//horizontals
-			glm::vec2 worldMin = glm::vec2((float)m_RigidMin.x / (float)CHUNKSIZE, (float)m_RigidMin.y / (float)CHUNKSIZE);
-			glm::vec2 worldMax = glm::vec2((float)m_RigidMax.x / (float)CHUNKSIZE, (float)m_RigidMax.y / (float)CHUNKSIZE);
+			glm::vec2 worldMin = glm::vec2((float)m_RigidMin.x / CHUNKSIZEF, (float)m_RigidMin.y / CHUNKSIZEF);
+			glm::vec2 worldMax = glm::vec2((float)m_RigidMax.x / CHUNKSIZEF, (float)m_RigidMax.y / CHUNKSIZEF);
 			Renderer2D::DrawLine({ worldMin.x, worldMin.y }, { worldMax.x, worldMin.y});
 			Renderer2D::DrawLine({ worldMin.x, worldMax.y }, { worldMax.x, worldMax.y});
 			//vertical lines
@@ -442,14 +442,21 @@ namespace Pyxis
 		return vec;
 	}
 
-	void GameNode::OnKeyPressedEvent(KeyPressedEvent& event) {
-		if (event.GetKeyCode() == PX_KEY_R)
+	void GameNode::OnKeyPressedEvent(KeyPressedEvent& event) {		
+		if (event.GetKeyCode() == PX_KEY_Q)
 		{
-			Physics2D::ResetWorld();
-		}
-		if (event.GetKeyCode() == PX_KEY_X)
-		{
-			m_World.TestStaticColliders();
+			//Take the element out and make it a particle
+			glm::vec2 mousePos = GetMousePosWorld();
+			glm::ivec2 pixelPos = m_World.WorldToPixel(mousePos);
+			m_World.SeedRandom(pixelPos.x, pixelPos.y);
+			if (m_World.ForceGetElement(pixelPos).m_ID != 0)
+			{
+				float randX = (m_World.GetRandom() / 100.0f) * 5;
+				float randY = (m_World.GetRandom() / 100.0f) * 5;
+				m_World.CreateParticle(pixelPos, {randX, randY}, m_World.GetElement(pixelPos));
+				PX_TRACE("Launched with velocity: {0}, {1}", randX, randY);
+				m_World.SetElement(pixelPos, Element());				
+			}
 		}
 		if (event.GetKeyCode() == PX_KEY_K)
 		{
@@ -636,9 +643,9 @@ namespace Pyxis
 				glm::vec4 vecColor = glm::vec4(r,g,b,std::fmax(a * 0.5f, 0.25f));
 				
 				//draw square at that pixel
-				float pixelSize = 1.0f / (float)CHUNKSIZE;
+				float pixelSize = 1.0f / CHUNKSIZEF;
 				//
-				Renderer2D::DrawQuad((glm::vec3(newPos.x, newPos.y, 0) / (float)CHUNKSIZE) + glm::vec3(pixelSize / 2, pixelSize / 2, 0.05f), glm::vec2(pixelSize, pixelSize), vecColor);
+				Renderer2D::DrawQuad((glm::vec3(newPos.x, newPos.y, 0) / CHUNKSIZEF) + glm::vec3(pixelSize / 2, pixelSize / 2, 0.05f), glm::vec2(pixelSize, pixelSize), vecColor);
 				
 			}
 		}

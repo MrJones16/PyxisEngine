@@ -4,13 +4,24 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
+static const int CHUNKSIZE = 64;
+static const float CHUNKSIZEF = 64.0f;
 
+static const float PPU = 16.0f; // pixels per unit for box2d sim
+
+static const float PIXELSIZE = 1.0f / CHUNKSIZEF; // size of a pixel
 
 namespace Pyxis
 {
-	enum class ElementType {
-		solid, movableSolid, liquid, gas, fire
-	};
+	//bitwise flags for element properties
+	using ElementTypeType = uint8_t;
+    enum class ElementType : ElementTypeType {
+        solid			= 1 << 0,
+        movableSolid	= 1 << 1,
+        liquid			= 1 << 2,
+        gas				= 1 << 3,
+        fire			= 1 << 4
+    };
 
 	enum class ElementSubType {
 		None, Static

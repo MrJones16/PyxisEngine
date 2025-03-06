@@ -21,7 +21,7 @@ namespace Pyxis
 		m_Width = std::abs(maxX - minX) + 1;
 		m_Height = std::abs(maxY - minY) + 1;
 		glm::vec2 CenterPixelPos = glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);
-		glm::vec2 WorldPos = CenterPixelPos / (float)CHUNKSIZE;
+		glm::vec2 WorldPos = CenterPixelPos / CHUNKSIZEF;
 		SetPosition(WorldPos);
 
 		glm::ivec2 offset = glm::ivec2(minX, minY) + glm::ivec2(m_Width / 2, m_Height / 2);
@@ -136,7 +136,7 @@ namespace Pyxis
 			//draw center position
 			Renderer2D::DrawQuad({ GetPosition().x, GetPosition().y, 20 }, glm::vec2(0.75f / 256.0f, 0.75f / 256.0f), { 1,1,1,1 });
 
-			float scaling = PPU / (float)CHUNKSIZE;
+			float scaling = PPU / CHUNKSIZEF;
 			
 			auto& T = m_B2Body->GetTransform();
 			for (auto fixture = m_B2Body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
@@ -187,7 +187,7 @@ namespace Pyxis
 
 		//chunkloading
 		//get current chunk we are in, then get the chunks around us
-		glm::vec2 pixelPos = GetPosition() * (float)CHUNKSIZE;
+		glm::vec2 pixelPos = GetPosition() * CHUNKSIZEF;
 		glm::ivec2 chunkPos = m_PXWorld->PixelToChunk(glm::ivec2(pixelPos.x, pixelPos.y));
 		for (int x = -1; x <= 1; x++)
 		{
@@ -201,26 +201,25 @@ namespace Pyxis
 			}
 		}
 
-
-		//int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
-
 		for (auto& mappedElement : m_Elements)
 		{
-			//minX = std::min(mappedElement.second.worldPos.x, minX);
-			//maxX = std::max(mappedElement.second.worldPos.x, maxX);
-			//minY = std::min(mappedElement.second.worldPos.y, minY);
-			//maxY = std::max(mappedElement.second.worldPos.y, maxY);
- 			if (m_PXWorld->GetElement(mappedElement.second.worldPos).m_ID != 0)
+			Element& e = m_PXWorld->GetElement(mappedElement.second.worldPos);
+			ElementData& ed = ElementData::GetElementData(e.m_ID);
+			
+			//if it is a solid, or it is rigid, we need to become hidden.
+ 			if (ed.cell_type == ElementType::solid || e.m_Rigid)
 			{
-				//we are replacing something that is in the way!
-
-				//TODO: instead of always hiding, throw liquids ect as a particle!
 				mappedElement.second.hidden = true;
-
+				continue;
 			}
 			else
 			{
-
+				if (e.m_ID != 0)
+				{
+					//its not air, so we need to throw it as a particle
+					//we will use the opposite of the velocity of the body					
+					m_PXWorld->CreateParticle(mappedElement.second.worldPos, (GetLinearVelocity() * -0.25f) + glm::vec2(0, 2), e);
+				}
 				if (std::abs(m_B2Body->GetAngularVelocity()) > 0.01f || m_B2Body->GetLinearVelocity().LengthSquared() > 0.01f)
 				{
 					//we are moving, so update dirty rect
@@ -427,7 +426,7 @@ namespace Pyxis
 			m_Height = std::abs(maxY - minY) + 1;
 
 			glm::vec2 CenterPixelPos = glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);			
-			SetPosition(CenterPixelPos / (float)CHUNKSIZE);
+			SetPosition(CenterPixelPos / CHUNKSIZEF);
 
 			glm::ivec2 offset = glm::ivec2(minX, minY) + glm::ivec2(m_Width / 2, m_Height / 2);
 

@@ -12,6 +12,7 @@ namespace Pyxis
 		SinglePlayerGameNode() 
 		{
 			//scene heirarchy done in constructor since we have no scene serialization
+			
 		};
 		virtual ~SinglePlayerGameNode() {};
 

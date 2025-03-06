@@ -14,6 +14,9 @@
 //networking game messages / input actions
 #include "PixelNetworking.h"
 
+//Particles
+#include "ElementParticle.h"
+
 
 namespace Pyxis
 {
@@ -53,10 +56,10 @@ namespace Pyxis
 		}
 	};
 
+
 	class World
 	{
 	public:
-
 		World(std::string assetPath = "assets", int seed = 1337);
 		void Initialize(int worldSeed);
 
@@ -75,7 +78,11 @@ namespace Pyxis
 		Chunk* GetChunk(const glm::ivec2& chunkPos);
 		void GenerateChunk(Chunk* chunk);
 
+		//gets the requested element, undefined behavior if the chunk doesn't exist
 		Element& GetElement(const glm::ivec2& pixelPos);
+
+		//loads the chunk if it doesn't exist, then gets the element
+		Element& ForceGetElement(const glm::ivec2& pixelPos);
 		void SetElement(const glm::ivec2& pixelPos, const Element& element);
 		void SetElementWithoutDirtyRectUpdate(const glm::ivec2& pixelPos, const Element& element);
 
@@ -85,6 +92,12 @@ namespace Pyxis
 		void UpdateTextures();
 		void UpdateChunk(Chunk* chunk);
 		void UpdateChunkDirtyRect(int x, int y, Chunk* chunk);
+
+		//ElementParticle system
+		std::vector<ElementParticle> m_ElementParticles;
+		void CreateParticle(const glm::vec2& position, const glm::vec2& velocity, const Element& element);
+		void UpdateParticles();
+		void RenderParticles();
 
 		void Clear();
 		void RenderWorld();
@@ -107,21 +120,22 @@ namespace Pyxis
 		//void HandleTickClosure(MergedTickClosure& tc);
 		//Player* CreatePlayer(uint64_t playerID, glm::ivec2 position);
 
-
-		//helper functions
-
+		
+		
+		//random number generation
 		std::mt19937 m_RandomEngine;
 		std::uniform_int_distribution<int> m_Rand = std::uniform_int_distribution<int>(0, 99);
 		std::uniform_int_distribution<uint32_t> dist;
 		void SeedRandom(int xPos, int yPos);
 		int GetRandom(); //0 - 99 as seen above
 
+		//Helper functions
 		static const bool IsInBounds(int x, int y);
 		glm::ivec2 WorldToPixel(const glm::vec2& worldPos);
 		glm::ivec2 PixelToChunk(const glm::ivec2& pixelPos);
 		glm::ivec2 PixelToIndex(const glm::ivec2& pixelPos);
 
-		//
+		//map of chunks, ordered so we update in the same order across machines
 		std::map<glm::ivec2, Chunk*> m_Chunks;
 
 		//keeping track of theads to join them
