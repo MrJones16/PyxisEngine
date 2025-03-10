@@ -1,100 +1,195 @@
+# Pyxis Engine
+
+![Pyxis Engine Demo](PyxisGifWebp.webp)
+
+Pyxis is a multiplayer falling sand simulation and game engine written in C++. The engine currently powers a falling sand simulation inspired by [Noita](https://store.steampowered.com/app/881100/Noita/), with the goal of evolving into either a sandbox survival game or a Little Big Planet-like creation platform.
+
+## Project Structure
+
+* **Pyxis Engine (Main)** - Core game engine that powers the falling sand simulation
+* **Pyxis Game** - Multiplayer falling sand simulation game
+* **Pyxis Editor** - Visual editor for the Pyxis Engine
+* **Sandbox** - Testing environment for experimental features
+
+## Development Status
+
+> Pyxis is in active development, and features are continuously being added and improved, and broken.
+
+## Key Features
+
+**Multiplayer**
+  * P2P gameplay using Steamworks API
+  * Connect to friends via Steam Overlay
+  * LAN and direct IP connection support
+  
+**Vast World & Integrated Physics**
+  * Infinite world generation (theoretical)
+  * Dynamic and static rigid bodies using Box2D integration
+  * Rigidbodies integrated with the falling sand simulation with runtime deformation.
+  
+**Customizable & Dynamic**
+  * Easy to make Elements written in JSON that are deserialized during runtime
+  * Custom reactions also using deserialized JSON
+  * Simple to create new Nodes in the game engine using inheritance
+  
+**Modular Architecture**
+  * Event-driven design with custom event system
+  * Hierarchy Node-based component framework
+  * Abstracted rendering pipeline
 
 
-# In This Repo:
-* Pyxis Game Engine (Main) - The main game engine, which will either become a falling sand engine, or a voxel engine.
-* Pyxis Game (Pyxis-Game) The Multiplayer Falling sand simulation game.
-* Pyxis-Editor (/pyxis-editor) - What would be the editor of the Pyxis Engine.
-* Sandbox (/sandbox) - Used for testing random core experimental things.
+## Technology Stack
+
+### Core Libraries
+* [OpenGL](https://www.opengl.org) - Graphics API
+* [GLFW](https://github.com/glfw/glfw) - Window and input handling
+* [GLAD](https://glad.dav1d.de) - OpenGL loader
+* [GLM](https://github.com/g-truc/glm) - Mathematics library
+* [ImGui](https://github.com/ocornut/imgui) - UI framework with experimental docking
+
+### Physics & Simulation
+* [Box2D](https://box2d.org) - 2D physics engine
+* [Poly2Tri](https://github.com/jhasse/poly2tri) - Delaunay triangulation
+* [FastNoiseLite](https://github.com/Auburn/FastNoiseLite) - Noise generation
+
+### Networking & Data
+* [Steamworks API](https://partner.steamgames.com/doc/sdk) - P2P networking
+* [GameNetworkingSockets](https://github.com/ValveSoftware/GameNetworkingSockets) - Game networking
+* [nlohmann-json](https://github.com/nlohmann/json) - JSON handling
+* [Snappy](https://github.com/google/snappy) - Compression
+
+### Utilities
+* [spdlog](https://github.com/gabime/spdlog) - Logging
+* [stb](https://github.com/nothings/stb) - Single-file utilities
+* [FreeType](https://freetype.org/) - Font rendering
+* [VCPKG](https://vcpkg.io/en/) - Dependency management
+
+## Architecture Overview
+
+The Pyxis Engine is built with a modular architecture that separates core functionality into distinct components:
+
+### Core Systems
+* Event-driven architecture with a custom event system
+* Layer-based application structure for organizing functionality
+* Resource management for assets and memory optimization
+* Signal/slot mechanism for inter-component communication
+
+### Rendering
+* Abstracted renderer with OpenGL implementation
+* 2D and 3D rendering capabilities
+* Camera systems with orthographic and perspective options
+* Material and shader management
+* Framebuffer support for advanced rendering techniques
+
+### UI System
+* Node-based UI framework with various components:
+  * Buttons, Text, Containers, Input fields
+  * Hierarchical layout system
+  * Event handling for UI interactions
+
+### Physics
+* Integration with Box2D for 2D physics
+* Custom rigid body implementation
+* Collision detection and response
+* Chain-based deformable bodies
+
+### Networking
+* Steam integration for P2P connectivity
+* Thread-safe message queuing
+* Client-server architecture
+* Optimized data serialization for network transfer
+
+### Game Components
+* Element-based particle system for falling sand simulation
+* Chunk-based world management for large environments
+* Scene management through hierarchical nodes
+* Custom physics bodies for the falling sand simulation
+
+This architecture provides a flexible foundation for different types of games, with a current focus on falling sand simulations with multiplayer capabilities.
+
+## Knowledge Gained
+
+Through developing this engine, I've gained extensive knowledge in:
+
+### Project Management
+* Pre-processor definitions and precompiled headers
+* Core-App linking patterns
+* Build system configuration (CMake, Premake5)
+
+### Programming Techniques
+* Linear algebra for graphics programming
+* Header-implementation separation
+* Type casting (static vs. dynamic)
+* Smart pointers (shared, weak)
+* Event-driven programming
+* Thread-safe concurrent data structures
+* Resource management
+* Node-based system design
+
+### Graphics Programming
+* Rendering pipeline implementation
+* GLSL shader development
+* Lighting models (Phong)
+* Mesh generation and manipulation
+* Framebuffer techniques
+* Font rendering
+
+### Game Development
+* Particle systems
+* Multiplayer networking
+* Chunk-based world management
+* Physics simulation
+* Custom UI framework development
+
+## Installation & Building
+
+### Prerequisites
+- CMake 3.15+
+- C++17 compatible compiler
+- [VCPKG](https://vcpkg.io) for dependency management
+
+### Building
+
+1. Clone the repository
+   ```
+   git clone https://github.com/YourUsername/PyxisEngine.git
+   cd PyxisEngine
+   ```
+
+2. Configure and build with CMake
+   ```
+   # Windows
+   .\Windows-CMake-VS17.bat
+   
+   # Manual configuration
+   cmake -B build
+   cmake --build build
+   ```
+
+3. Run the sandbox or game
+   ```
+   .\build\bin\Pyxis-Game.exe
+   ```
 
 
-# Pyxis 
 
-Pyxis, as it is now, is a multiplayer falling sand simulation. My inspiration began with [Noita](https://store.steampowered.com/app/881100/Noita/), and I hope I am able to craft it into either a sandbox survival game, or a little-big-planet like sandbox. It is my favorite personal project so far, and probably my best work. Things are still very much work in progress, but it has seen consistent improvement!
+## Acknowledgements
 
-![Simple Pyxis Gif](PyxisGifWebp.webp)
+This engine was initially inspired by [TheCherno](https://www.youtube.com/@TheCherno)'s Hazel engine series on YouTube. While the base engine architecture shares similarities, Pyxis has evolved with its own unique features and design choices.
 
-### Important Notice:
-As the game & engine are in constant development, not all features will be available at all times, and things might straight up not work. Like if i'm working on the UI (Like I am currently) there won't be access to building the Dynamic / Kinematic bodies.
+A lot of my very early education was thanks to [LearnOpenGL](https://learnopengl.com), and it has continued to be an amazing resource.
 
-### Key Features:
-*  Multiplayer Utilizing ~~ASIO~~ Steamworks API 
-* * Host P2P game
-* * Connect to friends using Steam Overlay
-*  Infinite World (In theory, although there is no unloading of chunks so good luck)
-*  Dynamic / Static Rigid Bodies with runtime deformation
-* Easy to create and customizable elements, and element reaction system, all de-serialized with xml
+A good portion of trying to mimic how Noita was even possible was thanks to the developers sharing their wisdom through a [gdc talk](https://www.youtube.com/watch?v=prXuyMCgbTc)
 
-### Possible Future features:
-In-Game editor for elements, reactions, ect, and 
+## License
 
-### Notes
-~~Server's port is 21218, and everything is run on TCP at the moment(very laggy :( )~~
-~~Clients aren't yet able to slow down for each other, so the client farthest in the lead has to wait on the one furthest behind. will be fixed soon!~~
-There will be options for hosting to LAN & connecting by IP, but is currently removed for lack of UI.
+Pyxis Engine is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+```
+MIT License
 
-# Pyxis Game Engine & Editor
+Copyright (c) 2024 Peyton
 
-A game engine written in C++ for learning purposes and personal use. 
-
-Will either end up as a falling sand engine, a 2d game engine, or a voxel engine (or all fuck it). The goal regardless for the editor is to make it an adorable 2D(or voxel) game engine with an aseprite-like pixel-art theme!
-
-### About
-
-This engine was made by following [TheCherno](https://www.youtube.com/@TheCherno)'s game engine series on Youtube, where he creates the Hazel game engine. For this reason, a LOT of the base engine code will be almost, if not exactly, the same as it is there.
-
-Originally built with Premake 5, but have switched to CMake! (It's great that its a standard but premake5 was more straightforward)
-
-### Currently Used Frameworks/Libraries/Software/API/ect.
-
-* [VCPKG](https://vcpkg.io/en/) (C/C++ dependency manager from Microsoft For all platforms, buildsystems, and workflows) This is the greatest 10/10
-
-* [OpenGL](https://www.opengl.org)
-
-* [GLFW](https://github.com/glfw/glfw) (GLFW is an Open Source, multi-platform library for OpenGL)
-
-* [GLAD](https://glad.dav1d.de) (Vulkan/GL/GLES/EGL/GLX/WGL Loader-Generator)
-
-* [GLM](https://github.com/g-truc/glm) (GLM is an OpenGL based C++ mathematics library for graphics software)
-
-* [ImGui](https://github.com/ocornut/imgui) (Dear ImGui is a bloat-free graphical user interface library for C++)
-
-* [spdlog](https://github.com/gabime/spdlog) (Very fast, header-only/compiled, C++ logging library.)
-
-* [tinyXML2](https://github.com/leethomason/tinyxml2) (TinyXML-2 is a simple, small, efficient, C++ XML parser)
-* [Box2D](https://box2d.org) (A 2D Physics Engine for Games)
-* [Poly2Tri](https://github.com/jhasse/poly2tri) (A 2D constrained Delaunay triangulation library)
-* [ASIO](https://think-async.com/Asio/) (Asio is a cross-platform C++ library for network and low-level I/O programming)
-
-
-
-### What I've Learned
-
-I've learned a lot about:
-
-**Projects:**
-
-* Pre-Processor Definitions
-
-* Precompiled Headers
-
-* Core - App Linking
-
-* Solution Building Through Premake5 / Cmake / ect
-
-**Programming**
-* Using linear algebra for lighting calculations and different space matrices
-* Networking
-* A LOT of practice with Header Definitions and CPP Implementations, inlining in some places :)
-* Picking a style and sticking to it (cleaner and more consistent code)
-* Static Cast(Compile Time) vs Dynamic Cast (Runtime, does inheritance check)
-* Douglas-Peucker & other algorithgms
-* Shared & Weak pointers
-* Function pointers and practice with event signaling (i want to use it everywhere mmmmm)
-
-**OpenGL/GLAD/GLFW/ImGui**
-* Rendering / Graphics pipeline
-* Creating and using GLSL shaders
-* Phong Lighting
-* More practice with meshes, vertices, triangles, ect
-* ImGui GUI rendering
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files...
+```
