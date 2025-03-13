@@ -1,6 +1,5 @@
 #include "PixelBody2D.h"
 #include <Pyxis/Game/Physics2D.h>
-
 namespace Pyxis
 {
 
@@ -218,7 +217,21 @@ namespace Pyxis
 				{
 					//its not air, so we need to throw it as a particle
 					//we will use the opposite of the velocity of the body					
-					m_PXWorld->CreateParticle(mappedElement.second.worldPos, (GetLinearVelocity() * -0.25f) + glm::vec2(0, 2), e);
+					
+					glm::vec2 velocity = GetLocalPixelVelocity(mappedElement.first) * 0.25f;
+					float lengthSquared = velocity.x * velocity.x + velocity.y * velocity.y;
+					if (lengthSquared > 0.0f)
+					{
+						m_PXWorld->CreateParticle(mappedElement.second.worldPos, -velocity, e);
+					}
+					else
+					{
+						//we are too slow to make a particle, so we hide instead
+						mappedElement.second.hidden = true;
+						continue;
+					}
+
+					//TODO: make pixelbody lose velocity based on the particles thrown
 				}
 				if (std::abs(m_B2Body->GetAngularVelocity()) > 0.01f || m_B2Body->GetLinearVelocity().LengthSquared() > 0.01f)
 				{
@@ -565,6 +578,26 @@ namespace Pyxis
 	float PixelBody2D::GetRotation()
 	{
 		return m_B2Body->GetAngle();
+	}
+
+	glm::vec2 PixelBody2D::GetLocalPixelVelocity(glm::ivec2 localPosition)
+	{
+
+		//get the strength of the tangential velocity
+		float tangentialScale = std::sqrtf((localPosition.x * localPosition.x) + (localPosition.y * localPosition.y)) * GetAngularVelocity();
+
+		//get the angle of the local position in combination with the body angle
+		float angle = std::atan2f(localPosition.y, localPosition.x) + m_B2Body->GetAngle();
+		//rotate the angle by 90 degrees to get the tangential direction
+		angle += 1.57079632679f;
+		//turn the angle into a vector
+		glm::vec2 tangentialDirection = glm::vec2(std::cosf(angle), std::sinf(angle));
+		//scale the direction by the strength
+		//TODO: figure out correct scaling constant, probable based on PPU of the box2d sim
+		tangentialDirection *= tangentialScale * 0.05f;
+
+		//combine tangential direction with linear velocity
+		return GetLinearVelocity() + tangentialDirection;
 	}
 
 

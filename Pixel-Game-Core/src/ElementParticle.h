@@ -10,6 +10,8 @@ namespace Pyxis
 	class ElementParticle
 	{
 	public:
+		inline static const float DEADSPEED = 0.01f;
+	public:
 		glm::vec2 m_Position = { 0,0 };
 		glm::vec2 m_Velocity = { 0,0 };
 		Element m_Element;

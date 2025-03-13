@@ -1942,63 +1942,117 @@ namespace Pyxis
 
 	void World::UpdateParticles()
 	{
+
+		// NOTES FOR LATER IMPLEMENTATION
+		// 
+		// use per-pixel velocity. [done]
+		// below a certain velocity, just hide instead of making a particle [ready]
+		// 
+		// if a particle leaves the rigidbody, it should be put back into the simulation, climbing
+		// pixel by pixel until there is space.
+		//
 		
 		// Use size_t for indices to avoid signed/unsigned mismatch
 		for (size_t particleIndex = 0; particleIndex < m_ElementParticles.size(); ) {
 			auto& particle = m_ElementParticles[particleIndex];
 
+			//// Update the particle, whatever that might entail.
 			particle.Update();
 
-			// Move the particle along its velocity, checking for collisions
-			glm::vec2 newPos = particle.m_Position + particle.m_Velocity;
-			std::vector<glm::ivec2> path = Utils::getLinePath(particle.m_Position, newPos);
-			particle.m_Position = newPos;			
 
 
-			//checking first element to see if we started in collision
-			bool startedInCollision = false;
-			Chunk* chunk = GetChunk(PixelToChunk(path[0]));
-			if (chunk == nullptr) {
-				AddChunk(PixelToChunk(path[0]));
-			}
-			Element& element = GetElement(path[0]);
+			//// Move the particle along its velocity, checking for collisions			
+
+
+			// begin with seeing if the particle is starting in a collision. this usually would only happen if it
+			// just landed with another particle, or if it was spawned inside a solid moving object.
+			Element& element = ForceGetElement(particle.m_Position);
 			ElementData& ed = ElementData::GetElementData(element.m_ID);
-			if (static_cast<ElementTypeType>(ed.cell_type) & particle.m_CollisionFlags >= 1)
+			// if we are in something rigid, or we collide with it, we need to slow our velocity until we "die"
+			bool startedInCollision = false;
+			if (element.m_Rigid || ((static_cast<int>(ed.cell_type) & static_cast<int>(particle.m_CollisionFlags)) >= 1))
 			{
-				//the starting point is a collision, so we ignore collisions until we find a non-colliding point
+				particle.m_Velocity *= 0.8f;
 				startedInCollision = true;
 			}
+
+			if (particle.m_Velocity.x * particle.m_Velocity.x + particle.m_Velocity.y * particle.m_Velocity.y < ElementParticle::DEADSPEED) {
+				// If the particle is moving slowly, it has "died"
+				// keep climbing up the same material until it's not the same material.
+				Element* e = &ForceGetElement(particle.m_Position);
+				while (e->m_ID == particle.m_Element.m_ID || e->m_Rigid) {
+					particle.m_Position.y += 1;
+					e = &ForceGetElement(particle.m_Position);
+				}
+				//e is now not of the same element, and not a rigid body. So see if it collides, and if not, set the particle to that position.
+				ElementData& deadED = ElementData::GetElementData(e->m_ID);
+				if ((static_cast<ElementTypeType>(deadED.cell_type) & particle.m_CollisionFlags) >= 1) {
+					// Collision detected
+					
+					//I don't like the idea of particles being lost, but it is what it is for now
+					std::swap(m_ElementParticles[particleIndex], m_ElementParticles.back());
+					m_ElementParticles.pop_back();
+					// Don’t increment particleIndex; the swapped-in element (if any) is now at particleIndex
+					// and hasn’t been processed yet
+					continue;
+				}
+				else
+				{
+					//no collision detected, so set the element then erase
+					SetElement(particle.m_Position, particle.m_Element);
+					std::swap(m_ElementParticles[particleIndex], m_ElementParticles.back());
+					m_ElementParticles.pop_back();
+					// Don’t increment particleIndex; the swapped-in element (if any) is now at particleIndex
+					// and hasn’t been processed yet
+					continue;
+				}
+				
+				
+			}
+
+			//start by getting the path it will take
+			glm::vec2 newPos = particle.m_Position + particle.m_Velocity;
+			std::vector<glm::ivec2> path = Utils::getLinePath(particle.m_Position, newPos);
+			particle.m_Position = newPos;
 
 
 			bool shouldRemove = false;
 			int index = 1;
 			//loop over the path and see when we collide
 			for (auto it = path.begin() + 1; it != path.end(); it++) {
-				Chunk* chunk = GetChunk(PixelToChunk(*it));
-				if (chunk == nullptr) {
-					AddChunk(PixelToChunk(*it));
-				}
-				Element& element = GetElement(*it);
+				Element& element = ForceGetElement(*it);
 				ElementData& ed = ElementData::GetElementData(element.m_ID);
 				// Check collision
-				if (static_cast<ElementTypeType>(ed.cell_type) & particle.m_CollisionFlags >= 1) {
+				if (element.m_Rigid || ((static_cast<int>(ed.cell_type) & static_cast<int>(particle.m_CollisionFlags)) >= 1)) {
 					// Collision detected
+					
+					//if we started in collision, then ignore
 					if (!startedInCollision)
 					{
-						// set element in world to previous position on path (although not sure what to do
-						// if the starting position was taken over by something, it just gets deleted)
-						SetElement(path[std::max(index - 1, 0)], particle.m_Element); // Set element at collision point
+						// set element in world to previous position on path 
+						SetElement(path[std::max(index - 1, 0)], particle.m_Element);
 						shouldRemove = true; // Mark for removal
 						break;
-					}					
+					}
+					
 				}
 				else
 				{
-					//there was no collision, so clear startedInCollision
+					if (startedInCollision)
+					{
+						//we were colliding but now we aren't, so lets just get back into the simulation
+						SetElement(*it, particle.m_Element);
+						shouldRemove = true; // Mark for removal
+						break;
+					}
 					startedInCollision = false;
 				}
 				index++;
 			}
+
+			if (!startedInCollision)
+				particle.m_Velocity.y -= 0.05f;
+			
 
 			if (shouldRemove) {
 				// Swap with the last element and pop

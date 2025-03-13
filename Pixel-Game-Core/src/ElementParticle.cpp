@@ -13,11 +13,14 @@ namespace Pyxis
 
 	void ElementParticle::Update()
 	{
-		m_Velocity.y -= 0.25f;
+		//m_Velocity.y -= 0.25f;
 	}
 
 	void ElementParticle::Render()
 	{
+		//dont render very slow particles
+		if (m_Velocity.x * m_Velocity.x + m_Velocity.y * m_Velocity.y < DEADSPEED) return;
+
 		//Render the particle
 		glm::vec3 position = { m_Position.x / CHUNKSIZEF, m_Position.y / CHUNKSIZEF, 0.1f };
 
@@ -26,8 +29,9 @@ namespace Pyxis
 		float b = float((m_Element.m_Color & 0x00FF0000) >> 16) / 255.0f;
 		float a = float((m_Element.m_Color & 0xFF000000) >> 24) / 255.0f;
 		glm::vec4 vecColor = glm::vec4(r, g, b, a);
+		//if (m_Velocity.x * m_Velocity.x + m_Velocity.y * m_Velocity.y < DEADSPEED) vecColor = {1,0,0,1};
 
-		float halfSize = PIXELSIZE / 2.0f;
+		float halfSize = PIXELSIZE / 2.1f;
 		Renderer2D::DrawQuad(position + glm::vec3(halfSize, halfSize, 0), glm::vec2(PIXELSIZE, PIXELSIZE), vecColor);
 	}
 }

@@ -167,6 +167,8 @@ namespace Pyxis
 
 	private:
 
+		glm::vec2 GetLocalPixelVelocity(glm::ivec2 localPosition);
+
 
 		/// <summary>
 		/// takes a set of points, and uses QueuePull to separate it into different contiguous sections
