@@ -1260,7 +1260,7 @@ namespace Pyxis
 					int minConductivity = 0;
 					float diff = 0;
 
-					if (elementLeft != nullptr)
+					if (elementLeft != nullptr && elementLeft->m_ID != 0)
 					{
 						minConductivity = std::min(currElementData.conductivity, elementLeftData->conductivity);
 						diff = ((currElement.m_Temperature - elementLeft->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
@@ -1271,7 +1271,7 @@ namespace Pyxis
 						}
 					}
 					
-					if (elementTop != nullptr)
+					if (elementTop != nullptr && elementTop->m_ID != 0)
 					{
 						minConductivity = std::min(currElementData.conductivity, elementTopData->conductivity);
 						diff = ((float)(currElement.m_Temperature - elementTop->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
@@ -1282,7 +1282,7 @@ namespace Pyxis
 						}						
 					}
 
-					if (elementRight != nullptr)
+					if (elementRight != nullptr && elementRight->m_ID != 0)
 					{
 						minConductivity = std::min(currElementData.conductivity, elementRightData->conductivity);
 						diff = ((float)(currElement.m_Temperature - elementRight->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
@@ -1293,7 +1293,7 @@ namespace Pyxis
 						}
 					}
 					
-					if (elementBottom != nullptr)
+					if (elementBottom != nullptr && elementBottom->m_ID != 0)
 					{
 						minConductivity = std::min(currElementData.conductivity, elementBottomData->conductivity);
 						diff = ((float)(currElement.m_Temperature - elementBottom->m_Temperature) * ((float)minConductivity / 100.0f)) / 2;
@@ -1448,7 +1448,6 @@ namespace Pyxis
 						currElement.m_Sliding = true;
 						Element temp = currElement;
 						chunk->SetElement(x, y, *elementBottom);
-						//chunk->m_Elements[x + y * CHUNKSIZE] = *elementBottom;
 
 						bottomChunk->SetElement(x, (y + (CHUNKSIZE - 1)) % CHUNKSIZE, temp);
 						//*elementBottom = temp;
@@ -1663,8 +1662,8 @@ namespace Pyxis
 					
 					uint32_t colorRed   = (currElement.m_BaseColor & 0x000000FF) >> 0;
 					uint32_t colorGreen = (currElement.m_BaseColor & 0x0000FF00) >> 8;
-					uint32_t colorBlue = (currElement.m_BaseColor & 0x00FF0000) >> 16;
-					uint32_t colorAlpha  = currElement.m_BaseColor & 0xFF000000;
+					uint32_t colorBlue	= (currElement.m_BaseColor & 0x00FF0000) >> 16;
+					uint32_t colorAlpha = currElement.m_BaseColor & 0xFF000000;
 
 					float percentAlive = (float)currElement.m_Health / (float)currElementData.health;
 					colorRed *= Pyxis::interpolateBetweenValues(-10, 20, currElement.m_Health);
@@ -1678,7 +1677,7 @@ namespace Pyxis
 					if (r > 20 && r < 80) //~60% to go up
 					{
 						//check above, and move						
-						if (elementTop != nullptr && elementTopData->cell_type == ElementType::gas && elementTopData->density > currElementData.density)
+						if (elementTop != nullptr && elementTopData->cell_type == ElementType::gas && (elementTopData->density > currElementData.density || elementTop->m_ID == 0))
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1691,13 +1690,14 @@ namespace Pyxis
 						{
 							//moving to fire, so combine temp and leave air
 							elementTop->m_Temperature = std::max(elementTop->m_Temperature, currElement.m_Temperature);
+							elementTop->m_Health += currElement.m_Health;
 							currElement.m_ID = 0;
 							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}						
 					}
 					else if (r > 50) // left / right
 					{
-						if (elementRight != nullptr && elementRightData->cell_type == ElementType::gas && elementRightData->density > currElementData.density)
+						if (elementRight != nullptr && elementRightData->cell_type == ElementType::gas)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1713,7 +1713,7 @@ namespace Pyxis
 							currElement.m_ID = 0;
 							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}
-						if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::gas && elementLeftData->density > currElementData.density)
+						if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::gas)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1732,7 +1732,7 @@ namespace Pyxis
 					}
 					else
 					{
-						if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::gas && elementLeftData->density > currElementData.density)
+						if (elementLeft != nullptr && elementLeftData->cell_type == ElementType::gas)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1748,7 +1748,7 @@ namespace Pyxis
 							currElement.m_ID = 0;
 							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}
-						if (elementRight != nullptr && elementRightData->cell_type == ElementType::gas && elementRightData->density > currElementData.density)
+						if (elementRight != nullptr && elementRightData->cell_type == ElementType::gas)
 						{
 							currElement.m_Sliding = true;
 							Element temp = currElement;
@@ -1765,7 +1765,7 @@ namespace Pyxis
 							ElementData::GetElementData(0).UpdateElementData(currElement, x, y);
 						}
 					}
-
+					UpdateChunkDirtyRect(x, y, chunk);
 					break;
 				}
 
@@ -1945,11 +1945,8 @@ namespace Pyxis
 
 		// NOTES FOR LATER IMPLEMENTATION
 		// 
-		// use per-pixel velocity. [done]
-		// below a certain velocity, just hide instead of making a particle [ready]
-		// 
-		// if a particle leaves the rigidbody, it should be put back into the simulation, climbing
-		// pixel by pixel until there is space.
+		// It would be great to have thrown particles use the positive velocity, but currently
+		// that shoves the particles into the ground. Perhaps, if the particle hits a non-rigidbody solid, it could reflect?
 		//
 		
 		// Use size_t for indices to avoid signed/unsigned mismatch

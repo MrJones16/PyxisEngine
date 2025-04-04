@@ -130,6 +130,8 @@ namespace Pyxis
 		Ref<VertexArray> QuadVertexArray;
 		Ref<VertexBuffer> QuadVertexBuffer;
 
+		
+
 		//BITMAPS
 
 		std::array<Ref<Texture2D>, MaxTextureSlots> BitMapTextureSlots;

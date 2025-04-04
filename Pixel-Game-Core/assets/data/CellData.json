@@ -179,7 +179,7 @@
         "Density": 1,
         "FireTemperatureIncrease": 50.0,
         "Flammable": true,
-        "Health": 20,
+        "Health": 10,
         "Ignited": true,
         "Name": "fire",
         "Tags": [],

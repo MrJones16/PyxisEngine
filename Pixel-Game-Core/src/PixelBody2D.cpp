@@ -218,7 +218,7 @@ namespace Pyxis
 					//its not air, so we need to throw it as a particle
 					//we will use the opposite of the velocity of the body					
 					
-					glm::vec2 velocity = GetLocalPixelVelocity(mappedElement.first) * 0.25f;
+					glm::vec2 velocity = GetLocalPixelVelocity(mappedElement.first);
 					float lengthSquared = velocity.x * velocity.x + velocity.y * velocity.y;
 					if (lengthSquared > 0.0f)
 					{
@@ -597,7 +597,8 @@ namespace Pyxis
 		tangentialDirection *= tangentialScale * 0.05f;
 
 		//combine tangential direction with linear velocity
-		return GetLinearVelocity() + tangentialDirection;
+		
+		return (GetLinearVelocity() + tangentialDirection) * PPU * Physics2D::m_Step;
 	}
 
 
