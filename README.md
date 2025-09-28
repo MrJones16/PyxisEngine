@@ -23,13 +23,13 @@ Pyxis is a multiplayer falling sand simulation and game engine written in C++. T
   * LAN and direct IP connection support
   
 **Vast World & Integrated Physics**
-  * Infinite world generation (theoretical)
+  * Infinite world generation (theoretical, like minecraft)
   * Dynamic and static rigid bodies using Box2D integration
   * Rigidbodies integrated with the falling sand simulation with runtime deformation.
   
 **Customizable & Dynamic**
-  * Easy to make Elements written in JSON that are deserialized during runtime
-  * Custom reactions also using deserialized JSON
+  * Easy to make falling sand elements written in JSON that are deserialized during runtime
+  * Custom reactions between elements also using deserialized JSON
   * Simple to create new Nodes in the game engine using inheritance
   
 **Modular Architecture**
@@ -152,7 +152,7 @@ Through developing this engine, I've gained extensive knowledge in:
 
 1. Clone the repository
    ```
-   git clone https://github.com/YourUsername/PyxisEngine.git
+   git clone https://github.com/MrJones16/PyxisEngine.git
    cd PyxisEngine
    ```
 
@@ -191,5 +191,20 @@ MIT License
 Copyright (c) 2024 Peyton
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files...
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
