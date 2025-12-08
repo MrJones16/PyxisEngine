@@ -15,6 +15,10 @@ namespace Pyxis
 {
 	namespace Utils
 	{
+		/// <summary>
+		/// Line solver using Bresenham's line algorithm
+		/// </summary>
+		/// <returns></returns>
 		std::vector<glm::ivec2> getLinePath(glm::ivec2 startPosition, glm::ivec2 endPosition) {
 			std::vector<glm::ivec2> positions;
 			glm::ivec2 current = startPosition;
@@ -44,7 +48,23 @@ namespace Pyxis
 		Physics2D::GetWorld();//make sure that the physics world is made
 		//load the element data
 		//make sure the file exists
-		if (!std::filesystem::exists(assetPath + "/data/CellData.xml"))
+		if (!std::filesystem::exists(assetPath + "/data/CellData.json"))
+		{
+			PX_ASSERT(false, "CellData.json file is missing!");
+			PX_ERROR("CellData.json file is missing!");
+			m_Error = true;
+			Application::Get().Sleep(10000);
+			Application::Get().Close();
+			return;
+		}
+
+		ElementData::LoadElementData(assetPath + "/data/CellData.json");
+
+		//set up world noise data
+		Initialize(seed);
+
+		//////////// PRIOR XML SETUP ////////////
+		/*if (!std::filesystem::exists(assetPath + "/data/CellData.xml"))
 		{
 			PX_ASSERT(false, "Failed to load element data, shutting down.");
 			PX_ERROR("Failed to load element data, shutting down.");
@@ -52,10 +72,8 @@ namespace Pyxis
 			Application::Get().Sleep(10000);
 			Application::Get().Close();
 			return;
-		}
-
+		}*/		
 		//LoadXMLElementData(assetPath);
-
 		////Output the element data to a file
 		//std::ofstream file(assetPath + "/data/CellData.json");
 		//json j;
@@ -67,424 +85,15 @@ namespace Pyxis
 		//{
 		//	j += reaction;
 		//}
-
 		//file << j;
-
-		ElementData::LoadElementData(assetPath + "/data/CellData.json");
-
-		//set up world noise data
-		Initialize(seed);
+		//file.close();?
+		//////////// PRIOR XML SETUP ////////////		
 	}
 
 	void World::Initialize(int worldSeed)
 	{
 		m_HeightNoise = FastNoiseLite(m_WorldSeed);
 		m_CaveNoise = FastNoiseLite(m_WorldSeed);
-	}
-
-	bool World::LoadXMLElementData(std::string assetPath)
-	{
-		//loading element data from xml
-		tinyxml2::XMLDocument doc;
-		doc.LoadFile((assetPath + "/data/CellData.xml").c_str());
-		if (doc.ErrorID())
-		{
-			PX_ERROR("Error in loading xml data");
-			return false;
-		}
-		auto materials = doc.FirstChild();
-		auto data = materials->FirstChildElement();
-		int elementIndex = 0;
-		//loop over each element or reaction, and add them
-		while (data != nullptr)
-		{
-			std::string nodeName = data->Value();
-			//node is an element, so create a new element data
-			if (nodeName == "ElementData")
-			{
-				//initialize the element data to be modified
-				ElementData elementData = ElementData();
-
-				///////////////////////////////////////////////////
-				/// Basic Attributes
-				///////////////////////////////////////////////////
-
-				//get the name
-				const char* name;
-				auto error = data->QueryAttribute("name", &name);
-				if (!error) {
-					elementData.name = name;
-				}
-				else {
-					data = data->NextSiblingElement();
-					PX_ERROR("No name given to element, skipping");
-					continue;
-				}
-
-				//get the texture
-				const char* texture;
-				error = data->QueryAttribute("texture", &texture);
-				if (!error) {
-					elementData.SetTexture(assetPath + "/" + texture);
-				}
-				else {
-					PX_ERROR("No texture given to element, using color");
-				}
-
-				//gather each attribuite for the element and set the values
-				const char* cell_type;
-				error = data->QueryAttribute("cell_type", &cell_type);
-				if (!error) {
-					std::string cell_type_str = cell_type;
-					//auto cell_type = attribute->Value();
-					if (cell_type_str == "solid") {
-						elementData.cell_type = ElementType::solid;
-					}
-					else if (cell_type_str == "movableSolid") {
-						elementData.cell_type = ElementType::movableSolid;
-					}
-					else if (cell_type_str == "liquid") {
-						elementData.cell_type = ElementType::liquid;
-					}
-					else if (cell_type_str == "gas") {
-						elementData.cell_type = ElementType::gas;
-					}
-					else if (cell_type_str == "fire") {
-						elementData.cell_type = ElementType::fire;
-					}
-				}
-				else {
-					PX_ERROR("No type given to element {0}, defaulting to gas", elementData.name);
-				}
-
-				const char* colorStr;
-				error = data->QueryAttribute("color", &colorStr);
-				if (!error) {
-					uint32_t color = std::stoul(colorStr, nullptr, 16);
-					elementData.color = RGBAtoABGR(color);
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no color", elementData.name);
-				}
-
-				int health = 100;
-				error = data->QueryIntAttribute("health", &health);
-				if (!error) {
-					elementData.health = health;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no health attribute", elementData.name);
-				}
-
-				uint32_t density;
-				error = data->QueryUnsignedAttribute("density", &density);
-				if (!error) {
-					elementData.density = density;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no density", elementData.name);
-				}
-
-				uint32_t friction;
-				error = data->QueryUnsignedAttribute("friction", &friction);
-				if (!error) {
-					elementData.friction = friction;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no friction", elementData.name);
-				}
-
-				///////////////////////////////////////////////////
-				/// Flammable Attributes
-				///////////////////////////////////////////////////
-
-				bool flammable = false;
-				error = data->QueryBoolAttribute("flammable", &flammable);
-				if (!error) {
-					elementData.flammable = flammable;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no flammable attribute", elementData.name);
-				}
-
-				bool spread_ignition = false;
-				error = data->QueryBoolAttribute("spread_ignition", &spread_ignition);
-				if (!error) {
-					elementData.spread_ignition = spread_ignition;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no spread_ignition attribute", elementData.name);
-				}
-
-
-				uint32_t spread_ignition_chance = 0;
-				error = data->QueryUnsignedAttribute("spread_ignition_chance", &spread_ignition_chance);
-				if (!error) {
-					elementData.spread_ignition_chance = spread_ignition_chance;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no spread_ignition_chance", elementData.name);
-				}
-
-				bool ignited = false;
-				error = data->QueryBoolAttribute("ignited", &ignited);
-				if (!error) {
-					elementData.ignited = ignited;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no ignited attribute", elementData.name);
-				}
-
-				const char* ignitedColorStr;
-				error = data->QueryAttribute("ignited_color", &ignitedColorStr);
-				if (!error) {
-					uint32_t ignited_color = std::stoul(ignitedColorStr, nullptr, 16);
-					elementData.ignited_color = RGBAtoABGR(ignited_color);
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no ignited_color", elementData.name);
-					elementData.ignited_color = 0;
-				}
-
-				float ignition_temperature = 371;
-				error = data->QueryFloatAttribute("ignition_temperature", &ignition_temperature);
-				if (!error) {
-					elementData.ignition_temperature = ignition_temperature;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no ignition_temperature", elementData.name);
-				}
-
-				float fire_temperature = 1000;
-				error = data->QueryFloatAttribute("fire_temperature", &fire_temperature);
-				if (!error) {
-					elementData.fire_temperature = fire_temperature;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no fire_temperature", elementData.name);
-				}
-
-				const char* fireColorStr;
-				error = data->QueryAttribute("fire_color", &fireColorStr);
-				if (!error) {
-					uint32_t fire_color = std::stoul(fireColorStr, nullptr, 16);
-					elementData.fire_color = RGBAtoABGR(fire_color);
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no fire_color", elementData.name);
-				}
-
-				float fire_temperature_increase = 1.0f;
-				error = data->QueryFloatAttribute("fire_temperature_increase", &fire_temperature_increase);
-				if (!error) {
-					elementData.fire_temperature_increase = fire_temperature_increase;
-				}
-				else
-				{
-					elementData.fire_temperature_increase = (elementData.fire_temperature) / elementData.health;
-					PX_INFO("Element {0} was given no fire_temperature_increase, defaulting to {1}", elementData.name, elementData.fire_temperature_increase);
-
-				}
-
-				const char* burnt;
-				error = data->QueryAttribute("burnt", &burnt);
-				if (!error) {
-					elementData.burnt = burnt;
-				}
-				else
-				{
-					//PX_INFO("Element {0} was given no _____", elementData.name);
-				}
-
-				///////////////////////////////////////////////////
-				/// Temperature Attributes
-				///////////////////////////////////////////////////
-
-				bool glow = false;
-				error = data->QueryBoolAttribute("glow", &glow);
-				if (!error) {
-					elementData.glow = glow;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no glow", elementData.name);
-				}
-
-				uint32_t conductivity = 0;
-				error = data->QueryUnsignedAttribute("conductivity", &conductivity);
-				if (!error) {
-					elementData.conductivity = conductivity;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no conductivity", elementData.name);
-				}
-
-				const char* meltedStr;
-				error = data->QueryAttribute("melted", &meltedStr);
-				if (!error) {
-					elementData.melted = meltedStr;
-				}
-				else
-				{
-					//PX_INFO("Element {0} was given no _____", elementData.name);
-				}
-
-				const char* frozenStr;
-				error = data->QueryAttribute("frozen", &frozenStr);
-				if (!error) {
-					elementData.frozen = frozenStr;
-				}
-				else
-				{
-					//PX_INFO("Element {0} was given no _____", elementData.name);
-				}
-
-				float temperature = 20;
-				error = data->QueryFloatAttribute("temperature", &temperature);
-				if (!error) {
-					elementData.temperature = temperature;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no temperature", elementData.name);
-				}
-
-				int meltingPoint = 100;
-				error = data->QueryIntAttribute("melting_point", &meltingPoint);
-				if (!error) {
-					elementData.melting_point = meltingPoint;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no melting point", elementData.name);
-				}
-
-				int freezingPoint = 0;
-				error = data->QueryIntAttribute("freezing_point", &freezingPoint);
-				if (!error) {
-					elementData.freezing_point = freezingPoint;
-				}
-				else
-				{
-					PX_INFO("Element {0} was given no freezing point", elementData.name);
-				}
-
-				//end of attributes, read for children like tags and graphics
-				auto tags = data->FirstChildElement("Tags");
-				if (tags)
-				{
-					for (auto tagElement = tags->FirstChildElement(); tagElement != nullptr; tagElement = tagElement->NextSiblingElement())
-					{
-						std::string tag = tagElement->Value();
-						PX_TRACE("Added element {0} to tag {1}", elementData.name, tag);
-						ElementData::s_TagElements[tag].push_back(elementIndex);
-					}
-				}
-
-				//finished reading data, add to the memory!
-				ElementData::s_ElementData.push_back(elementData);
-				ElementData::s_ElementNameToID[elementData.name] = elementIndex++;
-			}
-			//node is a reaction, so add to reaction input list for later
-			else if (nodeName == "Reaction")
-			{
-				//create result reaction
-				Reaction reaction = Reaction();
-
-				uint32_t probability;
-				auto error = data->QueryUnsignedAttribute("probability", &probability);
-				if (!error) {
-					reaction.probablility = probability;
-				}
-
-				//input cell 0
-				const char* input0str;
-				error = data->QueryAttribute("input_cell_0", &input0str);
-				if (!error) {
-					reaction.input_cell_0 = input0str;
-				}
-				else
-				{
-					PX_INFO("Reaction missing input cell 0");
-				}
-
-				//input cell 1
-				const char* input1str;
-				error = data->QueryAttribute("input_cell_1", &input1str);
-				if (!error) {
-					reaction.input_cell_1 = input1str;
-				}
-				else
-				{
-					PX_INFO("Reaction missing input cell 1");
-				}
-
-				//output cell 0
-				const char* output0str;
-				error = data->QueryAttribute("output_cell_0", &output0str);
-				if (!error) {
-					reaction.output_cell_0 = output0str;
-				}
-				else
-				{
-					PX_INFO("Reaction missing output cell 0");
-				}
-
-				//output cell 1
-				const char* output1str;
-				error = data->QueryAttribute("output_cell_1", &output1str);
-				if (!error) {
-					reaction.output_cell_1 = output1str;
-				}
-				else
-				{
-					PX_INFO("Reaction missing output cell 1");
-				}
-
-				//end of gathering data, so add to reaction list
-				ElementData::s_Reactions.push_back(reaction);
-			}
-			PX_TRACE("node name was: {0}", nodeName);
-			data = data->NextSiblingElement();
-		}
-
-
-		////5
-		//ElementData dampSand = ElementData();
-		//dampSand.name = "dampSand";
-		//dampSand.cell_type = ElementType::movableSolid;
-		//dampSand.density = 2;
-		//dampSand.color = 0xFF11AAAA;
-		//dampSand.friction = 25;
-		//m_ElementData.push_back(dampSand);
-		//m_ElementIDs[dampSand.name] = m_TotalElements++;
-
-		////6
-		//ElementData wetSand = ElementData();
-		//wetSand.name = "wetSand";
-		//wetSand.cell_type = ElementType::movableSolid;
-		//wetSand.density = 3;
-		//wetSand.color = 0xFF229999;
-		//wetSand.friction = 40;
-		//m_ElementData.push_back(wetSand);
-		//m_ElementIDs[wetSand.name] = m_TotalElements++;
-
-		//when loading from xml, make a map of tags to elements, so
-		//the reaction table can use it
-		return true;
 	}
 
 	/// <summary>

@@ -51,9 +51,6 @@
 /// [({! DONE !})] MULTIPLAYER!!!
 /// 
 /// 
-/// Saving and Loading worlds
-/// 
-/// 
 /// World Generation
 ///		[({! DONE !})]start with a simple noise library, like fast noise lite, and get a heightmap of dirt?
 /// 
@@ -77,12 +74,12 @@
 ///		-	[Done!][hard]	UI Rework (text rendering, UI interaction, buttons, signals, ect)
 /// 
 /// 
-///		-	Easier building of rigid and kinematic bodies. instead of a selection box...
-///		-	Air brush is invisible
+///		-	(paint convert, but not end goal)Easier building of rigid and kinematic bodies. instead of a selection box...
+///		-	[done] Air brush is invisible
 /// 
 /// 
-///		-	static collisions with ground near dynamic bodies
-///		-	Pixel bodies throwing liquid/sand in the air (aka particle system)
+///		-	[Done!]static collisions with ground near dynamic bodies
+///		-	[Some progress, fluid rework needed]Pixel bodies throwing liquid/sand in the air (aka particle system)
 /// 
 /// 
 ///		-	Drag and Drop a png? or blueprints?

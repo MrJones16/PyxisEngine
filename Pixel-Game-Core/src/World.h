@@ -63,8 +63,6 @@ namespace Pyxis
 		World(std::string assetPath = "assets", int seed = 1337);
 		void Initialize(int worldSeed);
 
-		bool LoadXMLElementData(std::string assetPath);
-
 		enum class GameDataMsgType : uint8_t { pixelbody, chunk };
 		void DownloadWorldInit(Network::Message& msg);
 		void DownloadWorld(Network::Message& msg);
