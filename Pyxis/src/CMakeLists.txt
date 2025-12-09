@@ -80,6 +80,11 @@ target_sources(PyxisEngine PRIVATE
     Platform/Windows/WindowsWindow.cpp
     Platform/Windows/WindowsWindow.h
 
+    #Linux
+    Platform/Linux/LinuxInput.cpp
+    Platform/Linux/LinuxWindow.cpp
+    Platform/Linux/LinuxWindow.h
+
     # @Pyxis files
     ## Core
     Pyxis/Core/Application.cpp

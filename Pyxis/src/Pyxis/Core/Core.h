@@ -44,19 +44,36 @@
 #ifdef PX_DEBUG
 #define PX_ENABLE_ASSERTS
 #define PX_PROFILING 0
+#define PX_CONFIG_DEFINED
 #endif
 
 #ifdef PX_RELEASE
 #define PX_PROFILING 0
+#define PX_CONFIG_DEFINED
 #endif
 
 #ifdef PX_DIST
 #define PX_PROFILING 0
+#define PX_CONFIG_DEFINED
+#endif
+
+//Confirm that a mode was set
+#if !defined(PX_CONFIG_DEFINED)
+	#error You must define either PX_DEBUG, PX_RELEASE, or PX_DIST
+#endif // !PX_PLATFORM_WINDOWS
+
+#if defined(_MSC_VER)
+    #define DEBUG_BREAK() __debugbreak()
+#elif defined(__clang__) || defined(__GNUC__)
+    #define DEBUG_BREAK() __builtin_trap()
+#else
+    #include <csignal>
+    #define DEBUG_BREAK() raise(SIGTRAP)
 #endif
 
 #ifdef PX_ENABLE_ASSERTS
-	#define PX_CORE_ASSERT(x, ...) {if(!(x)) {PX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
-	#define PX_ASSERT(x, ...) {if(!(x)) {PX_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+	#define PX_CORE_ASSERT(x, ...) {if(!(x)) {PX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); DEBUG_BREAK(); } }
+	#define PX_ASSERT(x, ...) {if(!(x)) {PX_ERROR("Assertion Failed: {0}", __VA_ARGS__); DEBUG_BREAK(); } }
 #else
 	#define PX_CORE_ASSERT(x,...)
 	#define PX_ASSERT(x,...)

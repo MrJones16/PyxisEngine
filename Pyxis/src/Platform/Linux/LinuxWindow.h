@@ -1,5 +1,5 @@
 #pragma once
-#ifdef PX_PLATFORM_WINDOWS
+#ifdef PX_PLATFORM_LINUX
 
 #include "Pyxis/Core/Window.h"
 #include "Pyxis/Renderer/GraphicsContext.h"
@@ -8,11 +8,11 @@
 
 namespace Pyxis
 {
-	class WindowsWindow : public Window
+	class LinuxWindow : public Window
 	{
 	public:
-		WindowsWindow(const WindowProps& props);
-		virtual ~WindowsWindow();
+		LinuxWindow(const WindowProps& props);
+		virtual ~LinuxWindow();
 
 		void OnUpdate() override;
 

@@ -1,7 +1,8 @@
 #include "pxpch.h"
-#include "WindowsWindow.h"
+#include "LinuxWindow.h"
+#include <filesystem>
 
-#ifdef PX_PLATFORM_WINDOWS
+#ifdef PX_PLATFORM_LINUX
 
 #include "Pyxis/Events/ApplicationEvent.h"	
 #include "Pyxis/Events/KeyEvent.h"	
@@ -22,18 +23,18 @@ namespace Pyxis
 
 	Window* Window::Create(const WindowProps& props)
 	{
-		return new WindowsWindow(props);
+		return new LinuxWindow(props);
 	}
-	WindowsWindow::WindowsWindow(const WindowProps& props)
+	LinuxWindow::LinuxWindow(const WindowProps& props)
 	{
 		Init(props);
 	}
-	WindowsWindow::~WindowsWindow()
+	LinuxWindow::~LinuxWindow()
 	{
 		Shutdown();
 	}
 
-	void WindowsWindow::Init(const WindowProps& props)
+	void LinuxWindow::Init(const WindowProps& props)
 	{
 		m_Data.Title = props.Title;
 		m_Data.Width = props.Width;
@@ -67,6 +68,10 @@ namespace Pyxis
 		{
 			stbi_set_flip_vertically_on_load(false);
 			GLFWimage images[1];
+			PX_CORE_INFO("Trying to load icon from: {}", props.IconPath);
+			std::string s = std::filesystem::current_path().string();
+
+			PX_CORE_INFO("Current working directory: {}", std::filesystem::current_path().string());
 			images[0].pixels = stbi_load(props.IconPath.c_str(), &images[0].width, &images[0].height, 0, 4); //rgba channels 
 			glfwSetWindowIcon(m_Window, 1, images);
 			stbi_image_free(images[0].pixels);
@@ -186,19 +191,19 @@ namespace Pyxis
 		});
 	}
 
-	void WindowsWindow::Shutdown()
+	void LinuxWindow::Shutdown()
 	{
 		glfwDestroyWindow(m_Window);
 	}
 
-	void WindowsWindow::OnUpdate()
+	void LinuxWindow::OnUpdate()
 	{
 		glfwPollEvents();
 		m_Context->SwapBuffers();
 		
 	}
 
-	void WindowsWindow::SetVSync(bool enabled)
+	void LinuxWindow::SetVSync(bool enabled)
 	{
 		if (enabled) {
 			glfwSwapInterval(1);
@@ -209,7 +214,7 @@ namespace Pyxis
 		m_Data.VSync = enabled;
 	}
 
-	bool WindowsWindow::IsVSync() const
+	bool LinuxWindow::IsVSync() const
 	{
 		return m_Data.VSync;
 	}

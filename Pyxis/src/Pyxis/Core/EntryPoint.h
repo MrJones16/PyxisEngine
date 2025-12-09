@@ -1,7 +1,5 @@
 #pragma once
 
-#ifdef PX_PLATFORM_WINDOWS
-
 extern Pyxis::Application* Pyxis::CreateApplication();
 
 int main(int argc, char** argv) {
@@ -18,5 +16,3 @@ int main(int argc, char** argv) {
 	app->Run();
 	delete app;
 }
-
-#endif // !PX_PLATFORM_WINDOWS

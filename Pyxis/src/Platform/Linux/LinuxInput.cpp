@@ -1,7 +1,7 @@
 #include "pxpch.h"
 #include "Pyxis/Core/Input.h"
 
-#ifdef PX_PLATFORM_WINDOWS
+#ifdef PX_PLATFORM_LINUX
 
 #include "Pyxis/Core/Application.h"
 #include <GLFW/glfw3.h>

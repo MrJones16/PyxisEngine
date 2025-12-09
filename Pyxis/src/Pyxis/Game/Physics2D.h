@@ -43,10 +43,9 @@ namespace Pyxis
 			{
 				m_World = new b2World({ 0, -9.8f });
 			}
-			else
-			{
-				return m_World;
-			}
+			
+			return m_World;
+			
 		}
 
 		inline static void ResetWorld()

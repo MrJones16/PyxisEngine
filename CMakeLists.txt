@@ -12,10 +12,33 @@ project("PyxisWorkspace")
 
     add_subdirectory("Pyxis")
     add_subdirectory("Pyxis-Game")
-    add_subdirectory("Pixel-Game-Core")
 
-    if (PX_DEBUG)
+    add_subdirectory("Pixel-Game-Core")
+    
+    # Make compilier more strict
+    add_compile_options(
+        $<$<CXX_COMPILER_ID:GNU,Clang>:
+        -Wall -Wextra -Wpedantic -Wreturn-type
+        >
+    )
+
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_definitions(PyxisEngine PUBLIC PX_DEBUG)
+        add_compile_options(
+        $<$<CXX_COMPILER_ID:GNU,Clang>:
+            -Wall -Wextra -Wpedantic -Wreturn-type
+        >
+        )
+        
+        target_link_options(Pyxis-Game PRIVATE
+        -fsanitize=address,undefined
+        )
+    endif()
+    if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+        target_compile_definitions(PyxisEngine PUBLIC PX_RELEASE)
+    endif()
+    if(CMAKE_BUILD_TYPE STREQUAL "Release")
+        target_compile_definitions(PyxisEngine PUBLIC PX_DIST)
     endif()
 
     
@@ -32,7 +55,6 @@ project("PyxisWorkspace")
         target_compile_definitions(PyxisEngine PRIVATE PX_PLATFORM_LINUX=1)
         target_compile_definitions(Pyxis-Game PRIVATE PX_PLATFORM_LINUX=1)
         target_compile_definitions(Pixel-Game-Core PRIVATE PX_PLATFORM_LINUX=1)
-        
     endif()
     
 
