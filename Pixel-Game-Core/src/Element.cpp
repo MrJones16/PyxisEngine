@@ -1,5 +1,4 @@
 #include "Element.h"
-#pragma once
 
 namespace Pyxis
 {

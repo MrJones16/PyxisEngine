@@ -5,7 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Pyxis-Game Debug",
+            "name": "Debug Pyxis-Game Linux",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/Pyxis-Game/Pyxis-Game",
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Debug Pyxis-Game Windows",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/bin/Debug-windows-x86_64/Pyxis-Game/Pyxis-Game.exe",

@@ -8,7 +8,10 @@
 
 //template <> struct fmt::formatter<glm::mat4> : ostream_formatter {};
 
+
+
 #ifdef PX_PLATFORM_WINDOWS
+	#define PX_PLATFORM_DEFINED
 	#if PX_DYNAMIC_LINK
 		#ifdef PX_BUILD_DLL
 			#define PYXIS_API __declspec(dllexport)
@@ -18,8 +21,24 @@
 	#else
 		#define PYXIS_API
 	#endif
-#else
-	#error Pyxis only supports Windows at the moment
+#endif
+
+#ifdef PX_PLATFORM_LINUX
+	#define PX_PLATFORM_DEFINED
+	#if PX_DYNAMIC_LINK
+		#ifdef PX_BUILD_DLL
+			#define PYXIS_API __declspec(dllexport)
+		#else
+			#define PYXIS_API __declspec(dllimport)
+		#endif // !PX_BUILD_DLL
+	#else
+		#define PYXIS_API
+	#endif
+#endif
+
+//We only support Windows and Linux right now.
+#if !defined(PX_PLATFORM_DEFINED)
+	#error Pyxis does not support this platform!
 #endif // !PX_PLATFORM_WINDOWS
 
 #ifdef PX_DEBUG
@@ -113,7 +132,7 @@ namespace Pyxis
 		}
 	private:
 		const char* m_Name;
-		std::chrono::time_point<std::chrono::steady_clock> m_StartTimepoint;
+		std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTimepoint;
 		bool m_Stopped;
 		Fn m_Func;
 	};

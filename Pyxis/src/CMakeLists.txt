@@ -16,7 +16,7 @@ find_package(Snappy CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
 
 set(FPHSA_NAME_MISMATCHED ON)
-find_package(stb REQUIRED)
+#find_package(Stb CONFIG REQUIRED)
 set(FPHSA_NAME_MISMATCHED OFF)
 
 find_package(tinyxml2 CONFIG REQUIRED)
