@@ -79,6 +79,7 @@ namespace Pyxis
 			RenderCommand::SetClearColor({ 198 / 255.0f, 239 / 255.0f, 249 / 255.0f, 1 });
 			RenderCommand::Clear();
 			uint32_t clear = 0;
+			//m_SceneFrameBuffer->ClearColorAttachment(0, &clear);
 			m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
 			PX_CORE_ASSERT(Camera::Main() != nullptr, "There is no main camera!");
 			Camera::Main()->RecalculateViewMatrix();
@@ -99,9 +100,7 @@ namespace Pyxis
 			m_FixedUpdateTime = time;
 			
 			for (auto node : Node::Nodes)
-			{
-				
-				
+			{								
 				if (node.second != nullptr)
 				{
 					node.second->OnUpdate(ts);
@@ -139,6 +138,7 @@ namespace Pyxis
 			Node::Nodes.erase(m_NullNodeQueue.front());
 			m_NullNodeQueue.pop();
 		}
+
 		/*auto[x,y] = Input::GetMousePosition();
 		glm::vec2 worldPos = m_CameraNode->MouseToWorldPos({x, y});
 		PX_TRACE("Mouse Pos: ({0},{1})", x, y);

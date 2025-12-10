@@ -145,7 +145,6 @@ namespace Pyxis
 		virtual const glm::vec3& GetRotation() const override { return m_Rotation; }
 		void SetRotation(glm::vec3 rotation) { m_Rotation = rotation; RecalculateViewMatrix(); }
 
-
 		//void SetProjectionMatrix(float width, float height, ) const override { return m_ProjectionMatrix; }
 
 		virtual const glm::mat4& GetProjectionMatrix() const override { return m_ProjectionMatrix; }

@@ -42,6 +42,8 @@ namespace Pyxis
 
 	public:
 		//scene
+
+		//List of now null nodes to be removed
 		std::queue<uint32_t> m_NullNodeQueue;
 		Ref<Camera> m_MainCamera;
 
