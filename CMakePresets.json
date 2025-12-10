@@ -2,30 +2,39 @@
   "version": 8,
   "configurePresets": [
     {
-      "name": "debug",
-      "displayName": "Debug",
+      "name": "x64-Debug",
+      "displayName": "x64-Debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/debug",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "PX_DEBUG": "ON" }
     },
     {
-      "name": "release",
-      "displayName": "Release",
+      "name": "x64-Release",
+      "displayName": "x64-Release",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/release",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "PX_RELEASE": "ON" }
     },
     {
-      "name": "dist",
-      "displayName": "Distribution",
+      "name": "x64-Dist",
+      "displayName": "x64-Dist",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/dist",
       "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "PX_DIST": "ON" }
     }
   ],
   "buildPresets": [
-    { "name": "debug",    "configurePreset": "debug" },
-    { "name": "release",  "configurePreset": "release" },
-    { "name": "dist",     "configurePreset": "dist" }
+    {
+      "name": "x64-Debug",
+      "configurePreset": "x64-Debug"
+    },
+    {
+      "name": "x64-Release",
+      "configurePreset": "x64-Release"
+    },
+    {
+      "name": "x64-Dist",
+      "configurePreset": "x64-Dist"
+    }
   ]
 }
