@@ -6,10 +6,9 @@ using json = nlohmann::json;
 
 static const int CHUNKSIZE = 64;
 static const float CHUNKSIZEF = 64.0f;
+static const float HALFCHUNKSIZEF = CHUNKSIZEF / 2.0f;
 
 static const float PPU = 16.0f; // pixels per unit for box2d sim
-
-static const float PIXELSIZE = 1.0f / CHUNKSIZEF; // size of a pixel
 
 namespace Pyxis
 {

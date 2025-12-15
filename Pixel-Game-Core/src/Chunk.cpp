@@ -178,13 +178,11 @@ namespace Pyxis
 			glm::vec4 chunkStatusColor = {1,1,1,0.2f};
 			if (m_StaticColliderGenerated) chunkStatusColor = { 0,0,1,0.2f };
 			if (m_StaticColliderGenerated && m_StaticColliderChanged) chunkStatusColor = { 0,1,1,0.2f };
-			Renderer2D::DrawQuad({ m_ChunkPos.x + 0.5f, m_ChunkPos.y + 0.5f, 20 }, glm::vec2(0.1f), chunkStatusColor);
-
-			float scaling = PPU / CHUNKSIZEF;
+			Renderer2D::DrawQuad({ (m_ChunkPos.x + 0.5f) * CHUNKSIZEF, (m_ChunkPos.y + 0.5f) * CHUNKSIZEF, 20 }, glm::vec2(HALFCHUNKSIZEF), chunkStatusColor);
 
 			//Draw the collider
 			if (m_OwnedChainBody2D != nullptr)
-				m_OwnedChainBody2D->DebugDraw(scaling, 10);
+				m_OwnedChainBody2D->DebugDraw(PPU, 10);
 
 
 			glm::vec2 min = {std::max(m_DirtyRect.min.x, 0), std::max(m_DirtyRect.min.y, 0) };
@@ -194,13 +192,13 @@ namespace Pyxis
 				float width = (max.x - min.x) + 1;
 				float height = (max.y - min.y) + 1;
 				
-				float posX = (min.x + (width / 2.0f)) / CHUNKSIZEF;
-				float posY = (min.y + (height / 2.0f)) / CHUNKSIZEF;
+				float posX = (min.x + (width / 2.0f));
+				float posY = (min.y + (height / 2.0f));
 
-				posX += m_ChunkPos.x;
-				posY += m_ChunkPos.y;
+				posX += m_ChunkPos.x * CHUNKSIZEF;
+				posY += m_ChunkPos.y * CHUNKSIZEF;
 
-				Renderer2D::DrawQuad({ posX, posY, 30 }, {width / CHUNKSIZEF, height / CHUNKSIZEF}, { 1,0,0,0.2f });
+				Renderer2D::DrawQuad({ posX, posY, 30 }, {width, height}, { 1,0,0,0.2f });
 			}
 			
 		}

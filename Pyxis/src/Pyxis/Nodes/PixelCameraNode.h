@@ -31,6 +31,6 @@ namespace Pyxis
 
 	};
 	
-	REGISTER_SERIALIZABLE_NODE(CameraNode);
+	REGISTER_SERIALIZABLE_NODE(PixelCameraNode);
 
 }

@@ -40,7 +40,8 @@ namespace Pyxis
 		static void BeginScene(Pyxis::Camera* camera);
 		static void EndScene();
 		static void Flush();
-		static void DrawScreenQuad(uint32_t TextureID);
+
+		static void DrawScreenQuad(const uint32_t TextureID, const float scale = 1, const glm::vec2& offset = glm::vec2(0, 0));
 
 		//Primitives
 

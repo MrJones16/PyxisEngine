@@ -6,6 +6,7 @@
 #include "SingleplayerGameNode.h"
 #include "MultiplayerGameNode.h"
 #include "HostedGameNode.h"
+#include <Pyxis/Nodes/PixelCameraNode.h>
 
 namespace Pyxis
 {
@@ -19,9 +20,9 @@ namespace Pyxis
 		//scenes are set in a constructor...
 		glm::vec4 themeYellow = glm::vec4(255.0f / 255.0f, 221.0f / 255.0f, 159.0f / 255.0f, 1);
 
-		auto camera = Instantiate<CameraNode>();
+		auto camera = Instantiate<PixelCameraNode>();
 		camera->SetMainCamera();
-		camera->SetWidth(12.8);
+		camera->SetWidth(640);
 		camera->m_LockAspect = false;
 		AddChild(camera);
 

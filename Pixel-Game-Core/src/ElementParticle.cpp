@@ -22,7 +22,7 @@ namespace Pyxis
 		if (m_Velocity.x * m_Velocity.x + m_Velocity.y * m_Velocity.y < DEADSPEED) return;
 
 		//Render the particle
-		glm::vec3 position = { m_Position.x / CHUNKSIZEF, m_Position.y / CHUNKSIZEF, 0.1f };
+		glm::vec3 position = { m_Position.x, m_Position.y, 0.1f };
 
 		float r = float(m_Element.m_Color & 0x000000FF) / 255.0f;
 		float g = float((m_Element.m_Color & 0x0000FF00) >> 8) / 255.0f;
@@ -31,7 +31,7 @@ namespace Pyxis
 		glm::vec4 vecColor = glm::vec4(r, g, b, a);
 		//if (m_Velocity.x * m_Velocity.x + m_Velocity.y * m_Velocity.y < DEADSPEED) vecColor = {1,0,0,1};
 
-		float halfSize = PIXELSIZE / 2.1f;
-		Renderer2D::DrawQuad(position + glm::vec3(halfSize, halfSize, 0), glm::vec2(PIXELSIZE, PIXELSIZE), vecColor);
+		
+		Renderer2D::DrawQuad(position + glm::vec3(0.5f, 0.5f, 0), glm::vec2(1, 1), vecColor);
 	}
 }

@@ -26,8 +26,7 @@ namespace Pyxis
 	/// width / size pixel body. like a 1x1 box is this wide/tall
 	/// 
 	/// I have it at 16 cause a 16x16 box is a box to me!
-	/// </summary>
-	static const float PPU = 16.0f; // pixels per unit for box2d sim
+	/// </summary>	
 
 	struct PixelBodyElement
 	{
@@ -85,8 +84,8 @@ namespace Pyxis
 		bool m_DebugDisplay = false;
 
 	public:
-		float WorldToB2 = static_cast<float>(CHUNKSIZE) / PPU;
-		float B2ToWorld = PPU / static_cast<float>(CHUNKSIZE);
+		float WorldToB2 = 1.0f / PPU;
+		float B2ToWorld = PPU / 1.0f;
 
 
 		World* m_PXWorld = nullptr;

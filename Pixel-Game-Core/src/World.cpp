@@ -1721,7 +1721,7 @@ namespace Pyxis
 		//PX_TRACE("Rendering world");
 		for (auto& pair : m_Chunks)
 		{
-			Renderer2D::DrawQuad(glm::vec2(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f), { 1,1 }, pair.second->m_Texture);
+			Renderer2D::DrawQuad(glm::vec2((pair.second->m_ChunkPos.x  * CHUNKSIZEF) + HALFCHUNKSIZEF, (pair.second->m_ChunkPos.y * CHUNKSIZEF) + HALFCHUNKSIZEF), { CHUNKSIZEF,CHUNKSIZEF }, pair.second->m_Texture);
 			pair.second->RenderChunk();
 			//Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f, pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f}, glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
 		}
@@ -1920,9 +1920,12 @@ namespace Pyxis
 
 	glm::ivec2 World::WorldToPixel(const glm::vec2& worldPos)
 	{
-		glm::ivec2 result = glm::ivec2(worldPos.x * CHUNKSIZE, worldPos.y * CHUNKSIZE);
-		if (worldPos.x < 0) result.x--;
-		if (worldPos.y < 0) result.y--;
+		//glm::ivec2 result = glm::ivec2(worldPos.x * CHUNKSIZE, worldPos.y * CHUNKSIZE);
+		//now, world and pixel are equivalent.
+
+		glm::ivec2 result = worldPos;
+		if (worldPos.x < 0.0f) result.x--;
+		if (worldPos.y < 0.0f) result.y--;
 		return result;
 	}
 

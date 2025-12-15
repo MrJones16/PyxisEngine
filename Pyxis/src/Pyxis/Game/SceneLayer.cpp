@@ -73,6 +73,8 @@ namespace Pyxis
 		Renderer2D::ResetStats();
 		#endif
 
+		m_MainCamera = Camera::Main();
+
 		{
 			PROFILE_SCOPE("Renderer Prep");
 			m_SceneFrameBuffer->Bind();
@@ -81,9 +83,9 @@ namespace Pyxis
 			uint32_t clear = 0;
 			//m_SceneFrameBuffer->ClearColorAttachment(0, &clear);
 			m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
-			PX_CORE_ASSERT(Camera::Main() != nullptr, "There is no main camera!");
-			Camera::Main()->RecalculateViewMatrix();
-			Renderer2D::BeginScene(Camera::Main());
+			PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
+			m_MainCamera->RecalculateViewMatrix();
+			Renderer2D::BeginScene(m_MainCamera);
 		}
 
 
@@ -163,7 +165,10 @@ namespace Pyxis
 
 		m_SceneFrameBuffer->Unbind();
 		//m_SceneFrameBuffer->BindColorAttachmentTexture(0);
-		Renderer2D::DrawScreenQuad(m_SceneFrameBuffer->GetColorAttachmentRendererID(0));
+		glm::vec2 offset = m_MainCamera->GetOffsetToGrid();
+		offset.x /= m_MainCamera->GetSize().x;
+		offset.y /= m_MainCamera->GetSize().y;
+		Renderer2D::DrawScreenQuad(m_SceneFrameBuffer->GetColorAttachmentRendererID(0), 1, offset * 2.0f);
 	}
 
 	void SceneLayer::DrawNodeTree(Ref<Node> Node)
@@ -298,10 +303,9 @@ namespace Pyxis
 	bool SceneLayer::OnWindowResizeEvent(WindowResizeEvent& event)
 	{
 		m_ViewportSize = { event.GetWidth(), event.GetHeight()};
-		Camera* cam = Camera::Main();
-		if (cam != nullptr)
+		if (m_MainCamera != nullptr)
 		{
-			cam->SetAspect(m_ViewportSize.y / m_ViewportSize.x);
+			m_MainCamera->SetAspect(m_ViewportSize.y / m_ViewportSize.x);
 		}
 		//m_OrthographicCameraController.SetAspect(m_ViewportSize.y / m_ViewportSize.x);
 		m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x, (uint32_t)m_ViewportSize.y);

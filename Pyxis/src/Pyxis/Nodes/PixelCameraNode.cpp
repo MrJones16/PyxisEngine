@@ -1,5 +1,8 @@
 #include "PixelCameraNode.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/matrix_decompose.hpp"
+
 namespace Pyxis
 {
 	void PixelCameraNode::Serialize(json& j)
@@ -50,7 +53,26 @@ namespace Pyxis
 
 	void PixelCameraNode::RecalculateViewMatrix()
 	{
-		m_ViewMatrix = glm::inverse(GetWorldTransform());
+		glm::mat4 wt = GetWorldTransform();
+
+		glm::quat rotation;
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		glm::vec3 scale;
+		glm::vec3 position;
+		glm::decompose(wt, scale, rotation, position, skew, perspective);
+		glm::vec3 e_rotation = -glm::degrees(glm::eulerAngles(rotation));
+
+		glm::vec3 flooredPosition = glm::floor(position);
+		m_OffsetToGrid = flooredPosition - position;
+		
+		wt = glm::translate(glm::mat4(1), flooredPosition);
+		wt = glm::rotate(wt, glm::radians(e_rotation.x), { -1, 0, 0 });
+		wt = glm::rotate(wt, glm::radians(e_rotation.y), { 0,-1, 0 });
+		wt = glm::rotate(wt, glm::radians(e_rotation.z), { 0, 0,-1 });
+		wt = glm::scale(wt, scale);
+
+		m_ViewMatrix = glm::inverse(wt);
 		m_ViewProjectionMatrix = m_ProjectionMatrix * m_ViewMatrix;
 	}
 

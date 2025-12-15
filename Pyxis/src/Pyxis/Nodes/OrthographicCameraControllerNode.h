@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Pyxis/Core/Input.h>
-#include "Pyxis/Nodes/CameraNode.h"
+#include "Pyxis/Nodes/PixelCameraNode.h"
 #include <Pyxis/Events/EventSignals.h>
 
 namespace Pyxis
@@ -10,24 +10,24 @@ namespace Pyxis
 	/// <summary>
 	/// A Base UI Node that can act as a root
 	/// </summary>
-	class OrthographicCameraControllerNode : public CameraNode
+	class OrthographicCameraControllerNode : public PixelCameraNode
 	{
 	public:
-		float m_CameraSpeed = 0.5;
+		float m_CameraSpeed = 64;
 		float m_Sensitivity = 0.5f;
 
 		Reciever<void(MouseScrolledEvent&)> m_MouseScrolledReciever;
 		
 	public:
 		OrthographicCameraControllerNode(const std::string& name = "OrthographicCameraControllerNode") :
-			CameraNode(name),
+			PixelCameraNode(name),
 			m_MouseScrolledReciever(this, &OrthographicCameraControllerNode::OnMouseScrolledEvent)
 		{
 			EventSignal::s_MouseScrolledEventSignal.AddReciever(m_MouseScrolledReciever);
 		};
 
 		OrthographicCameraControllerNode(UUID id) :
-			CameraNode(id),
+			PixelCameraNode(id),
 			m_MouseScrolledReciever(this, &OrthographicCameraControllerNode::OnMouseScrolledEvent)
 		{
 			EventSignal::s_MouseScrolledEventSignal.AddReciever(m_MouseScrolledReciever);
@@ -39,7 +39,7 @@ namespace Pyxis
 		//Serialization
 		virtual void Serialize(json& j)
 		{
-			CameraNode::Serialize(j);
+			PixelCameraNode::Serialize(j);
 			j["Type"] = "OrthographicCameraControllerNode"; // Override type identifier
 			j["m_CameraSpeed"] = m_CameraSpeed;
 			j["m_Sensitivity"] = m_Sensitivity;
@@ -47,7 +47,7 @@ namespace Pyxis
 
 		virtual void Deserialize(json& j)
 		{
-			CameraNode::Deserialize(j);
+			PixelCameraNode::Deserialize(j);
 			if (j.contains("m_CameraSpeed")) j.at("m_CameraSpeed").get_to(m_CameraSpeed);
 			if (j.contains("m_Sensitivity")) j.at("m_Sensitivity").get_to(m_Sensitivity);
 		}

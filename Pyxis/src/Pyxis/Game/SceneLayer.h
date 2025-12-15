@@ -45,7 +45,7 @@ namespace Pyxis
 
 		//List of now null nodes to be removed
 		std::queue<uint32_t> m_NullNodeQueue;
-		Ref<Camera> m_MainCamera;
+		Camera* m_MainCamera;
 
 	private:
 
@@ -59,6 +59,8 @@ namespace Pyxis
 		Ref<FrameBuffer> m_SceneFrameBuffer;
 		glm::vec2 m_ViewportSize;
 		glm::vec2 m_ViewportBounds[2];
+
+		glm::vec2 m_RenderResolution = glm::vec2(640, 360);
 
 
 		//fixed update

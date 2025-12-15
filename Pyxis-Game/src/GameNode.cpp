@@ -29,7 +29,7 @@ namespace Pyxis
 		//I'm going to aim for a bottom hot bar for now.
 		m_CameraController = Instantiate<OrthographicCameraControllerNode>();
 		m_CameraController->SetMainCamera();
-		m_CameraController->SetWidth(2);
+		m_CameraController->SetWidth(640);
 		m_CameraController->Translate({ 0,1,0 });
 		AddChild(m_CameraController);
 
@@ -642,10 +642,7 @@ namespace Pyxis
 				float a = float((color & 0xFF000000) >> 24) / 255.0f;
 				glm::vec4 vecColor = glm::vec4(r,g,b,std::fmax(a * 0.5f, 0.25f));
 				
-				//draw square at that pixel
-				float pixelSize = 1.0f / CHUNKSIZEF;
-				//
-				Renderer2D::DrawQuad((glm::vec3(newPos.x, newPos.y, 0) / CHUNKSIZEF) + glm::vec3(pixelSize / 2, pixelSize / 2, 0.05f), glm::vec2(pixelSize, pixelSize), vecColor);
+				Renderer2D::DrawQuad((glm::vec3(newPos.x + 0.5f, newPos.y + 0.5f, 0.05)), {1, 1}, vecColor);
 				
 			}
 		}

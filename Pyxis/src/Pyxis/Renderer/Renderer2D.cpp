@@ -100,10 +100,22 @@ namespace Pyxis
 		static const uint32_t MaxTextureSlots = 32;
 		Ref<Texture2D> WhiteTexture;
 
+		//SCREEN QUAD
+
 		Ref<Shader> ScreenQuadShader;
 		Ref<VertexArray> ScreenQuadVertexArray;
 		Ref<VertexBuffer> ScreenQuadVertexBuffer;
 		Ref<IndexBuffer> ScreenQuadIndexBuffer;
+
+		//set here so I can modify values and not constantly reallocate
+		ScreenQuadVertex ScreenQuadData[4] =
+		{
+			{{-1,-1}, {0,0}},
+			{{1,-1}, {1,0}},
+			{{1,1}, {1,1}},
+			{{-1,1}, {0,1}}
+
+		};
 
 
 		//QUADS
@@ -129,6 +141,8 @@ namespace Pyxis
 		};
 		Ref<VertexArray> QuadVertexArray;
 		Ref<VertexBuffer> QuadVertexBuffer;
+
+
 
 		
 
@@ -201,16 +215,7 @@ namespace Pyxis
 			{ShaderDataType::Float2, "a_Position"},
 			{ShaderDataType::Float2, "a_TexCoord"},
 		};
-		s_Data.ScreenQuadVertexBuffer->SetLayout(ScreenQuadLayout);
-		ScreenQuadVertex ScreenQuadData[4] =
-		{
-			{{-1,-1}, {0,0}},
-			{{1,-1}, {1,0}},
-			{{1,1}, {1,1}},
-			{{-1,1}, {0,1}}
-
-		};
-
+		s_Data.ScreenQuadVertexBuffer->SetLayout(ScreenQuadLayout);		
 
 		uint32_t SingleQuadIndices[6] =
 		{
@@ -218,7 +223,7 @@ namespace Pyxis
 		};
 		s_Data.ScreenQuadIndexBuffer = IndexBuffer::Create(SingleQuadIndices, 6);
 
-		s_Data.ScreenQuadVertexBuffer->SetData(ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
+		s_Data.ScreenQuadVertexBuffer->SetData(s_Data.ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
 		s_Data.ScreenQuadVertexArray->AddVertexBuffer(s_Data.ScreenQuadVertexBuffer);
 		s_Data.ScreenQuadVertexArray->SetIndexBuffer(s_Data.ScreenQuadIndexBuffer);
 		
@@ -421,8 +426,16 @@ namespace Pyxis
 #endif
 	}
 
-	void Renderer2D::DrawScreenQuad(uint32_t TextureID)
+	void Renderer2D::DrawScreenQuad(const uint32_t TextureID, const float scale, const glm::vec2& offset)
 	{
+
+		s_Data.ScreenQuadData[0] = { {-scale + offset.x,-scale + offset.y}, {0,0} };
+		s_Data.ScreenQuadData[1] = { { scale + offset.x, -scale + offset.y }, { 1,0 } };
+		s_Data.ScreenQuadData[2] = { {scale + offset.x,scale + offset.y}, {1,1} };
+		s_Data.ScreenQuadData[3] = { {-scale + offset.x ,scale + offset.y}, {0,1} };
+
+		s_Data.ScreenQuadVertexArray->GetVertexBuffers()[0]->SetData(s_Data.ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
+
 		RenderCommand::Clear();
 		s_Data.ScreenQuadShader->Bind();
 		s_Data.ScreenQuadVertexArray->Bind();
