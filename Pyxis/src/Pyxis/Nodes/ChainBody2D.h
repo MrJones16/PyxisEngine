@@ -108,10 +108,11 @@ namespace Pyxis
 					auto e = shape->m_vertices[i + 1];
 					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec3 start = glm::vec3(x1, y1, z) * scaling;
-					glm::vec3 end = glm::vec3(x2, y2, z) * scaling;
+					glm::vec3 start = glm::vec3(x1* scaling, y1 * scaling, z);
+					glm::vec3 end = glm::vec3(x2 * scaling, y2 * scaling, z);
 
 					Renderer2D::DrawLine(start, end);
+					PX_CORE_TRACE("Drawing line from ({0},{1}) to ({2},{3})", start.x, start.y, end.x, end.y);
 				}
 				//draw the last line to connect the shape
 				auto v = shape->m_vertices[shape->m_count - 1];
@@ -121,8 +122,8 @@ namespace Pyxis
 				auto e = shape->m_vertices[0];
 				float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 				float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-				glm::vec3 start = glm::vec3(x1, y1, z) * scaling;
-				glm::vec3 end = glm::vec3(x2, y2, z) * scaling;
+				glm::vec3 start = glm::vec3(x1 * scaling, y1 * scaling, z);
+				glm::vec3 end = glm::vec3(x2 * scaling, y2 * scaling, z);
 
 				Renderer2D::DrawLine(start, end);
 

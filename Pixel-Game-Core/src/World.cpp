@@ -146,7 +146,7 @@ namespace Pyxis
 				PixelBody2D* body = (PixelBody2D*)RigidBodyNode.get();
 				body->m_PXWorld = this;
 				//m_PixelBodyMap[body->m_UUID] = body;
-				PX_TRACE("Loaded PixelBody2D: Pos[{},{}] UUID[{}]", body->GetPosition().x, body->GetPosition().y, RigidBodyNode->GetUUID());
+				PX_TRACE("Loaded 2D: Pos[{},{}] UUID[{}]", body->GetPosition().x, body->GetPosition().y, RigidBodyNode->GetUUID());
 				// can safely ignore putting it in the world, since when we got the world
 				// data it is already there!
 			}

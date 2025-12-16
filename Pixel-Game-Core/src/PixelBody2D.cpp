@@ -19,16 +19,14 @@ namespace Pyxis
 		}
 		m_Width = std::abs(maxX - minX) + 1;
 		m_Height = std::abs(maxY - minY) + 1;
-		glm::vec2 CenterPixelPos = glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);
-		glm::vec2 WorldPos = CenterPixelPos / CHUNKSIZEF;
-		SetPosition(WorldPos);
+		glm::ivec2 CenterPixelPos = glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);
+		SetPosition(CenterPixelPos);
 
-		glm::ivec2 offset = glm::ivec2(minX, minY) + glm::ivec2(m_Width / 2, m_Height / 2);
 
 		//use the minimum to get local positions from bottom left
 		for (auto& pbe : elements)
 		{
-			glm::ivec2 localPos = pbe.worldPos - offset;
+			glm::ivec2 localPos = pbe.worldPos - CenterPixelPos;
 			m_Elements[localPos] = pbe;
 		}
 		if (CreatedFromSplit) m_InWorld = false; else m_InWorld = true;
@@ -133,7 +131,7 @@ namespace Pyxis
 		if (m_DebugDisplay)
 		{
 			//draw center position
-			Renderer2D::DrawQuad({ GetPosition().x, GetPosition().y, 20 }, glm::vec2(0.75f / 256.0f, 0.75f / 256.0f), { 1,1,1,1 });
+			Renderer2D::DrawQuad({ GetPosition().x, GetPosition().y, 20 }, glm::vec2(0.75f, 0.75f), { 1,1,1,1 });
 			
 			auto& T = m_B2Body->GetTransform();
 			for (auto fixture = m_B2Body->GetFixtureList(); fixture != nullptr; fixture = fixture->GetNext())
@@ -148,8 +146,8 @@ namespace Pyxis
 					auto e = shape->m_vertices[i + 1];
 					float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 					float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-					glm::vec3 start = glm::vec3(x1, y1, 10) * B2ToWorld;
-					glm::vec3 end = glm::vec3(x2, y2, 10) * B2ToWorld;
+					glm::vec3 start = glm::vec3(x1 * B2ToWorld, y1 * B2ToWorld, m_DebugDisplayZ);
+					glm::vec3 end = glm::vec3(x2 * B2ToWorld, y2 * B2ToWorld, m_DebugDisplayZ);
 
 					Renderer2D::DrawLine(start, end);
 				}
@@ -161,8 +159,8 @@ namespace Pyxis
 				auto e = shape->m_vertices[0];
 				float x2 = (T.q.c * e.x - T.q.s * e.y) + T.p.x;
 				float y2 = (T.q.s * e.x + T.q.c * e.y) + T.p.y;
-				glm::vec3 start = glm::vec3(x1, y1, 10) * B2ToWorld;
-				glm::vec3 end = glm::vec3(x2, y2, 10) * B2ToWorld;
+				glm::vec3 start = glm::vec3(x1 * B2ToWorld, y1 * B2ToWorld, m_DebugDisplayZ);
+				glm::vec3 end = glm::vec3(x2 * B2ToWorld, y2 * B2ToWorld, m_DebugDisplayZ);
 
 				Renderer2D::DrawLine(start, end);
 
@@ -436,17 +434,15 @@ namespace Pyxis
 			m_Width = std::abs(maxX - minX) + 1;
 			m_Height = std::abs(maxY - minY) + 1;
 
-			glm::vec2 CenterPixelPos = glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);			
+			glm::ivec2 CenterPixelPos = glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);			
 			SetPosition(CenterPixelPos);
-
-			glm::ivec2 offset = glm::ivec2(minX, minY) + glm::ivec2(m_Width / 2, m_Height / 2);
 
 			//use the minimum to get local positions from bottom left
 			std::unordered_map<glm::ivec2, PixelBodyElement, HashVector> newElements;
 			for (auto& oldPos : areas[0])
 			{
 				auto& pbe = m_Elements[oldPos];
-				glm::ivec2 localPos = pbe.worldPos - offset;
+				glm::ivec2 localPos = pbe.worldPos - CenterPixelPos;
 				newElements[localPos] = pbe;
 			}
 			

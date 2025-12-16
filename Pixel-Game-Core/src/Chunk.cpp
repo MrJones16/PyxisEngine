@@ -178,11 +178,11 @@ namespace Pyxis
 			glm::vec4 chunkStatusColor = {1,1,1,0.2f};
 			if (m_StaticColliderGenerated) chunkStatusColor = { 0,0,1,0.2f };
 			if (m_StaticColliderGenerated && m_StaticColliderChanged) chunkStatusColor = { 0,1,1,0.2f };
-			Renderer2D::DrawQuad({ (m_ChunkPos.x + 0.5f) * CHUNKSIZEF, (m_ChunkPos.y + 0.5f) * CHUNKSIZEF, 20 }, glm::vec2(HALFCHUNKSIZEF), chunkStatusColor);
+			//Renderer2D::DrawQuad({ (m_ChunkPos.x + 0.5f) * CHUNKSIZEF, (m_ChunkPos.y + 0.5f) * CHUNKSIZEF, 20 }, glm::vec2(HALFCHUNKSIZEF), chunkStatusColor);
 
 			//Draw the collider
 			if (m_OwnedChainBody2D != nullptr)
-				m_OwnedChainBody2D->DebugDraw(PPU, 10);
+				m_OwnedChainBody2D->DebugDraw(PPU, 20);
 
 
 			glm::vec2 min = {std::max(m_DirtyRect.min.x, 0), std::max(m_DirtyRect.min.y, 0) };
@@ -210,16 +210,21 @@ namespace Pyxis
 		if (m_OwnedChainBody2D == nullptr)
 		{
 			//create a static body for the chunk
-			float RBToWorld = (CHUNKSIZEF / PPU);
 			m_OwnedChainBody2D = CreateRef<ChunkChainBody>("ChunkChainBody", b2_staticBody);
 			m_OwnedChainBody2D->m_ChunkOwnerPos = m_ChunkPos;
-			m_OwnedChainBody2D->SetPosition({ m_ChunkPos.x * RBToWorld, m_ChunkPos.y * RBToWorld });
+			//set to center of the chunk
+			//chunk pos * size to get bottom left of chunk
+			//add half chunk size to get center of chunk
+			//divide by PPU to get box2d version
+			glm::ivec2 b2chunkpos = ((m_ChunkPos * CHUNKSIZE))/ (int)PPU;
+			m_OwnedChainBody2D->SetPosition({ b2chunkpos.x, b2chunkpos.y});
 		}
 		else
 		{
 			m_OwnedChainBody2D->ClearFixtures();
 		}		
 
+		//add every element in the chunk to "source"
 		std::unordered_set<glm::ivec2, HashVector> source;
 		for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++)
 		{
@@ -229,6 +234,8 @@ namespace Pyxis
 				source.insert({ i % CHUNKSIZE, i / CHUNKSIZE });
 			}
 		}
+
+		//flood fill to find continuous areas and put into "areas"
 		std::list<std::unordered_set<glm::ivec2, HashVector>> areas;
 		while (source.size() > 0)
 		{
@@ -237,12 +244,11 @@ namespace Pyxis
 			areas.push_back(result);
 		}
 
+		//for each area, get contour points and create loop
 		while (!areas.empty())
 		{
 			auto contour = GetContourPoints(areas.back());
-			areas.pop_back();
-
-			
+			areas.pop_back();			
 
 
 			// BUG ERROR FIX TODO WRONG BROKEN

@@ -82,10 +82,11 @@ namespace Pyxis
 		bool m_RecreateBody = false;
 
 		bool m_DebugDisplay = false;
+		float m_DebugDisplayZ = 25.0f;
 
 	public:
 		float WorldToB2 = 1.0f / PPU;
-		float B2ToWorld = PPU / 1.0f;
+		float B2ToWorld = PPU;
 
 
 		World* m_PXWorld = nullptr;
