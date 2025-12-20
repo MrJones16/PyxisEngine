@@ -6,21 +6,30 @@
       "displayName": "x64-Debug",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/debug",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug", "PX_DEBUG": "ON" }
+      "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Debug",
+          "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
     },
     {
       "name": "x64-Release",
       "displayName": "x64-Release",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/release",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "RelWithDebInfo", "PX_RELEASE": "ON" }
+      "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+          "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
     },
     {
       "name": "x64-Dist",
       "displayName": "x64-Dist",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/dist",
-      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release", "PX_DIST": "ON" }
+      "cacheVariables": {
+          "CMAKE_BUILD_TYPE": "Release",
+          "VCPKG_TARGET_TRIPLET": "x64-linux"
+      }
     }
   ],
   "buildPresets": [

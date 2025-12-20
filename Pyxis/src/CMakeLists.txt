@@ -14,6 +14,7 @@ find_package(imgui CONFIG REQUIRED)
 find_package(poly2tri CONFIG REQUIRED)
 find_package(Snappy CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
+#target_compile_definitions(PyxisEngine PRIVATE )
 
 set(FPHSA_NAME_MISMATCHED ON)
 #find_package(Stb CONFIG REQUIRED)
@@ -46,7 +47,7 @@ target_link_libraries(PyxisEngine
     imgui::imgui
     poly2tri::poly2tri
     Snappy::snappy
-    spdlog::spdlog
+    spdlog::spdlog_header_only
     tinyxml2::tinyxml2
     Freetype::Freetype
 )

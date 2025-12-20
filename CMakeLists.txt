@@ -10,6 +10,8 @@ endif()
 
 if(UNIX)
     set(CMAKE_TOOLCHAIN_FILE "~/git/vcpkg/scripts/buildsystems/vcpkg.cmake")
+    set(CMAKE_C_COMPILER "clang")
+    set(CMAKE_CXX_COMPILER "clang++")
 endif()
 
 project("PyxisWorkspace")
@@ -20,23 +22,18 @@ project("PyxisWorkspace")
     add_subdirectory("Pixel-Game-Core")
     
     # Make compilier more strict
-    add_compile_options(
-        $<$<CXX_COMPILER_ID:GNU,Clang>:
-        -Wall -Wextra -Wpedantic -Wreturn-type
-        >
-    )
+    #add_compile_options(
+    #    $<$<CXX_COMPILER_ID:GNU,Clang>:
+    #    -Wall -Wextra -Wpedantic -Wreturn-type
+    #    >
+    #)
 
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
         target_compile_definitions(PyxisEngine PUBLIC PX_DEBUG)
-        add_compile_options(
-        $<$<CXX_COMPILER_ID:GNU,Clang>:
-            -Wall -Wextra -Wpedantic -Wreturn-type
-        >
-        )
         
-        target_link_options(Pyxis-Game PRIVATE
-        -fsanitize=address,undefined
-        )
+        #target_link_options(Pyxis-Game PRIVATE
+        #-fsanitize=address,undefined
+        #)
     endif()
     if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
         target_compile_definitions(PyxisEngine PUBLIC PX_RELEASE)
