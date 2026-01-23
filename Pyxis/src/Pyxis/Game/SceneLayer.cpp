@@ -20,13 +20,13 @@ void SceneLayer::OnAttach() {
     FrameBufferSpecification fbspec;
     fbspec.Attachments = {
         {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // position
+         FrameBufferTextureType::Color}, // position 0
         {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // normal
+         FrameBufferTextureType::Color}, // normal 1
         {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // albedo
+         FrameBufferTextureType::Color}, // albedo 2
         {FrameBufferTextureFormat::R32UI,
-         FrameBufferTextureType::Color}, // node id
+         FrameBufferTextureType::Color}, // node id 3
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
     fbspec.Width = m_ViewportSize.x;
     fbspec.Height = m_ViewportSize.y;
@@ -68,10 +68,13 @@ void SceneLayer::OnUpdate(Timestep ts) {
         m_SceneFrameBuffer->Bind();
         RenderCommand::SetClearColor(
             {198 / 255.0f, 239 / 255.0f, 249 / 255.0f, 1});
-        RenderCommand::Clear();
-        uint32_t clear = 0;
+        RenderCommand::Clear(); // clears color attachment 0?
         // m_SceneFrameBuffer->ClearColorAttachment(0, &clear);
-        m_SceneFrameBuffer->ClearColorAttachment(1, &clear);
+        glm::vec4 clearcolor = {0, 0, 0, 1};
+        m_SceneFrameBuffer->ClearColorAttachment(1, &clearcolor); // normals
+        m_SceneFrameBuffer->ClearColorAttachment(2, &clearcolor); // albedo
+        uint32_t clear = 0;
+        m_SceneFrameBuffer->ClearColorAttachment(3, &clear); // id
         PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
         m_MainCamera->RecalculateViewMatrix();
         Renderer2D::BeginScene(m_MainCamera);

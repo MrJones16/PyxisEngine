@@ -29,9 +29,9 @@ void main()
 #version 460
 			
 layout (location = 0) out vec4 o_Position;
-layout (location = 0) out vec4 o_Normal;
-layout (location = 0) out vec4 o_Albedo;
-layout (location = 1) out uint o_ID;
+layout (location = 1) out vec4 o_Normal;
+layout (location = 2) out vec4 o_Albedo;
+layout (location = 3) out uint o_ID;
 
 in vec4 v_Position;
 in vec4 v_Color;

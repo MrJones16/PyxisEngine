@@ -113,7 +113,7 @@ struct RendererData2D {
 
     std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
     uint32_t TextureSlotsIndex = 1;
-    Ref<Shader> TextureShader;
+    Ref<Shader> DeferredShader;
 
     static const uint32_t MaxQuads = 40000;
     static const uint32_t MaxVertices = MaxQuads * 4;
@@ -184,8 +184,12 @@ void Renderer2D::Init() {
     s_Data.WhiteTexture->SetData(&WhiteTextureData, sizeof(WhiteTextureData));
     s_Data.TextureSlots[0] = s_Data.WhiteTexture;
 
-    // screen quad
-    s_Data.ScreenQuadShader = Shader::Create("assets/shaders/ScreenQuad.glsl");
+    ////////////////////
+    /// SCREEN QUAD
+    ////////////////////
+
+    s_Data.ScreenQuadShader =
+        Shader::Create("assets/shaders/DeferredLighting.glsl");
     s_Data.ScreenQuadShader->Bind();
     // s_Data.ScreenQuadShader->SetInt("u_Texture",
     // s_Data.WhiteTexture->GetID());
@@ -214,16 +218,14 @@ void Renderer2D::Init() {
     s_Data.QuadVertexArray = VertexArray::Create();
     // m_OrthographicCameraController = Pyxis::OrthographicCameraController(5, 9
     // / 16, -100, 100);
-    s_Data.TextureShader = Shader::Create("assets/shaders/Texture.glsl");
-    s_Data.TextureShader->Bind();
+    s_Data.DeferredShader = Shader::Create("assets/shaders/Deferred.glsl");
+    s_Data.DeferredShader->Bind();
     int samplers[s_Data.MaxTextureSlots];
     for (int i = 0; i < s_Data.MaxTextureSlots; i++) {
         samplers[i] = i;
     }
-    s_Data.TextureShader->SetIntArray("u_Textures", samplers,
-                                      s_Data.MaxTextureSlots);
-    s_Data.TextureShader->SetFloat("u_TilingFactor", 1);
-
+    s_Data.DeferredShader->SetIntArray("u_Textures", samplers,
+                                       s_Data.MaxTextureSlots);
     s_Data.QuadVertexBuffer =
         VertexBuffer::Create(s_Data.MaxVertices * sizeof(QuadVertex));
     BufferLayout layout = {
@@ -340,9 +342,9 @@ void Renderer2D::BeginScene(Pyxis::Camera *camera) {
     s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
     s_Data.BitMapIndexCount = 0;
 
-    s_Data.TextureShader->Bind();
-    s_Data.TextureShader->SetMat4("u_ViewProjection",
-                                  camera->GetViewProjectionMatrix());
+    s_Data.DeferredShader->Bind();
+    s_Data.DeferredShader->SetMat4("u_ViewProjection",
+                                   camera->GetViewProjectionMatrix());
 
     s_Data.QuadVertexBufferPtr = s_Data.QuadVertexBufferBase;
     s_Data.QuadIndexCount = 0;
@@ -356,7 +358,7 @@ void Renderer2D::Flush() {
     ////////////////////////////
     /// Flush normal quads first
     ////////////////////////////
-    s_Data.TextureShader->Bind();
+    s_Data.DeferredShader->Bind();
     // send data to buffer
     uint32_t size = (uint8_t *)s_Data.QuadVertexBufferPtr -
                     (uint8_t *)s_Data.QuadVertexBufferBase;
@@ -396,6 +398,10 @@ void Renderer2D::Flush() {
     s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
     s_Data.BitMapIndexCount = 0;
     s_Data.BitMapSlotsIndex = 0;
+
+    // rebind quad shader as this is used by lines, although it was working
+    // before...
+    s_Data.DeferredShader->Bind();
 
     // RenderCommand::EnableDepthTesting();
 
