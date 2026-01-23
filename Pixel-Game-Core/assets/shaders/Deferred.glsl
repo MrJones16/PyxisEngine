@@ -22,7 +22,7 @@ out flat uint v_NodeID;
 void main()
 {
 	gl_Position = u_ViewProjection * vec4(a_Position, 1.0f);
-	v_Position = u_ViewProjection * vec4(a_Position, 1.0f);
+	v_Position = gl_Position;
 	v_Normal = vec4(a_Normal, 1.0f);
 	v_Albedo = a_Albedo;
 	v_TexCoord = a_TexCoord;
