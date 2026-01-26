@@ -17,8 +17,8 @@ void SceneLayer::OnAttach() {
                       Application::Get().GetWindow().GetHeight()};
     Renderer2D::Init();
 
-    FrameBufferSpecification fbspec;
-    fbspec.Attachments = {
+    FrameBufferSpecification deferredGBufferSpec;
+    deferredGBufferSpec.Attachments = {
         {FrameBufferTextureFormat::RGBA8,
          FrameBufferTextureType::Color}, // position 0
         {FrameBufferTextureFormat::RGBA8,
@@ -28,9 +28,18 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::R32UI,
          FrameBufferTextureType::Color}, // node id 3
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    fbspec.Width = m_ViewportSize.x;
-    fbspec.Height = m_ViewportSize.y;
-    m_SceneFrameBuffer = FrameBuffer::Create(fbspec);
+    deferredGBufferSpec.Width = m_ViewportSize.x;
+    deferredGBufferSpec.Height = m_ViewportSize.y;
+    m_DeferredGBuffer = FrameBuffer::Create(deferredGBufferSpec);
+
+    FrameBufferSpecification lightingPassBufferSpec;
+    lightingPassBufferSpec.Attachments = {
+        {FrameBufferTextureFormat::RGBA8,
+         FrameBufferTextureType::Color}, // Color 0
+        {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
+    lightingPassBufferSpec.Width = m_ViewportSize.x;
+    lightingPassBufferSpec.Height = m_ViewportSize.y;
+    m_LightingPassBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
 void SceneLayer::OnDetach() {}
@@ -65,16 +74,16 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     {
         PROFILE_SCOPE("Renderer Prep");
-        m_SceneFrameBuffer->Bind();
+        m_DeferredGBuffer->Bind();
         RenderCommand::SetClearColor(
             {198 / 255.0f, 239 / 255.0f, 249 / 255.0f, 1});
         RenderCommand::Clear(); // clears color attachment 0?
-        // m_SceneFrameBuffer->ClearColorAttachment(0, &clear);
+        // m_DeferredGBuffer->ClearColorAttachment(0, &clear);
         glm::vec4 clearcolor = {0, 0, 0, 1};
-        m_SceneFrameBuffer->ClearColorAttachment(1, &clearcolor); // normals
-        m_SceneFrameBuffer->ClearColorAttachment(2, &clearcolor); // albedo
+        m_DeferredGBuffer->ClearColorAttachment(1, &clearcolor); // normals
+        m_DeferredGBuffer->ClearColorAttachment(2, &clearcolor); // albedo
         uint32_t clear = 0;
-        m_SceneFrameBuffer->ClearColorAttachment(3, &clear); // id
+        m_DeferredGBuffer->ClearColorAttachment(3, &clear); // id
         PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
         m_MainCamera->RecalculateViewMatrix();
         Renderer2D::BeginScene(m_MainCamera);
@@ -132,25 +141,34 @@ void SceneLayer::OnUpdate(Timestep ts) {
     Renderer2D::DrawText("Hello!", glm::mat4(1),
     ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));*/
 
-    Renderer2D::EndScene();
+    Renderer2D::EndScene(); // finalizes rendering
 
+    // grab the ID from the Deferred "G" buffer while we have it so we don't
+    // pass it down.
     auto mp = Input::GetMousePosition();
     // flip the y so bottom left is 0,0
     mp.y = m_ViewportSize.y - mp.y;
     if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 &&
         mp.y < m_ViewportSize.y) {
         UUID nodeID;
-        m_SceneFrameBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
+        m_DeferredGBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
         Node::s_HoveredNodeID = nodeID;
     }
 
-    m_SceneFrameBuffer->Unbind();
-    // m_SceneFrameBuffer->BindColorAttachmentTexture(0);
+    // unbind the G buffer, and bind the light pass buffer
+    m_DeferredGBuffer->Unbind();
+    m_LightingPassBuffer->Bind();
+    RenderCommand::SetClearColor({0, 0, 0, 0});
+    RenderCommand::Clear();
+    Renderer2D::DrawDeferredLightingPass(m_DeferredGBuffer);
+    m_LightingPassBuffer->Unbind();
+
     glm::vec2 offset = m_MainCamera->GetOffsetToGrid();
     offset.x /= m_MainCamera->GetSize().x;
     offset.y /= m_MainCamera->GetSize().y;
     Renderer2D::DrawScreenQuad(
-        m_SceneFrameBuffer->GetColorAttachmentRendererID(0), 1, offset * 2.0f);
+        m_LightingPassBuffer->GetColorAttachmentRendererID(0), 1,
+        offset * 2.0f);
 }
 
 void SceneLayer::DrawNodeTree(Ref<Node> Node) {
@@ -226,7 +244,7 @@ void SceneLayer::OnImGuiRender() {
 
     //	//Application::Get().GetImGuiLayer()->BlockEvents(false);
     //	ImGui::Image(
-    //		(ImTextureID)(m_SceneFrameBuffer->GetColorAttachmentRendererID(0)),
+    //		(ImTextureID)(m_DeferredGBuffer->GetColorAttachmentRendererID(0)),
     //		newViewportSize,
     //		ImVec2(0, 1),
     //		ImVec2(1, 0),
@@ -241,7 +259,7 @@ void SceneLayer::OnImGuiRender() {
     //		m_ViewportSize = { newViewportSize.x, newViewportSize.y };
     //		//m_OrthographicCameraController.SetAspect(m_ViewportSize.y /
     // m_ViewportSize.x);
-    // m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x,
+    // m_DeferredGBuffer->Resize((uint32_t)m_ViewportSize.x,
     //(uint32_t)m_ViewportSize.y);
     //	}
 
@@ -284,8 +302,8 @@ bool SceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
     }
     // m_OrthographicCameraController.SetAspect(m_ViewportSize.y /
     // m_ViewportSize.x);
-    m_SceneFrameBuffer->Resize((uint32_t)m_ViewportSize.x,
-                               (uint32_t)m_ViewportSize.y);
+    m_DeferredGBuffer->Resize((uint32_t)m_ViewportSize.x,
+                              (uint32_t)m_ViewportSize.y);
     return false;
 }
 

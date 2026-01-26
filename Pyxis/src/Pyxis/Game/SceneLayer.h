@@ -4,72 +4,64 @@
 #include <Pyxis/Renderer/Camera.h>
 #include <Pyxis/Renderer/FrameBuffer.h>
 
+#include <Pyxis/Nodes/CameraNode.h>
 #include <Pyxis/Nodes/Node.h>
 #include <Pyxis/Nodes/UI/UI.h>
-#include <Pyxis/Nodes/CameraNode.h>
 
 #include <Pyxis/Events/EventSignals.h>
 
+namespace Pyxis {
+class SceneLayer : public Layer {
+  public:
+    SceneLayer(bool debug = false);
+    virtual ~SceneLayer();
 
-namespace Pyxis
-{
-	class SceneLayer : public Layer
-	{
-	public:
-		SceneLayer(bool debug = false);
-		virtual ~SceneLayer();
+    // Layer functions
+    virtual void OnAttach() override;
+    virtual void OnDetach() override;
 
-		//Layer functions
-		virtual void OnAttach() override;
-		virtual void OnDetach() override;
+    virtual void OnUpdate(Timestep ts) override;
+    virtual void OnImGuiRender() override;
+    virtual void OnEvent(Event &e) override;
 
-		virtual void OnUpdate(Timestep ts) override;
-		virtual void OnImGuiRender() override;
-		virtual void OnEvent(Event& e) override;
+    glm::ivec2 GetMousePositionImGui();
 
+    bool OnWindowResizeEvent(WindowResizeEvent &event);
+    bool OnKeyPressedEvent(KeyPressedEvent &event);
+    bool OnMouseButtonPressedEvent(MouseButtonPressedEvent &event);
+    bool OnMouseButtonReleasedEvent(MouseButtonReleasedEvent &event);
+    bool OnMouseScrolledEvent(MouseScrolledEvent &event);
 
-		
+    // std::pair<float, float> GetMousePositionScene();
 
-		glm::ivec2 GetMousePositionImGui();
+  public:
+    // scene
 
-		bool OnWindowResizeEvent(WindowResizeEvent& event);
-		bool OnKeyPressedEvent(KeyPressedEvent& event);
-		bool OnMouseButtonPressedEvent(MouseButtonPressedEvent& event);
-		bool OnMouseButtonReleasedEvent(MouseButtonReleasedEvent& event);
-		bool OnMouseScrolledEvent(MouseScrolledEvent& event);
+    // List of now null nodes to be removed
+    std::queue<uint32_t> m_NullNodeQueue;
+    Camera *m_MainCamera;
 
-		//std::pair<float, float> GetMousePositionScene();
+  private:
+    // debug heirarchy / inspector
+    bool m_Debug = false;
+    virtual void DrawNodeTree(Ref<Node> Node);
+    Ref<Node> m_SelectedNode;
 
-	public:
-		//scene
+    // viewport
+    Ref<FrameBuffer> m_DeferredGBuffer;
+    Ref<FrameBuffer> m_LightingPassBuffer;
+    glm::vec2 m_ViewportSize;
+    glm::vec2 m_ViewportBounds[2];
 
-		//List of now null nodes to be removed
-		std::queue<uint32_t> m_NullNodeQueue;
-		Camera* m_MainCamera;
+    glm::vec2 m_RenderResolution = glm::vec2(640, 360);
 
-	private:
+    // fixed update
+    double m_FixedUpdateRate = 60.0f;
+    std::chrono::time_point<std::chrono::high_resolution_clock>
+        m_FixedUpdateTime = std::chrono::high_resolution_clock::now();
 
-		//debug heirarchy / inspector
-		bool m_Debug = false;
-		virtual void DrawNodeTree(Ref<Node> Node);
-		Ref<Node> m_SelectedNode;
+    // Other
 
-
-		//viewport
-		Ref<FrameBuffer> m_SceneFrameBuffer;
-		glm::vec2 m_ViewportSize;
-		glm::vec2 m_ViewportBounds[2];
-
-		glm::vec2 m_RenderResolution = glm::vec2(640, 360);
-
-
-		//fixed update
-		double m_FixedUpdateRate = 60.0f;
-		std::chrono::time_point<std::chrono::high_resolution_clock> m_FixedUpdateTime = std::chrono::high_resolution_clock::now();
-
-		//Other
-
-		uint32_t m_HoveredNodeID = 0;
-
-	};
-}
+    uint32_t m_HoveredNodeID = 0;
+};
+} // namespace Pyxis

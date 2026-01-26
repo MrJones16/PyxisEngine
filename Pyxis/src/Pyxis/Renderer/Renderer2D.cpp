@@ -410,6 +410,28 @@ void Renderer2D::Flush() {
 #endif
 }
 
+void Renderer2D::DrawDeferredLightingPass(Ref<FrameBuffer> deferredGBuffer) {
+    s_Data.ScreenQuadData[0] = {{-1, -1}, {0, 0}};
+    s_Data.ScreenQuadData[1] = {{1, -1}, {1, 0}};
+    s_Data.ScreenQuadData[2] = {{1, 1}, {1, 1}};
+    s_Data.ScreenQuadData[3] = {{-1, 1}, {0, 1}};
+
+    s_Data.ScreenQuadVertexArray->GetVertexBuffers()[0]->SetData(
+        s_Data.ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
+
+    RenderCommand::Clear();
+    s_Data.ScreenQuadShader->Bind();
+    s_Data.ScreenQuadVertexArray->Bind();
+    RenderCommand::BindTexture2D(
+        deferredGBuffer->GetColorAttachmentRendererID(0), 0); // Position
+    RenderCommand::BindTexture2D(
+        deferredGBuffer->GetColorAttachmentRendererID(1), 1); // Normal
+    RenderCommand::BindTexture2D(
+        deferredGBuffer->GetColorAttachmentRendererID(2), 2); // Albedo
+    // s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
+    RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
+}
+
 void Renderer2D::DrawScreenQuad(const uint32_t TextureID, const float scale,
                                 const glm::vec2 &offset) {
 

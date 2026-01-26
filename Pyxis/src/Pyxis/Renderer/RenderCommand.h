@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Pyxis/Core/Core.h"
 #include "RendererAPI.h"
 
 namespace Pyxis {

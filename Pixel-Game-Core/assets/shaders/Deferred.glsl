@@ -51,7 +51,7 @@ uniform sampler2D u_Textures[32];
 
 void main()
 {
-	vec4 result = texture(u_Textures[int(v_TexIndex)], v_TexCoord * v_TilingFactor) * v_Color;
+	vec4 result = texture(u_Textures[int(v_TexIndex)], v_TexCoord * v_TilingFactor) * v_Albedo;
 	if(result.a == 0)
 		discard;
 
