@@ -553,7 +553,8 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const Ref<Texture2D> &texture,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -603,7 +604,8 @@ void Renderer2D::DrawQuad(glm::mat4 transform,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -644,7 +646,8 @@ void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2 &size,
         // heavy math so hurts on debug
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = color;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = color;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = 1;
@@ -712,7 +715,8 @@ void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2 &size,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -771,7 +775,8 @@ void Renderer2D::DrawQuad(const glm::vec3 position, const glm::vec2 &size,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -814,7 +819,8 @@ void Renderer2D::DrawRotatedQuad(const glm::vec3 position,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = color;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = color;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = 1;
@@ -887,7 +893,8 @@ void Renderer2D::DrawRotatedQuad(const glm::vec3 position,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -950,7 +957,8 @@ void Renderer2D::DrawRotatedQuad(const glm::vec3 position,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 1, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -986,7 +994,8 @@ void Renderer2D::DrawQuadEntity(const glm::vec3 position, const glm::vec2 &size,
         // heavy math so hurts on debug
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = color;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 1, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = color;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = 1;
@@ -1038,7 +1047,8 @@ void Renderer2D::DrawQuadEntity(const glm::vec3 position, const glm::vec2 &size,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 1, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -1068,7 +1078,8 @@ void Renderer2D::DrawQuadEntity(glm::mat4 transform, const glm::vec4 &color,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = color;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 1, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = color;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = 1;
@@ -1127,7 +1138,8 @@ void Renderer2D::DrawQuadEntity(glm::mat4 transform,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 1, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
@@ -1175,7 +1187,8 @@ void Renderer2D::DrawQuadEntity(glm::mat4 transform,
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = tintColor;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 1, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = tintColor;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = tilingFactor;
