@@ -63,7 +63,6 @@ struct QuadVertex {
     glm::vec3 Position;
     glm::vec3 Normal;
     glm::vec4 Albedo;
-    glm::vec4 Color;
     glm::vec2 TexCoord;
     float TexIndex;
     float TilingFactor;
@@ -83,7 +82,8 @@ struct LineVertex {
     // as quads use so it still needs it
     // TODO: Rework lines to use diff shader?
     glm::vec3 Position;
-    glm::vec4 Color;
+    glm::vec3 Normal;
+    glm::vec4 Albedo;
     glm::vec2 TexCoord;
     float TexIndex;
     float TilingFactor;
@@ -191,7 +191,10 @@ void Renderer2D::Init() {
     s_Data.ScreenQuadShader =
         Shader::Create("assets/shaders/DeferredLighting.glsl");
     s_Data.ScreenQuadShader->Bind();
-    // s_Data.ScreenQuadShader->SetInt("u_Texture",
+    // doing this for deferred
+    s_Data.ScreenQuadShader->SetInt("u_Position", 0);
+    s_Data.ScreenQuadShader->SetInt("u_Normal", 1);
+    s_Data.ScreenQuadShader->SetInt("u_Albedo", 2);
     // s_Data.WhiteTexture->GetID());
 
     s_Data.ScreenQuadVertexArray = VertexArray::Create();
@@ -316,14 +319,16 @@ void Renderer2D::Init() {
     s_Data.LineVertexArray->AddVertexBuffer(s_Data.LineVertexBuffer);
 
     s_Data.LineVertexBufferData[0].Position = s_Data.LineVertexPositions[0];
-    s_Data.LineVertexBufferData[0].Color = {1, 1, 1, 1};
+    s_Data.LineVertexBufferData[0].Normal = {0, 0, 1};
+    s_Data.LineVertexBufferData[0].Albedo = {1, 1, 1, 1};
     s_Data.LineVertexBufferData[0].TexCoord = {0, 0};
     s_Data.LineVertexBufferData[0].TexIndex = 0.0f;
     s_Data.LineVertexBufferData[0].TilingFactor = 1;
     s_Data.LineVertexBufferData[0].NodeID = 0;
 
     s_Data.LineVertexBufferData[1].Position = s_Data.LineVertexPositions[1];
-    s_Data.LineVertexBufferData[1].Color = {1, 1, 1, 1};
+    s_Data.LineVertexBufferData[1].Normal = {0, 0, 1};
+    s_Data.LineVertexBufferData[1].Albedo = {1, 1, 1, 1};
     s_Data.LineVertexBufferData[1].TexCoord = {1, 1};
     s_Data.LineVertexBufferData[1].TexIndex = 0.0f;
     s_Data.LineVertexBufferData[1].TilingFactor = 1;
@@ -459,9 +464,9 @@ void Renderer2D::DrawLine(const glm::vec2 &start, const glm::vec2 &end,
 void Renderer2D::DrawLine(const glm::vec3 &start, const glm::vec3 &end,
                           const glm::vec4 &color) {
     s_Data.LineVertexBufferData[0].Position = start;
-    s_Data.LineVertexBufferData[0].Color = color;
+    s_Data.LineVertexBufferData[0].Albedo = color;
     s_Data.LineVertexBufferData[1].Position = end;
-    s_Data.LineVertexBufferData[1].Color = color;
+    s_Data.LineVertexBufferData[1].Albedo = color;
     s_Data.LineVertexBuffer->SetData(s_Data.LineVertexBufferData,
                                      2 * sizeof(LineVertex));
     s_Data.TextureSlots[0]->Bind();
@@ -488,7 +493,8 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
     for (int i = 0; i < quadVertexCount; i++) {
         s_Data.QuadVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
-        s_Data.QuadVertexBufferPtr->Color = color;
+        s_Data.QuadVertexBufferPtr->Normal = {0, 0, 1};
+        s_Data.QuadVertexBufferPtr->Albedo = color;
         s_Data.QuadVertexBufferPtr->TexCoord = textureCoords[i];
         s_Data.QuadVertexBufferPtr->TexIndex = TexIndex;
         s_Data.QuadVertexBufferPtr->TilingFactor = 1;

@@ -75,17 +75,21 @@ void SceneLayer::OnUpdate(Timestep ts) {
     {
         PROFILE_SCOPE("Renderer Prep");
         m_DeferredGBuffer->Bind();
-        RenderCommand::SetClearColor(
-            {198 / 255.0f, 239 / 255.0f, 249 / 255.0f, 1});
+        RenderCommand::SetClearColor({0, 0, 0, 1});
         RenderCommand::Clear(); // clears color attachment 0?
-        // m_DeferredGBuffer->ClearColorAttachment(0, &clear);
+        //  m_DeferredGBuffer->ClearColorAttachment(0, &clear);
+
+        // Clear all g buffers
         glm::vec4 clearcolor = {0, 0, 0, 1};
+        m_DeferredGBuffer->ClearColorAttachment(0, &clearcolor); // position
         m_DeferredGBuffer->ClearColorAttachment(1, &clearcolor); // normals
         m_DeferredGBuffer->ClearColorAttachment(2, &clearcolor); // albedo
-        uint32_t clear = 0;
+        uint32_t clear = -1;
         m_DeferredGBuffer->ClearColorAttachment(3, &clear); // id
+
         PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
         m_MainCamera->RecalculateViewMatrix();
+
         Renderer2D::BeginScene(m_MainCamera);
     }
 
