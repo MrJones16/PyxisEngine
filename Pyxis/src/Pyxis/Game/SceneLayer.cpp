@@ -155,7 +155,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
     if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 &&
         mp.y < m_ViewportSize.y) {
         UUID nodeID;
-        m_DeferredGBuffer->ReadPixel(1, mp.x, mp.y, &nodeID);
+        m_DeferredGBuffer->ReadPixel(3, mp.x, mp.y, &nodeID);
         Node::s_HoveredNodeID = nodeID;
     }
 
