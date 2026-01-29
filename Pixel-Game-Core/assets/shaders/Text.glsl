@@ -18,7 +18,7 @@ out flat uint v_NodeID;
 void main()
 {
 	gl_Position = u_ViewProjection * vec4(a_Position, 1.0f); 
-	v_Position = gl_Position;
+	v_Position = vec4(a_Position, 1.0f);
 	v_Color = a_Color;
 	v_TexCoord = a_TexCoord;
 	v_TexIndex = a_TexIndex;
@@ -44,8 +44,10 @@ uniform sampler2D u_BitMapTextures[32];
 void main()
 {
 	vec4 sampled = vec4(1.0, 1.0, 1.0, texture(u_BitMapTextures[int(v_TexIndex)], v_TexCoord).r);
+    if(sampled.a == 0)
+		discard;
     o_Position = v_Position;
-    o_Albedo = sampled * v_Color;
     o_Normal = vec4(0.0,0.0,0.0,1.0);
+    o_Albedo = sampled * v_Color;
 	o_ID = v_NodeID;
 }

@@ -164,6 +164,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
     m_LightingPassBuffer->Bind();
     RenderCommand::SetClearColor({0, 0, 0, 0});
     RenderCommand::Clear();
+
     Renderer2D::DrawDeferredLightingPass(m_DeferredGBuffer);
     m_LightingPassBuffer->Unbind();
 

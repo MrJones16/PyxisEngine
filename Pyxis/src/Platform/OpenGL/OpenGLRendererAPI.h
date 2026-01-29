@@ -14,6 +14,12 @@ class OpenGLRendererAPI : public RendererAPI {
     virtual void EnableDepthTesting() override;
     virtual void DisableDepthTesting() override;
 
+    virtual void EnableBlending() override;
+    virtual void DisableBlending() override;
+
+    virtual void SetBlendFactors(BlendFactor srcFactor,
+                                 BlendFactor dstFactor) override;
+
     virtual void DrawIndexed(const Ref<VertexArray> &VertexArray,
                              uint32_t indexCount = 0) override;
     virtual void DrawArray(const Ref<VertexArray> &VertexArray) override;

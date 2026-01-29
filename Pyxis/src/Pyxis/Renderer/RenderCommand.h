@@ -51,6 +51,14 @@ class RenderCommand {
         s_RendererAPI->DisableDepthTesting();
     }
 
+    inline static void EnableBlending() { s_RendererAPI->EnableBlending(); }
+    inline static void DisableBlending() { s_RendererAPI->DisableBlending(); }
+
+    inline static void SetBlendFactors(RendererAPI::BlendFactor srcFactor,
+                                       RendererAPI::BlendFactor dstFactor) {
+        s_RendererAPI->SetBlendFactors(srcFactor, dstFactor);
+    }
+
   private:
     static RendererAPI *s_RendererAPI;
 };

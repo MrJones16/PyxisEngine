@@ -19,6 +19,24 @@ class RendererAPI {
     virtual void EnableDepthTesting() = 0;
     virtual void DisableDepthTesting() = 0;
 
+    virtual void EnableBlending() = 0;
+    virtual void DisableBlending() = 0;
+    enum BlendFactor {
+        ZERO,
+        ONE,
+        SRC_COLOR,
+        ONE_MINUS_SRC_COLOR,
+        DST_COLOR,
+        ONE_MINUS_DST_COLOR,
+        SRC_ALPHA,
+        ONE_MINUS_SRC_ALPHA,
+        DST_ALPHA,
+        ONE_MINUS_DST_ALPHA
+
+    };
+    virtual void SetBlendFactors(BlendFactor srcFactor,
+                                 BlendFactor dstFactor) = 0;
+
     virtual void DrawIndexed(const Ref<VertexArray> &VertexArray,
                              uint32_t indexCount = 0) = 0;
     virtual void DrawArray(const Ref<VertexArray> &VertexArray) = 0;

@@ -427,6 +427,11 @@ void Renderer2D::DrawDeferredLightingPass(Ref<FrameBuffer> deferredGBuffer) {
     RenderCommand::Clear();
     s_Data.ScreenQuadShader->Bind();
     s_Data.ScreenQuadVertexArray->Bind();
+    // enable blending so that we can draw lights separately
+    RenderCommand::EnableBlending();
+    // set to each alpha directly, so we are adding both together fully!
+    RenderCommand::SetBlendFactors(RendererAPI::BlendFactor::SRC_ALPHA,
+                                   RendererAPI::BlendFactor::DST_ALPHA);
     RenderCommand::BindTexture2D(
         deferredGBuffer->GetColorAttachmentRendererID(0), 0); // Position
     RenderCommand::BindTexture2D(
@@ -435,6 +440,8 @@ void Renderer2D::DrawDeferredLightingPass(Ref<FrameBuffer> deferredGBuffer) {
         deferredGBuffer->GetColorAttachmentRendererID(2), 2); // Albedo
     // s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
     RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
+
+    RenderCommand::DisableBlending();
 }
 
 void Renderer2D::DrawScreenQuad(const uint32_t TextureID, const float scale,

@@ -26,6 +26,83 @@ void OpenGLRendererAPI::EnableDepthTesting() { glEnable(GL_DEPTH_TEST); }
 
 void OpenGLRendererAPI::DisableDepthTesting() { glDisable(GL_DEPTH_TEST); }
 
+void OpenGLRendererAPI::EnableBlending() { glEnable(GL_BLEND); }
+void OpenGLRendererAPI::DisableBlending() { glDisable(GL_BLEND); }
+void OpenGLRendererAPI::SetBlendFactors(BlendFactor srcFactor,
+                                        BlendFactor dstFactor) {
+    GLenum src, dst = 0;
+    switch (srcFactor) {
+    case RendererAPI::ZERO:
+        src = GL_ZERO;
+        break;
+    case RendererAPI::ONE:
+        src = GL_ONE;
+        break;
+    case RendererAPI::SRC_COLOR:
+        src = GL_SRC_COLOR;
+        break;
+    case RendererAPI::ONE_MINUS_SRC_COLOR:
+        src = GL_ONE_MINUS_SRC_COLOR;
+        break;
+    case RendererAPI::DST_COLOR:
+        src = GL_DST_COLOR;
+        break;
+    case RendererAPI::ONE_MINUS_DST_COLOR:
+        src = GL_ONE_MINUS_DST_COLOR;
+        break;
+    case RendererAPI::SRC_ALPHA:
+        src = GL_SRC_ALPHA;
+        break;
+    case RendererAPI::ONE_MINUS_SRC_ALPHA:
+        src = GL_ONE_MINUS_SRC_ALPHA;
+        break;
+    case RendererAPI::DST_ALPHA:
+        src = GL_DST_ALPHA;
+        break;
+    case RendererAPI::ONE_MINUS_DST_ALPHA:
+        src = GL_ONE_MINUS_DST_ALPHA;
+        break;
+    default:
+        break;
+    }
+    switch (dstFactor) {
+    case RendererAPI::ZERO:
+        dst = GL_ZERO;
+        break;
+    case RendererAPI::ONE:
+        dst = GL_ONE;
+        break;
+    case RendererAPI::SRC_COLOR:
+        dst = GL_SRC_COLOR;
+        break;
+    case RendererAPI::ONE_MINUS_SRC_COLOR:
+        dst = GL_ONE_MINUS_SRC_COLOR;
+        break;
+    case RendererAPI::DST_COLOR:
+        dst = GL_DST_COLOR;
+        break;
+    case RendererAPI::ONE_MINUS_DST_COLOR:
+        dst = GL_ONE_MINUS_DST_COLOR;
+        break;
+    case RendererAPI::SRC_ALPHA:
+        dst = GL_SRC_ALPHA;
+        break;
+    case RendererAPI::ONE_MINUS_SRC_ALPHA:
+        dst = GL_ONE_MINUS_SRC_ALPHA;
+        break;
+    case RendererAPI::DST_ALPHA:
+        dst = GL_DST_ALPHA;
+        break;
+    case RendererAPI::ONE_MINUS_DST_ALPHA:
+        dst = GL_ONE_MINUS_DST_ALPHA;
+        break;
+    default:
+        break;
+    }
+
+    glBlendFunc(src, dst);
+}
+
 void OpenGLRendererAPI::DrawIndexed(const Ref<VertexArray> &VertexArray,
                                     uint32_t indexCount) {
     uint32_t count =
