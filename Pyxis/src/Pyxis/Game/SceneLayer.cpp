@@ -80,12 +80,12 @@ void SceneLayer::OnUpdate(Timestep ts) {
         //  m_DeferredGBuffer->ClearColorAttachment(0, &clear);
 
         // Clear all g buffers
-        glm::vec4 clearcolor = {0, 0, 0, 1};
-        m_DeferredGBuffer->ClearColorAttachment(0, &clearcolor); // position
-        m_DeferredGBuffer->ClearColorAttachment(1, &clearcolor); // normals
-        m_DeferredGBuffer->ClearColorAttachment(2, &clearcolor); // albedo
-        uint32_t clear = -1;
-        m_DeferredGBuffer->ClearColorAttachment(3, &clear); // id
+        // glm::vec4 clearcolor = {0, 0, 0, 1};
+        // m_DeferredGBuffer->ClearColorAttachment(0, &clearcolor); // position
+        // m_DeferredGBuffer->ClearColorAttachment(1, &clearcolor); // normals
+        // m_DeferredGBuffer->ClearColorAttachment(2, &clearcolor); // albedo
+        // uint32_t clear = -1;
+        // m_DeferredGBuffer->ClearColorAttachment(3, &clear); // id
 
         PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
         m_MainCamera->RecalculateViewMatrix();

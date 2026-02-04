@@ -69,6 +69,16 @@ struct QuadVertex {
     uint32_t NodeID;
 };
 
+struct LightVertex {
+    glm::vec3 Position;
+    glm::vec4 Color;
+    float Radius;
+    float Intensity;
+    float Falloff;
+    float MinAngle;
+    float MaxAngle;
+};
+
 struct TextVertex {
     glm::vec3 Position;
     glm::vec4 Color;
@@ -131,6 +141,26 @@ struct RendererData2D {
     };
     Ref<VertexArray> QuadVertexArray;
     Ref<VertexBuffer> QuadVertexBuffer;
+
+    // LIGHTS
+    Ref<Shader> DeferredLightShader;
+
+    static const uint32_t MaxLights = 10000;
+    static const uint32_t MaxLightVertices = MaxLights * 4;
+    static const uint32_t MaxLightIndices = MaxLights * 6;
+
+    uint32_t LightIndexCount = 0;
+    LightVertex *LightVertexBufferBase = nullptr;
+    LightVertex *LightVertexBufferPtr = nullptr;
+    glm::vec4 LightVertexPositions[4] = {
+        {-0.5f, -0.5f, 0, 1}, // bl
+        {0.5f, -0.5f, 0, 1},  // br
+        {0.5f, 0.5f, 0, 1},   // tr
+        {-0.5f, 0.5f, 0, 1}   // tl
+
+    };
+    Ref<VertexArray> LightVertexArray;
+    Ref<VertexBuffer> LightVertexBuffer;
 
     // BITMAPS
 
@@ -265,6 +295,52 @@ void Renderer2D::Init() {
     delete[] QuadIndices;
 
     ////////////////////
+    /// LIGHTS
+    ////////////////////
+
+    s_Data.LightVertexArray = VertexArray::Create();
+    // m_OrthographicCameraController = Pyxis::OrthographicCameraController(5, 9
+    // / 16, -100, 100);
+    s_Data.DeferredLightShader = Shader::Create("assets/shaders/Deferred.glsl");
+    s_Data.DeferredLightShader->Bind();
+
+    s_Data.LightVertexBuffer =
+        VertexBuffer::Create(s_Data.MaxLightVertices * sizeof(LightVertex));
+    BufferLayout LightBufferLayout = {
+        {ShaderDataType::Float3, "a_Position"},
+        {ShaderDataType::Float4, "a_Color"},
+        {ShaderDataType::Float, "a_Radius"},
+        {ShaderDataType::Float, "a_Intensity"},
+        {ShaderDataType::Float, "a_Falloff"},
+        {ShaderDataType::Float, "a_MinAngle"},
+        {ShaderDataType::Float, "a_MaxAngle"},
+    };
+
+    s_Data.LightVertexBuffer->SetLayout(layout);
+    s_Data.LightVertexArray->AddVertexBuffer(s_Data.LightVertexBuffer);
+    s_Data.LightVertexBufferBase = new LightVertex[s_Data.MaxLightVertices];
+
+    uint32_t *LightIndices = new uint32_t[s_Data.MaxIndices];
+    // set indices
+    offset = 0;
+    for (uint32_t i = 0; i < s_Data.MaxIndices; i += 6) {
+        QuadIndices[i + 0] = offset + 0;
+        QuadIndices[i + 1] = offset + 1;
+        QuadIndices[i + 2] = offset + 2;
+
+        QuadIndices[i + 3] = offset + 2;
+        QuadIndices[i + 4] = offset + 3;
+        QuadIndices[i + 5] = offset + 0;
+
+        offset += 4;
+    }
+
+    Ref<IndexBuffer> LightIndexBuffer =
+        IndexBuffer::Create(LightIndices, s_Data.MaxLightIndices);
+    s_Data.LightVertexArray->SetIndexBuffer(LightIndexBuffer);
+    delete[] LightIndices;
+
+    ////////////////////
     /// TEXT
     ////////////////////
 
@@ -358,6 +434,8 @@ void Renderer2D::BeginScene(Pyxis::Camera *camera) {
 }
 
 void Renderer2D::EndScene() { Flush(); }
+
+void Renderer2D::FlushLights() {}
 
 void Renderer2D::Flush() {
     ////////////////////////////
@@ -512,6 +590,30 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
 #if STATISTICS
     s_Data.Stats.QuadCount++;
 #endif
+}
+void Renderer2D::DrawLight(const glm::vec3 &Position, const glm::vec4 &Color,
+                           float Radius, float Falloff, float MinAngle,
+                           float MaxAngle) {
+    // check if we need to flush
+    if (s_Data.LightIndexCount >= RendererData2D::MaxLightIndices) {
+        PX_CORE_WARN("Reached the limit of lights to draw!");
+        return;
+    }
+
+    glm::mat4 transform = glm::translate(glm::mat4(1.0f), Position);
+    transform = glm::scale(transform, {Radius, Radius, 0});
+
+    constexpr size_t lightVertexCount = 4;
+    for (int i = 0; i < lightVertexCount; i++) {
+        s_Data.LightVertexBufferPtr->Position =
+            transform * s_Data.QuadVertexPositions[i];
+        s_Data.LightVertexBufferPtr->Color = Color;
+        s_Data.LightVertexBufferPtr->TexCoord = textureCoords[i];
+        s_Data.LightVertexBufferPtr->TexIndex = TexIndex;
+        s_Data.LightVertexBufferPtr->TilingFactor = 1;
+        s_Data.LightVertexBufferPtr++;
+    }
+    s_Data.LightIndexCount += 6;
 }
 
 /// <summary>
