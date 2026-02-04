@@ -218,14 +218,8 @@ void Renderer2D::Init() {
     /// SCREEN QUAD
     ////////////////////
 
-    s_Data.ScreenQuadShader =
-        Shader::Create("assets/shaders/DeferredLighting.glsl");
+    s_Data.ScreenQuadShader = Shader::Create("assets/shaders/ScreenQuad.glsl");
     s_Data.ScreenQuadShader->Bind();
-    // doing this for deferred
-    s_Data.ScreenQuadShader->SetInt("u_Position", 0);
-    s_Data.ScreenQuadShader->SetInt("u_Normal", 1);
-    s_Data.ScreenQuadShader->SetInt("u_Albedo", 2);
-    // s_Data.WhiteTexture->GetID());
 
     s_Data.ScreenQuadVertexArray = VertexArray::Create();
     s_Data.ScreenQuadVertexBuffer = VertexBuffer::Create(16 * sizeof(float));
@@ -301,7 +295,8 @@ void Renderer2D::Init() {
     s_Data.LightVertexArray = VertexArray::Create();
     // m_OrthographicCameraController = Pyxis::OrthographicCameraController(5, 9
     // / 16, -100, 100);
-    s_Data.DeferredLightShader = Shader::Create("assets/shaders/Deferred.glsl");
+    s_Data.DeferredLightShader =
+        Shader::Create("assets/shaders/DeferredLighting.glsl");
     s_Data.DeferredLightShader->Bind();
 
     s_Data.LightVertexBuffer =
@@ -435,7 +430,26 @@ void Renderer2D::BeginScene(Pyxis::Camera *camera) {
 
 void Renderer2D::EndScene() { Flush(); }
 
-void Renderer2D::FlushLights() {}
+void Renderer2D::FlushLights() {
+    RenderCommand::Clear();
+    s_Data.ScreenQuadShader->Bind();
+    s_Data.ScreenQuadVertexArray->Bind();
+    // enable blending so that we can draw lights separately
+    RenderCommand::EnableBlending();
+    // set to each alpha directly, so we are adding both together fully!
+    RenderCommand::SetBlendFactors(RendererAPI::BlendFactor::SRC_ALPHA,
+                                   RendererAPI::BlendFactor::DST_ALPHA);
+    RenderCommand::BindTexture2D(
+        deferredGBuffer->GetColorAttachmentRendererID(0), 0); // Position
+    RenderCommand::BindTexture2D(
+        deferredGBuffer->GetColorAttachmentRendererID(1), 1); // Normal
+    RenderCommand::BindTexture2D(
+        deferredGBuffer->GetColorAttachmentRendererID(2), 2); // Albedo
+    // s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
+    RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
+
+    RenderCommand::DisableBlending();
+}
 
 void Renderer2D::Flush() {
     ////////////////////////////
@@ -592,11 +606,12 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
 #endif
 }
 void Renderer2D::DrawLight(const glm::vec3 &Position, const glm::vec4 &Color,
-                           float Radius, float Falloff, float MinAngle,
-                           float MaxAngle) {
+                           float Intensity, float Radius, float FallOff,
+                           float MinAngle, float MaxAngle) {
     // check if we need to flush
     if (s_Data.LightIndexCount >= RendererData2D::MaxLightIndices) {
         PX_CORE_WARN("Reached the limit of lights to draw!");
+        // skip drawing any more lights.
         return;
     }
 
@@ -608,9 +623,11 @@ void Renderer2D::DrawLight(const glm::vec3 &Position, const glm::vec4 &Color,
         s_Data.LightVertexBufferPtr->Position =
             transform * s_Data.QuadVertexPositions[i];
         s_Data.LightVertexBufferPtr->Color = Color;
-        s_Data.LightVertexBufferPtr->TexCoord = textureCoords[i];
-        s_Data.LightVertexBufferPtr->TexIndex = TexIndex;
-        s_Data.LightVertexBufferPtr->TilingFactor = 1;
+        s_Data.LightVertexBufferPtr->Intensity = Intensity;
+        s_Data.LightVertexBufferPtr->Radius = Radius;
+        s_Data.LightVertexBufferPtr->Falloff = FallOff;
+        s_Data.LightVertexBufferPtr->MinAngle = MinAngle;
+        s_Data.LightVertexBufferPtr->MaxAngle = MaxAngle;
         s_Data.LightVertexBufferPtr++;
     }
     s_Data.LightIndexCount += 6;
