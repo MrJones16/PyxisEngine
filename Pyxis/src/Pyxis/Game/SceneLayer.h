@@ -49,7 +49,7 @@ class SceneLayer : public Layer {
 
     // viewport
     Ref<FrameBuffer> m_DeferredGBuffer;
-    Ref<FrameBuffer> m_LightingPassBuffer;
+    Ref<FrameBuffer> m_DeferredLightingBuffer;
     glm::vec2 m_ViewportSize;
     glm::vec2 m_ViewportBounds[2];
 

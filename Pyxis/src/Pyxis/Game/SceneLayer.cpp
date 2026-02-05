@@ -39,7 +39,7 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
     lightingPassBufferSpec.Width = m_ViewportSize.x;
     lightingPassBufferSpec.Height = m_ViewportSize.y;
-    m_LightingPassBuffer = FrameBuffer::Create(lightingPassBufferSpec);
+    m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
 void SceneLayer::OnDetach() {}
@@ -74,23 +74,13 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     {
         PROFILE_SCOPE("Renderer Prep");
-        m_DeferredGBuffer->Bind();
         RenderCommand::SetClearColor({0, 0, 0, 1});
-        RenderCommand::Clear(); // clears color attachment 0?
-        //  m_DeferredGBuffer->ClearColorAttachment(0, &clear);
-
-        // Clear all g buffers
-        // glm::vec4 clearcolor = {0, 0, 0, 1};
-        // m_DeferredGBuffer->ClearColorAttachment(0, &clearcolor); // position
-        // m_DeferredGBuffer->ClearColorAttachment(1, &clearcolor); // normals
-        // m_DeferredGBuffer->ClearColorAttachment(2, &clearcolor); // albedo
-        // uint32_t clear = -1;
-        // m_DeferredGBuffer->ClearColorAttachment(3, &clear); // id
 
         PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
         m_MainCamera->RecalculateViewMatrix();
 
-        Renderer2D::BeginScene(m_MainCamera);
+        Renderer2D::BeginScene(m_MainCamera, m_DeferredGBuffer,
+                               m_DeferredLightingBuffer);
     }
 
     // only run per tick rate
@@ -145,7 +135,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
     Renderer2D::DrawText("Hello!", glm::mat4(1),
     ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));*/
 
-    Renderer2D::EndScene(); // finalizes rendering
+    Renderer2D::EndScene(); // finalizes rendering of normal objects.
 
     // grab the ID from the Deferred "G" buffer while we have it so we don't
     // pass it down.
@@ -159,20 +149,16 @@ void SceneLayer::OnUpdate(Timestep ts) {
         Node::s_HoveredNodeID = nodeID;
     }
 
-    // unbind the G buffer, and bind the light pass buffer
-    m_DeferredGBuffer->Unbind();
-    m_LightingPassBuffer->Bind();
-    RenderCommand::SetClearColor({0, 0, 0, 0});
-    RenderCommand::Clear();
+    // test drawing lights.
+    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 1, 100);
 
-    Renderer2D::DrawDeferredLightingPass(m_DeferredGBuffer);
-    m_LightingPassBuffer->Unbind();
+    Renderer2D::DrawDeferredLightingPass();
 
     glm::vec2 offset = m_MainCamera->GetOffsetToGrid();
     offset.x /= m_MainCamera->GetSize().x;
     offset.y /= m_MainCamera->GetSize().y;
     Renderer2D::DrawScreenQuad(
-        m_LightingPassBuffer->GetColorAttachmentRendererID(0), 1,
+        m_DeferredLightingBuffer->GetColorAttachmentRendererID(0), 1,
         offset * 2.0f);
 }
 

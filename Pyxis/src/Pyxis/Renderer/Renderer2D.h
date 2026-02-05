@@ -36,12 +36,16 @@ class Renderer2D {
     static void Init();
     static void Shutdown();
 
-    static void BeginScene(Pyxis::Camera *camera);
+    static Ref<FrameBuffer> GetDeferredGFrameBuffer();
+    static Ref<FrameBuffer> GetDeferredLightingFrameBuffer();
+
+    static void BeginScene(Pyxis::Camera *camera,
+                           Ref<FrameBuffer> deferredGBuffer,
+                           Ref<FrameBuffer> deferredLightingBuffer);
     static void EndScene();
     static void Flush();
     static void FlushLights();
-
-    static void DrawDeferredLightingPass(Ref<FrameBuffer> deferredGBuffer);
+    static void DrawDeferredLightingPass();
     static void DrawScreenQuad(const uint32_t TextureID, const float scale = 1,
                                const glm::vec2 &offset = glm::vec2(0, 0));
 
@@ -52,8 +56,8 @@ class Renderer2D {
     static void DrawLine(const glm::vec3 &start, const glm::vec3 &end,
                          const glm::vec4 &color = {1, 1, 1, 1});
 
-    static void DrawLight(const glm::vec3 &Position,
-                          const glm::vec4 &Color = {1, 1, 1, 1},
+    static void DrawLight(const glm::vec2 &Position,
+                          const glm::vec3 &Color = {1, 1, 1},
                           float Intensity = 1, float Radius = 1,
                           float Falloff = 2, float MinAngle = 0,
                           float MaxAngle = 360);

@@ -70,10 +70,9 @@ struct QuadVertex {
 };
 
 struct LightVertex {
-    glm::vec3 Position;
-    glm::vec4 Color;
+    glm::vec4 WSPosAndLSPos;
+    glm::vec4 ColorAndIntensity;
     float Radius;
-    float Intensity;
     float Falloff;
     float MinAngle;
     float MaxAngle;
@@ -103,6 +102,9 @@ struct LineVertex {
 struct RendererData2D {
     static const uint32_t MaxTextureSlots = 32;
     Ref<Texture2D> WhiteTexture;
+
+    Ref<FrameBuffer> DeferredGBuffer;
+    Ref<FrameBuffer> DeferredLightingBuffer;
 
     // SCREEN QUAD
 
@@ -152,11 +154,11 @@ struct RendererData2D {
     uint32_t LightIndexCount = 0;
     LightVertex *LightVertexBufferBase = nullptr;
     LightVertex *LightVertexBufferPtr = nullptr;
-    glm::vec4 LightVertexPositions[4] = {
-        {-0.5f, -0.5f, 0, 1}, // bl
-        {0.5f, -0.5f, 0, 1},  // br
-        {0.5f, 0.5f, 0, 1},   // tr
-        {-0.5f, 0.5f, 0, 1}   // tl
+    glm::vec2 LightVertexPositions[4] = {
+        {-0.5f, -0.5f}, // bl
+        {0.5f, -0.5f},  // br
+        {0.5f, 0.5f},   // tr
+        {-0.5f, 0.5f}   // tl
 
     };
     Ref<VertexArray> LightVertexArray;
@@ -203,6 +205,14 @@ struct RendererData2D {
 };
 
 static RendererData2D s_Data; // can make this a pointer
+
+Ref<FrameBuffer> Renderer2D::GetDeferredGFrameBuffer() {
+    return s_Data.DeferredGBuffer;
+}
+
+Ref<FrameBuffer> Renderer2D::GetDeferredLightingFrameBuffer() {
+    return s_Data.DeferredLightingBuffer;
+}
 
 void Renderer2D::Init() {
     // initialize the renderer2d primitive things
@@ -299,33 +309,36 @@ void Renderer2D::Init() {
         Shader::Create("assets/shaders/DeferredLighting.glsl");
     s_Data.DeferredLightShader->Bind();
 
+    s_Data.DeferredLightShader->SetInt("u_Position", 0);
+    s_Data.DeferredLightShader->SetInt("u_Normal", 1);
+    s_Data.DeferredLightShader->SetInt("u_Albedo", 2);
+
     s_Data.LightVertexBuffer =
         VertexBuffer::Create(s_Data.MaxLightVertices * sizeof(LightVertex));
     BufferLayout LightBufferLayout = {
-        {ShaderDataType::Float3, "a_Position"},
-        {ShaderDataType::Float4, "a_Color"},
+        {ShaderDataType::Float4, "a_PosAndTex"},
+        {ShaderDataType::Float4, "a_ColorAndIntensity"},
         {ShaderDataType::Float, "a_Radius"},
-        {ShaderDataType::Float, "a_Intensity"},
         {ShaderDataType::Float, "a_Falloff"},
         {ShaderDataType::Float, "a_MinAngle"},
         {ShaderDataType::Float, "a_MaxAngle"},
     };
 
-    s_Data.LightVertexBuffer->SetLayout(layout);
+    s_Data.LightVertexBuffer->SetLayout(LightBufferLayout);
     s_Data.LightVertexArray->AddVertexBuffer(s_Data.LightVertexBuffer);
     s_Data.LightVertexBufferBase = new LightVertex[s_Data.MaxLightVertices];
 
     uint32_t *LightIndices = new uint32_t[s_Data.MaxIndices];
     // set indices
     offset = 0;
-    for (uint32_t i = 0; i < s_Data.MaxIndices; i += 6) {
-        QuadIndices[i + 0] = offset + 0;
-        QuadIndices[i + 1] = offset + 1;
-        QuadIndices[i + 2] = offset + 2;
+    for (uint32_t i = 0; i < s_Data.MaxLightIndices; i += 6) {
+        LightIndices[i + 0] = offset + 0;
+        LightIndices[i + 1] = offset + 1;
+        LightIndices[i + 2] = offset + 2;
 
-        QuadIndices[i + 3] = offset + 2;
-        QuadIndices[i + 4] = offset + 3;
-        QuadIndices[i + 5] = offset + 0;
+        LightIndices[i + 3] = offset + 2;
+        LightIndices[i + 4] = offset + 3;
+        LightIndices[i + 5] = offset + 0;
 
         offset += 4;
     }
@@ -410,13 +423,32 @@ void Renderer2D::Shutdown() {
     // delete s_Data;
 }
 
-void Renderer2D::BeginScene(Pyxis::Camera *camera) {
+void Renderer2D::BeginScene(Pyxis::Camera *camera,
+                            Ref<FrameBuffer> deferredGBuffer,
+                            Ref<FrameBuffer> deferredLightingBuffer) {
+    s_Data.DeferredGBuffer = deferredGBuffer;
+    s_Data.DeferredLightingBuffer = deferredLightingBuffer;
+
+    // bind buffer in case we draw anything directly without the queue, like
+    // lines do.
+    RenderCommand::Clear(); // clear main buffer
+    s_Data.DeferredGBuffer->Bind();
+    RenderCommand::Clear(); // clear deferred g buffer
+
     s_Data.BitMapShader->Bind();
     s_Data.BitMapShader->SetMat4("u_ViewProjection",
                                  camera->GetViewProjectionMatrix());
 
     s_Data.BitMapVertexBufferPtr = s_Data.BitMapVertexBufferBase;
     s_Data.BitMapIndexCount = 0;
+
+    s_Data.DeferredLightShader->Bind();
+    s_Data.DeferredLightShader->SetMat4("u_ViewProjection",
+                                        camera->GetViewProjectionMatrix());
+    s_Data.DeferredLightShader->SetFloat2(
+        "u_ScreenSize",
+        glm::vec2(deferredLightingBuffer->GetSpecification().Width,
+                  deferredLightingBuffer->GetSpecification().Height));
 
     s_Data.DeferredShader->Bind();
     s_Data.DeferredShader->SetMat4("u_ViewProjection",
@@ -425,30 +457,30 @@ void Renderer2D::BeginScene(Pyxis::Camera *camera) {
     s_Data.QuadVertexBufferPtr = s_Data.QuadVertexBufferBase;
     s_Data.QuadIndexCount = 0;
 
+    s_Data.LightVertexBufferPtr = s_Data.LightVertexBufferBase;
+    s_Data.LightIndexCount = 0;
+
     s_Data.TextureSlotsIndex = 1;
 }
 
 void Renderer2D::EndScene() { Flush(); }
 
 void Renderer2D::FlushLights() {
-    RenderCommand::Clear();
-    s_Data.ScreenQuadShader->Bind();
-    s_Data.ScreenQuadVertexArray->Bind();
-    // enable blending so that we can draw lights separately
-    RenderCommand::EnableBlending();
-    // set to each alpha directly, so we are adding both together fully!
-    RenderCommand::SetBlendFactors(RendererAPI::BlendFactor::SRC_ALPHA,
-                                   RendererAPI::BlendFactor::DST_ALPHA);
-    RenderCommand::BindTexture2D(
-        deferredGBuffer->GetColorAttachmentRendererID(0), 0); // Position
-    RenderCommand::BindTexture2D(
-        deferredGBuffer->GetColorAttachmentRendererID(1), 1); // Normal
-    RenderCommand::BindTexture2D(
-        deferredGBuffer->GetColorAttachmentRendererID(2), 2); // Albedo
-    // s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
-    RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
 
-    RenderCommand::DisableBlending();
+    s_Data.DeferredLightShader->Bind();
+    s_Data.LightVertexArray->Bind();
+
+    // send data to light buffer
+    uint32_t size = (uint8_t *)s_Data.LightVertexBufferPtr -
+                    (uint8_t *)s_Data.LightVertexBufferBase;
+    s_Data.LightVertexBuffer->SetData(s_Data.LightVertexBufferBase, size);
+
+    // draw
+    if (s_Data.LightIndexCount > 0)
+        RenderCommand::DrawIndexed(s_Data.LightVertexArray,
+                                   s_Data.LightIndexCount);
+    s_Data.LightVertexBufferPtr = s_Data.LightVertexBufferBase;
+    s_Data.LightIndexCount = 0;
 }
 
 void Renderer2D::Flush() {
@@ -507,33 +539,31 @@ void Renderer2D::Flush() {
 #endif
 }
 
-void Renderer2D::DrawDeferredLightingPass(Ref<FrameBuffer> deferredGBuffer) {
-    s_Data.ScreenQuadData[0] = {{-1, -1}, {0, 0}};
-    s_Data.ScreenQuadData[1] = {{1, -1}, {1, 0}};
-    s_Data.ScreenQuadData[2] = {{1, 1}, {1, 1}};
-    s_Data.ScreenQuadData[3] = {{-1, 1}, {0, 1}};
-
-    s_Data.ScreenQuadVertexArray->GetVertexBuffers()[0]->SetData(
-        s_Data.ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
-
+void Renderer2D::DrawDeferredLightingPass() {
+    s_Data.DeferredGBuffer->Unbind();
+    // bind lighting buffer and clear it for the pass.
+    s_Data.DeferredLightingBuffer->Bind();
+    RenderCommand::SetClearColor({0, 0, 0, 0});
     RenderCommand::Clear();
-    s_Data.ScreenQuadShader->Bind();
-    s_Data.ScreenQuadVertexArray->Bind();
+
     // enable blending so that we can draw lights separately
     RenderCommand::EnableBlending();
     // set to each alpha directly, so we are adding both together fully!
-    RenderCommand::SetBlendFactors(RendererAPI::BlendFactor::SRC_ALPHA,
-                                   RendererAPI::BlendFactor::DST_ALPHA);
+    RenderCommand::SetBlendFactors(RendererAPI::BlendFactor::ONE,
+                                   RendererAPI::BlendFactor::ONE);
+
+    // send lighting fragment shader the g buffer
     RenderCommand::BindTexture2D(
-        deferredGBuffer->GetColorAttachmentRendererID(0), 0); // Position
+        s_Data.DeferredGBuffer->GetColorAttachmentRendererID(0), 0); // Position
     RenderCommand::BindTexture2D(
-        deferredGBuffer->GetColorAttachmentRendererID(1), 1); // Normal
+        s_Data.DeferredGBuffer->GetColorAttachmentRendererID(1), 1); // Normal
     RenderCommand::BindTexture2D(
-        deferredGBuffer->GetColorAttachmentRendererID(2), 2); // Albedo
-    // s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
-    RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
+        s_Data.DeferredGBuffer->GetColorAttachmentRendererID(2), 2); // Albedo
+                                                                     //
+    FlushLights();
 
     RenderCommand::DisableBlending();
+    s_Data.DeferredLightingBuffer->Unbind();
 }
 
 void Renderer2D::DrawScreenQuad(const uint32_t TextureID, const float scale,
@@ -605,7 +635,7 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
     s_Data.Stats.QuadCount++;
 #endif
 }
-void Renderer2D::DrawLight(const glm::vec3 &Position, const glm::vec4 &Color,
+void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
                            float Intensity, float Radius, float FallOff,
                            float MinAngle, float MaxAngle) {
     // check if we need to flush
@@ -615,15 +645,19 @@ void Renderer2D::DrawLight(const glm::vec3 &Position, const glm::vec4 &Color,
         return;
     }
 
-    glm::mat4 transform = glm::translate(glm::mat4(1.0f), Position);
-    transform = glm::scale(transform, {Radius, Radius, 0});
+    glm::vec2 localCoords[] = {
+        {-1.0f, -1.0f}, {1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}};
+
+    // glm::mat4 transform = glm::translate(glm::mat4(1.0f), Position);
+    // transform = glm::scale(transform, {Radius, Radius, 0});
 
     constexpr size_t lightVertexCount = 4;
     for (int i = 0; i < lightVertexCount; i++) {
-        s_Data.LightVertexBufferPtr->Position =
-            transform * s_Data.QuadVertexPositions[i];
-        s_Data.LightVertexBufferPtr->Color = Color;
-        s_Data.LightVertexBufferPtr->Intensity = Intensity;
+        glm::vec2 pos = (s_Data.LightVertexPositions[i] * Radius) + Position;
+        s_Data.LightVertexBufferPtr->WSPosAndLSPos =
+            glm::vec4(pos, localCoords[i]);
+        s_Data.LightVertexBufferPtr->ColorAndIntensity =
+            glm::vec4(Color, Intensity);
         s_Data.LightVertexBufferPtr->Radius = Radius;
         s_Data.LightVertexBufferPtr->Falloff = FallOff;
         s_Data.LightVertexBufferPtr->MinAngle = MinAngle;
