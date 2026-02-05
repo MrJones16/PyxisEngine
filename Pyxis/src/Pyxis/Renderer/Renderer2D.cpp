@@ -636,7 +636,7 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
 #endif
 }
 void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
-                           float Intensity, float Radius, float FallOff,
+                           float Intensity, float Radius, float Falloff,
                            float MinAngle, float MaxAngle) {
     // check if we need to flush
     if (s_Data.LightIndexCount >= RendererData2D::MaxLightIndices) {
@@ -659,7 +659,7 @@ void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
         s_Data.LightVertexBufferPtr->ColorAndIntensity =
             glm::vec4(Color, Intensity);
         s_Data.LightVertexBufferPtr->Radius = Radius;
-        s_Data.LightVertexBufferPtr->Falloff = FallOff;
+        s_Data.LightVertexBufferPtr->Falloff = Falloff;
         s_Data.LightVertexBufferPtr->MinAngle = MinAngle;
         s_Data.LightVertexBufferPtr->MaxAngle = MaxAngle;
         s_Data.LightVertexBufferPtr++;

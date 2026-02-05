@@ -59,8 +59,8 @@ class Renderer2D {
     static void DrawLight(const glm::vec2 &Position,
                           const glm::vec3 &Color = {1, 1, 1},
                           float Intensity = 1, float Radius = 1,
-                          float Falloff = 2, float MinAngle = 0,
-                          float MaxAngle = 360);
+                          float Falloff = 2, float MinAngle = 30,
+                          float MaxAngle = 330);
 
     static void DrawQuad(glm::mat4 transform, const glm::vec4 &color);
     static void DrawQuad(glm::mat4 transform, const Ref<Texture2D> &texture,

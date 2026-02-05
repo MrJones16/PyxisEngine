@@ -4,17 +4,15 @@
 layout (location = 0) in vec4 a_WSPosAndLSPos;
 layout (location = 1) in vec4 a_ColorAndIntensity;
 layout (location = 2) in float a_Radius;
-layout (location = 3) in float a_Intensity;
-layout (location = 4) in float a_Falloff;
-layout (location = 5) in float a_MinAngle;
-layout (location = 6) in float a_MaxAngle;
+layout (location = 3) in float a_Falloff;
+layout (location = 4) in float a_MinAngle;
+layout (location = 5) in float a_MaxAngle;
 
 uniform mat4 u_ViewProjection;
 
 out vec4 v_WSPosAndLSPos;
 out vec4 v_ColorAndIntensity;
 out float v_Radius;
-out float v_Intensity;
 out float v_Falloff;
 out float v_MinAngle;
 out float v_MaxAngle;
@@ -57,6 +55,11 @@ void main()
 	vec4 Src_Position = texture(u_Position, uv);
 	vec4 Src_Normal = texture(u_Normal, uv);
 	vec4 Src_Albedo = texture(u_Albedo, uv);
-    float radialFalloff = pow(length(v_WSPosAndLSPos.zw), v_Falloff);
-    color = vec4(radialFalloff, 0, 0, 1);
+    float RadialFalloff = pow(1 - length(v_WSPosAndLSPos.zw), v_Falloff);
+
+    //testing angles
+    float Angle = atan(normalize(v_WSPosAndLSPos.zw).x,normalize(v_WSPosAndLSPos.zw).y);
+    float AngularFalloff = clamp(smoothstep(v_MinAngle, v_MaxAngle, Angle), 0.0, 1.0);
+
+    color = vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff * Src_Albedo;
 }
