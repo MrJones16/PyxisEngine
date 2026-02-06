@@ -5,8 +5,7 @@ layout (location = 0) in vec4 a_WSPosAndLSPos;
 layout (location = 1) in vec4 a_ColorAndIntensity;
 layout (location = 2) in float a_Radius;
 layout (location = 3) in float a_Falloff;
-layout (location = 4) in float a_MinAngle;
-layout (location = 5) in float a_MaxAngle;
+layout (location = 4) in float a_Radians;
 
 uniform mat4 u_ViewProjection;
 
@@ -14,8 +13,7 @@ out vec4 v_WSPosAndLSPos;
 out vec4 v_ColorAndIntensity;
 out float v_Radius;
 out float v_Falloff;
-out float v_MinAngle;
-out float v_MaxAngle;
+out float v_Radians;
 
 void main()
 {
@@ -25,8 +23,7 @@ void main()
     v_ColorAndIntensity = a_ColorAndIntensity;
     v_Radius = a_Radius;
     v_Falloff = a_Falloff;
-    v_MinAngle = a_MinAngle;
-    v_MaxAngle = a_MaxAngle;
+    v_Radians = a_Radians;
 }
 
 #type fragment
@@ -37,8 +34,7 @@ in vec4 v_WSPosAndLSPos;
 in vec4 v_ColorAndIntensity;
 in float v_Radius;
 in float v_Falloff;
-in float v_MinAngle;
-in float v_MaxAngle;
+in float v_Radians;
 
 out vec4 color;
 
@@ -55,11 +51,12 @@ void main()
 	vec4 Src_Position = texture(u_Position, uv);
 	vec4 Src_Normal = texture(u_Normal, uv);
 	vec4 Src_Albedo = texture(u_Albedo, uv);
-    float RadialFalloff = pow(1 - length(v_WSPosAndLSPos.zw), v_Falloff);
 
-    //testing angles
-    float Angle = atan(normalize(v_WSPosAndLSPos.zw).x,normalize(v_WSPosAndLSPos.zw).y);
-    float AngularFalloff = clamp(smoothstep(v_MinAngle, v_MaxAngle, Angle), 0.0, 1.0);
+    float RadialFalloff = pow(clamp(1 - length(v_WSPosAndLSPos.zw), 0, 1), v_Falloff);
 
-    color = vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff * Src_Albedo;
+    //float Angle = atan(normalize(v_WSPosAndLSPos.zw).x, normalize(v_WSPosAndLSPos.zw).y);//gets angle from 0 being up in radians
+    //Angle = Angle * sign(v_WSPosAndLSPos.x);//negative becomes positive again.
+    //float AngularFalloff = 1 - smoothstep(0, v_Radians / 2, Angle);
+
+    color = vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff * Src_Albedo;// * AngularFalloff;
 }

@@ -12,7 +12,7 @@ layout (location = 6) in uint a_NodeID;
 uniform mat4 u_ViewProjection;
 
 out vec4 v_Position;
-out vec4 v_Normal;
+out vec2 v_Normal;
 out vec4 v_Albedo;
 out vec2 v_TexCoord;
 out float v_TexIndex;
@@ -24,8 +24,8 @@ void main()
 	gl_Position = u_ViewProjection * vec4(a_Position, 1.0f);
 	v_Position = vec4(a_Position, 1.0f);
 
-	v_Normal = vec4(a_Normal, 1.0f);
-	v_Albedo = a_Albedo;
+	v_Normal = normalize(v_TexCoord * 2 - vec2(1,1));
+    v_Albedo = a_Albedo;
 	v_TexCoord = a_TexCoord;
 	v_TexIndex = a_TexIndex;
 	v_TilingFactor = a_TilingFactor;
@@ -41,7 +41,7 @@ layout (location = 2) out vec4 o_Albedo;
 layout (location = 3) out uint o_ID;
 
 in vec4 v_Position;
-in vec4 v_Normal;
+in vec2 v_Normal;
 in vec4 v_Albedo;
 in vec2 v_TexCoord;
 in float v_TexIndex;
@@ -57,7 +57,8 @@ void main()
 		discard;
 
     o_Position = v_Position;
-    o_Normal = v_Normal;
+    o_Normal = vec4(v_Normal, 0, 1);
 	o_Albedo = result;
+    o_Albedo = vec4(v_Normal, 0, 1);
 	o_ID = v_NodeID;
 }

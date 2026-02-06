@@ -150,6 +150,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
     }
 
     // test drawing lights.
+
     Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 10, 100);
 
     Renderer2D::DrawDeferredLightingPass();

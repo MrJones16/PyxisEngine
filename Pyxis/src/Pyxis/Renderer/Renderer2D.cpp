@@ -1,11 +1,9 @@
 #include "Renderer2D.h"
 #include "RenderCommand.h"
-#include "pxpch.h"
 
 #include "Shader.h"
 #include "VertexArray.h"
 #include <glm/gtc/matrix_transform.hpp>
-#include <sstream>
 
 namespace Pyxis {
 
@@ -74,8 +72,7 @@ struct LightVertex {
     glm::vec4 ColorAndIntensity;
     float Radius;
     float Falloff;
-    float MinAngle;
-    float MaxAngle;
+    float Radians;
 };
 
 struct TextVertex {
@@ -320,8 +317,7 @@ void Renderer2D::Init() {
         {ShaderDataType::Float4, "a_ColorAndIntensity"},
         {ShaderDataType::Float, "a_Radius"},
         {ShaderDataType::Float, "a_Falloff"},
-        {ShaderDataType::Float, "a_MinAngle"},
-        {ShaderDataType::Float, "a_MaxAngle"},
+        {ShaderDataType::Float, "a_Radians"},
     };
 
     s_Data.LightVertexBuffer->SetLayout(LightBufferLayout);
@@ -637,7 +633,7 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
 }
 void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
                            float Intensity, float Radius, float Falloff,
-                           float MinAngle, float MaxAngle) {
+                           float Radians) {
     // check if we need to flush
     if (s_Data.LightIndexCount >= RendererData2D::MaxLightIndices) {
         PX_CORE_WARN("Reached the limit of lights to draw!");
@@ -660,8 +656,7 @@ void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
             glm::vec4(Color, Intensity);
         s_Data.LightVertexBufferPtr->Radius = Radius;
         s_Data.LightVertexBufferPtr->Falloff = Falloff;
-        s_Data.LightVertexBufferPtr->MinAngle = MinAngle;
-        s_Data.LightVertexBufferPtr->MaxAngle = MaxAngle;
+        s_Data.LightVertexBufferPtr->Radians = Radians;
         s_Data.LightVertexBufferPtr++;
     }
     s_Data.LightIndexCount += 6;
