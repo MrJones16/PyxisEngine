@@ -58,5 +58,9 @@ void main()
     //Angle = Angle * sign(v_WSPosAndLSPos.x);//negative becomes positive again.
     //float AngularFalloff = 1 - smoothstep(0, v_Radians / 2, Angle);
 
-    color = vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff * Src_Albedo;// * AngularFalloff;
+    vec2 dirToLight = normalize(v_WSPosAndLSPos.xy - Src_Position.xy);
+    float normalLight = clamp(dot(Src_Normal.xy, dirToLight), 0, 1);
+
+    color = vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff * Src_Albedo * normalLight;// * AngularFalloff;
+    
 }

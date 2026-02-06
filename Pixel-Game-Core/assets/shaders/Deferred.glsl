@@ -2,7 +2,7 @@
 #version 460
 			
 layout (location = 0) in vec3 a_Position;
-layout (location = 1) in vec3 a_Normal;
+layout (location = 1) in vec2 a_Normal;
 layout (location = 2) in vec4 a_Albedo;
 layout (location = 3) in vec2 a_TexCoord;
 layout (location = 4) in float a_TexIndex;
@@ -24,7 +24,7 @@ void main()
 	gl_Position = u_ViewProjection * vec4(a_Position, 1.0f);
 	v_Position = vec4(a_Position, 1.0f);
 
-	v_Normal = normalize(v_TexCoord * 2 - vec2(1,1));
+	v_Normal = normalize(a_Normal * 2 - vec2(1,1));
     v_Albedo = a_Albedo;
 	v_TexCoord = a_TexCoord;
 	v_TexIndex = a_TexIndex;
@@ -59,6 +59,5 @@ void main()
     o_Position = v_Position;
     o_Normal = vec4(v_Normal, 0, 1);
 	o_Albedo = result;
-    o_Albedo = vec4(v_Normal, 0, 1);
 	o_ID = v_NodeID;
 }
