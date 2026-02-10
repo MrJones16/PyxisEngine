@@ -28,8 +28,8 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::R32UI,
          FrameBufferTextureType::Color}, // node id 3
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    deferredGBufferSpec.Width = m_ViewportSize.x;
-    deferredGBufferSpec.Height = m_ViewportSize.y;
+    deferredGBufferSpec.Width = m_RenderResolution.x;
+    deferredGBufferSpec.Height = m_RenderResolution.y;
     m_DeferredGBuffer = FrameBuffer::Create(deferredGBufferSpec);
 
     FrameBufferSpecification lightingPassBufferSpec;
@@ -37,8 +37,8 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::RGBA8,
          FrameBufferTextureType::Color}, // Color 0
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    lightingPassBufferSpec.Width = m_ViewportSize.x;
-    lightingPassBufferSpec.Height = m_ViewportSize.y;
+    lightingPassBufferSpec.Width = m_RenderResolution.x;
+    lightingPassBufferSpec.Height = m_RenderResolution.y;
     m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
@@ -151,7 +151,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     // test drawing lights.
 
-    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 10, 100);
+    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 1, 640);
 
     Renderer2D::DrawDeferredLightingPass();
 

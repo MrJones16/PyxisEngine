@@ -565,6 +565,8 @@ void Renderer2D::DrawDeferredLightingPass() {
 void Renderer2D::DrawScreenQuad(const uint32_t TextureID, const float scale,
                                 const glm::vec2 &offset) {
 
+    RenderCommand::SetViewport(0, 0, 1920, 1080);
+
     s_Data.ScreenQuadData[0] = {{-scale + offset.x, -scale + offset.y}, {0, 0}};
     s_Data.ScreenQuadData[1] = {{scale + offset.x, -scale + offset.y}, {1, 0}};
     s_Data.ScreenQuadData[2] = {{scale + offset.x, scale + offset.y}, {1, 1}};
