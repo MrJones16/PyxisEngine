@@ -46,7 +46,8 @@ class Renderer2D {
     static void Flush();
     static void FlushLights();
     static void DrawDeferredLightingPass();
-    static void DrawScreenQuad(const uint32_t TextureID, const float scale = 1,
+    static void DrawScreenQuad(const uint32_t TextureID,
+                               const glm::vec2 &scale = {1, 1},
                                const glm::vec2 &offset = glm::vec2(0, 0));
 
     // Primitives

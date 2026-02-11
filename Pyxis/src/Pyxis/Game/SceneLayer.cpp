@@ -28,8 +28,8 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::R32UI,
          FrameBufferTextureType::Color}, // node id 3
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    deferredGBufferSpec.Width = m_RenderResolution.x;
-    deferredGBufferSpec.Height = m_RenderResolution.y;
+    deferredGBufferSpec.Width = m_RenderResolution.x + 2;
+    deferredGBufferSpec.Height = m_RenderResolution.y + 2;
     m_DeferredGBuffer = FrameBuffer::Create(deferredGBufferSpec);
 
     FrameBufferSpecification lightingPassBufferSpec;
@@ -37,8 +37,8 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::RGBA8,
          FrameBufferTextureType::Color}, // Color 0
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    lightingPassBufferSpec.Width = m_RenderResolution.x;
-    lightingPassBufferSpec.Height = m_RenderResolution.y;
+    lightingPassBufferSpec.Width = m_RenderResolution.x + 2;
+    lightingPassBufferSpec.Height = m_RenderResolution.y + 2;
     m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
@@ -137,30 +137,57 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     Renderer2D::EndScene(); // finalizes rendering of normal objects.
 
-    // grab the ID from the Deferred "G" buffer while we have it so we don't
-    // pass it down.
-    auto mp = Input::GetMousePosition();
-    // flip the y so bottom left is 0,0
-    mp.y = m_ViewportSize.y - mp.y;
-    if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 &&
-        mp.y < m_ViewportSize.y) {
-        UUID nodeID;
-        m_DeferredGBuffer->ReadPixel(3, mp.x, mp.y, &nodeID);
-        Node::s_HoveredNodeID = nodeID;
-    }
-
     // test drawing lights.
 
     Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 1, 640);
 
     Renderer2D::DrawDeferredLightingPass();
 
+    // we need to get the scale and offset to render the output to, as the
+    // render resolution and display are separate.
+    float ResIntScale = 3;
+    // add 2 to res for extra buffer needed for offsetting. not 1! oops lol.
+    glm::vec2 outputSize = ((m_RenderResolution + glm::vec2(2, 2)) *
+                            ResIntScale); // 642 * 4 = 2568
+
+    glm::vec2 outputScale = outputSize / m_ViewportSize;
+    // went from scaled render res to output, in amount to scale. a 640 at 1x
+    // would be 0.25 of the screen space for a 2560 monitor
+
     glm::vec2 offset = m_MainCamera->GetOffsetToGrid();
-    offset.x /= m_MainCamera->GetSize().x;
+    offset.x /=
+        m_MainCamera->GetSize().x; // 0/642 - 1/642 ... how much of a pixel
     offset.y /= m_MainCamera->GetSize().y;
+    offset *= outputScale; // offset depends on scale too
+
+    // grab the ID from the Deferred "G" buffer.
+    //
+    // Mouse position is weird in this setup, as the output / buffers/ game are
+    // all kinda doing their own thing. I have to find the mouse position from
+    // 0-output, which 0 may start offset from the bottom left corner! check
+    // RenderingThoughts.png for an analysis, where x is that offset.
+    auto mp = Input::GetMousePosition();
+    // flip the y so bottom left is 0,0
+    mp.y = m_ViewportSize.y - mp.y;
+
+    glm::vec2 offsetForMouse = (m_ViewportSize - outputSize) / 2.0f;
+    mp -= offsetForMouse;
+    mp /= ResIntScale; // need to divide from that int scale to get back to
+                       // original 642/362
+    m_DeferredGBuffer->Bind();
+    if (mp.x >= 0 && mp.x < (outputSize.x / ResIntScale) && mp.y >= 0 &&
+        mp.y < (outputSize.y / ResIntScale)) {
+        UUID nodeID;
+        m_DeferredGBuffer->ReadPixel(3, mp.x, mp.y, &nodeID);
+        Node::s_HoveredNodeID = nodeID;
+        // PX_CORE_TRACE("Mouse Position: ({0},{1})", mp.x, mp.y);
+        PX_CORE_TRACE("Read Pixel: {0}", (uint32_t)nodeID);
+    }
+    m_DeferredGBuffer->Unbind();
+
     Renderer2D::DrawScreenQuad(
-        m_DeferredLightingBuffer->GetColorAttachmentRendererID(0), 1,
-        offset * 2.0f);
+        m_DeferredLightingBuffer->GetColorAttachmentRendererID(0), outputScale,
+        glm::vec2(0, 0)); // offset * 2.0f
 }
 
 void SceneLayer::DrawNodeTree(Ref<Node> Node) {

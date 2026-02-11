@@ -562,15 +562,20 @@ void Renderer2D::DrawDeferredLightingPass() {
     s_Data.DeferredLightingBuffer->Unbind();
 }
 
-void Renderer2D::DrawScreenQuad(const uint32_t TextureID, const float scale,
+void Renderer2D::DrawScreenQuad(const uint32_t TextureID,
+                                const glm::vec2 &scale,
                                 const glm::vec2 &offset) {
 
     RenderCommand::SetViewport(0, 0, 1920, 1080);
 
-    s_Data.ScreenQuadData[0] = {{-scale + offset.x, -scale + offset.y}, {0, 0}};
-    s_Data.ScreenQuadData[1] = {{scale + offset.x, -scale + offset.y}, {1, 0}};
-    s_Data.ScreenQuadData[2] = {{scale + offset.x, scale + offset.y}, {1, 1}};
-    s_Data.ScreenQuadData[3] = {{-scale + offset.x, scale + offset.y}, {0, 1}};
+    s_Data.ScreenQuadData[0] = {{-scale.x + offset.x, -scale.y + offset.y},
+                                {0, 0}};
+    s_Data.ScreenQuadData[1] = {{scale.x + offset.x, -scale.y + offset.y},
+                                {1, 0}};
+    s_Data.ScreenQuadData[2] = {{scale.x + offset.x, scale.y + offset.y},
+                                {1, 1}};
+    s_Data.ScreenQuadData[3] = {{-scale.x + offset.x, scale.y + offset.y},
+                                {0, 1}};
 
     s_Data.ScreenQuadVertexArray->GetVertexBuffers()[0]->SetData(
         s_Data.ScreenQuadData, 4 * sizeof(ScreenQuadVertex));
