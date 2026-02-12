@@ -104,16 +104,16 @@ const glm::mat3 PixelCameraNode::GetRotationMatrix() const {
 //{
 //	m_Rotation += rotation;
 //	m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.x, { 1,0,0
-//}); 	m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.y, { 0,1,0 });
-//	m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.z, { 0,0,1
+//}); 	m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.y, { 0,1,0
+//}); 	m_LocalTransform = glm::rotate(m_LocalTransform, m_Rotation.z, { 0,0,1
 //});
 
 //	/*m_RotationMatrix =	glm::rotate(glm::mat4(1.0f),
-//glm::radians(m_Rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f)) *
+// glm::radians(m_Rotation.x), glm::vec3(-1.0f, 0.0f, 0.0f)) *
 //						glm::rotate(glm::mat4(1.0f),
-//glm::radians(m_Rotation.y), glm::vec3( 0.0f,-1.0f, 0.0f)) *
+// glm::radians(m_Rotation.y), glm::vec3( 0.0f,-1.0f, 0.0f)) *
 //						glm::rotate(glm::mat4(1.0f),
-//glm::radians(m_Rotation.z), glm::vec3( 0.0f, 0.0f,-1.0f));*/
+// glm::radians(m_Rotation.z), glm::vec3( 0.0f, 0.0f,-1.0f));*/
 //}
 
 // void PixelCameraNode::Scale(glm::vec3 scale)

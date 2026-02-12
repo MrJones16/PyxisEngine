@@ -1,4 +1,5 @@
 #include "Renderer2D.h"
+#include "Pyxis/Core/Application.h"
 #include "RenderCommand.h"
 
 #include "Shader.h"
@@ -566,7 +567,8 @@ void Renderer2D::DrawScreenQuad(const uint32_t TextureID,
                                 const glm::vec2 &scale,
                                 const glm::vec2 &offset) {
 
-    RenderCommand::SetViewport(0, 0, 1920, 1080);
+    RenderCommand::SetViewport(0, 0, Application::Get().GetWindow().GetWidth(),
+                               Application::Get().GetWindow().GetHeight());
 
     s_Data.ScreenQuadData[0] = {{-scale.x + offset.x, -scale.y + offset.y},
                                 {0, 0}};

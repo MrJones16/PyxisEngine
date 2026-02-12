@@ -28,8 +28,8 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::R32UI,
          FrameBufferTextureType::Color}, // node id 3
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    deferredGBufferSpec.Width = m_RenderResolution.x + 2;
-    deferredGBufferSpec.Height = m_RenderResolution.y + 2;
+    deferredGBufferSpec.Width = m_RenderResolution.x + resBuffer;
+    deferredGBufferSpec.Height = m_RenderResolution.y + resBuffer;
     m_DeferredGBuffer = FrameBuffer::Create(deferredGBufferSpec);
 
     FrameBufferSpecification lightingPassBufferSpec;
@@ -37,8 +37,8 @@ void SceneLayer::OnAttach() {
         {FrameBufferTextureFormat::RGBA8,
          FrameBufferTextureType::Color}, // Color 0
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    lightingPassBufferSpec.Width = m_RenderResolution.x + 2;
-    lightingPassBufferSpec.Height = m_RenderResolution.y + 2;
+    lightingPassBufferSpec.Width = m_RenderResolution.x + resBuffer;
+    lightingPassBufferSpec.Height = m_RenderResolution.y + resBuffer;
     m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
@@ -139,16 +139,18 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     // test drawing lights.
 
-    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 1, 640);
+    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 2, 2000);
 
     Renderer2D::DrawDeferredLightingPass();
 
     // we need to get the scale and offset to render the output to, as the
     // render resolution and display are separate.
-    float ResIntScale = 3;
-    // add 2 to res for extra buffer needed for offsetting. not 1! oops lol.
-    glm::vec2 outputSize = ((m_RenderResolution + glm::vec2(2, 2)) *
-                            ResIntScale); // 642 * 4 = 2568
+
+    float ResIntScale = 6;
+    // add even amounts if adding buffer here. not 1 lol.
+    glm::vec2 outputSize =
+        ((m_RenderResolution + glm::vec2(resBuffer, resBuffer)) *
+         ResIntScale); // 642 * 4 = 2568
 
     glm::vec2 outputScale = outputSize / m_ViewportSize;
     // went from scaled render res to output, in amount to scale. a 640 at 1x
@@ -187,7 +189,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     Renderer2D::DrawScreenQuad(
         m_DeferredLightingBuffer->GetColorAttachmentRendererID(0), outputScale,
-        glm::vec2(0, 0)); // offset * 2.0f
+        offset * 2.0f); // offset * 2.0f - glm::vec2(0, 0)
 }
 
 void SceneLayer::DrawNodeTree(Ref<Node> Node) {

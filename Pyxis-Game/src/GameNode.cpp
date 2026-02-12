@@ -26,8 +26,9 @@ GameNode::GameNode(std::string debugName)
     // I'm going to aim for a bottom hot bar for now.
     m_CameraController = Instantiate<OrthographicCameraControllerNode>();
     m_CameraController->SetMainCamera();
-    m_CameraController->SetWidth(642);
-    m_CameraController->SetHeight(362);
+    m_CameraController->m_LockAspect = false;
+    m_CameraController->SetWidth(482);
+    m_CameraController->SetHeight(272);
     m_CameraController->Translate({0, 1, 0});
     AddChild(m_CameraController);
 
