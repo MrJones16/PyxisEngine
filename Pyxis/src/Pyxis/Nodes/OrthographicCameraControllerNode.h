@@ -6,9 +6,7 @@
 
 namespace Pyxis {
 
-/// <summary>
-/// A Base UI Node that can act as a root
-/// </summary>
+// Node to act as a WASD camera controller.
 class OrthographicCameraControllerNode : public PixelCameraNode {
   public:
     float m_CameraSpeed = 4;

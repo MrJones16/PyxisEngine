@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Pyxis/Core/Layer.h>
-#include <Pyxis/Renderer/Camera.h>
 #include <Pyxis/Renderer/FrameBuffer.h>
 
 #include <Pyxis/Nodes/CameraNode.h>
@@ -11,10 +10,10 @@
 #include <Pyxis/Events/EventSignals.h>
 
 namespace Pyxis {
-class SceneLayer : public Layer {
+class PixellatedSceneLayer : public Layer {
   public:
-    SceneLayer(bool debug = false);
-    virtual ~SceneLayer();
+    PixellatedSceneLayer(bool debug = false);
+    virtual ~PixellatedSceneLayer();
 
     // Layer functions
     virtual void OnAttach() override;

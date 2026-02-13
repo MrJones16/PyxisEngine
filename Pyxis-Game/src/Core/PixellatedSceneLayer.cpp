@@ -1,4 +1,4 @@
-#include "SceneLayer.h"
+#include "PixellatedSceneLayer.h"
 #include <Pyxis/Core/Application.h>
 
 #include <Pyxis/Renderer/RenderCommand.h>
@@ -8,11 +8,11 @@
 
 namespace Pyxis {
 
-SceneLayer::SceneLayer(bool debug) : m_Debug(debug) {}
+PixellatedSceneLayer::PixellatedSceneLayer(bool debug) : m_Debug(debug) {}
 
-SceneLayer::~SceneLayer() {}
+PixellatedSceneLayer::~PixellatedSceneLayer() {}
 
-void SceneLayer::OnAttach() {
+void PixellatedSceneLayer::OnAttach() {
     m_ViewportSize = {Application::Get().GetWindow().GetWidth(),
                       Application::Get().GetWindow().GetHeight()};
     Renderer2D::Init();
@@ -42,10 +42,10 @@ void SceneLayer::OnAttach() {
     m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
-void SceneLayer::OnDetach() {}
+void PixellatedSceneLayer::OnDetach() {}
 
-void SceneLayer::OnUpdate(Timestep ts) {
-    PROFILE_SCOPE("SceneLayer OnUpdate");
+void PixellatedSceneLayer::OnUpdate(Timestep ts) {
+    PROFILE_SCOPE("PixellatedSceneLayer OnUpdate");
 
     // clear dead nodes
     while (Node::NodesToDestroyQueue.size() > 0) {
@@ -197,7 +197,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
         offset * 2.0f); // offset * 2.0f - glm::vec2(0, 0)
 }
 
-void SceneLayer::DrawNodeTree(Ref<Node> Node) {
+void PixellatedSceneLayer::DrawNodeTree(Ref<Node> Node) {
     ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_OpenOnArrow |
         ((Node == m_SelectedNode) ? ImGuiTreeNodeFlags_Selected : 0);
@@ -218,7 +218,7 @@ void SceneLayer::DrawNodeTree(Ref<Node> Node) {
     }
 }
 
-void SceneLayer::OnImGuiRender() {
+void PixellatedSceneLayer::OnImGuiRender() {
     // PX_TRACE("Node Count ImGui: {0}", Node::Nodes.size());
     if (m_Debug) {
         if (ImGui::Begin("Scene Hierarchy")) {
@@ -253,8 +253,8 @@ void SceneLayer::OnImGuiRender() {
     }
 
     // auto dockID =
-    // ImGui::DockSpaceOverViewport(ImGui::GetID("SceneLayerDock"), (const
-    // ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
+    // ImGui::DockSpaceOverViewport(ImGui::GetID("PixellatedSceneLayerDock"),
+    // (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
     // ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
     // ImGui::SetNextWindowDockID(dockID);
     // if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
@@ -294,22 +294,22 @@ void SceneLayer::OnImGuiRender() {
     // ImGui::PopStyleVar();
 }
 
-void SceneLayer::OnEvent(Event &e) {
+void PixellatedSceneLayer::OnEvent(Event &e) {
 
     EventDispatcher dispatcher(e);
     dispatcher.Dispatch<WindowResizeEvent>(
-        PX_BIND_EVENT_FN(SceneLayer::OnWindowResizeEvent));
+        PX_BIND_EVENT_FN(PixellatedSceneLayer::OnWindowResizeEvent));
     dispatcher.Dispatch<KeyPressedEvent>(
-        PX_BIND_EVENT_FN(SceneLayer::OnKeyPressedEvent));
+        PX_BIND_EVENT_FN(PixellatedSceneLayer::OnKeyPressedEvent));
     dispatcher.Dispatch<MouseButtonPressedEvent>(
-        PX_BIND_EVENT_FN(SceneLayer::OnMouseButtonPressedEvent));
+        PX_BIND_EVENT_FN(PixellatedSceneLayer::OnMouseButtonPressedEvent));
     dispatcher.Dispatch<MouseButtonReleasedEvent>(
-        PX_BIND_EVENT_FN(SceneLayer::OnMouseButtonReleasedEvent));
+        PX_BIND_EVENT_FN(PixellatedSceneLayer::OnMouseButtonReleasedEvent));
     dispatcher.Dispatch<MouseScrolledEvent>(
-        PX_BIND_EVENT_FN(SceneLayer::OnMouseScrolledEvent));
+        PX_BIND_EVENT_FN(PixellatedSceneLayer::OnMouseScrolledEvent));
 }
 
-glm::ivec2 SceneLayer::GetMousePositionImGui() {
+glm::ivec2 PixellatedSceneLayer::GetMousePositionImGui() {
     /// if not using a framebuffer / imgui image, just use
     /// Pyxis::Input::GetMousePosition();
     // TODO: Set up ifdef for using imgui? or just stop using imgui... lol
@@ -321,7 +321,7 @@ glm::ivec2 SceneLayer::GetMousePositionImGui() {
     return {(int)mx, (int)my};
 }
 
-bool SceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
+bool PixellatedSceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
     m_ViewportSize = {event.GetWidth(), event.GetHeight()};
     if (m_MainCamera != nullptr) {
         m_MainCamera->SetAspect(m_ViewportSize.y / m_ViewportSize.x);
@@ -333,7 +333,7 @@ bool SceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
     return false;
 }
 
-bool SceneLayer::OnKeyPressedEvent(KeyPressedEvent &event) {
+bool PixellatedSceneLayer::OnKeyPressedEvent(KeyPressedEvent &event) {
     // Serialize Scene
     if (event.GetKeyCode() == PX_KEY_O) {
         json j;
@@ -353,7 +353,8 @@ bool SceneLayer::OnKeyPressedEvent(KeyPressedEvent &event) {
     return false;
 }
 
-bool SceneLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent &event) {
+bool PixellatedSceneLayer::OnMouseButtonPressedEvent(
+    MouseButtonPressedEvent &event) {
     // let the UI keep track of what has been pressed, so that way buttons can
     // be on release!
     UI::UINode::s_MousePressedNodeID = Node::s_HoveredNodeID;
@@ -380,7 +381,8 @@ bool SceneLayer::OnMouseButtonPressedEvent(MouseButtonPressedEvent &event) {
 /// </summary>
 /// <param name="event"></param>
 /// <returns></returns>
-bool SceneLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent &event) {
+bool PixellatedSceneLayer::OnMouseButtonReleasedEvent(
+    MouseButtonReleasedEvent &event) {
     PX_TRACE("Released when UINode is: {0}", UI::UINode::s_MousePressedNodeID);
     if (UI::UINode::s_MousePressedNodeID == Node::s_HoveredNodeID) {
         // the hovered node is what we pressed last
@@ -429,7 +431,7 @@ bool SceneLayer::OnMouseButtonReleasedEvent(MouseButtonReleasedEvent &event) {
     return false;
 }
 
-bool SceneLayer::OnMouseScrolledEvent(MouseScrolledEvent &event) {
+bool PixellatedSceneLayer::OnMouseScrolledEvent(MouseScrolledEvent &event) {
     return false;
 }
 
