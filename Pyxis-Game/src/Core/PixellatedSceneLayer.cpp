@@ -5,6 +5,7 @@
 #include <Pyxis/Renderer/Renderer2D.h>
 
 #include <Pyxis/Core/Input.h>
+#include <memory>
 
 namespace Pyxis {
 
@@ -28,8 +29,10 @@ void PixellatedSceneLayer::OnAttach() {
         {FrameBufferTextureFormat::R32UI,
          FrameBufferTextureType::Color}, // node id 3
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    deferredGBufferSpec.Width = m_RenderResolution.x + resBuffer;
-    deferredGBufferSpec.Height = m_RenderResolution.y + resBuffer;
+    deferredGBufferSpec.Width =
+        m_RenderResolution.x + m_RenderResolutionPadding;
+    deferredGBufferSpec.Height =
+        m_RenderResolution.y + m_RenderResolutionPadding;
     m_DeferredGBuffer = FrameBuffer::Create(deferredGBufferSpec);
 
     FrameBufferSpecification lightingPassBufferSpec;
@@ -37,8 +40,10 @@ void PixellatedSceneLayer::OnAttach() {
         {FrameBufferTextureFormat::RGBA8,
          FrameBufferTextureType::Color}, // Color 0
         {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    lightingPassBufferSpec.Width = m_RenderResolution.x + resBuffer;
-    lightingPassBufferSpec.Height = m_RenderResolution.y + resBuffer;
+    lightingPassBufferSpec.Width =
+        m_RenderResolution.x + m_RenderResolutionPadding;
+    lightingPassBufferSpec.Height =
+        m_RenderResolution.y + m_RenderResolutionPadding;
     m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
 }
 
@@ -70,16 +75,38 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
     Renderer2D::ResetStats();
 #endif
 
-    m_MainCamera = Camera::Main();
-
     {
         PROFILE_SCOPE("Renderer Prep");
+        // Checking for camera and updating buffers if necessary.
+        PixelCameraNode *camera =
+            dynamic_cast<PixelCameraNode *>(Camera::Main());
+        if (!camera) {
+            // Camera is null, or not a pixel camera!
+            //
+            PX_CORE_ASSERT(false, "There is no main camera!");
+        } else {
+            // Camera is a pixel camera. We need to check if the size/padding
+            // has changed so that we can adjust the framebuffers
+            if (m_RenderResolution != camera->GetSize() ||
+                m_RenderResolutionPadding !=
+                    camera->GetRenderResolutionPadding()) {
+                m_RenderResolution = camera->GetSize();
+                // Camera size changed. Resize the buffers!
+                m_DeferredGBuffer->Resize(
+                    m_RenderResolution.x + (m_RenderResolutionPadding * 2),
+                    m_RenderResolution.y + (m_RenderResolutionPadding * 2));
+                m_DeferredLightingBuffer->Resize(
+                    m_RenderResolution.x + (m_RenderResolutionPadding * 2),
+                    m_RenderResolution.y + (m_RenderResolutionPadding * 2));
+            }
+        }
+
+        m_PixelCamera = camera;
         RenderCommand::SetClearColor({0, 0, 0, 1});
 
-        PX_CORE_ASSERT(m_MainCamera != nullptr, "There is no main camera!");
-        m_MainCamera->RecalculateViewMatrix();
+        m_PixelCamera->RecalculateViewMatrix();
 
-        Renderer2D::BeginScene(m_MainCamera, m_DeferredGBuffer,
+        Renderer2D::BeginScene(m_PixelCamera, m_DeferredGBuffer,
                                m_DeferredLightingBuffer);
     }
 
@@ -150,19 +177,18 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
         m_ViewportSize.x /
         m_RenderResolution.x; // maybe we should take the min with height? so it
                               // guarantees full screen coverage?
-    ScaleToFillDisplay = 5.7f;
-    glm::vec2 outputSize =
-        ((m_RenderResolution + glm::vec2(resBuffer, resBuffer)) *
-         ScaleToFillDisplay); // 642 * 4 = 2568
+    glm::vec2 bufferPadding = glm::vec2(2, 2) * m_RenderResolutionPadding;
+    glm::vec2 outputSize = ((m_RenderResolution + bufferPadding) *
+                            ScaleToFillDisplay); // 642 * 4 = 2568
 
     glm::vec2 outputScale = outputSize / m_ViewportSize;
     // went from scaled render res to output, in amount to scale. a 640 at 1x
     // would be 0.25 of the screen space for a 2560 monitor
 
-    glm::vec2 offset = m_MainCamera->GetOffsetToGrid();
-    offset.x /=
-        m_MainCamera->GetSize().x; // 0/642 - 1/642 ... how much of a pixel
-    offset.y /= m_MainCamera->GetSize().y;
+    glm::vec2 offset = m_PixelCamera->GetOffsetToGrid();
+    offset /=
+        (m_PixelCamera->GetSize() +
+         bufferPadding);   // 0/642 - 1/642 ... how much of a pixel we shifted
     offset *= outputScale; // offset depends on scale too
 
     // grab the ID from the Deferred "G" buffer.
@@ -219,79 +245,7 @@ void PixellatedSceneLayer::DrawNodeTree(Ref<Node> Node) {
 }
 
 void PixellatedSceneLayer::OnImGuiRender() {
-    // PX_TRACE("Node Count ImGui: {0}", Node::Nodes.size());
-    if (m_Debug) {
-        if (ImGui::Begin("Scene Hierarchy")) {
-            for (auto &[id, ref] : Node::Nodes) {
-                if (ref->m_Parent == nullptr)
-                    DrawNodeTree(ref);
-            }
-        }
-        ImGui::End();
-
-        if (ImGui::Begin("Inspector")) {
-            if (m_SelectedNode != nullptr) {
-                m_SelectedNode->OnInspectorRender();
-            }
-        }
-        ImGui::End();
-    }
-
-    for (auto node : Node::Nodes) {
-        if (node.second != nullptr) {
-            node.second->OnImGuiRender();
-        } else {
-            // node was null so add it to list to delete
-            m_NullNodeQueue.push(node.first);
-        }
-    }
-
-    // remove null nodes from map
-    while (!m_NullNodeQueue.empty()) {
-        Node::Nodes.erase(m_NullNodeQueue.front());
-        m_NullNodeQueue.pop();
-    }
-
-    // auto dockID =
-    // ImGui::DockSpaceOverViewport(ImGui::GetID("PixellatedSceneLayerDock"),
-    // (const ImGuiViewport*)0, ImGuiDockNodeFlags_PassthruCentralNode);
-    // ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, { 0,0 });
-    // ImGui::SetNextWindowDockID(dockID);
-    // if (ImGui::Begin("Scene", (bool*)0, ImGuiWindowFlags_NoTitleBar))
-    //{
-    //	//m_SceneViewIsFocused = ImGui::IsWindowFocused();
-
-    //	auto viewportOffset = ImGui::GetCursorScreenPos();
-    //	auto newViewportSize = ImGui::GetContentRegionAvail();
-
-    //	m_ViewportBounds[0] = { viewportOffset.x, viewportOffset.y };
-    //	m_ViewportBounds[1] = { viewportOffset.x + newViewportSize.x,
-    // viewportOffset.y + newViewportSize.y };
-
-    //	//Application::Get().GetImGuiLayer()->BlockEvents(false);
-    //	ImGui::Image(
-    //		(ImTextureID)(m_DeferredGBuffer->GetColorAttachmentRendererID(0)),
-    //		newViewportSize,
-    //		ImVec2(0, 1),
-    //		ImVec2(1, 0),
-    //		ImVec4(1, 1, 1, 1)
-    //		//ImVec4(1, 1, 1, 1) border color
-    //	);
-    //	//m_ViewportOffset = ImGui::GetItemRectMin();
-
-    //	if (m_ViewportSize.x != newViewportSize.x || m_ViewportSize.y !=
-    // newViewportSize.y)
-    //	{
-    //		m_ViewportSize = { newViewportSize.x, newViewportSize.y };
-    //		//m_OrthographicCameraController.SetAspect(m_ViewportSize.y /
-    // m_ViewportSize.x);
-    // m_DeferredGBuffer->Resize((uint32_t)m_ViewportSize.x,
-    //(uint32_t)m_ViewportSize.y);
-    //	}
-
-    //	ImGui::End();
-    //}
-    // ImGui::PopStyleVar();
+    // check scenelayer.cpp for actual setup
 }
 
 void PixellatedSceneLayer::OnEvent(Event &e) {
@@ -323,13 +277,12 @@ glm::ivec2 PixellatedSceneLayer::GetMousePositionImGui() {
 
 bool PixellatedSceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
     m_ViewportSize = {event.GetWidth(), event.GetHeight()};
-    if (m_MainCamera != nullptr) {
-        m_MainCamera->SetAspect(m_ViewportSize.y / m_ViewportSize.x);
+    if (m_PixelCamera != nullptr) {
+        m_PixelCamera->SetAspect(m_ViewportSize.y / m_ViewportSize.x);
     }
+
     // m_OrthographicCameraController.SetAspect(m_ViewportSize.y /
     // m_ViewportSize.x);
-    m_DeferredGBuffer->Resize((uint32_t)m_ViewportSize.x,
-                              (uint32_t)m_ViewportSize.y);
     return false;
 }
 

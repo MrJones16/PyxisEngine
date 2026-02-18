@@ -12,6 +12,7 @@ void PixelCameraNode::Serialize(json &j) {
     j["m_FOV"] = m_FOV;
     j["m_Near"] = m_Near;
     j["m_Far"] = m_Far;
+    j["m_RenderResolutionBuffer"] = m_RenderResolutionPadding;
 }
 void PixelCameraNode::Deserialize(json &j) {
     // Deserialize base class (Node3D)
@@ -28,6 +29,8 @@ void PixelCameraNode::Deserialize(json &j) {
         j.at("m_Near").get_to(m_Near);
     if (j.contains("m_Far"))
         j.at("m_Far").get_to(m_Far);
+    if (j.contains("m_RenderResolutionBuffer"))
+        j.at("m_RenderResolutionBuffer").get_to(m_RenderResolutionPadding);
 
     // Recalculate projection mat with new data & for init
     RecalculateProjectionMatrix();
@@ -84,6 +87,28 @@ const glm::mat3 PixelCameraNode::GetRotationMatrix() const {
            glm::rotate(glm::mat4(1.0f), glm::radians(m_Rotation.z),
                        glm::vec3(0.0f, 0.0f, -1.0f));
 };
+
+const float PixelCameraNode::GetWidth() const { return m_Size.x; }
+void PixelCameraNode::SetWidth(float width) {
+    m_Size.x = width;
+    if (m_LockAspect) {
+        m_Size.y = m_Size.x * m_Aspect;
+    } else {
+        m_Aspect = m_Size.y / m_Size.x;
+    }
+    RecalculateProjectionMatrix();
+}
+
+const float PixelCameraNode::GetHeight() const { return m_Size.y; }
+void PixelCameraNode::SetHeight(float height) {
+    m_Size.y = height;
+    if (m_LockAspect) {
+        m_Size.x = m_Size.y * (1 / m_Aspect);
+    } else {
+        m_Aspect = m_Size.y / m_Size.x;
+    }
+    RecalculateProjectionMatrix();
+}
 
 // void PixelCameraNode::ResetLocalTransform()
 //{

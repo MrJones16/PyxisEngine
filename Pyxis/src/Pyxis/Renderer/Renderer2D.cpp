@@ -420,8 +420,7 @@ void Renderer2D::Shutdown() {
     // delete s_Data;
 }
 
-void Renderer2D::BeginScene(Pyxis::Camera *camera,
-                            Ref<FrameBuffer> deferredGBuffer,
+void Renderer2D::BeginScene(Camera *camera, Ref<FrameBuffer> deferredGBuffer,
                             Ref<FrameBuffer> deferredLightingBuffer) {
     s_Data.DeferredGBuffer = deferredGBuffer;
     s_Data.DeferredLightingBuffer = deferredLightingBuffer;

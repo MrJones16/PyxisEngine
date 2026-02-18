@@ -139,51 +139,19 @@ void SceneLayer::OnUpdate(Timestep ts) {
 
     // test drawing lights.
 
-    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 2, 2000);
-
     Renderer2D::DrawDeferredLightingPass();
 
     // we need to get the scale and offset to render the output to, as the
     // render resolution and display are separate.
 
-    float ScaleToFillDisplay =
-        m_ViewportSize.x /
-        m_RenderResolution.x; // maybe we should take the min with height? so it
-                              // guarantees full screen coverage?
-    ScaleToFillDisplay = 5.7f;
-    glm::vec2 outputSize =
-        ((m_RenderResolution + glm::vec2(resBuffer, resBuffer)) *
-         ScaleToFillDisplay); // 642 * 4 = 2568
-
-    glm::vec2 outputScale = outputSize / m_ViewportSize;
-    // went from scaled render res to output, in amount to scale. a 640 at 1x
-    // would be 0.25 of the screen space for a 2560 monitor
-
-    glm::vec2 offset = m_MainCamera->GetOffsetToGrid();
-    offset.x /=
-        m_MainCamera->GetSize().x; // 0/642 - 1/642 ... how much of a pixel
-    offset.y /= m_MainCamera->GetSize().y;
-    offset *= outputScale; // offset depends on scale too
-
-    // grab the ID from the Deferred "G" buffer.
-    //
-    // Mouse position is weird in this setup, as the output / buffers/ game are
-    // all kinda doing their own thing. I have to find the mouse position from
-    // 0-output, which 0 may start offset from the bottom left corner! check
     // RenderingThoughts.png for an analysis, where x is that offset.
     glm::vec2 mp = Input::GetMousePosition();
     // flip the y so bottom left is 0,0
     mp.y = m_ViewportSize.y - mp.y;
 
-    glm::vec2 offsetForMouse = (m_ViewportSize - outputSize) / 2.0f;
-    mp -= offsetForMouse;
-    mp /=
-        ScaleToFillDisplay; // need to divide from that int scale to get back to
-    // original 642/362
-
     m_DeferredGBuffer->Bind();
-    if (mp.x >= 0 && mp.x < (outputSize.x / ScaleToFillDisplay) && mp.y >= 0 &&
-        mp.y < (outputSize.y / ScaleToFillDisplay)) {
+    if (mp.x >= 0 && mp.x < m_ViewportSize.x && mp.y >= 0 &&
+        mp.y < m_ViewportSize.y) {
         UUID nodeID;
         m_DeferredGBuffer->ReadPixel(3, mp.x, mp.y, &nodeID);
         Node::s_HoveredNodeID = nodeID;
@@ -193,8 +161,7 @@ void SceneLayer::OnUpdate(Timestep ts) {
     m_DeferredGBuffer->Unbind();
 
     Renderer2D::DrawScreenQuad(
-        m_DeferredLightingBuffer->GetColorAttachmentRendererID(0), outputScale,
-        offset * 2.0f); // offset * 2.0f - glm::vec2(0, 0)
+        m_DeferredLightingBuffer->GetColorAttachmentRendererID(0));
 }
 
 void SceneLayer::DrawNodeTree(Ref<Node> Node) {

@@ -27,8 +27,8 @@ GameNode::GameNode(std::string debugName)
     m_CameraController = Instantiate<OrthographicCameraControllerNode>();
     m_CameraController->SetMainCamera();
     m_CameraController->m_LockAspect = false;
-    m_CameraController->SetWidth(482);
-    m_CameraController->SetHeight(272);
+    m_CameraController->SetWidth(480);
+    m_CameraController->SetHeight(270);
     m_CameraController->Translate({0, 1, 0});
     AddChild(m_CameraController);
 

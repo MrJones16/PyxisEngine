@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Pyxis/Nodes/PixelCameraNode.h"
 #include <Pyxis/Core/Layer.h>
 #include <Pyxis/Renderer/FrameBuffer.h>
 
@@ -38,7 +39,7 @@ class PixellatedSceneLayer : public Layer {
 
     // List of now null nodes to be removed
     std::queue<uint32_t> m_NullNodeQueue;
-    Camera *m_MainCamera;
+    PixelCameraNode *m_PixelCamera;
 
   private:
     // debug heirarchy / inspector
@@ -53,8 +54,8 @@ class PixellatedSceneLayer : public Layer {
     glm::vec2 m_ViewportBounds[2];
 
     glm::vec2 m_RenderResolution = glm::vec2(480, 270);
-    // add even amounts if adding buffer here.
-    float resBuffer = 2;
+    // depth of padding to add in all directions to buffers.
+    float m_RenderResolutionPadding = 1;
 
     // fixed update
     double m_FixedUpdateRate = 60.0f;

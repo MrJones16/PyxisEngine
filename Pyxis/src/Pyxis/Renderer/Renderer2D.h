@@ -39,8 +39,7 @@ class Renderer2D {
     static Ref<FrameBuffer> GetDeferredGFrameBuffer();
     static Ref<FrameBuffer> GetDeferredLightingFrameBuffer();
 
-    static void BeginScene(Pyxis::Camera *camera,
-                           Ref<FrameBuffer> deferredGBuffer,
+    static void BeginScene(Camera *camera, Ref<FrameBuffer> deferredGBuffer,
                            Ref<FrameBuffer> deferredLightingBuffer);
     static void EndScene();
     static void Flush();

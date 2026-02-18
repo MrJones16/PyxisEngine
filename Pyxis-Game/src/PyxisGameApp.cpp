@@ -6,7 +6,7 @@
 //---------- Entry Point ----------//
 #include <Pyxis/Core/EntryPoint.h>
 
-#include <Pyxis/Game/SceneLayer.h>
+#include "Core/PixellatedSceneLayer.h"
 
 #include "MenuNode.h"
 #include "SteamManagerNode.h"
@@ -112,7 +112,8 @@ class PyxisGame : public Pyxis::Application {
         SteamNetworkingUtils()->InitRelayNetworkAccess();
 
         // overlay instead of layer so it is on top
-        auto scene = CreateRef<SceneLayer>(false); // Set True for Debug!
+        auto scene =
+            CreateRef<PixellatedSceneLayer>(false); // Set True for Debug!
         PushOverlay(scene);
 
         // create game nodes
