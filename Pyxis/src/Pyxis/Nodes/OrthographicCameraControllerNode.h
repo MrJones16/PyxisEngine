@@ -53,13 +53,17 @@ class OrthographicCameraControllerNode : public PixelCameraNode {
 
     void OnMouseScrolledEvent(MouseScrolledEvent &e) {
         if (!Input::IsKeyPressed(PX_KEY_LEFT_CONTROL)) {
-            Zoom(1 - (e.GetYOffset() / 10));
+            if (e.GetYOffset() > 0) {
+                Zoom(2);
+            } else {
+                Zoom(0.5f);
+            }
         }
     }
 
     void Zoom(float multiplier) {
-        SetWidth(m_Size.x * multiplier);
-        SetHeight(m_Size.y * multiplier);
+        SetWidth(GetWidth() * multiplier);
+        SetHeight(GetHeight() * multiplier);
     }
 
     inline virtual void OnUpdate(Timestep ts) override {

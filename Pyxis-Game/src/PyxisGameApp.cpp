@@ -106,7 +106,7 @@ namespace Pyxis {
 
 class PyxisGame : public Pyxis::Application {
   public:
-    PyxisGame() : Application("Pyxis", 2736, 1824, "assets/Icon.png") {
+    PyxisGame() : Application("Pyxis", 1920, 1080, "assets/Icon.png") {
         bool success = SteamAPI_Init();
         PX_CORE_ASSERT(success, "Failed to init steam api!");
         SteamNetworkingUtils()->InitRelayNetworkAccess();

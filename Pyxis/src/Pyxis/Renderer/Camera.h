@@ -48,8 +48,10 @@ class Camera {
     virtual const float GetAspect() const { return m_Aspect; }
     virtual void SetAspect(float aspect) {
         m_Aspect = aspect;
-        m_Size.y = m_Size.x * aspect;
-        RecalculateProjectionMatrix();
+        if (m_LockAspect) {
+            m_Size.y = m_Size.x * aspect;
+            RecalculateProjectionMatrix();
+        }
     }
 
     virtual const float GetNear() const { return m_Near; }

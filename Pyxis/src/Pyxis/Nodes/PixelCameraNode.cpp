@@ -88,24 +88,32 @@ const glm::mat3 PixelCameraNode::GetRotationMatrix() const {
                        glm::vec3(0.0f, 0.0f, -1.0f));
 };
 
-const float PixelCameraNode::GetWidth() const { return m_Size.x; }
+glm::vec2 PixelCameraNode::GetSize() const {
+    return m_Size - (glm::vec2(2, 2) * m_RenderResolutionPadding);
+}
+
+const float PixelCameraNode::GetWidth() const {
+    return m_Size.x - (m_RenderResolutionPadding * 2);
+}
 void PixelCameraNode::SetWidth(float width) {
-    m_Size.x = width;
-    if (m_LockAspect) {
-        m_Size.y = m_Size.x * m_Aspect;
+    m_Size.x = width + (2 * m_RenderResolutionPadding);
+    if (!m_LockAspect) {
+        m_Aspect = (m_Size.y - (m_RenderResolutionPadding * 2)) / width;
     } else {
-        m_Aspect = m_Size.y / m_Size.x;
+        m_Size.y = (width * m_Aspect) + (2 * m_RenderResolutionPadding);
     }
     RecalculateProjectionMatrix();
 }
 
-const float PixelCameraNode::GetHeight() const { return m_Size.y; }
+const float PixelCameraNode::GetHeight() const {
+    return m_Size.y - (m_RenderResolutionPadding * 2);
+}
 void PixelCameraNode::SetHeight(float height) {
-    m_Size.y = height;
-    if (m_LockAspect) {
-        m_Size.x = m_Size.y * (1 / m_Aspect);
+    m_Size.y = height + (m_RenderResolutionPadding * 2);
+    if (!m_LockAspect) {
+        m_Aspect = height / (m_Size.x - (2 * m_RenderResolutionPadding));
     } else {
-        m_Aspect = m_Size.y / m_Size.x;
+        m_Size.x = (height * (1 / m_Aspect)) + (m_RenderResolutionPadding * 2);
     }
     RecalculateProjectionMatrix();
 }

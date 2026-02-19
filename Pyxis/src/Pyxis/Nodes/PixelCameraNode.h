@@ -33,6 +33,8 @@ class PixelCameraNode : public CameraNode {
         return m_Rotation;
     };
 
+    virtual glm::vec2 GetSize() const override;
+
     virtual const float GetWidth() const override;
     virtual void SetWidth(float width) override;
 
