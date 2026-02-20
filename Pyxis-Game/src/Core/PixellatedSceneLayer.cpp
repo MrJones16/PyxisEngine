@@ -93,10 +93,9 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
                 m_RenderResolution = camera->GetSize();
 
                 // Camera size changed. Resize the buffers!
-                PX_CORE_TRACE("Render Resolution: {0}. {1}",
-                              m_RenderResolution.x, m_RenderResolution.y);
                 PX_CORE_TRACE(
-                    "Camera size changed, resizing buffers to {0}, {1}",
+                    "Camera size changed, resizing buffers to "
+                    "{0}, {1}",
                     m_RenderResolution.x + (2 * m_RenderResolutionPadding),
                     m_RenderResolution.y + (2 * m_RenderResolutionPadding));
                 m_DeferredGBuffer->Resize(
@@ -109,7 +108,7 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
         }
 
         m_PixelCamera = camera;
-        RenderCommand::SetClearColor({0, 0, 0, 1});
+        RenderCommand::SetClearColor({0, 0, 0, 0});
 
         m_PixelCamera->RecalculateViewMatrix();
 
@@ -173,7 +172,7 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
 
     // test drawing lights.
 
-    Renderer2D::DrawLight({0, 0}, {0.5, 0.5, 0.5}, 2, 2000);
+    Renderer2D::DrawLight({-10, -10}, {0.5, 0.5, 0.5}, 2, 2000);
 
     Renderer2D::DrawDeferredLightingPass();
 
@@ -285,7 +284,10 @@ glm::ivec2 PixellatedSceneLayer::GetMousePositionImGui() {
 bool PixellatedSceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
     m_ViewportSize = {event.GetWidth(), event.GetHeight()};
     if (m_PixelCamera != nullptr) {
-        glm::vec2 newRenderResolution = m_ViewportSize / 4.0f;
+        glm::vec2 dynamicScale = m_ViewportSize / 480.0f;
+        float dynamicScaleMin = std::min(dynamicScale.x, dynamicScale.y);
+        dynamicScaleMin = (int)(dynamicScaleMin + 1);
+        glm::vec2 newRenderResolution = m_ViewportSize / dynamicScaleMin;
         glm::ivec2 intRes = glm::floor(newRenderResolution);
         if (intRes.x % 2 != 0)
             intRes.x++;
