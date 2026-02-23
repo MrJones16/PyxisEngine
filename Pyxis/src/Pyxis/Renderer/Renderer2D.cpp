@@ -115,9 +115,7 @@ struct RendererData2D {
     ScreenQuadVertex ScreenQuadData[4] = {{{-1, -1}, {0, 0}},
                                           {{1, -1}, {1, 0}},
                                           {{1, 1}, {1, 1}},
-                                          {{-1, 1}, {0, 1}}
-
-    };
+                                          {{-1, 1}, {0, 1}}};
 
     // QUADS
 
@@ -417,19 +415,14 @@ void Renderer2D::Init() {
 }
 
 void Renderer2D::Shutdown() {
-    // delete s_Data;
+    // delete s_Data; // if pointer use this
+    s_Data = RendererData2D();
 }
 
 void Renderer2D::BeginScene(Camera *camera, Ref<FrameBuffer> deferredGBuffer,
                             Ref<FrameBuffer> deferredLightingBuffer) {
     s_Data.DeferredGBuffer = deferredGBuffer;
     s_Data.DeferredLightingBuffer = deferredLightingBuffer;
-
-    // bind buffer in case we draw anything directly without the queue, like
-    // lines do.
-    RenderCommand::Clear(); // clear main buffer
-    s_Data.DeferredGBuffer->Bind();
-    RenderCommand::Clear(); // clear deferred g buffer
 
     s_Data.BitMapShader->Bind();
     s_Data.BitMapShader->SetMat4("u_ViewProjection",
@@ -596,6 +589,7 @@ void Renderer2D::DrawLine(const glm::vec2 &start, const glm::vec2 &end,
 
 void Renderer2D::DrawLine(const glm::vec3 &start, const glm::vec3 &end,
                           const glm::vec4 &color) {
+    s_Data.DeferredGBuffer->Bind();
     s_Data.LineVertexBufferData[0].Position = start;
     s_Data.LineVertexBufferData[0].Albedo = color;
     s_Data.LineVertexBufferData[1].Position = end;
@@ -639,9 +633,14 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
     s_Data.Stats.QuadCount++;
 #endif
 }
+
+/// Radius is maxed out at 128 for now, which is the same as the padding for the
+/// cameras.
 void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
                            float Intensity, float Radius, float Falloff,
                            float Radians) {
+    // Radius = std::min(std::abs(Radius), 128.0f);
+
     // check if we need to flush
     if (s_Data.LightIndexCount >= RendererData2D::MaxLightIndices) {
         PX_CORE_WARN("Reached the limit of lights to draw!");

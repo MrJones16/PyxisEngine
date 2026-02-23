@@ -1,232 +1,150 @@
 #include "PixellatedSceneLayer.h"
 #include <Pyxis/Core/Application.h>
 
+#include "Pyxis/Renderer/PixelRenderer2D.h"
 #include <Pyxis/Renderer/RenderCommand.h>
-#include <Pyxis/Renderer/Renderer2D.h>
 
-#include <Pyxis/Core/Input.h>
 #include <memory>
 
 namespace Pyxis {
 
 PixellatedSceneLayer::PixellatedSceneLayer(bool debug) : m_Debug(debug) {}
 
-PixellatedSceneLayer::~PixellatedSceneLayer() {}
+PixellatedSceneLayer::~PixellatedSceneLayer() { PixelRenderer2D::Shutdown(); }
 
-void PixellatedSceneLayer::OnAttach() {
-    m_ViewportSize = {Application::Get().GetWindow().GetWidth(),
-                      Application::Get().GetWindow().GetHeight()};
-    Renderer2D::Init();
+void PixellatedSceneLayer::OnAttach() { PixelRenderer2D::Init(); }
 
-    FrameBufferSpecification deferredGBufferSpec;
-    deferredGBufferSpec.Attachments = {
-        {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // position 0
-        {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // normal 1
-        {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // albedo 2
-        {FrameBufferTextureFormat::R32UI,
-         FrameBufferTextureType::Color}, // node id 3
-        {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    deferredGBufferSpec.Width =
-        m_RenderResolution.x + (m_RenderResolutionPadding * 2);
-    deferredGBufferSpec.Height =
-        m_RenderResolution.y + (m_RenderResolutionPadding * 2);
-    m_DeferredGBuffer = FrameBuffer::Create(deferredGBufferSpec);
-
-    FrameBufferSpecification lightingPassBufferSpec;
-    lightingPassBufferSpec.Attachments = {
-        {FrameBufferTextureFormat::RGBA8,
-         FrameBufferTextureType::Color}, // Color 0
-        {FrameBufferTextureFormat::Depth, FrameBufferTextureType::Depth}};
-    lightingPassBufferSpec.Width =
-        m_RenderResolution.x + (m_RenderResolutionPadding * 2);
-    lightingPassBufferSpec.Height =
-        m_RenderResolution.y + (m_RenderResolutionPadding * 2);
-    m_DeferredLightingBuffer = FrameBuffer::Create(lightingPassBufferSpec);
-}
-
-void PixellatedSceneLayer::OnDetach() {}
+void PixellatedSceneLayer::OnDetach() { PixelRenderer2D::Shutdown(); }
 
 void PixellatedSceneLayer::OnUpdate(Timestep ts) {
     PROFILE_SCOPE("PixellatedSceneLayer OnUpdate");
 
-    // clear dead nodes
-    while (Node::NodesToDestroyQueue.size() > 0) {
-        Ref<Node> node = Node::Nodes[Node::NodesToDestroyQueue.front()];
+    //////////////////////////////////
+    ///  Simulation Pass
+    //////////////////////////////////
+    {
+        // clear dead nodes
+        while (Node::NodesToDestroyQueue.size() > 0) {
+            Ref<Node> node = Node::Nodes[Node::NodesToDestroyQueue.front()];
 
-        if (node != nullptr) {
-            // clear parent for children
-            for (auto child : node->m_Children) {
-                child->m_Parent = nullptr;
+            if (node != nullptr) {
+                // clear parent for children
+                for (auto child : node->m_Children) {
+                    child->m_Parent = nullptr;
+                }
+                // clear parent's child of this
+                if (node->m_Parent != nullptr) {
+                    node->m_Parent->RemoveChild(node->shared_from_this());
+                }
             }
-            // clear parent's child of this
-            if (node->m_Parent != nullptr) {
-                node->m_Parent->RemoveChild(node->shared_from_this());
-            }
+            Node::Nodes.erase(Node::NodesToDestroyQueue.front());
+            Node::NodesToDestroyQueue.pop();
         }
-        Node::Nodes.erase(Node::NodesToDestroyQueue.front());
-        Node::NodesToDestroyQueue.pop();
-    }
 
 // rendering
 #if STATISTICS
-    Renderer2D::ResetStats();
+        Renderer2D::ResetStats();
 #endif
 
-    {
-        PROFILE_SCOPE("Renderer Prep");
-        // Checking for camera and updating buffers if necessary.
-        PixelCameraNode *camera =
-            dynamic_cast<PixelCameraNode *>(Camera::Main());
-        if (!camera) {
-            // Camera is null, or not a pixel camera!
-            //
-            PX_CORE_ASSERT(false, "There is no main camera!");
+        {
+            PROFILE_SCOPE("Renderer Prep");
+            // Checking for camera and updating buffers if necessary.
+            m_PixelCamera = dynamic_cast<PixelCameraNode *>(Camera::Main());
+            PixelRenderer2D::BeginFrame(m_PixelCamera);
+
+            PixelRenderer2D::BeginSimulationPass();
+        }
+
+        // only run per tick rate
+        auto time = std::chrono::high_resolution_clock::now();
+        if (m_FixedUpdateRate > 0 &&
+            std::chrono::time_point_cast<std::chrono::microseconds>(time)
+                        .time_since_epoch()
+                        .count() -
+                    std::chrono::time_point_cast<std::chrono::microseconds>(
+                        m_FixedUpdateTime)
+                        .time_since_epoch()
+                        .count() >=
+                (1.0f / m_FixedUpdateRate) * 1000000.0f) {
+            PROFILE_SCOPE("Fixed Update");
+
+            m_FixedUpdateTime = time;
+
+            for (auto node : Node::Nodes) {
+                if (node.second != nullptr) {
+                    node.second->OnUpdate(ts);
+                    node.second->OnFixedUpdate();
+                    node.second->OnRender();
+                } else {
+                    // node was null so add it to list to delete
+                    m_NullNodeQueue.push(node.first);
+                }
+            }
+
         } else {
-            // Camera is a pixel camera. We need to check if the size/padding
-            // has changed so that we can adjust the framebuffers
-            if (m_RenderResolution != camera->GetSize() ||
-                m_RenderResolutionPadding !=
-                    camera->GetRenderResolutionPadding()) {
-                m_RenderResolution = camera->GetSize();
-
-                // Camera size changed. Resize the buffers!
-                PX_CORE_TRACE(
-                    "Camera size changed, resizing buffers to "
-                    "{0}, {1}",
-                    m_RenderResolution.x + (2 * m_RenderResolutionPadding),
-                    m_RenderResolution.y + (2 * m_RenderResolutionPadding));
-                m_DeferredGBuffer->Resize(
-                    m_RenderResolution.x + (m_RenderResolutionPadding * 2),
-                    m_RenderResolution.y + (m_RenderResolutionPadding * 2));
-                m_DeferredLightingBuffer->Resize(
-                    m_RenderResolution.x + (m_RenderResolutionPadding * 2),
-                    m_RenderResolution.y + (m_RenderResolutionPadding * 2));
+            for (auto node : Node::Nodes) {
+                if (node.second != nullptr) {
+                    node.second->OnUpdate(ts);
+                    node.second->OnRender();
+                } else {
+                    // node was null so add it to list to delete
+                    m_NullNodeQueue.push(node.first);
+                }
             }
         }
 
-        m_PixelCamera = camera;
-        RenderCommand::SetClearColor({0, 0, 0, 0});
-
-        m_PixelCamera->RecalculateViewMatrix();
-
-        Renderer2D::BeginScene(m_PixelCamera, m_DeferredGBuffer,
-                               m_DeferredLightingBuffer);
-    }
-
-    // only run per tick rate
-    auto time = std::chrono::high_resolution_clock::now();
-    if (m_FixedUpdateRate > 0 &&
-        std::chrono::time_point_cast<std::chrono::microseconds>(time)
-                    .time_since_epoch()
-                    .count() -
-                std::chrono::time_point_cast<std::chrono::microseconds>(
-                    m_FixedUpdateTime)
-                    .time_since_epoch()
-                    .count() >=
-            (1.0f / m_FixedUpdateRate) * 1000000.0f) {
-        PROFILE_SCOPE("Fixed Update");
-
-        m_FixedUpdateTime = time;
-
-        for (auto node : Node::Nodes) {
-            if (node.second != nullptr) {
-                node.second->OnUpdate(ts);
-                node.second->OnFixedUpdate();
-                node.second->OnRender();
-            } else {
-                // node was null so add it to list to delete
-                m_NullNodeQueue.push(node.first);
-            }
+        // remove null nodes from map
+        while (!m_NullNodeQueue.empty()) {
+            Node::Nodes.erase(m_NullNodeQueue.front());
+            m_NullNodeQueue.pop();
         }
 
-    } else {
-        for (auto node : Node::Nodes) {
-            if (node.second != nullptr) {
-                node.second->OnUpdate(ts);
-                node.second->OnRender();
-            } else {
-                // node was null so add it to list to delete
-                m_NullNodeQueue.push(node.first);
-            }
-        }
+        Renderer2D::DrawLight({-10, -10}, {1, 1, 1}, 1, 1000);
+
+        PixelRenderer2D::EndSimulationPass();
     }
 
-    // remove null nodes from map
-    while (!m_NullNodeQueue.empty()) {
-        Node::Nodes.erase(m_NullNodeQueue.front());
-        m_NullNodeQueue.pop();
+    //////////////////////////////////
+    ///  Parallax Pass
+    //////////////////////////////////
+    /// Drawing multiple layers together
+    ///
+    /// In Buffer: List of "Parallax Layers" with their depth, distance, and
+    /// texture Out Buffer: Framebuffer with all layers added together.
+    /// Resolution: Pixel Resolution -> Display Resolution
+    {
+        PixelRenderer2D::BeginParallaxPass();
+        PixelRenderer2D::DrawParallaxLayer(
+            0, 0, PixelRenderer2D::s_RenderData.DeferredLightingBuffer);
+        PixelRenderer2D::EndParallaxPass();
     }
 
-    /*auto[x,y] = Input::GetMousePosition();
-    glm::vec2 worldPos = m_CameraNode->MouseToWorldPos({x, y});
-    PX_TRACE("Mouse Pos: ({0},{1})", x, y);
-    PX_TRACE("World Pos: ({0},{1})", worldPos.x, worldPos.y);
-
-    Renderer2D::DrawText("Hello!", glm::mat4(1),
-    ResourceManager::Load<Font>("assets/fonts/Aseprite.ttf"));*/
-
-    Renderer2D::EndScene(); // finalizes rendering of normal objects.
-
-    // test drawing lights.
-
-    Renderer2D::DrawLight({-10, -10}, {0.5, 0.5, 0.5}, 2, 2000);
-
-    Renderer2D::DrawDeferredLightingPass();
-
-    // we need to get the scale and offset to render the output to, as the
-    // render resolution and display are separate.
-
-    float ScaleToFillDisplay =
-        m_ViewportSize.x /
-        m_RenderResolution.x; // maybe we should take the min with height? so it
-                              // guarantees full screen coverage?
-    glm::vec2 bufferPadding = glm::vec2(2, 2) * m_RenderResolutionPadding;
-    glm::vec2 outputSize = ((m_RenderResolution + bufferPadding) *
-                            ScaleToFillDisplay); // 642 * 4 = 2568
-
-    glm::vec2 outputScale = outputSize / m_ViewportSize;
-    // went from scaled render res to output, in amount to scale. a 640 at 1x
-    // would be 0.25 of the screen space for a 2560 monitor
-
-    glm::vec2 offset = m_PixelCamera->GetOffsetToGrid();
-    offset /=
-        (m_PixelCamera->GetSize() +
-         bufferPadding);   // 0/642 - 1/642 ... how much of a pixel we shifted
-    offset *= outputScale; // offset depends on scale too
-
-    // grab the ID from the Deferred "G" buffer.
-    //
-    // Mouse position is weird in this setup, as the output / buffers/ game are
-    // all kinda doing their own thing. I have to find the mouse position from
-    // 0-output, which 0 may start offset from the bottom left corner! check
-    // RenderingThoughts.png for an analysis, where x is that offset.
-    glm::vec2 mp = Input::GetMousePosition();
-    // flip the y so bottom left is 0,0
-    mp.y = m_ViewportSize.y - mp.y;
-
-    glm::vec2 offsetForMouse = (m_ViewportSize - outputSize) / 2.0f;
-    mp -= offsetForMouse;
-    mp /=
-        ScaleToFillDisplay; // need to divide from that int scale to get back to
-    // original 642/362
-
-    m_DeferredGBuffer->Bind();
-    if (mp.x >= 0 && mp.x < (outputSize.x / ScaleToFillDisplay) && mp.y >= 0 &&
-        mp.y < (outputSize.y / ScaleToFillDisplay)) {
-        UUID nodeID;
-        m_DeferredGBuffer->ReadPixel(3, mp.x, mp.y, &nodeID);
-        Node::s_HoveredNodeID = nodeID;
-        // PX_CORE_TRACE("Mouse Position: ({0},{1})", mp.x, mp.y);
-        // PX_CORE_TRACE("Read Pixel: {0}", (uint32_t)nodeID);
+    //////////////////////////////////
+    ///  Post-Effects Pass
+    //////////////////////////////////
+    /// Bloom, Blur, Distortion, Etc.
+    ///
+    /// In Buffer: Compiled Parallax Buffer
+    /// Out Buffer: Straight to output buffer
+    /// Resolution: Pixel Resolution
+    {
+        PixelRenderer2D::BeginPostEffectsPass();
+        PixelRenderer2D::EndPostEffectsPass();
     }
-    m_DeferredGBuffer->Unbind();
 
-    Renderer2D::DrawScreenQuad(
-        m_DeferredLightingBuffer->GetColorAttachmentRendererID(0), outputScale,
-        offset * 2.0f); // offset * 2.0f - glm::vec2(0, 0)
+    //////////////////////////////////
+    ///  HUD Pass
+    //////////////////////////////////
+    /// Drawing HUD & UI to screen
+    ///
+    /// In Buffer: None
+    /// Out Buffer: Output Buffer
+    /// Resolution: Display Resolution
+    {
+        PixelRenderer2D::BeginHUDPass();
+
+        PixelRenderer2D::EndHUDPass();
+    }
 }
 
 void PixellatedSceneLayer::DrawNodeTree(Ref<Node> Node) {
@@ -269,25 +187,13 @@ void PixellatedSceneLayer::OnEvent(Event &e) {
         PX_BIND_EVENT_FN(PixellatedSceneLayer::OnMouseScrolledEvent));
 }
 
-glm::ivec2 PixellatedSceneLayer::GetMousePositionImGui() {
-    /// if not using a framebuffer / imgui image, just use
-    /// Pyxis::Input::GetMousePosition();
-    // TODO: Set up ifdef for using imgui? or just stop using imgui... lol
-    auto [mx, my] = ImGui::GetMousePos();
-
-    mx -= m_ViewportBounds[0].x;
-    my -= m_ViewportBounds[0].y;
-
-    return {(int)mx, (int)my};
-}
-
 bool PixellatedSceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
-    m_ViewportSize = {event.GetWidth(), event.GetHeight()};
+    glm::vec2 viewportSize = {event.GetWidth(), event.GetHeight()};
     if (m_PixelCamera != nullptr) {
-        glm::vec2 dynamicScale = m_ViewportSize / 480.0f;
+        glm::vec2 dynamicScale = viewportSize / 480.0f;
         float dynamicScaleMin = std::min(dynamicScale.x, dynamicScale.y);
         dynamicScaleMin = (int)(dynamicScaleMin + 1);
-        glm::vec2 newRenderResolution = m_ViewportSize / dynamicScaleMin;
+        glm::vec2 newRenderResolution = viewportSize / dynamicScaleMin;
         glm::ivec2 intRes = glm::floor(newRenderResolution);
         if (intRes.x % 2 != 0)
             intRes.x++;

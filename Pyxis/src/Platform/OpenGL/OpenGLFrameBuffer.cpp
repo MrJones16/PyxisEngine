@@ -205,7 +205,14 @@ void OpenGLFrameBuffer::Unbind() const { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 void OpenGLFrameBuffer::Resize(uint32_t width, uint32_t height) {
     m_Specification.Width = width;
     m_Specification.Height = height;
-    glViewport(0, 0, m_Specification.Width, m_Specification.Height);
+    // glViewport(0, 0, m_Specification.Width, m_Specification.Height);
+    Invalidate();
+}
+
+void OpenGLFrameBuffer::Resize(const glm::ivec2 &size) {
+    m_Specification.Width = size.x;
+    m_Specification.Height = size.y;
+    // glViewport(0, 0, m_Specification.Width, m_Specification.Height);
     Invalidate();
 }
 

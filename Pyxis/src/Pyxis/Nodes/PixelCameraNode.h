@@ -59,7 +59,8 @@ class PixelCameraNode : public CameraNode {
 
     // Depth of additional buffer, in pixels. 1 means a 1 px buffer around
     // entire buffer, so +2x,+2y.
-    float m_RenderResolutionPadding = 1;
+    // adding 128 as I want lights to be able to have this range.
+    float m_RenderResolutionPadding = 128;
 };
 
 REGISTER_SERIALIZABLE_NODE(PixelCameraNode);

@@ -47,16 +47,6 @@ class PixellatedSceneLayer : public Layer {
     virtual void DrawNodeTree(Ref<Node> Node);
     Ref<Node> m_SelectedNode;
 
-    // viewport
-    Ref<FrameBuffer> m_DeferredGBuffer;
-    Ref<FrameBuffer> m_DeferredLightingBuffer;
-    glm::vec2 m_ViewportSize;
-    glm::vec2 m_ViewportBounds[2];
-
-    glm::vec2 m_RenderResolution = glm::vec2(480, 270);
-    // depth of padding to add in all directions to buffers.
-    float m_RenderResolutionPadding = 1;
-
     // fixed update
     double m_FixedUpdateRate = 60.0f;
     std::chrono::time_point<std::chrono::high_resolution_clock>

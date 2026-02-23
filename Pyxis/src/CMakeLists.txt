@@ -154,6 +154,8 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/Renderer.h
     Pyxis/Renderer/Renderer2D.cpp
     Pyxis/Renderer/Renderer2D.h
+    Pyxis/Renderer/PixelRenderer2D.cpp
+    Pyxis/Renderer/PixelRenderer2D.h
     Pyxis/Renderer/RendererAPI.cpp
     Pyxis/Renderer/RendererAPI.h
     Pyxis/Renderer/Shader.cpp

@@ -64,6 +64,7 @@ class FrameBuffer {
     virtual void Unbind() const = 0;
 
     virtual void Resize(uint32_t width, uint32_t height) = 0;
+    virtual void Resize(const glm::ivec2 &size) = 0;
 
     virtual void ReadPixel(uint32_t attachmentIndex, int x, int y,
                            void *data) = 0;

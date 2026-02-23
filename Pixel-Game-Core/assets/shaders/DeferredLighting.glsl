@@ -76,7 +76,14 @@ float SampleShadowAlongLine(vec2 startPos, vec2 endPos, float PixelDepth, sample
         // Adjust the threshold based on your needs
         float opacity = albedoSample.a;
 
-        shadowAttenuation -= (opacity * (1.0f/PixelDepth));
+        if (sampleUV.x > 1 || sampleUV.y > 1 || sampleUV.x < 0 || sampleUV.y < 0)
+        {
+            shadowAttenuation -= 1.0f/PixelDepth;
+        }
+        else
+        {
+            shadowAttenuation -= (opacity * (1.0f/PixelDepth));
+        }
 
         // Reduce shadow attenuation based on opacity encountered
         // This dims the light for each opaque pixel in the path
@@ -124,9 +131,11 @@ void main()
     float normalLight = clamp(dot(Src_Normal.xy, dirToLight), 0, 1);
 
     // Sample shadow along the line from light source to fragment
-    float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 10, u_Albedo, uv, u_ScreenSize);
+    float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
 
-    // Apply shadow attenuation to the final color
-    color = vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff * Src_Albedo * shadowAttenuation;
+     
+    vec4 ambient = Src_Albedo * 0.25f;//ambient lighting
+    vec4 light = Src_Albedo * vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * max(0, shadowAttenuation) * max(0, RadialFalloff);
+    color = ambient + light;
 
 }
