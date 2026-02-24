@@ -56,10 +56,14 @@ class Renderer2D {
     static void DrawLine(const glm::vec3 &start, const glm::vec3 &end,
                          const glm::vec4 &color = {1, 1, 1, 1});
 
-    static void DrawLight(const glm::vec2 &Position,
-                          const glm::vec3 &Color = {1, 1, 1},
-                          float Intensity = 1, float Radius = 1,
-                          float Falloff = 2, float Radians = 3.14159265 / 2);
+    static void
+    DrawPointLight(const glm::vec2 &Position,
+                   const glm::vec3 &Color = {1, 1, 1}, float Intensity = 1,
+                   float Radius = 1, float Falloff = 2,
+                   const glm::vec2 &Radians = {3.14159265 / 2, 3.14159265});
+    static void DrawDirectionalLight(const glm::vec3 &Color = {1, 1, 1},
+                                     float Intensity = 1,
+                                     float AngleInRadians = 3.1415);
 
     static void DrawQuad(glm::mat4 transform, const glm::vec4 &color);
     static void DrawQuad(glm::mat4 transform, const Ref<Texture2D> &texture,

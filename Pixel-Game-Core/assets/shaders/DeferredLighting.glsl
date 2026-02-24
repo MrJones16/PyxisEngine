@@ -3,24 +3,37 @@
 
 layout (location = 0) in vec4 a_WSPosAndLSPos;
 layout (location = 1) in vec4 a_ColorAndIntensity;
-layout (location = 2) in float a_Radius;
-layout (location = 3) in float a_Falloff;
-layout (location = 4) in float a_Radians;
+layout (location = 2) in int a_LightType;
+layout (location = 3) in float a_Radius;
+layout (location = 4) in float a_Falloff;
+layout (location = 5) in vec2 a_Radians;
 
 uniform mat4 u_ViewProjection;
 
 out vec4 v_WSPosAndLSPos;
 out vec4 v_ColorAndIntensity;
+out int v_LightType;
 out float v_Radius;
 out float v_Falloff;
-out float v_Radians;
+out vec2 v_Radians;
 
 void main()
 {
-	gl_Position = u_ViewProjection * vec4(a_WSPosAndLSPos.xy, 0, 1.0f);
+    if (a_LightType < 1)//0 is point, 1 is directional
+    {
+        //0, point
+	    gl_Position = u_ViewProjection * vec4(a_WSPosAndLSPos.xy, 0, 1.0f);
+    }
+    else
+    {
+        //1, directional
+	    gl_Position = vec4(a_WSPosAndLSPos.zw, 0, 1.0f);
+    }
+
 
     v_WSPosAndLSPos = a_WSPosAndLSPos;
     v_ColorAndIntensity = a_ColorAndIntensity;
+    v_LightType = a_LightType;
     v_Radius = a_Radius;
     v_Falloff = a_Falloff;
     v_Radians = a_Radians;
@@ -32,9 +45,10 @@ void main()
 
 in vec4 v_WSPosAndLSPos;
 in vec4 v_ColorAndIntensity;
+in int v_LightType;
 in float v_Radius;
 in float v_Falloff;
-in float v_Radians;
+in vec2 v_Radians;
 
 out vec4 color;
 
@@ -119,23 +133,40 @@ void main()
 	vec4 Src_Position = texture(u_Position, uv);
 	vec4 Src_Normal = texture(u_Normal, uv);
 	vec4 Src_Albedo = texture(u_Albedo, uv);
+
+    //radial falloff
     float RadialFalloff = pow(clamp(1 - length(v_WSPosAndLSPos.zw), 0, 1), v_Falloff);
 
     vec2 VecToLight = (v_WSPosAndLSPos.zw * -v_Radius);
     vec2 LightSourceWorldPos = v_WSPosAndLSPos.xy + VecToLight;  
-    //float Angle = atan(normalize(v_WSPosAndLSPos.zw).x, normalize(v_WSPosAndLSPos.zw).y);//gets angle from 0 being up in radians
-    //Angle = Angle * sign(v_WSPosAndLSPos.x);//negative becomes positive again.
-    //float AngularFalloff = 1 - smoothstep(0, v_Radians / 2, Angle);
+
+    float Angle = atan(normalize(v_WSPosAndLSPos.zw).x, normalize(v_WSPosAndLSPos.zw).y);//gets angle from 0 being up in radians
+    Angle = Angle * sign(v_WSPosAndLSPos.x);//negative becomes positive again.
+    float AngularFalloff = 1 - smoothstep(v_Radians.x / 2.0f, v_Radians.y / 2.0f, Angle);
 
     vec2 dirToLight = normalize(v_WSPosAndLSPos.xy - Src_Position.xy);
     float normalLight = clamp(dot(Src_Normal.xy, dirToLight), 0, 1);
 
-    // Sample shadow along the line from light source to fragment
-    float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
 
      
-    vec4 ambient = Src_Albedo * 0.25f;//ambient lighting
-    vec4 light = Src_Albedo * vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * max(0, shadowAttenuation) * max(0, RadialFalloff);
-    color = ambient + light;
+    vec4 Color_Ambient = Src_Albedo * 0.25f;//ambient lighting
+    vec4 Color_Light = Src_Albedo * vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w;
+    if (v_LightType < 1)
+    {
+        //point light gets radial falloff (and maybe angular)
+        Color_Light *= max(0, RadialFalloff);//angular too?
+
+        // Sample shadow along the line from light source to fragment
+        float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
+        Color_Light *= max(0, shadowAttenuation);
+    }
+    else{
+        //Directonal light. Shadows from... infinitely...far...
+        // Sample shadow along the line from light source to fragment
+        float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
+        Color_Light *= max(0, shadowAttenuation);
+    }
+
+    color = Color_Ambient + Color_Light;
 
 }

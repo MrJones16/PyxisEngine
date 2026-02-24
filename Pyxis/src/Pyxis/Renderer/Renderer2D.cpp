@@ -1,5 +1,6 @@
 #include "Renderer2D.h"
 #include "Pyxis/Core/Application.h"
+#include "Pyxis/Renderer/Buffer.h"
 #include "RenderCommand.h"
 
 #include "Shader.h"
@@ -71,9 +72,10 @@ struct QuadVertex {
 struct LightVertex {
     glm::vec4 WSPosAndLSPos;
     glm::vec4 ColorAndIntensity;
+    int LightType;
     float Radius;
     float Falloff;
-    float Radians;
+    glm::vec2 Radians;
 };
 
 struct TextVertex {
@@ -314,9 +316,10 @@ void Renderer2D::Init() {
     BufferLayout LightBufferLayout = {
         {ShaderDataType::Float4, "a_PosAndTex"},
         {ShaderDataType::Float4, "a_ColorAndIntensity"},
+        {ShaderDataType::Int, "a_LightType"},
         {ShaderDataType::Float, "a_Radius"},
         {ShaderDataType::Float, "a_Falloff"},
-        {ShaderDataType::Float, "a_Radians"},
+        {ShaderDataType::Float2, "a_Radians"},
     };
 
     s_Data.LightVertexBuffer->SetLayout(LightBufferLayout);
@@ -636,9 +639,10 @@ void Renderer2D::DrawQuad(glm::mat4 transform, const glm::vec4 &color) {
 
 /// Radius is maxed out at 128 for now, which is the same as the padding for the
 /// cameras.
-void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
-                           float Intensity, float Radius, float Falloff,
-                           float Radians) {
+void Renderer2D::DrawPointLight(const glm::vec2 &Position,
+                                const glm::vec3 &Color, float Intensity,
+                                float Radius, float Falloff,
+                                const glm::vec2 &Radians) {
     // Radius = std::min(std::abs(Radius), 128.0f);
 
     // check if we need to flush
@@ -661,9 +665,44 @@ void Renderer2D::DrawLight(const glm::vec2 &Position, const glm::vec3 &Color,
             glm::vec4(pos, localCoords[i]);
         s_Data.LightVertexBufferPtr->ColorAndIntensity =
             glm::vec4(Color, Intensity);
+        s_Data.LightVertexBufferPtr->LightType = 0;
         s_Data.LightVertexBufferPtr->Radius = Radius;
         s_Data.LightVertexBufferPtr->Falloff = Falloff;
         s_Data.LightVertexBufferPtr->Radians = Radians;
+        s_Data.LightVertexBufferPtr++;
+    }
+    s_Data.LightIndexCount += 6;
+}
+
+void Renderer2D::DrawDirectionalLight(const glm::vec3 &Color, float Intensity,
+                                      float AngleInRadians) {
+    // check if we need to flush
+    if (s_Data.LightIndexCount >= RendererData2D::MaxLightIndices) {
+        PX_CORE_WARN("Reached the limit of lights to draw!");
+        // skip drawing any more lights.
+        return;
+    }
+
+    glm::vec2 localCoords[] = {
+        {-1.0f, -1.0f}, {1.0f, -1.0f}, {1.0f, 1.0f}, {-1.0f, 1.0f}};
+
+    // glm::mat4 transform = glm::translate(glm::mat4(1.0f), Position);
+    // transform = glm::scale(transform, {Radius, Radius, 0});
+
+    constexpr size_t lightVertexCount = 4;
+    for (int i = 0; i < lightVertexCount; i++) {
+        // directional lights don't need WS position, as they are infinitely far
+        // away.
+        s_Data.LightVertexBufferPtr->WSPosAndLSPos =
+            glm::vec4(localCoords[i], localCoords[i]);
+        s_Data.LightVertexBufferPtr->ColorAndIntensity =
+            glm::vec4(Color, Intensity);
+        s_Data.LightVertexBufferPtr->LightType =
+            1; // light type 1 for directional.
+        s_Data.LightVertexBufferPtr->Radius = 1;
+        s_Data.LightVertexBufferPtr->Falloff =
+            0; // no falloff on directional light.
+        s_Data.LightVertexBufferPtr->Radians = glm::vec2(AngleInRadians);
         s_Data.LightVertexBufferPtr++;
     }
     s_Data.LightIndexCount += 6;
