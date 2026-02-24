@@ -5,7 +5,7 @@ namespace Pyxis {
 PixelBody2D::PixelBody2D(const std::string &name, b2BodyType type, World *world,
                          std::vector<PixelBodyElement> &elements,
                          bool CreatedFromSplit)
-    : RigidBody2D(name, type), m_PXWorld(world) {
+    : B2BodyNode(name, type), m_PXWorld(world) {
     // we need to convert the vector of elements to local positions to store
     // them
 
@@ -36,10 +36,10 @@ PixelBody2D::PixelBody2D(const std::string &name, b2BodyType type, World *world,
     GeneratePixelBody(CreatedFromSplit);
 }
 
-PixelBody2D::PixelBody2D(UUID id) : RigidBody2D(id) {}
+PixelBody2D::PixelBody2D(UUID id) : B2BodyNode(id) {}
 
 void PixelBody2D::Serialize(json &j) {
-    RigidBody2D::Serialize(j);
+    B2BodyNode::Serialize(j);
     j["Type"] = "PixelBody2D";
 
     // Position for pixelbody2d is different than normal
@@ -58,7 +58,7 @@ void PixelBody2D::Serialize(json &j) {
 }
 
 void PixelBody2D::Deserialize(json &j) {
-    RigidBody2D::Deserialize(j);
+    B2BodyNode::Deserialize(j);
 
     // get the position
     glm::vec2 position;
@@ -117,7 +117,7 @@ void PixelBody2D::OnPhysicsUpdate() {
 }
 
 void PixelBody2D::OnInspectorRender() {
-    RigidBody2D::OnInspectorRender();
+    B2BodyNode::OnInspectorRender();
     ImGui::Checkbox("Debug Display", &m_DebugDisplay);
 }
 
@@ -496,10 +496,11 @@ void PixelBody2D::GeneratePixelBody(bool SkipCalculations) {
         fixtureDef.shape = &triangleShape;
         m_B2Body->CreateFixture(&fixtureDef);
     }
+    delete cdt;
 }
 
 void PixelBody2D::TransferWorld(b2World *world) {
-    RigidBody2D::TransferWorld(world);
+    B2BodyNode::TransferWorld(world);
     GeneratePixelBody(true);
 }
 

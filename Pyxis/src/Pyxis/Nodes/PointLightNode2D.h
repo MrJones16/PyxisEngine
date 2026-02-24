@@ -1,21 +1,20 @@
 #pragma once
 
-#include "Pyxis/Nodes/Node.h"
-#include "Pyxis/Renderer/PixelRenderer2D.h"
-#include <Pyxis/Nodes/Node2D.h>
+#include <Pyxis/Nodes/B2BodyNode.h>
+#include <Pyxis/Renderer/Renderer2D.h>
 
 namespace Pyxis {
-class PointLight2DNode : public Node2D {
+class PointLight2DNode : public B2BodyNode {
   public:
     PointLight2DNode(const std::string &name,
                      const glm::vec3 &Color = {1, 1, 1}, float Intensity = 1,
                      float Radius = 1, float FalloffPow = 2);
-    PointLight2DNode(UUID id) : Node2D(id) {}
+    PointLight2DNode(UUID id) : B2BodyNode(id) {}
     ~PointLight2DNode();
 
     void OnRender() override {
-        Renderer2D::DrawLight(m_Position, m_Color, m_Intensity, m_Radius,
-                              m_Falloff);
+        Renderer2D::DrawPointLight(m_Position, m_Color, m_Intensity, m_Radius,
+                                   m_Falloff);
     }
 
     void Serialize(json &j) override {

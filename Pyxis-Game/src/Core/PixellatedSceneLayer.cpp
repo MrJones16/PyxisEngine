@@ -99,7 +99,7 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
             m_NullNodeQueue.pop();
         }
 
-        Renderer2D::DrawLight({-10, -10}, {1, 1, 1}, 1, 1000);
+        Renderer2D::DrawPointLight({-10, -10}, {1, 1, 1}, 1, 1000);
 
         PixelRenderer2D::EndSimulationPass();
     }

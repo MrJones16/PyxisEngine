@@ -5,6 +5,7 @@
 #include "Pyxis/Renderer/FrameBuffer.h"
 #include "SubTexture2D.h"
 #include "Texture.h"
+#include <box2d/b2_body.h>
 
 namespace Pyxis {
 namespace UI {
@@ -48,6 +49,9 @@ class Renderer2D {
     static void DrawScreenQuad(const uint32_t TextureID,
                                const glm::vec2 &scale = {1, 1},
                                const glm::vec2 &offset = glm::vec2(0, 0));
+
+    // 2d shadows
+    static void AddShadowCaster(b2Body body);
 
     // Primitives
 

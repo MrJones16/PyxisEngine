@@ -1,10 +1,15 @@
 #include "Renderer2D.h"
 #include "Pyxis/Core/Application.h"
+#include "Pyxis/Core/Core.h"
 #include "Pyxis/Renderer/Buffer.h"
 #include "RenderCommand.h"
 
+#include "box2d/box2d.h"
+
 #include "Shader.h"
 #include "VertexArray.h"
+#include <box2d/b2_math.h>
+#include <box2d/b2_world.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis {
@@ -100,6 +105,7 @@ struct LineVertex {
 };
 
 struct RendererData2D {
+    Ref<b2World> ShadowCasterB2World = nullptr;
     static const uint32_t MaxTextureSlots = 32;
     Ref<Texture2D> WhiteTexture;
 
@@ -213,6 +219,10 @@ Ref<FrameBuffer> Renderer2D::GetDeferredLightingFrameBuffer() {
 }
 
 void Renderer2D::Init() {
+    // create a world so that we can query for shadow casters when drawing
+    // lights. This could be altered for querying everything to draw in general!
+    s_Data.ShadowCasterB2World = CreateRef<b2World>(b2Vec2(0, 0));
+
     // initialize the renderer2d primitive things
     // s_Data = new RendererData2D();
 
@@ -584,6 +594,8 @@ void Renderer2D::DrawScreenQuad(const uint32_t TextureID,
     // s_Data.ScreenQuadShader->SetInt("u_Texture", TextureID);
     RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
 }
+
+void Renderer2D::AddShadowCaster(b2Body body) {}
 
 void Renderer2D::DrawLine(const glm::vec2 &start, const glm::vec2 &end,
                           const glm::vec4 &color) {

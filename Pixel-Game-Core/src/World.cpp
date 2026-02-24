@@ -150,12 +150,12 @@ void World::DownloadWorld(Network::Message &msg) {
             PX_TRACE("Loaded ChunkChainBody: Pos[{},{}] UUID[{}]",
                      ccb->m_ChunkOwnerPos.x, ccb->m_ChunkOwnerPos.y,
                      ccb->GetUUID());
-        } else //"RigidBody2D")
+        } else //"B2BodyNode")
         {
             // register to Node::Nodes
             Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
 
-            PX_TRACE("Loaded Generic RigidBody2D, UUID[{0}]",
+            PX_TRACE("Loaded Generic B2BodyNode, UUID[{0}]",
                      RigidBodyNode->GetUUID());
         }
     }
@@ -202,15 +202,15 @@ void World::GetGameData(std::vector<Network::Message> &messages) {
         body = body->GetNext();
     }
     while (!bodies.empty()) {
-        RigidBody2D *rb = (RigidBody2D *)bodies.back()->GetUserData().pointer;
+        B2BodyNode *rb = (B2BodyNode *)bodies.back()->GetUserData().pointer;
         if (rb) {
-            PX_TRACE("Packing RigidBody2D {0}", rb->GetUUID());
+            PX_TRACE("Packing B2BodyNode {0}", rb->GetUUID());
             messages.emplace_back();
             messages.back().header.id =
                 static_cast<uint32_t>(GameMessage::Server_GameDataRigidBody);
             messages.back() << rb->SerializeBinary();
         } else {
-            PX_ASSERT(false, "RigidBody2D has no user data!");
+            PX_ASSERT(false, "B2BodyNode has no user data!");
         }
         bodies.pop_back();
     }

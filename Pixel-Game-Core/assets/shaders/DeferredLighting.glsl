@@ -12,7 +12,7 @@ uniform mat4 u_ViewProjection;
 
 out vec4 v_WSPosAndLSPos;
 out vec4 v_ColorAndIntensity;
-out int v_LightType;
+out flat int v_LightType;
 out float v_Radius;
 out float v_Falloff;
 out vec2 v_Radians;
@@ -45,7 +45,7 @@ void main()
 
 in vec4 v_WSPosAndLSPos;
 in vec4 v_ColorAndIntensity;
-in int v_LightType;
+in flat int v_LightType;
 in float v_Radius;
 in float v_Falloff;
 in vec2 v_Radians;
