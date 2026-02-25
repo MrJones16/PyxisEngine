@@ -5,7 +5,8 @@
 #include "Pyxis/Renderer/FrameBuffer.h"
 #include "SubTexture2D.h"
 #include "Texture.h"
-#include <box2d/b2_body.h>
+#include <box2d/box2d.h>
+#include <box2d/id.h>
 
 namespace Pyxis {
 namespace UI {
@@ -31,6 +32,16 @@ struct Word {
         ContainsNewLine = hasNewLine;
     }
 };
+struct ShadowVertex {
+  public:
+    // vertex for a shadow.
+    glm::vec2 position;
+    glm::vec2 normal;
+};
+struct ShadowRenderBody {
+  public:
+    // Whatever is needed to draw shadow! aka, vertices, normals, and indicies.
+};
 
 class Renderer2D {
   public:
@@ -51,7 +62,10 @@ class Renderer2D {
                                const glm::vec2 &offset = glm::vec2(0, 0));
 
     // 2d shadows
-    static void AddShadowCaster(b2Body body);
+    // uses box2d for spatial querying
+    static b2BodyId AddShadowCaster();
+    static void RemoveShadowCaster(b2BodyId bodyId);
+    static std::vector<b2BodyId> QueryShadowCasters();
 
     // Primitives
 

@@ -8,8 +8,10 @@
 
 #include "Shader.h"
 #include "VertexArray.h"
-#include <box2d/b2_math.h>
-#include <box2d/b2_world.h>
+#include <box2d/b2_collision.h>
+#include <box2d/box2d.h>
+#include <box2d/id.h>
+#include <box2d/types.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis {
@@ -105,7 +107,7 @@ struct LineVertex {
 };
 
 struct RendererData2D {
-    Ref<b2World> ShadowCasterB2World = nullptr;
+    b2WorldId ShadowCasterB2World;
     static const uint32_t MaxTextureSlots = 32;
     Ref<Texture2D> WhiteTexture;
 
@@ -126,7 +128,6 @@ struct RendererData2D {
                                           {{-1, 1}, {0, 1}}};
 
     // QUADS
-
     std::array<Ref<Texture2D>, MaxTextureSlots> TextureSlots;
     uint32_t TextureSlotsIndex = 1;
     Ref<Shader> DeferredShader;
@@ -221,10 +222,12 @@ Ref<FrameBuffer> Renderer2D::GetDeferredLightingFrameBuffer() {
 void Renderer2D::Init() {
     // create a world so that we can query for shadow casters when drawing
     // lights. This could be altered for querying everything to draw in general!
-    s_Data.ShadowCasterB2World = CreateRef<b2World>(b2Vec2(0, 0));
-
-    // initialize the renderer2d primitive things
-    // s_Data = new RendererData2D();
+    if (b2World_IsValid(s_Data.ShadowCasterB2World)) {
+        b2DestroyWorld(s_Data.ShadowCasterB2World);
+    }
+    b2WorldDef worldDef = b2DefaultWorldDef();
+    worldDef.gravity = {0, 0};
+    s_Data.ShadowCasterB2World = b2CreateWorld(&worldDef);
 
     // texture init
     s_Data.WhiteTexture = Texture2D::Create(1, 1);
@@ -430,6 +433,11 @@ void Renderer2D::Init() {
 void Renderer2D::Shutdown() {
     // delete s_Data; // if pointer use this
     s_Data = RendererData2D();
+
+    if (b2World_IsValid(s_Data.ShadowCasterB2World)) {
+        b2DestroyWorld(s_Data.ShadowCasterB2World);
+        s_Data.ShadowCasterB2World = b2_nullWorldId;
+    }
 }
 
 void Renderer2D::BeginScene(Camera *camera, Ref<FrameBuffer> deferredGBuffer,
@@ -595,7 +603,11 @@ void Renderer2D::DrawScreenQuad(const uint32_t TextureID,
     RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
 }
 
-void Renderer2D::AddShadowCaster(b2Body body) {}
+// add or remove a mesh to the shadow casters. Requires a special mesh with
+// doubled countour vertices.
+b2BodyId Renderer2D::AddShadowCaster() {}
+void Renderer2D::RemoveShadowCaster(b2BodyId bodyId) {}
+std::vector<b2BodyId> Renderer2D::QueryShadowCasters() {}
 
 void Renderer2D::DrawLine(const glm::vec2 &start, const glm::vec2 &end,
                           const glm::vec4 &color) {

@@ -309,7 +309,7 @@ void World::GenerateChunk(Chunk *chunk) {
 Element &World::GetElement(const glm::ivec2 &pixelPos) {
     auto chunkPos = PixelToChunk(pixelPos);
     auto index = PixelToIndex(pixelPos);
-    return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+    return GetChunk(chunkPos)->GetElement(index);
 }
 
 Element &World::ForceGetElement(const glm::ivec2 &pixelPos) {
@@ -318,16 +318,16 @@ Element &World::ForceGetElement(const glm::ivec2 &pixelPos) {
     if (!m_Chunks.contains(chunkPos)) {
         AddChunk(chunkPos);
     }
-    return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+    return GetChunk(chunkPos)->GetElement(index);
 }
 
 void World::SetElement(const glm::ivec2 &pixelPos, const Element &element) {
     Chunk *chunk = GetChunk(PixelToChunk(pixelPos));
     auto index = PixelToIndex(pixelPos);
     if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+        chunk->GetElement(index).m_Temperature++;
     } else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+        chunk->GetElement(index).m_Temperature--;
     } else {
         chunk->SetElement(index.x, index.y, element);
     }
@@ -339,9 +339,9 @@ void World::SetElementWithoutDirtyRectUpdate(const glm::ivec2 &pixelPos,
     Chunk *chunk = GetChunk(PixelToChunk(pixelPos));
     auto index = PixelToIndex(pixelPos);
     if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+        chunk->GetElement(index).m_Temperature++;
     } else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+        chunk->GetElement(index).m_Temperature--;
     } else {
         chunk->SetElement(index.x, index.y, element);
     }
@@ -386,12 +386,10 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
 
             // set the element
             if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"]) {
-                chunk->m_Elements[index.x + index.y * CHUNKSIZE]
-                    .m_Temperature++;
+                chunk->GetElement(index).m_Temperature++;
             } else if (element.m_ID ==
                        ElementData::s_ElementNameToID["debug_cool"]) {
-                chunk->m_Elements[index.x + index.y * CHUNKSIZE]
-                    .m_Temperature--;
+                chunk->GetElement(index).m_Temperature--;
             } else {
                 chunk->SetElement(index.x, index.y, element);
             }

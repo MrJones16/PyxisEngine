@@ -43,6 +43,7 @@ Element &Chunk::GetElement(int x, int y) {
 Element &Chunk::GetElement(const glm::ivec2 &index) {
     return m_Elements[index.x + index.y * CHUNKSIZE];
 }
+Element &Chunk::GetElement(int index) { return m_Elements[index]; }
 
 void Chunk::SetElement(int x, int y, const Element &element) {
     // test if we are placing a rigid element
@@ -78,7 +79,11 @@ void Chunk::SetElement(int x, int y, const Element &element) {
         if (!(currType == ElementType::solid ||
               currType == ElementType::movableSolid)) {
             // we are no longer solid, so we need to update the collider
-            m_StaticColliderChanged = true;
+            m_MeshChanged = true;
+            // set bit array at that spot to 0
+            uint64_t AndMask =
+                ~(1 << y); // inverse of 1 bitshifted to the position of y.
+            m_BitArray[x] &= AndMask;
         }
 
         m_Elements[x + y * CHUNKSIZE] = element;
@@ -89,7 +94,9 @@ void Chunk::SetElement(int x, int y, const Element &element) {
         if (currType == ElementType::solid ||
             currType == ElementType::movableSolid) {
             // we are becoming solid, so we need to update the collider
-            m_StaticColliderChanged = true;
+            m_MeshChanged = true;
+            // set bit array at that spot to 1
+            m_BitArray[x] |= (1 << y);
         }
 
         m_Elements[x + y * CHUNKSIZE] = element;

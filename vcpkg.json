@@ -1,7 +1,10 @@
 {
   "builtin-baseline": "9b5cb8e554487f3edb5d50b80188883846f81e14",
   "dependencies": [
-    "box2d",
+    {
+      "name": "box2d",
+      "version>=": "3.1.1"
+    },
     "freetype",
     "gamenetworkingsockets",
     "glad",
