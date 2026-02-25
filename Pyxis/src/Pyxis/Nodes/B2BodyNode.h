@@ -1,13 +1,8 @@
 #pragma once
 
 #include <Pyxis/Nodes/Node2D.h>
-
-#include <box2d/b2_body.h>
-#include <box2d/b2_fixture.h>
-#include <box2d/b2_math.h>
-#include <box2d/b2_polygon_shape.h>
-#include <box2d/b2_settings.h>
-#include <box2d/b2_world.h>
+#include <box2d/box2d.h>
+#include <box2d/id.h>
 #include <poly2tri.h>
 
 // override json conversion for glm objects
@@ -31,25 +26,25 @@ struct B2BodyStorage {
     b2Vec2 position;
     b2Vec2 linearVelocity;
     float linearDamping;
-    float angle;
+    b2Rot rotation;
     float angularVelocity;
     float angularDamping;
 
-    B2BodyStorage(b2Body *body) {
-        position = body->GetPosition();
-        linearVelocity = body->GetLinearVelocity();
-        linearDamping = body->GetLinearDamping();
-        angle = body->GetAngle();
-        angularVelocity = body->GetAngularVelocity();
-        angularDamping = body->GetAngularDamping();
+    B2BodyStorage(b2BodyId body) {
+        position = b2Body_GetPosition(body);
+        linearVelocity = b2Body_GetLinearVelocity(body);
+        linearDamping = b2Body_GetLinearDamping(body);
+        rotation = b2Body_GetRotation(body);
+        angularVelocity = b2Body_GetAngularVelocity(body);
+        angularDamping = b2Body_GetAngularDamping(body);
     }
 
-    void TransferData(b2Body *body) {
-        body->SetTransform(position, angle);
-        body->SetLinearVelocity(linearVelocity);
-        body->SetLinearDamping(linearDamping);
-        body->SetAngularVelocity(angularVelocity);
-        body->SetAngularDamping(angularDamping);
+    void TransferData(b2BodyId body) {
+        b2Body_SetTransform(body, position, rotation);
+        b2Body_SetLinearVelocity(body, linearVelocity);
+        b2Body_SetLinearDamping(body, linearDamping);
+        b2Body_SetAngularVelocity(body, angularVelocity);
+        b2Body_SetAngularDamping(body, angularDamping);
     }
 };
 
@@ -59,8 +54,8 @@ struct B2BodyStorage {
 /// </summary>
 class B2BodyNode : public Node2D {
   protected:
-    b2Body *m_B2Body = nullptr;
-    b2World *m_B2World = nullptr;
+    b2BodyId m_B2Body = b2_nullBodyId;
+    b2WorldId m_B2World = b2_nullWorldId;
     bool m_HasBody = false;
 
     // todo: make functions to use these!
@@ -111,11 +106,11 @@ class B2BodyNode : public Node2D {
     /// will be deleted and that will destroy the old b2bodies.
     /// </summary>
     /// <param name="world"></param>
-    virtual void TransferWorld(b2World *world);
+    virtual void TransferWorld(b2WorldId world);
 
     // creates the underlying b2body. might be better to switch this to take the
     // world as parameter
-    virtual void CreateBody(b2World *world);
+    virtual void CreateBody(b2WorldId world);
 
     /// <summary>
     /// Frees the underlying b2body and resets the world.
@@ -123,7 +118,7 @@ class B2BodyNode : public Node2D {
     /// </summary>
     virtual void DestroyBody();
 
-    void ClearFixtures();
+    void DestroyShapes();
 
     void SetType(b2BodyType type);
     b2BodyType GetType();

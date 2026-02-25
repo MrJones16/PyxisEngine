@@ -2,7 +2,6 @@
 
 #include <Pyxis/Nodes/B2BodyNode.h>
 #include <Pyxis/Nodes/Node.h>
-#include <box2d/b2_world.h>
 #include <map>
 #include <unordered_set>
 
@@ -21,7 +20,7 @@ class Physics2D {
     /// <summary>
     ///
     /// </summary>
-    inline static b2World *m_World = nullptr;
+    inline static b2WorldId m_World = b2_nullWorldId;
 
   protected:
     // inline static std::map<b2Body*, B2BodyNode*> s_BodyToNode;
@@ -34,7 +33,7 @@ class Physics2D {
     inline static int32_t m_PositionIterations = 2;
     inline static float m_Step = 1.0f / 60.0f;
 
-    inline static b2World *GetWorld() {
+    inline static b2WorldId GetWorld() {
         if (m_World == nullptr) {
             m_World = new b2World({0, -9.8f});
         }

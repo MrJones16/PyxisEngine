@@ -46,6 +46,7 @@ class Chunk {
     void QueuePull(glm::ivec2 startPos,
                    std::unordered_set<glm::ivec2, HashVector> &result,
                    std::unordered_set<glm::ivec2, HashVector> &source);
+
     std::vector<b2Vec2>
     GetContourPoints(const std::unordered_set<glm::ivec2, HashVector> &source);
     int GetMarchingSquareCase(

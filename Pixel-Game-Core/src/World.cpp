@@ -166,7 +166,7 @@ void World::DownloadWorld(Network::Message &msg) {
         PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(),
                   "Tried to load a chunk that already existed");
         Chunk *chunk = new Chunk(chunkPos);
-        msg >> chunk->m_StaticColliderChanged;
+        msg >> chunk->m_MeshChanged;
         msg >> chunk->m_DirtyRect;
         m_Chunks[chunkPos] = chunk;
         for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--) {
@@ -224,7 +224,7 @@ void World::GetGameData(std::vector<Network::Message> &messages) {
             messages.back() << pair.second->m_Elements[i];
         }
         messages.back() << pair.second->m_DirtyRect;
-        messages.back() << pair.second->m_StaticColliderChanged;
+        messages.back() << pair.second->m_MeshChanged;
         messages.back() << pair.first;
     }
 }
@@ -527,7 +527,7 @@ void World::UpdateChunk(Chunk *chunk) {
                 // we now have an x and y of the element in the array, so update
                 // it
 
-                Element &currElement = chunk->m_Elements[x + y * CHUNKSIZE];
+                Element &currElement = chunk->GetElement(x, y);
                 ElementProperties &currElementData =
                     ElementData::GetElementProperties(currElement.m_ID);
 
@@ -562,8 +562,8 @@ void World::UpdateChunk(Chunk *chunk) {
                 // get cardinal elements
                 {
                     if (IsInBounds(x, y + 1)) {
-                        elementTop =
-                            chunk->m_Elements + (x) + (y + 1) * CHUNKSIZE;
+                        elementTop = &(chunk->GetElement(x, y + 1));
+                        chunk->m_Elements + (x) + (y + 1) * CHUNKSIZE;
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -674,7 +674,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementLeft->m_ID = it->second.cell1ID;
@@ -683,7 +683,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                leftChunk->m_StaticColliderChanged = true;
+                                leftChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementLeft, x - 1, y);
                             UpdateChunkDirtyRect(x, y, chunk);
@@ -705,7 +705,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementTop->m_ID = it->second.cell1ID;
@@ -714,7 +714,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                topChunk->m_StaticColliderChanged = true;
+                                topChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementTop, x - 1, y);
                             UpdateChunkDirtyRect(x, y, chunk);
@@ -736,7 +736,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementRight->m_ID = it->second.cell1ID;
@@ -745,7 +745,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                rightChunk->m_StaticColliderChanged = true;
+                                rightChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementRight, x - 1, y);
                             UpdateChunkDirtyRect(x, y, chunk);
@@ -767,7 +767,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementBottom->m_ID = it->second.cell1ID;
@@ -776,7 +776,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                bottomChunk->m_StaticColliderChanged = true;
+                                bottomChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementBottom, x - 1,
                                                         y);
@@ -800,7 +800,7 @@ void World::UpdateChunk(Chunk *chunk) {
                         newData.UpdateElementProperties(currElement, x, y);
                         if (newData.cell_type == ElementType::solid ||
                             newData.cell_type == ElementType::movableSolid) {
-                            chunk->m_StaticColliderChanged = true;
+                            chunk->m_MeshChanged = true;
                         }
                         currElement.m_Temperature = temp;
                         currElement.m_ID = newID;
@@ -823,7 +823,7 @@ void World::UpdateChunk(Chunk *chunk) {
                         newData.UpdateElementProperties(currElement, x, y);
                         if (newData.cell_type == ElementType::solid ||
                             newData.cell_type == ElementType::movableSolid) {
-                            chunk->m_StaticColliderChanged = true;
+                            chunk->m_MeshChanged = true;
                         }
 
                         currElement.m_Temperature = temp;
@@ -1057,7 +1057,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             if (burntData.cell_type == ElementType::solid ||
                                 burntData.cell_type ==
                                     ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
                             burntData.UpdateElementProperties(currElement, x,
                                                               y);
@@ -1525,8 +1525,8 @@ void World::UpdateChunk(Chunk *chunk) {
     Physics2D::GetWorld()->QueryAABB(&dynamicCallback, queryFullRegion);
     if (found) {
         // Found Dynamic Body
-        if (chunk->m_StaticColliderChanged == true) {
-            chunk->m_StaticColliderChanged = false;
+        if (chunk->m_MeshChanged == true) {
+            chunk->m_MeshChanged = false;
             chunk->GenerateStaticCollider();
         }
     }

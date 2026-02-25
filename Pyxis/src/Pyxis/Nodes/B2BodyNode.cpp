@@ -1,12 +1,14 @@
 #include "B2BodyNode.h"
 #include <Pyxis/Game/Physics2D.h>
+#include <box2d/box2d.h>
+#include <box2d/id.h>
 
 namespace Pyxis {
 B2BodyNode::B2BodyNode(const std::string &name, b2BodyType type)
     : Node2D(name) {
     m_B2BodyDef.position = {0, 0};
     m_B2BodyDef.type = type;
-    m_B2BodyDef.userData.pointer = (uintptr_t)this;
+    m_B2BodyDef.userData = this;
     CreateBody(Physics2D::GetWorld());
 }
 
@@ -57,11 +59,10 @@ void B2BodyNode::Serialize(json &j) {
     if (m_HasBody) {
         // note: we already have position and angle
 
-        j["m_B2Body"]["linearVelocity"] = m_B2Body->GetLinearVelocity();
-        j["m_B2Body"]["linearDamping"] = m_B2Body->GetLinearDamping();
-
-        j["m_B2Body"]["angularVelocity"] = m_B2Body->GetAngularVelocity();
-        j["m_B2Body"]["angularDamping"] = m_B2Body->GetAngularDamping();
+        j["m_B2Body"]["linearVelocity"] = b2Body_GetLinearVelocity(m_B2Body);
+        j["m_B2Body"]["linearDamping"] = b2Body_GetLinearDamping(m_B2Body);
+        j["m_B2Body"]["angularVelocity"] = b2Body_GetAngularVelocity(m_B2Body);
+        j["m_B2Body"]["angularDamping"] = b2Body_GetAngularDamping(m_B2Body);
     }
 }
 
@@ -78,7 +79,7 @@ void B2BodyNode::Deserialize(json &j) {
             j["m_B2BodyDef"].at("position").get_to(m_B2BodyDef.position);
         if (j["m_B2BodyDef"].contains("type"))
             j["m_B2BodyDef"].at("type").get_to(m_B2BodyDef.type);
-        m_B2BodyDef.userData.pointer = (uintptr_t)this;
+        m_B2BodyDef.userData = this;
     }
 
     if (j.contains("m_B2Body")) {
@@ -105,17 +106,17 @@ void B2BodyNode::Deserialize(json &j) {
         SetPosition({position.x, position.y});
         SetRotation(angle);
 
-        // m_B2Body->SetTransform(b2Vec2(m_Position.x, m_Position.y),
+        // b2Body_SetTransform(b2Vec2(m_Position.x, m_Position.y),
         // m_Rotation);
-        m_B2Body->SetLinearVelocity(linearVelocity);
-        m_B2Body->SetLinearDamping(linearDamping);
-        m_B2Body->SetAngularVelocity(angularVelocity);
-        m_B2Body->SetAngularDamping(angularDamping);
+        b2Body_SetLinearVelocity(m_B2Body, linearVelocity);
+        b2Body_SetLinearDamping(m_B2Body, linearDamping);
+        b2Body_SetAngularVelocity(m_B2Body, angularVelocity);
+        b2Body_SetAngularDamping(m_B2Body, angularDamping);
     }
 }
 
 glm::mat4 B2BodyNode::GetWorldTransform() {
-    auto pos = m_B2Body->GetPosition();
+    auto pos = b2Body_GetPosition(m_B2Body);
     glm::mat4 localTransform =
         glm::translate(glm::mat4(), glm::vec3(pos.x, pos.y, m_Layer));
     localTransform = glm::rotate(localTransform, m_Rotation, {0, 0, -1});
@@ -128,28 +129,34 @@ glm::mat4 B2BodyNode::GetWorldTransform() {
 
 void B2BodyNode::Translate(const glm::vec2 &translation) {
     m_Position += translation;
-    m_B2Body->SetTransform({m_Position.x, m_Position.y}, m_Rotation);
+    b2Body_SetTransform(m_B2Body, {m_Position.x, m_Position.y},
+                        b2Rot(m_Rotation));
 }
 void B2BodyNode::SetPosition(const glm::vec2 &position) {
     m_Position = position;
-    m_B2Body->SetTransform({m_Position.x, m_Position.y}, m_Rotation);
+    b2Body_SetTransform(m_B2Body, {m_Position.x, m_Position.y},
+                        b2Rot(m_Rotation));
 }
 glm::vec2 B2BodyNode::GetPosition() {
-    b2Vec2 vec = m_B2Body->GetPosition();
+    b2Vec2 vec = b2Body_GetPosition(m_B2Body);
     return glm::vec2(vec.x, vec.y);
 }
 
 void B2BodyNode::Rotate(const float radians) {
     m_Rotation += radians;
-    m_B2Body->SetTransform({m_Position.x, m_Position.y}, m_Rotation);
+    b2Body_SetTransform(m_B2Body, {m_Position.x, m_Position.y},
+                        b2Rot(m_Rotation));
 }
 void B2BodyNode::SetRotation(const float radians) {
     m_Rotation = radians;
-    m_B2Body->SetTransform({m_Position.x, m_Position.y}, m_Rotation);
+    b2Body_SetTransform(m_B2Body, {m_Position.x, m_Position.y},
+                        b2Rot(m_Rotation));
 }
-float B2BodyNode::GetRotation() { return m_B2Body->GetAngle(); }
+float B2BodyNode::GetRotation() {
+    return b2Rot_GetAngle(b2Body_GetRotation(m_B2Body));
+}
 
-void B2BodyNode::TransferWorld(b2World *world) {
+void B2BodyNode::TransferWorld(b2WorldId world) {
     if (m_HasBody) {
         // store data from body, then make a new one, then put the new data in.
         B2BodyStorage storage(m_B2Body);
@@ -157,16 +164,17 @@ void B2BodyNode::TransferWorld(b2World *world) {
         m_HasBody = false;
         CreateBody(world);
         storage.TransferData(m_B2Body);
-        PX_TRACE("Transferred body to new world. Position: ({0},{1})",
-                 m_B2Body->GetPosition().x, m_B2Body->GetPosition().y);
+        PX_CORE_TRACE("Transferred body to new world. Position: ({0},{1})",
+                      GetPosition().x, GetPosition().y);
     }
 }
 
-void B2BodyNode::CreateBody(b2World *world) {
+void B2BodyNode::CreateBody(b2WorldId world) {
     if (!m_HasBody) {
         m_HasBody = true;
         m_B2World = world;
-        m_B2Body = m_B2World->CreateBody(&m_B2BodyDef);
+
+        m_B2Body = b2CreateBody(world, &m_B2BodyDef);
         // Physics2D::s_RigidBodiesToAdd.push(this);
     }
 }
@@ -175,67 +183,69 @@ void B2BodyNode::DestroyBody() {
     if (m_HasBody) {
         m_HasBody = false;
         // Physics2D::s_BodyToNode[m_B2Body] = nullptr;
-        m_B2World->DestroyBody(m_B2Body);
-        m_B2Body = nullptr;
-        m_B2World = nullptr;
+        if (b2Body_IsValid(m_B2Body))
+            b2DestroyBody(m_B2Body);
+        m_B2Body = b2_nullBodyId;
+        m_B2World = b2_nullWorldId;
     }
 }
 
-void B2BodyNode::ClearFixtures() {
-    auto fixture = m_B2Body->GetFixtureList();
-    if (fixture != nullptr)
-        do {
-            b2Fixture *next = fixture->GetNext();
-            m_B2Body->DestroyFixture(fixture);
-            fixture = next;
-        } while (fixture != nullptr);
+void B2BodyNode::DestroyShapes() {
+    int shapeCount = b2Body_GetShapeCount(m_B2Body);
+    b2ShapeId shapes[shapeCount];
+    b2Body_GetShapes(m_B2Body, shapes, shapeCount);
+    for (b2ShapeId id : shapes) {
+        b2DestroyShape(id, true);
+    }
 }
 
 void B2BodyNode::SetType(b2BodyType type) {
     m_B2BodyDef.type = type;
-    m_B2Body->SetType(type);
+    b2Body_SetType(m_B2Body, type);
 }
 
-b2BodyType B2BodyNode::GetType() { return m_B2Body->GetType(); }
+b2BodyType B2BodyNode::GetType() { return m_B2BodyDef.type; }
 
 void B2BodyNode::ApplyForce(const glm::vec2 &force, const glm::vec2 &point) {
-    m_B2Body->ApplyForce({force.x, force.y}, {point.x, point.y}, true);
+    b2Body_ApplyForce(m_B2Body, {force.x, force.y}, {point.x, point.y}, true);
 }
 
 void B2BodyNode::ApplyForceToCenter(const glm::vec2 &force) {
-    m_B2Body->ApplyForceToCenter({force.x, force.y}, true);
+    b2Body_ApplyForceToCenter(m_B2Body, {force.x, force.y}, true);
 }
 
 void B2BodyNode::AddLinearVelocity(const glm::vec2 &velocity) {
-    m_B2Body->SetLinearVelocity(m_B2Body->GetLinearVelocity() +
-                                b2Vec2(velocity.x, velocity.y));
+    b2Body_SetLinearVelocity(m_B2Body, b2Body_GetLinearVelocity(m_B2Body) +
+                                           b2Vec2(velocity.x, velocity.y));
 }
 
 void B2BodyNode::SetLinearVelocity(const glm::vec2 &velocity) {
-    m_B2Body->SetLinearVelocity({velocity.x, velocity.y});
+    b2Body_SetLinearVelocity(m_B2Body, {velocity.x, velocity.y});
 }
 
 glm::vec2 B2BodyNode::GetLinearVelocity() {
-    auto velocity = m_B2Body->GetLinearVelocity();
+    b2Vec2 velocity = b2Body_GetLinearVelocity(m_B2Body);
     return glm::vec2(velocity.x, velocity.y);
 }
 
 void B2BodyNode::AddAngularVelocity(float angVel) {
-    m_B2Body->ApplyAngularImpulse(angVel, true);
+    b2Body_ApplyAngularImpulse(m_B2Body, angVel, true);
 }
 
 void B2BodyNode::SetAngularVelocity(float angVel) {
-    m_B2Body->SetAngularVelocity(angVel);
+    b2Body_SetAngularVelocity(m_B2Body, angVel);
 }
 
 float B2BodyNode::GetAngularVelocity() {
-    return m_B2Body->GetAngularVelocity();
+    return b2Body_GetAngularVelocity(m_B2Body);
 }
 
 void B2BodyNode::SetAngularDampening(float damping) {
-    m_B2Body->SetAngularDamping(damping);
+    b2Body_SetAngularDamping(m_B2Body, damping);
 }
 
-float B2BodyNode::GetAngularDamping() { return m_B2Body->GetAngularDamping(); }
+float B2BodyNode::GetAngularDamping() {
+    return b2Body_GetAngularDamping(m_B2Body);
+}
 
 } // namespace Pyxis
