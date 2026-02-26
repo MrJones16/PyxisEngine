@@ -1,7 +1,6 @@
 #include "B2BodyNode.h"
 #include <Pyxis/Game/Physics2D.h>
 #include <box2d/box2d.h>
-#include <box2d/id.h>
 
 namespace Pyxis {
 B2BodyNode::B2BodyNode(const std::string &name, b2BodyType type)
@@ -174,7 +173,7 @@ void B2BodyNode::CreateBody(b2WorldId world) {
         m_HasBody = true;
         m_B2World = world;
 
-        m_B2Body = b2CreateBody(world, &m_B2BodyDef);
+        m_B2Body = Physics2D::CreateBody(m_B2BodyDef);
         // Physics2D::s_RigidBodiesToAdd.push(this);
     }
 }

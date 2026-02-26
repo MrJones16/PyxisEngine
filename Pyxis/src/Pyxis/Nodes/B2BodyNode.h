@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Pyxis/Game/PhysicsBody2D.h>
 #include <Pyxis/Nodes/Node2D.h>
 #include <box2d/box2d.h>
-#include <box2d/id.h>
 #include <poly2tri.h>
 
 // override json conversion for glm objects
@@ -21,33 +21,6 @@ namespace Pyxis {
 // UUID uuid, const glm::ivec2& size, std::unordered_map<glm::ivec2,
 // RigidBodyElement, HashVector> elements, b2BodyType type, b2World* world)
 
-struct B2BodyStorage {
-  public:
-    b2Vec2 position;
-    b2Vec2 linearVelocity;
-    float linearDamping;
-    b2Rot rotation;
-    float angularVelocity;
-    float angularDamping;
-
-    B2BodyStorage(b2BodyId body) {
-        position = b2Body_GetPosition(body);
-        linearVelocity = b2Body_GetLinearVelocity(body);
-        linearDamping = b2Body_GetLinearDamping(body);
-        rotation = b2Body_GetRotation(body);
-        angularVelocity = b2Body_GetAngularVelocity(body);
-        angularDamping = b2Body_GetAngularDamping(body);
-    }
-
-    void TransferData(b2BodyId body) {
-        b2Body_SetTransform(body, position, rotation);
-        b2Body_SetLinearVelocity(body, linearVelocity);
-        b2Body_SetLinearDamping(body, linearDamping);
-        b2Body_SetAngularVelocity(body, angularVelocity);
-        b2Body_SetAngularDamping(body, angularDamping);
-    }
-};
-
 /// <summary>
 /// A B2BodyNode is a node that tries to correlate the b2 transform with the
 /// node's transform, and functions like a standard rigid body.
@@ -55,7 +28,6 @@ struct B2BodyStorage {
 class B2BodyNode : public Node2D {
   protected:
     b2BodyId m_B2Body = b2_nullBodyId;
-    b2WorldId m_B2World = b2_nullWorldId;
     bool m_HasBody = false;
 
     // todo: make functions to use these!

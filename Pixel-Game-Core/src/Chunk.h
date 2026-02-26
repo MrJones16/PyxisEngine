@@ -1,10 +1,9 @@
 #pragma once
 
-#include "ChunkChainBody.h"
 #include "Element.h"
 #include "VectorHash.h"
 #include <Pyxis.h>
-#include <box2d/box2d.h>.h>
+#include <box2d/box2d.h>
 
 namespace Pyxis {
 struct DirtyRect {
@@ -40,8 +39,8 @@ class Chunk {
     // whether or not this chunk has a static collider
     bool m_MeshGenerated = false;
     bool m_MeshChanged = true;
-    void GenerateStaticCollider();
-    void AddPreviousStaticCollider(Ref<ChunkChainBody> previousChunkChainBody);
+    void GenerateMesh();
+    void AddPreviousMesh();
 
     void QueuePull(glm::ivec2 startPos,
                    std::unordered_set<glm::ivec2, HashVector> &result,
