@@ -1,52 +1,25 @@
 #pragma once
 
-#include <Pyxis/Game/PhysicsBody2D.h>
+#include "Pyxis/Game/PhysicsBody2D.h"
+#include <Pyxis/Game/Physics2D.h>
 #include <Pyxis/Nodes/Node2D.h>
-#include <box2d/box2d.h>
 #include <poly2tri.h>
-
-// override json conversion for glm objects
-
-// Serialize b2Vec2
-inline void to_json(json &j, const b2Vec2 &vec) {
-    j = json{{"x", vec.x}, {"y", vec.y}};
-}
-// Deserialize glm::vec2
-inline void from_json(const json &j, b2Vec2 &vec) {
-    vec.x = j.at("x").get<float>();
-    vec.y = j.at("y").get<float>();
-}
 
 namespace Pyxis {
 // UUID uuid, const glm::ivec2& size, std::unordered_map<glm::ivec2,
 // RigidBodyElement, HashVector> elements, b2BodyType type, b2World* world)
 
 /// <summary>
-/// A B2BodyNode is a node that tries to correlate the b2 transform with the
-/// node's transform, and functions like a standard rigid body.
+/// A PhysicsBodyNode2D is a node that has an underlying PHysicsBody2D
 /// </summary>
-class B2BodyNode : public Node2D {
+class PhysicsBodyNode2D : public Node2D {
   protected:
-    b2BodyId m_B2Body = b2_nullBodyId;
-    bool m_HasBody = false;
-
-    // todo: make functions to use these!
-    uint16_t m_CategoryBits = 1;
-    uint16_t m_MaskBits = 0xFFFF;
-
-    b2BodyDef m_B2BodyDef;
+    Ref<PhysicsBody2D> m_PhysicsBody;
 
   public:
-    B2BodyNode(const std::string &name, b2BodyType type);
-    B2BodyNode(UUID id);
-    ~B2BodyNode();
-
-    /// <summary>
-    /// this will be called by Physics2D::step
-    /// </summary>
-    virtual void OnPhysicsUpdate();
-
-    virtual void OnInspectorRender() override;
+    PhysicsBodyNode2D(const std::string &name, b2BodyType type);
+    PhysicsBodyNode2D(UUID id);
+    ~PhysicsBodyNode2D();
 
     // Serialization
     void Serialize(json &j) override;
@@ -70,19 +43,9 @@ class B2BodyNode : public Node2D {
     ///   Functions for rigid bodies / B2Bodies
     ///////////////////////////////////////////////
 
-    /// <summary>
-    /// needed for resetting the world without destroying the game object!
-    ///
-    /// To be implemented correctly, it needs to not destroy the previous
-    /// b2body, and just create a new one in the new world. the old world
-    /// will be deleted and that will destroy the old b2bodies.
-    /// </summary>
-    /// <param name="world"></param>
-    virtual void TransferWorld(b2WorldId world);
-
     // creates the underlying b2body. might be better to switch this to take the
     // world as parameter
-    virtual void CreateBody(b2WorldId world);
+    virtual void CreatePhysicsBody();
 
     /// <summary>
     /// Frees the underlying b2body and resets the world.
@@ -139,5 +102,5 @@ class B2BodyNode : public Node2D {
     */
 };
 
-REGISTER_SERIALIZABLE_NODE(B2BodyNode);
+REGISTER_SERIALIZABLE_NODE(PhysicsBodyNode2D);
 } // namespace Pyxis

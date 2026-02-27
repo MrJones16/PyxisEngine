@@ -1,7 +1,5 @@
 #include "Chunk.h"
 #include "Pyxis/Renderer/Renderer2D.h"
-#include <Pyxis/Game/Physics2D.h>
-#include <box2d/b2_chain_shape.h>
 /*
 //create a static body for the chunk
                 float RBToWorld = (CHUNKSIZEF / PPU);
@@ -165,18 +163,15 @@ void Chunk::RenderChunk() {
     if (s_DebugChunks) {
         // draw center position
         glm::vec4 chunkStatusColor = {1, 1, 1, 0.2f};
-        if (m_StaticColliderGenerated)
+        if (m_MeshGenerated)
             chunkStatusColor = {0, 0, 1, 0.2f};
-        if (m_StaticColliderGenerated && m_StaticColliderChanged)
+        if (m_MeshGenerated && m_MeshChanged)
             chunkStatusColor = {0, 1, 1, 0.2f};
         // Renderer2D::DrawQuad({ (m_ChunkPos.x + 0.5f) * CHUNKSIZEF,
         // (m_ChunkPos.y + 0.5f) * CHUNKSIZEF, 20 }, glm::vec2(HALFCHUNKSIZEF),
         // chunkStatusColor);
 
         // Draw the collider
-        if (m_OwnedChainBody2D != nullptr)
-            m_OwnedChainBody2D->DebugDraw(PPU, 20);
-
         glm::vec2 min = {std::max(m_DirtyRect.min.x, 0),
                          std::max(m_DirtyRect.min.y, 0)};
         glm::vec2 max = {std::min(m_DirtyRect.max.x, CHUNKSIZE - 1),
@@ -197,81 +192,9 @@ void Chunk::RenderChunk() {
     }
 }
 
-void Chunk::GenerateStaticCollider() {
-    m_StaticColliderGenerated = true;
-    if (m_OwnedChainBody2D == nullptr) {
-        // create a static body for the chunk
-        m_OwnedChainBody2D =
-            CreateRef<ChunkChainBody>("ChunkChainBody", b2_staticBody);
-        m_OwnedChainBody2D->m_ChunkOwnerPos = m_ChunkPos;
-        // set to center of the chunk
-        // chunk pos * size to get bottom left of chunk
-        // add half chunk size to get center of chunk
-        // divide by PPU to get box2d version
-        glm::ivec2 b2chunkpos = ((m_ChunkPos * CHUNKSIZE)) / (int)PPU;
-        m_OwnedChainBody2D->SetPosition({b2chunkpos.x, b2chunkpos.y});
-    } else {
-        m_OwnedChainBody2D->ClearFixtures();
-    }
+void Chunk::GenerateMesh() { m_MeshGenerated = true; }
 
-    // add every element in the chunk to "source"
-    std::unordered_set<glm::ivec2, HashVector> source;
-    for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++) {
-        ElementProperties &ed =
-            ElementData::GetElementProperties(m_Elements[i].m_ID);
-        if (!m_Elements[i].m_Rigid && ed.cell_type == ElementType::solid) {
-            source.insert({i % CHUNKSIZE, i / CHUNKSIZE});
-        }
-    }
-
-    // flood fill to find continuous areas and put into "areas"
-    std::list<std::unordered_set<glm::ivec2, HashVector>> areas;
-    while (source.size() > 0) {
-        std::unordered_set<glm::ivec2, HashVector> result;
-        QueuePull(*source.begin(), result, source);
-        areas.push_back(result);
-    }
-
-    // for each area, get contour points and create loop
-    while (!areas.empty()) {
-        auto contour = GetContourPoints(areas.back());
-        areas.pop_back();
-
-        // BUG ERROR FIX TODO WRONG BROKEN
-        // getcontour points is able to have repeating points, which is a no-no
-        // for box2d triangles / triangulation
-        if (contour.size() == 0) {
-
-            PX_ASSERT(false, "PixelBody2D Error: Contour gathered was size 0");
-            continue;
-        }
-
-        std::vector<b2Vec2> contourVector;
-        if (contour.size() > 20) {
-            contourVector =
-                SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
-        } else {
-            contourVector = contour;
-        }
-
-        // scale points to PPU
-        for (auto &point : contourVector) {
-            point.x /= PPU;
-            point.y /= PPU;
-        }
-
-        if (contourVector.size() >= 3) {
-            m_OwnedChainBody2D->CreateLoop((b2Vec2 *)contourVector.data(),
-                                           contourVector.size());
-        }
-    }
-}
-
-void Chunk::AddPreviousStaticCollider(
-    Ref<ChunkChainBody> previousChunkChainBody) {
-    m_StaticColliderGenerated = true;
-    m_OwnedChainBody2D = previousChunkChainBody;
-}
+void Chunk::AddPreviousMesh() { m_MeshGenerated = true; }
 
 void Chunk::QueuePull(glm::ivec2 startPos,
                       std::unordered_set<glm::ivec2, HashVector> &result,
@@ -382,158 +305,5 @@ Chunk::SimplifyPoints(const std::vector<b2Vec2> &contourVector, int startIndex,
     endResult.push_back(contourVector[endIndex]);
     // PX_TRACE("Removed Points");
     return endResult;
-}
-std::vector<b2Vec2> Chunk::GetContourPoints(
-    const std::unordered_set<glm::ivec2, HashVector> &source) {
-    // run marching squares on element array to find all vertices
-    // inspired by
-    // https://www.emanueleferonato.com/2013/03/01/using-marching-squares-algorithm-to-trace-the-contour-of-an-image/
-    std::vector<b2Vec2> ContourVector;
-
-    glm::ivec2 cursor =
-        glm::ivec2(CHUNKSIZE - 1, CHUNKSIZE - 1); // get top right local pos
-    // scroll through element array until you find an element to start at
-    while (!source.contains(cursor)) {
-        cursor.x--;
-        if (cursor.x < 0) {
-            cursor.x = CHUNKSIZE - 1;
-            cursor.y--;
-            if (cursor.y < 0) {
-                // ran out of pixels to test for! so the entire array is air...
-                return ContourVector;
-            }
-        }
-    }
-
-    // found starting element by scrolling backwards through array
-    glm::ivec2 start = cursor;
-    glm::ivec2 step = {1, 0};
-    glm::ivec2 prev = {1, 0};
-
-    // moving in a counter-clockwise fashion
-    bool closedLoop = false;
-    while (!closedLoop) {
-        int caseValue = GetMarchingSquareCase(cursor, source);
-        switch (caseValue) {
-        case 1:
-        case 5:
-        case 13:
-            /* going UP with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    | 1 |   |   | 1 |   |   | 1 |   |
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   | 4 |   |   | 4 | 8 |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = 0;
-            step.y = 1;
-            break;
-
-        case 8:
-        case 10:
-        case 11:
-            /* going DOWN with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   |   | 2 |   | 1 | 2 |
-                                    +---+---+   +---+---+   +---+---+
-                                    |   | 8 |   |   | 8 |   |   | 8 |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = 0;
-            step.y = -1;
-            break;
-
-        case 4:
-        case 12:
-        case 14:
-            /* going LEFT with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   |   |   |   |   | 2 |
-                                    +---+---+   +---+---+   +---+---+
-                                    | 4 |   |   | 4 | 8 |   | 4 | 8 |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = -1;
-            step.y = 0;
-            break;
-
-        case 2:
-        case 3:
-        case 7:
-            /* going RIGHT with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    |   | 2 |   | 1 | 2 |   | 1 | 2 |
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   |   |   |   | 4 |   |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = 1;
-            step.y = 0;
-            break;
-
-        case 6:
-            /* special saddle point case 1:
-
-            +---+---+
-            |   | 2 |
-            +---+---+
-            | 4 |   |
-            +---+---+
-
-            going LEFT if coming from UP
-            else going RIGHT
-
-            */
-            if (prev.x == 0 && prev.y == -1) {
-                step.x = -1;
-                step.y = 0;
-            } else {
-                step.x = 1;
-                step.y = 0;
-            }
-            break;
-
-        case 9:
-            /* special saddle point case 2:
-
-                    +---+---+
-                    | 1 |   |
-                    +---+---+
-                    |   | 8 |
-                    +---+---+
-
-                    going UP if coming from RIGHT
-                    else going DOWN
-
-                    */
-            if (prev.x == -1 && prev.y == 0) {
-                step.x = 0;
-                step.y = 1;
-            } else {
-                step.x = 0;
-                step.y = -1;
-            }
-            break;
-        }
-        // saving contour point
-        ContourVector.push_back(b2Vec2(cursor.x, cursor.y));
-        // moving onto next point
-        cursor += step;
-        prev = step;
-        //  drawing the line
-        // if we returned to the first point visited, the loop has finished
-        if (cursor == start) {
-            closedLoop = true;
-        }
-    }
-    return ContourVector;
 }
 } // namespace Pyxis

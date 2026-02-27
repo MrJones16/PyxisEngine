@@ -1,12 +1,27 @@
 #include <Pyxis/Game/PhysicsBody2D.h>
 #include <box2d/box2d.h>
+#include <box2d/math_functions.h>
 #include <box2d/types.h>
 
 namespace Pyxis {
 uint32_t PhysicsBody2D::s_IDCounter = 0;
-PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, b2BodyType type) {
+
+// angle is in radians
+PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, b2BodyType type,
+                             const glm::vec2 &position, float angle) {
     m_B2BodyDefinition = b2DefaultBodyDef();
     m_B2BodyDefinition.type = type;
+    m_B2BodyDefinition.position = b2Vec2(position.x, position.y);
+    m_B2BodyDefinition.rotation = b2Rot(angle);
+    m_B2BodyDefinition.userData = this;
+    m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
+    m_ID = s_IDCounter++;
+}
+
+PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, json &j) {
+    m_B2BodyDefinition = b2DefaultBodyDef();
+    Deserialize(j);
+    m_B2BodyDefinition.userData = this;
     m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
     m_ID = s_IDCounter++;
 }
@@ -15,14 +30,91 @@ PhysicsBody2D::~PhysicsBody2D() {
         b2DestroyBody(m_B2BodyId);
 }
 
-void PhysicsBody2D::TransferToWorld(b2WorldId worldId) {
+void PhysicsBody2D::CopyToWorld(b2WorldId worldId) {
     // physics2d will use this to move the properties of this body onto the
     // newly made world, so that the simulation is deterministic on the move
     UpdateBodyDefinition();
     m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
 }
 
+// main wrapper funcs for body interaction
+void PhysicsBody2D::SetType(PhysicsBody2DType type) {}
+PhysicsBody2DType PhysicsBody2D::GetType() const {
+    switch (b2Body_GetType(m_B2BodyId)) {
+    case b2BodyType::b2_dynamicBody:
+        return PhysicsBody2DType::Dynamic;
+        break;
+    case b2BodyType::b2_kinematicBody:
+        return PhysicsBody2DType::Kinematic;
+        break;
+    case b2BodyType::b2_staticBody:
+        return PhysicsBody2DType::Static;
+        break;
+    default:
+        return PhysicsBody2DType::None;
+        break;
+    }
+}
+
+void PhysicsBody2D::SetPosition(const glm::vec2 &position) {
+    b2Body_SetTransform(m_B2BodyId, {position.x, position.y},
+                        b2Body_GetRotation(m_B2BodyId));
+}
+glm::vec2 PhysicsBody2D::GetPosition() const {
+    b2Vec2 position = b2Body_GetPosition(m_B2BodyId);
+    return {position.x, position.y};
+}
+
+void PhysicsBody2D::SetLinearVelocity(const glm::vec2 &velocity) {
+    b2Body_SetLinearVelocity(m_B2BodyId, {velocity.x, velocity.y});
+}
+glm::vec2 PhysicsBody2D::GetLinearVelocity() const {
+    b2Vec2 vel = b2Body_GetLinearVelocity(m_B2BodyId);
+    return {vel.x, vel.y};
+}
+
+void PhysicsBody2D::SetLinearDamping(float damping) {
+    b2Body_SetLinearDamping(m_B2BodyId, damping);
+}
+float PhysicsBody2D::GetLinearDamping() const {
+    return b2Body_GetLinearDamping(m_B2BodyId);
+}
+
+void PhysicsBody2D::SetRotation(float angleInRadians) {
+
+    b2Body_SetTransform(m_B2BodyId, b2Body_GetPosition(m_B2BodyId),
+                        b2Rot(angleInRadians));
+}
+float PhysicsBody2D::GetRotation() const {
+    return b2Rot_GetAngle(b2Body_GetRotation(m_B2BodyId));
+}
+void PhysicsBody2D::SetAngularVelocity(float angularVelocity) {
+    b2Body_SetAngularVelocity(m_B2BodyId, angularVelocity);
+}
+float PhysicsBody2D::GetAngularVelocity() const {
+    return b2Body_GetAngularVelocity(m_B2BodyId);
+}
+void PhysicsBody2D::SetAngularDamping(float angularDamping) {
+    b2Body_SetAngularDamping(m_B2BodyId, angularDamping);
+}
+float PhysicsBody2D::GetAngularDamping() const {
+    return b2Body_GetAngularDamping(m_B2BodyId);
+}
+
+// forces
+void PhysicsBody2D::ApplyForce(const glm::vec2 &force, const glm::vec2 &point,
+                               bool wake) {
+    b2Body_ApplyForce(m_B2BodyId, {force.x, force.y}, {point.x, point.y}, wake);
+}
+void PhysicsBody2D::ApplyTorque(float torque, bool wake) {
+    b2Body_ApplyTorque(m_B2BodyId, torque, wake);
+}
+
 void PhysicsBody2D::UpdateBodyDefinition() {
+    // wipe all body info first
+    m_B2BodyDefinition = b2DefaultBodyDef();
+    // re-grab all info from actual body
+    m_B2BodyDefinition.type = b2Body_GetType(m_B2BodyId);
     m_B2BodyDefinition.position = b2Body_GetPosition(m_B2BodyId);
     m_B2BodyDefinition.linearVelocity = b2Body_GetLinearVelocity(m_B2BodyId);
     m_B2BodyDefinition.linearDamping = b2Body_GetLinearDamping(m_B2BodyId);
@@ -32,81 +124,65 @@ void PhysicsBody2D::UpdateBodyDefinition() {
 }
 
 void PhysicsBody2D::Serialize(json &j) {
-    // update the member vars with b2body and then serialize them
-    m_Position = GetPosition();
-    m_Rotation = GetRotation();
+    // refresh body def before serializing.
+    UpdateBodyDefinition();
 
-    Node2D::Serialize(j);
-    j["Type"] = "B2BodyNode"; // Override type identifier
-
-    // Serialize member variables
-    // j["m_HasBody"] = m_HasBody;// this will be determined by if it has the
-    // "m_b2Body"
-    j["m_CategoryBits"] = m_CategoryBits;
-    j["m_MaskBits"] = m_MaskBits;
-
-    // Serialize B2 Body Definition
-    // we will re-construct the user data, and
-    j["m_B2BodyDef"]["position"] = m_B2BodyDef.position;
-    j["m_B2BodyDef"]["type"] = (int)m_B2BodyDef.type;
-
-    // Serialize B2 Body data
-    if (m_HasBody) {
-        // note: we already have position and angle
-
-        j["m_B2Body"]["linearVelocity"] = b2Body_GetLinearVelocity(m_B2Body);
-        j["m_B2Body"]["linearDamping"] = b2Body_GetLinearDamping(m_B2Body);
-        j["m_B2Body"]["angularVelocity"] = b2Body_GetAngularVelocity(m_B2Body);
-        j["m_B2Body"]["angularDamping"] = b2Body_GetAngularDamping(m_B2Body);
-    }
+    j["Type"] = GetType();
+    j["Position"] = GetPosition();
+    j["LinearVelocity"] = GetLinearVelocity();
+    j["LinearDamping"] = GetLinearDamping();
+    j["Rotation"] = GetRotation();
+    j["AngularVelocity"] = GetAngularVelocity();
+    j["AngularDamping"] = GetAngularDamping();
 }
 
+// Updates the body definition with present json values
 void PhysicsBody2D::Deserialize(json &j) {
+    PhysicsBody2DType type = Kinematic;
+    if (j.contains("Type"))
+        j.at("type").get_to(type);
+    switch (type) {
 
-    if (j.contains("m_CategoryBits"))
-        j.at("m_CategoryBits").get_to(m_CategoryBits);
-    if (j.contains("m_MaskBits"))
-        j.at("m_MaskBits").get_to(m_MaskBits);
-
-    if (j.contains("m_B2BodyDef")) {
-        if (j["m_B2BodyDef"].contains("position"))
-            j["m_B2BodyDef"].at("position").get_to(m_B2BodyDef.position);
-        if (j["m_B2BodyDef"].contains("type"))
-            j["m_B2BodyDef"].at("type").get_to(m_B2BodyDef.type);
-        m_B2BodyDef.userData = this;
+    case Dynamic:
+        m_B2BodyDefinition.type = b2BodyType::b2_dynamicBody;
+        break;
+    case Kinematic:
+        m_B2BodyDefinition.type = b2BodyType::b2_kinematicBody;
+        break;
+    case Static:
+        m_B2BodyDefinition.type = b2BodyType::b2_staticBody;
+        break;
+    default:
+        m_B2BodyDefinition.type = b2BodyType::b2_dynamicBody;
+        break;
     }
 
-    if (j.contains("m_B2Body")) {
-        CreateBody(Physics2D::GetWorld());
+    glm::vec2 Position = {0, 0};
+    if (j.contains("Position"))
+        j.at("Position").get_to(Position);
+    m_B2BodyDefinition.position = {Position.x, Position.y};
 
-        b2Vec2 linearVelocity = {0, 0};
-        float linearDamping = 0, angularVelocity = 0, angularDamping = 0;
-        if (j["m_B2Body"].contains("linearVelocity"))
-            j["m_B2Body"].at("linearVelocity").get_to(linearVelocity);
-        if (j["m_B2Body"].contains("linearDamping"))
-            j["m_B2Body"].at("linearDamping").get_to(linearDamping);
-        if (j["m_B2Body"].contains("angularVelocity"))
-            j["m_B2Body"].at("angularVelocity").get_to(angularVelocity);
-        if (j["m_B2Body"].contains("angularDamping"))
-            j["m_B2Body"].at("angularDamping").get_to(angularDamping);
+    glm::vec2 LinearVelocity = {0, 0};
+    if (j.contains("LinearVelocity"))
+        j.at("LinearVelocity").get_to(LinearVelocity);
+    m_B2BodyDefinition.linearVelocity = {LinearVelocity.x, LinearVelocity.y};
 
-        b2Vec2 position = {0, 0};
-        float angle = 0;
-        if (j.contains("m_Position"))
-            j.at("m_Position").get_to(position);
-        if (j.contains("m_Rotation"))
-            j.at("m_Rotation").get_to(angle);
+    m_B2BodyDefinition.linearDamping = b2DefaultBodyDef().linearDamping;
+    if (j.contains("LinearDamping"))
+        j.at("LinearDamping").get_to(m_B2BodyDefinition.linearDamping);
 
-        SetPosition({position.x, position.y});
-        SetRotation(angle);
+    float Rotation = 0;
+    if (j.contains("Rotation"))
+        j.at("Rotation").get_to(Rotation);
+    m_B2BodyDefinition.rotation = b2Rot(Rotation);
 
-        // b2Body_SetTransform(b2Vec2(m_Position.x, m_Position.y),
-        // m_Rotation);
-        b2Body_SetLinearVelocity(m_B2Body, linearVelocity);
-        b2Body_SetLinearDamping(m_B2Body, linearDamping);
-        b2Body_SetAngularVelocity(m_B2Body, angularVelocity);
-        b2Body_SetAngularDamping(m_B2Body, angularDamping);
-    }
+    m_B2BodyDefinition.angularVelocity = 0;
+    if (j.contains("AngularVelocity"))
+        j.at("AngularVelocity").get_to(m_B2BodyDefinition.angularVelocity);
+
+    m_B2BodyDefinition.angularDamping = b2DefaultBodyDef().angularDamping;
+    if (j.contains("AngularDamping"))
+        j.at("AngularDamping").get_to(m_B2BodyDefinition.angularDamping);
 }
 
 } // namespace Pyxis

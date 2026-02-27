@@ -3,7 +3,7 @@
 #include "Element.h"
 #include "VectorHash.h"
 #include "World.h"
-#include <Pyxis/Nodes/B2BodyNode.h>
+#include <Pyxis/Nodes/PhysicsBodyNode2D.h>
 
 /// A pixel body is a rigidbody2D , aka a B2Body.
 ///
@@ -60,7 +60,7 @@ struct PixelBodyElement {
 ///
 /// When deserializing, you must set the m_PXWorld afterwards.
 /// </summary>
-class PixelBody2D : public B2BodyNode {
+class PixelBody2D : public PhysicsBodyNode2D {
   protected:
     bool m_InWorld = true;
 
@@ -139,8 +139,6 @@ class PixelBody2D : public B2BodyNode {
     /// Pixel bodies display in world,
     /// so the PPU and chunksize are not aligned!
     ////////////////////////////////////////////////
-
-    virtual void TransferWorld(b2World *world) override;
 
     virtual glm::mat4 GetWorldTransform() override;
 

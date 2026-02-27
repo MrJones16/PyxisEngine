@@ -1,6 +1,7 @@
 #include "Renderer2D.h"
 #include "Pyxis/Core/Application.h"
 #include "Pyxis/Core/Core.h"
+#include "Pyxis/Game/PhysicsWorld2D.h"
 #include "Pyxis/Renderer/Buffer.h"
 #include "RenderCommand.h"
 
@@ -8,10 +9,7 @@
 
 #include "Shader.h"
 #include "VertexArray.h"
-#include <box2d/b2_collision.h>
 #include <box2d/box2d.h>
-#include <box2d/id.h>
-#include <box2d/types.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis {
@@ -107,7 +105,7 @@ struct LineVertex {
 };
 
 struct RendererData2D {
-    b2WorldId ShadowCasterB2World;
+    PhysicsWorld2D ShadowCasterPhysicsWorld;
     static const uint32_t MaxTextureSlots = 32;
     Ref<Texture2D> WhiteTexture;
 

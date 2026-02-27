@@ -2,7 +2,6 @@
 // #include "ChunkWorker.h"
 #include <PixelBody2D.h>
 #include <Pyxis/Game/Physics2D.h>
-#include <box2d/b2_math.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <mutex>
 #include <poly2tri.h>

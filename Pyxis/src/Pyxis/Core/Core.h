@@ -4,6 +4,8 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 // #include <fmt/ostream.h>
 
 // template <> struct fmt::formatter<glm::mat4> : ostream_formatter {};
@@ -204,4 +206,70 @@ inline bool operator<(const glm::ivec2 &lhs, const glm::ivec2 &rhs) {
 inline bool operator==(const glm::ivec2 &lhs, const glm::ivec2 &rhs) {
     return lhs.x == rhs.x && lhs.y == rhs.y;
 }
+// Serialize glm::vec2
+inline void to_json(json &j, const glm::vec2 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}};
+}
+// Deserialize glm::vec2
+inline void from_json(const json &j, glm::vec2 &vec) {
+    vec.x = j.at("x").get<float>();
+    vec.y = j.at("y").get<float>();
+}
+
+// Serialize glm::ivec2
+inline void to_json(json &j, const glm::ivec2 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}};
+}
+// Deserialize glm::ivec2
+inline void from_json(const json &j, glm::ivec2 &vec) {
+    vec.x = j.at("x").get<int>();
+    vec.y = j.at("y").get<int>();
+}
+
+// Serialize glm::vec3
+inline void to_json(json &j, const glm::vec3 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}};
+}
+// Deserialize glm::vec3
+inline void from_json(const json &j, glm::vec3 &vec) {
+    vec.x = j.at("x").get<float>();
+    vec.y = j.at("y").get<float>();
+    vec.z = j.at("z").get<float>();
+}
+
+// Serialize glm::ivec3
+inline void to_json(json &j, const glm::ivec3 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}};
+}
+// Deserialize glm::ivec3
+inline void from_json(const json &j, glm::ivec3 &vec) {
+    vec.x = j.at("x").get<int>();
+    vec.y = j.at("y").get<int>();
+    vec.z = j.at("z").get<int>();
+}
+
+// Serialize glm::vec4
+inline void to_json(json &j, const glm::vec4 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}, {"w", vec.w}};
+}
+// Deserialize glm::vec4
+inline void from_json(const json &j, glm::vec4 &vec) {
+    vec.x = j.at("x").get<float>();
+    vec.y = j.at("y").get<float>();
+    vec.z = j.at("z").get<float>();
+    vec.w = j.at("w").get<float>();
+}
+
+// Serialize glm::ivec4
+inline void to_json(json &j, const glm::ivec4 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}, {"w", vec.w}};
+}
+// Deserialize glm::ivec4
+inline void from_json(const json &j, glm::ivec4 &vec) {
+    vec.x = j.at("x").get<int>();
+    vec.y = j.at("y").get<int>();
+    vec.z = j.at("z").get<int>();
+    vec.w = j.at("w").get<int>();
+}
+
 } // namespace glm

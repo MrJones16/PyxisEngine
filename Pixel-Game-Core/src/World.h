@@ -12,38 +12,9 @@
 
 // Particles
 #include "ElementParticle.h"
+#include <random>
 
 namespace Pyxis {
-
-class WakeUpQueryCallback : public b2QueryCallback {
-  public:
-    bool ReportFixture(b2Fixture *fixture) {
-        b2Body *body = fixture->GetBody();
-        // PX_TRACE("Found an object in the update region");
-        body->SetAwake(true);
-        // Return true to continue the query.
-        return true;
-    }
-};
-
-class FoundDynamicBodyQuery : public b2QueryCallback {
-  public:
-    bool &m_FoundBool;
-    FoundDynamicBodyQuery(bool &foundBool) : m_FoundBool(foundBool) {};
-    bool ReportFixture(b2Fixture *fixture) {
-        b2Body *body = fixture->GetBody();
-        if (body->GetType() == b2_dynamicBody) {
-            // PX_TRACE("Dynamic body in the area.");
-            m_FoundBool = true;
-
-            // stop searching
-            return false;
-        }
-
-        // continue searching.
-        return true;
-    }
-};
 
 class World {
   public:
@@ -90,14 +61,14 @@ class World {
     void Clear();
     void RenderWorld();
 
-    void TestStaticColliders() {
+    void TestMeshGeneration() {
         for (auto &[key, chunk] : m_Chunks) {
-            chunk->GenerateStaticCollider();
+            chunk->GenerateMesh();
         }
     }
 
   public:
-    void ResetBox2D();
+    void ResetPhysics2D();
     // PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2&
     // size, Element* ElementArray, b2BodyType type = b2_dynamicBody); void
     // PutPixelBodyInWorld(PixelRigidBody& body);
