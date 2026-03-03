@@ -7,10 +7,19 @@ namespace Pyxis {
 uint32_t PhysicsBody2D::s_IDCounter = 0;
 
 // angle is in radians
-PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, b2BodyType type,
+PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
                              const glm::vec2 &position, float angle) {
     m_B2BodyDefinition = b2DefaultBodyDef();
-    m_B2BodyDefinition.type = type;
+    switch (type) {
+    case Dynamic:
+        m_B2BodyDefinition.type = b2BodyType::b2_dynamicBody;
+    case Kinematic:
+        m_B2BodyDefinition.type = b2BodyType::b2_kinematicBody;
+    case Static:
+        m_B2BodyDefinition.type = b2BodyType::b2_staticBody;
+    default:
+        break;
+    }
     m_B2BodyDefinition.position = b2Vec2(position.x, position.y);
     m_B2BodyDefinition.rotation = b2Rot(angle);
     m_B2BodyDefinition.userData = this;
@@ -51,7 +60,7 @@ PhysicsBody2DType PhysicsBody2D::GetType() const {
         return PhysicsBody2DType::Static;
         break;
     default:
-        return PhysicsBody2DType::None;
+        return PhysicsBody2DType::Kinematic;
         break;
     }
 }

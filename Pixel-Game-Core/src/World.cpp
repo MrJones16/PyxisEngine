@@ -1,6 +1,6 @@
 #include "World.h"
 // #include "ChunkWorker.h"
-#include <PixelBody2D.h>
+#include <PixelBody.h>
 #include <Pyxis/Game/Physics2D.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <mutex>
@@ -38,6 +38,52 @@ std::vector<glm::ivec2> getLinePath(glm::ivec2 startPosition,
     }
 
     return positions;
+}
+
+// GridQueuePull will fetch a continuous section of the grid set directly out of
+// source, destructive! There could still be more things in source if there were
+// non-continuous items. You want to keep pulling till source is empty.
+static std::unordered_set<glm::ivec2, VectorHash>
+GridQueuePull(std::unordered_set<glm::ivec2, VectorHash> &source) {
+    std::unordered_set<glm::ivec2, VectorHash> result;
+
+    if (source.size() == 0)
+        return result;
+
+    // make sure the start pos is valid
+    glm::ivec2 startPos = *source.begin();
+
+    // we make a queue of positions to check
+    std::queue<glm::ivec2> queue;
+
+    queue.push(startPos);
+    result.insert(startPos);
+    source.erase(
+        startPos); // since we know it is valid, and it won't be reached by loop
+
+    const glm::ivec2 neighbors[] = {
+        {1, 0},
+        {-1, 0},
+        {0, 1},
+        {0, -1},
+    };
+
+    while (queue.size() > 0) {
+        // check neighbors to see if we need to add them to the queue, or
+        // have already visited them
+        glm::ivec2 position = queue.front();
+        queue.pop();
+
+        for (int i = 0; i < 4; i++) {
+            glm::ivec2 pos = position + neighbors[i];
+            if (!result.contains(pos) && source.contains(pos)) {
+                queue.push(pos);
+                result.insert(pos);
+                source.erase(pos);
+            }
+        }
+    }
+    return result;
 }
 } // namespace Utils
 
@@ -140,21 +186,11 @@ void World::DownloadWorld(Network::Message &msg) {
                      body->GetPosition().y, RigidBodyNode->GetUUID());
             // can safely ignore putting it in the world, since when we got the
             // world data it is already there!
-        } else if (j["Type"] == "ChunkChainBody") {
-            // we don't register these to the "scene layer" aka node:nodes
-
-            Ref<ChunkChainBody> ccb =
-                std::dynamic_pointer_cast<ChunkChainBody>(RigidBodyNode);
-            GetChunk(ccb->m_ChunkOwnerPos)->AddPreviousStaticCollider(ccb);
-            PX_TRACE("Loaded ChunkChainBody: Pos[{},{}] UUID[{}]",
-                     ccb->m_ChunkOwnerPos.x, ccb->m_ChunkOwnerPos.y,
-                     ccb->GetUUID());
-        } else //"B2BodyNode")
-        {
+        } else {
             // register to Node::Nodes
             Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
 
-            PX_TRACE("Loaded Generic B2BodyNode, UUID[{0}]",
+            PX_TRACE("Loaded Generic PhysicsBodyNode2D, UUID[{0}]",
                      RigidBodyNode->GetUUID());
         }
     }
@@ -184,7 +220,7 @@ void World::GetGameDataInit(Network::Message &msg) {
     msg << static_cast<uint32_t>(m_Chunks.size());
     PX_TRACE("# Chunks: {0}", m_Chunks.size());
     msg << static_cast<uint32_t>(Physics2D::GetWorld()->GetBodyCount());
-    PX_TRACE("# RigidBodies: {0}", Physics2D::GetWorld()->GetBodyCount());
+    PX_TRACE("# RigidBodies: {0}", Physics2D::GetWorld().GetBodyCount());
     msg << m_SimulationTick;
     msg << m_UpdateBit;
     msg << m_WorldSeed;
@@ -231,7 +267,7 @@ void World::GetGameData(std::vector<Network::Message> &messages) {
 World::~World() {
     PX_TRACE("Deleting World");
 
-    Physics2D::DeleteWorld();
+    Physics2D::DestroyWorld();
     for (auto &pair : m_Chunks) {
         delete (pair.second);
     }
@@ -311,13 +347,20 @@ Element &World::GetElement(const glm::ivec2 &pixelPos) {
     return GetChunk(chunkPos)->GetElement(index);
 }
 
+bool World::TryGetElement(const glm::ivec2 &pixelPos, Element &element) {
+    if (m_Chunks.contains(PixelToChunk(pixelPos))) {
+        element = GetChunk(PixelToChunk(pixelPos))
+                      ->GetElement(PixelToIndex(pixelPos));
+    }
+}
+
 Element &World::ForceGetElement(const glm::ivec2 &pixelPos) {
     auto chunkPos = PixelToChunk(pixelPos);
     auto index = PixelToIndex(pixelPos);
     if (!m_Chunks.contains(chunkPos)) {
         AddChunk(chunkPos);
     }
-    return GetChunk(chunkPos)->GetElement(index);
+    return GetChunk(chunkPos)->GetElement(PixelToIndex(pixelPos));
 }
 
 void World::SetElement(const glm::ivec2 &pixelPos, const Element &element) {
@@ -364,6 +407,8 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
                 break;
             case BrushType::square:
                 break;
+            case BrushType::end:
+                break;
             }
 
             // get chunk / index
@@ -400,6 +445,136 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
     }
 }
 
+Ref<PixelBody2D>
+World::CreatePixelBody(PhysicsBody2DType type,
+                       std::unordered_set<glm::ivec2, VectorHash> pixels,
+                       bool CheckIfContinuous) {
+    // we have a vector of pixels to make a body from, but we don't know if they
+    // are continuous
+    if (CheckIfContinuous) {
+        while (pixels.size() > 0) {
+            std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
+                Utils::GridQueuePull(pixels);
+            Ref<PixelBody2D> body = Instantiate<PixelBody2D>(type);
+            std::vector<PixelBodyElement> elements;
+            for (glm::ivec2 pos : continuousPixels) {
+                Element e = Element();
+                if (TryGetElement(pos, e))
+                    elements.push_back(PixelBodyElement(GetElement(pos), pos));
+            }
+            body->SetPixelBodyElements(elements);
+            m_PixelBodies[body->GetUUID()] = body;
+
+            if (pixels.size() == 0) {
+                // we pulled the last of the pixels, so return this body.
+                return body;
+            }
+        }
+    } else {
+        Ref<PixelBody2D> body = Instantiate<PixelBody2D>(type);
+        std::vector<PixelBodyElement> elements;
+        for (glm::ivec2 pos : pixels) {
+            elements.push_back(PixelBodyElement(GetElement(pos), pos));
+        }
+        body->SetPixelBodyElements(elements);
+        m_PixelBodies[body->GetUUID()] = body;
+        return body;
+    }
+}
+
+void World::PullPixelBodies() {
+    // also call ActuallyQueueFree on pixel bodies if they want to die.
+
+    for (auto kvp : m_PixelBodies) {
+        UUID id = kvp.first;
+        Ref<PixelBody2D> body = kvp.second;
+
+        // keep list of elements to take out after iteration
+        std::vector<glm::ivec2> elementsToRemove;
+
+        // loop over all elements, and attempt to take them out of the world
+        for (auto &mappedElement : body->m_Elements) {
+
+            // the world position of the element is already known, so just try
+            // to grab it
+            Element &worldElement = GetElement(mappedElement.second.worldPos);
+            ElementProperties &elementData =
+                ElementData::GetElementProperties(worldElement.m_ID);
+
+            if (mappedElement.second.element.m_ID !=
+                worldElement
+                    .m_ID) // || !worldElement.m_Rigid TODO re-implement rigid?
+            {
+
+                // element has changed over the last update, could have been
+                // removed or melted or something of the sort. we need to
+                // re-create our rigid body!
+
+                if (elementData.cell_type == ElementType::solid ||
+                    (elementData.cell_type == ElementType::movableSolid &&
+                     worldElement.m_Rigid)) {
+                    // replaced element is able to continue being part of the
+                    // solid! this could be the player replacing the blocks, or
+                    // a solid block reacts with something and stays solid, like
+                    // getting stained or something idk either way, in this
+                    // situation we just pull the new element
+                    body->m_Elements[mappedElement.first].element =
+                        worldElement;
+                    SetElementWithoutDirtyRectUpdate(
+                        mappedElement.second.worldPos, Element());
+                } else {
+                    // the element that has taken over the spot is not able to
+                    // be a solid, so we need to re-construct the rigid body
+                    // without that element! so we leave it in the sim, and
+                    // erase the previous from the body
+                    elementsToRemove.push_back(mappedElement.first);
+                }
+            } else {
+                // element should be the same, so nothing has changed, pull the
+                // element out
+                body->m_Elements[mappedElement.first].element = worldElement;
+                // replace with default element
+                SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
+                                                 Element());
+            }
+        }
+
+        // now that we pulled all the elements out, try to re-construct the body
+        // if needed:
+        if (elementsToRemove.size() > 0) {
+            // we need to reconstruct!
+
+            // remove the outdated elements
+            for (auto &localPos : elementsToRemove) {
+                // TODO: fix this to store these as a buffer and pass to new
+                // body creation instead of throwing into the world as a
+                // shortcut...
+                SetElementWithoutDirtyRectUpdate(
+                    body->m_Elements[localPos].worldPos,
+                    body->m_Elements[localPos].element);
+                body->m_Elements.erase(localPos);
+            }
+
+            std::unordered_set<glm::ivec2, VectorHash> source;
+            for (auto kvp : body->m_Elements) {
+                source.insert(kvp.first);
+            }
+
+            auto firstPull = Utils::GridQueuePull(source);
+            for (glm::ivec2 pos : source) {
+                // source is now what is remaining after pulling out a
+                // continuous set. lets remove the remainder from body, and make
+                // new pixel bodies from it
+                body->m_Elements.erase(pos);
+            }
+            body->GenerateMesh();
+            CreatePixelBody(body->GetType(), source, true);
+        }
+    }
+}
+
+void World::PushPixelBodies() {}
+
 void World::UpdateWorld() {
     /*m_Threads.clear();
     for each (auto& pair in m_Chunks)
@@ -413,12 +588,6 @@ void World::UpdateWorld() {
 
     UpdateParticles();
 
-    Physics2D::Step();
-    // physiscs 2d updates the pixel bodies,
-    // and the pixel bodies manage their own insertion
-    // and deletion from the world, and throwing the
-    // particles on overlap
-
     for (auto &[pos, chunk] : m_Chunks) {
         UpdateChunk(chunk);
     }
@@ -428,6 +597,11 @@ void World::UpdateWorld() {
             pair.second->UpdateTexture();
         }
     }
+
+    // TODO STILL
+    //  pull pixelbodies out
+    Physics2D::GetWorld().Step();
+    // put pixelbodies back in
 
     m_UpdateBit = !m_UpdateBit;
     m_SimulationTick++;
@@ -468,16 +642,17 @@ void World::UpdateChunk(Chunk *chunk) {
     chunk->m_DirtyRect.min = chunk->m_DirtyRect.min + 1;
     chunk->m_DirtyRect.max = chunk->m_DirtyRect.max - 1;
 
-    // make sure to wake up any pixel bodies in area
-    b2AABB queryRegion;
-    glm::vec2 lower =
-        glm::vec2(dirtyRect.min + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
-    glm::vec2 upper =
-        glm::vec2(dirtyRect.max + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
-    queryRegion.lowerBound = b2Vec2(lower.x, lower.y);
-    queryRegion.upperBound = b2Vec2(upper.x, upper.y);
-    WakeUpQueryCallback callback;
-    Physics2D::GetWorld()->QueryAABB(&callback, queryRegion);
+    // TODO: FIX WAKEUP
+    //  make sure to wake up any pixel bodies in area
+    // b2AABB queryRegion;
+    // glm::vec2 lower =
+    //     glm::vec2(dirtyRect.min + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
+    // glm::vec2 upper =
+    //     glm::vec2(dirtyRect.max + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
+    // queryRegion.lowerBound = b2Vec2(lower.x, lower.y);
+    // queryRegion.upperBound = b2Vec2(upper.x, upper.y);
+    // WakeUpQueryCallback callback;
+    // Physics2D::GetWorld()->QueryAABB(&callback, queryRegion);
 
     // get the min and max
     // loop from min to max in both "axies"?
@@ -562,7 +737,6 @@ void World::UpdateChunk(Chunk *chunk) {
                 {
                     if (IsInBounds(x, y + 1)) {
                         elementTop = &(chunk->GetElement(x, y + 1));
-                        chunk->m_Elements + (x) + (y + 1) * CHUNKSIZE;
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -574,15 +748,14 @@ void World::UpdateChunk(Chunk *chunk) {
                                 ((((x) + CHUNKSIZE) % CHUNKSIZE) +
                                  (((y + 1) + CHUNKSIZE) % CHUNKSIZE) *
                                      CHUNKSIZE);
-                            elementTop = topChunk->m_Elements + indexOther;
+                            elementTop = &(topChunk->GetElement(indexOther));
                         } else {
                             elementTop = nullptr;
                         }
                     }
 
                     if (IsInBounds(x, y - 1)) {
-                        elementBottom =
-                            chunk->m_Elements + (x) + (y - 1) * CHUNKSIZE;
+                        elementBottom = &(chunk->GetElement(x, y - 1));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -595,15 +768,14 @@ void World::UpdateChunk(Chunk *chunk) {
                                  (((y - 1) + CHUNKSIZE) % CHUNKSIZE) *
                                      CHUNKSIZE);
                             elementBottom =
-                                bottomChunk->m_Elements + indexOther;
+                                &(bottomChunk->GetElement(indexOther));
                         } else {
                             elementBottom = nullptr;
                         }
                     }
 
                     if (IsInBounds(x + 1, y)) {
-                        elementRight =
-                            chunk->m_Elements + (x + 1) + (y)*CHUNKSIZE;
+                        elementRight = &(chunk->GetElement(x + 1, y));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -614,15 +786,15 @@ void World::UpdateChunk(Chunk *chunk) {
                             int indexOther =
                                 ((((x + 1) + CHUNKSIZE) % CHUNKSIZE) +
                                  (((y) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-                            elementRight = rightChunk->m_Elements + indexOther;
+                            elementRight =
+                                &(rightChunk->GetElement(indexOther));
                         } else {
                             elementRight = nullptr;
                         }
                     }
 
                     if (IsInBounds(x - 1, y)) {
-                        elementLeft =
-                            chunk->m_Elements + (x - 1) + (y)*CHUNKSIZE;
+                        elementLeft = &(chunk->GetElement(x - 1, y));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -633,7 +805,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             int indexOther =
                                 ((((x - 1) + CHUNKSIZE) % CHUNKSIZE) +
                                  (((y) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-                            elementLeft = leftChunk->m_Elements + indexOther;
+                            elementLeft = &(leftChunk->GetElement(indexOther));
                         } else {
                             elementLeft = nullptr;
                         }
@@ -1664,7 +1836,6 @@ void World::CreateParticle(const glm::vec2 &position, const glm::vec2 &velocity,
 }
 
 void World::UpdateParticles() {
-
     // NOTES FOR LATER IMPLEMENTATION
     //
     // It would be great to have thrown particles use the positive velocity, but
@@ -1832,7 +2003,6 @@ void World::Clear() {
 /// Renders the world using Pyxis::renderer2d draw quad
 /// </summary>
 void World::RenderWorld() {
-
     // PX_TRACE("Rendering world");
     for (auto &pair : m_Chunks) {
         Renderer2D::DrawQuad(
@@ -1907,6 +2077,8 @@ void World::RenderWorld() {
         //}
     }
 }
+
+void World::AppendPixelBodyToSet() {}
 
 void World::ResetBox2D() {
     PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);

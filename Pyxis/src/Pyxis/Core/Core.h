@@ -5,7 +5,18 @@
 #include <glm/glm.hpp>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <random>
 using json = nlohmann::json;
+
+using UUID = uint32_t;
+
+inline static UUID CreateUUID() {
+    static std::random_device rd;  // Non-deterministic random seed
+    static std::mt19937 gen(rd()); // 64-bit Mersenne Twister
+    static std::uniform_int_distribution<uint32_t> dist;
+    UUID result = dist(gen);
+    return result;
+}
 // #include <fmt/ostream.h>
 
 // template <> struct fmt::formatter<glm::mat4> : ostream_formatter {};

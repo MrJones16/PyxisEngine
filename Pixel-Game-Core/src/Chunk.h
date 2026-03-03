@@ -44,14 +44,14 @@ class Chunk {
     void AddPreviousMesh();
 
     void QueuePull(glm::ivec2 startPos,
-                   std::unordered_set<glm::ivec2, HashVector> &result,
-                   std::unordered_set<glm::ivec2, HashVector> &source);
+                   std::unordered_set<glm::ivec2, VectorHash> &result,
+                   std::unordered_set<glm::ivec2, VectorHash> &source);
 
     std::vector<b2Vec2>
-    GetContourPoints(const std::unordered_set<glm::ivec2, HashVector> &source);
+    GetContourPoints(const std::unordered_set<glm::ivec2, VectorHash> &source);
     int GetMarchingSquareCase(
         const glm::ivec2 &localPosition,
-        const std::unordered_set<glm::ivec2, HashVector> &source);
+        const std::unordered_set<glm::ivec2, VectorHash> &source);
     std::vector<b2Vec2> SimplifyPoints(const std::vector<b2Vec2> &contourVector,
                                        int startIndex, int endIndex,
                                        float threshold);

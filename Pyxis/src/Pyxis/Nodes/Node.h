@@ -26,7 +26,6 @@
 
 namespace Pyxis {
 
-using UUID = uint32_t;
 // Node is the base entity class that lives in a scene heirarchy.
 // Nodes is a collection of all living nodes
 //  s_HoveredNodeID is the ID of the node with a mouse hovering over it, set by

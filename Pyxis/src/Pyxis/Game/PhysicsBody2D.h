@@ -6,7 +6,7 @@
 using json = nlohmann::json;
 
 namespace Pyxis {
-enum PhysicsBody2DType : uint8_t { Dynamic, Kinematic, Static, None };
+enum PhysicsBody2DType : uint8_t { Dynamic, Kinematic, Static };
 
 // A wrapper for box2d bodies. The main reason for doing this, is so that:
 // 1. could be slightly easier to replace box2d in future if somehow needed
@@ -14,6 +14,9 @@ enum PhysicsBody2DType : uint8_t { Dynamic, Kinematic, Static, None };
 // that is needed!
 struct PhysicsBody2D {
   public:
+    PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
+                  const glm::vec2 &position = {0, 0}, float angle = 0);
+    PhysicsBody2D(b2WorldId worldId, json &j);
     ~PhysicsBody2D();
 
     // doesn't remove from the prior world!
@@ -53,11 +56,6 @@ struct PhysicsBody2D {
     void Deserialize(json &j);
 
   protected:
-    // hide constructor, as we want to get this from Physics2D::CreateBody;
-    // Angle is in radians
-    PhysicsBody2D(b2WorldId worldId, b2BodyType type, const glm::vec2 &position,
-                  float angle);
-    PhysicsBody2D(b2WorldId worldId, json &j);
     void UpdateBodyDefinition();
 
     static uint32_t s_IDCounter;
@@ -65,7 +63,6 @@ struct PhysicsBody2D {
     b2BodyDef m_B2BodyDefinition;
     b2BodyId m_B2BodyId;
 
-    // allow PhysicsWorld2D to get inner variables.
     friend class PhysicsWorld2D;
 };
 } // namespace Pyxis

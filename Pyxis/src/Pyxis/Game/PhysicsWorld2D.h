@@ -35,9 +35,14 @@ class PhysicsWorld2D {
     void ResetWorld();
     void Step();
 
-    Ref<PhysicsBody2D> CreateBody(b2BodyType type, const glm::vec2 &position,
+    int GetBodyCount();
+
+    Ref<PhysicsBody2D> CreateBody(PhysicsBody2DType type,
+                                  const glm::vec2 &position,
                                   float angleInRadians);
     Ref<PhysicsBody2D> CreateBody(json &j);
+
+    friend class Physics2D;
 };
 
 } // namespace Pyxis

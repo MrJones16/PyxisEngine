@@ -1,11 +1,9 @@
 #pragma once
 
 #include "Chunk.h"
+#include "PixelBody2D.h"
 #include "Pyxis/FastNoiseLite/FastNoiseLite.h"
-#include "VectorHash.h"
-
-// all box2d things
-// #include "PixelRigidBody.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
 
 // networking game messages / input actions
 #include "PixelNetworking.h"
@@ -15,6 +13,11 @@
 #include <random>
 
 namespace Pyxis {
+
+namespace Utils {
+static std::unordered_set<glm::ivec2, VectorHash>
+GridQueuePull(std::unordered_set<glm::ivec2, VectorHash> &source);
+}
 
 class World {
   public:
@@ -34,11 +37,14 @@ class World {
     Chunk *GetChunk(const glm::ivec2 &chunkPos);
     void GenerateChunk(Chunk *chunk);
 
-    // gets the requested element, undefined behavior if the chunk doesn't exist
+    // gets the requested element, undefined behavior if the chunk doesn't
+    // exist!
     Element &GetElement(const glm::ivec2 &pixelPos);
-
+    // Tries to get element if chunk exists
+    bool TryGetElement(const glm::ivec2 &pixelPos, Element &element);
     // loads the chunk if it doesn't exist, then gets the element
     Element &ForceGetElement(const glm::ivec2 &pixelPos);
+
     void SetElement(const glm::ivec2 &pixelPos, const Element &element);
     void SetElementWithoutDirtyRectUpdate(const glm::ivec2 &pixelPos,
                                           const Element &element);
@@ -68,10 +74,27 @@ class World {
     }
 
   public:
+    // Create a pixel body. This will return the (if check continuous, the last)
+    // body generated from the set of pixels. This fetches the pixel from the
+    // world.
+    Ref<PixelBody2D>
+    CreatePixelBody(PhysicsBody2DType type,
+                    std::unordered_set<glm::ivec2, VectorHash> pixels,
+                    bool CheckIfContinuous = true);
     void ResetPhysics2D();
     // PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2&
     // size, Element* ElementArray, b2BodyType type = b2_dynamicBody); void
     // PutPixelBodyInWorld(PixelRigidBody& body);
+  protected:
+    // store pixel bodies as we need to be able to reference them to update
+    // their world positions.
+    // world will keep ownership of these.
+    std::unordered_map<UUID, Ref<PixelBody2D>> m_PixelBodies;
+
+    // take pixel bodies out of the world
+    void PullPixelBodies();
+    // put pixel bodies back into the world.
+    void PushPixelBodies();
 
   public:
     // moved to game layer and server respectively

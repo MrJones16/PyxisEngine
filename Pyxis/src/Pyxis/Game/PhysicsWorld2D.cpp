@@ -1,3 +1,4 @@
+#include "Pyxis/Game/PhysicsBody2D.h"
 #include <Pyxis/Game/PhysicsWorld2D.h>
 #include <box2d/box2d.h>
 
@@ -47,7 +48,19 @@ void PhysicsWorld2D::ResetWorld() {
 }
 void PhysicsWorld2D::Step() { b2World_Step(m_B2WorldId, m_Step, m_SubSteps); }
 
-Ref<PhysicsBody2D> PhysicsWorld2D::CreateBody(b2BodyType type,
+int PhysicsWorld2D::GetBodyCount() {
+    std::vector<uint32_t> expiredIds;
+    for (auto kvp : m_Bodies) {
+        if (kvp.second.expired()) {
+            expiredIds.push_back(kvp.first);
+        }
+    }
+    for (uint32_t id : expiredIds)
+        m_Bodies.erase(id);
+    return m_Bodies.size();
+}
+
+Ref<PhysicsBody2D> PhysicsWorld2D::CreateBody(PhysicsBody2DType type,
                                               const glm::vec2 &position,
                                               float angleInRadians) {
     Ref<PhysicsBody2D> ref =

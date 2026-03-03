@@ -1,5 +1,6 @@
 #include "Chunk.h"
 #include "Pyxis/Renderer/Renderer2D.h"
+#include "VectorHash.h"
 /*
 //create a static body for the chunk
                 float RBToWorld = (CHUNKSIZEF / PPU);
@@ -197,8 +198,8 @@ void Chunk::GenerateMesh() { m_MeshGenerated = true; }
 void Chunk::AddPreviousMesh() { m_MeshGenerated = true; }
 
 void Chunk::QueuePull(glm::ivec2 startPos,
-                      std::unordered_set<glm::ivec2, HashVector> &result,
-                      std::unordered_set<glm::ivec2, HashVector> &source) {
+                      std::unordered_set<glm::ivec2, VectorHash> &result,
+                      std::unordered_set<glm::ivec2, VectorHash> &source) {
     if (source.size() == 0)
         return;
 
@@ -209,7 +210,7 @@ void Chunk::QueuePull(glm::ivec2 startPos,
 
     // we make a queue of positions to check
     std::queue<glm::ivec2> queue;
-    std::unordered_set<glm::ivec2, HashVector> visited;
+    std::unordered_set<glm::ivec2, VectorHash> visited;
 
     queue.push(startPos);
     visited.insert(startPos);
@@ -245,7 +246,7 @@ void Chunk::QueuePull(glm::ivec2 startPos,
 }
 int Chunk::GetMarchingSquareCase(
     const glm::ivec2 &localPosition,
-    const std::unordered_set<glm::ivec2, HashVector> &source) {
+    const std::unordered_set<glm::ivec2, VectorHash> &source) {
     int result = 0;
     if (source.contains(localPosition + glm::ivec2(0, 0)))
         result += 8;
