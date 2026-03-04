@@ -448,6 +448,25 @@ World::CreatePixelBody(PhysicsBody2DType type,
         m_PixelBodies[body->GetUUID()] = body;
         return body;
     }
+    // something went wrong!
+    PX_CORE_ERROR("Somehow, we didn't create a pixel body here...");
+    return nullptr;
+}
+
+template <typename T>
+void World::AddCustomPixelBody(
+    Ref<T> body, std::unordered_set<glm::ivec2, VectorHash> pixels) {
+    static_assert(std::is_base_of_v<PixelBody2D, T>,
+                  "T must inherit from PixelBody2D");
+
+    m_PixelBodies[body->GetUUID()] = body;
+    std::vector<PixelBodyElement> elements;
+    for (glm::ivec2 pos : pixels) {
+        Element e = Element();
+        if (TryGetElement(pos, e))
+            elements.push_back(PixelBodyElement(GetElement(pos), pos));
+    }
+    body->SetPixelBodyElements(elements);
 }
 
 void World::PullPixelBodies() {

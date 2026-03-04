@@ -126,14 +126,14 @@ class PerspectiveCamera : public Camera {
         RecalculateViewMatrix();
     }
 
-    const float GetNear() const { return m_Near; }
-    void SetNear(float nearClip) {
+    const float GetNear() const override { return m_Near; }
+    void SetNear(float nearClip) override {
         m_Near = nearClip;
         RecalculateProjectionMatrix();
     }
 
-    const float GetFar() const { return m_Far; }
-    void SetFar(float farClip) {
+    const float GetFar() const override { return m_Far; }
+    void SetFar(float farClip) override {
         m_Far = farClip;
         RecalculateProjectionMatrix();
     }

@@ -48,6 +48,8 @@ static uint32_t ShaderDataTypeSize(ShaderDataType type) {
         return 4 * 4;
     case ShaderDataType::Uint:
         return 4;
+    case ShaderDataType::None:
+        break;
     }
 
     PX_CORE_ASSERT(false, "Unknown ShaderDataType!");
@@ -98,6 +100,8 @@ struct BufferElement {
             return 4;
         case ShaderDataType::Uint:
             return 1;
+        case ShaderDataType::None:
+            break;
         }
 
         PX_CORE_ASSERT(false, "Unknown ShaderDataType!");

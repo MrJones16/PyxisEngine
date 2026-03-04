@@ -235,6 +235,7 @@ OpenGLTexture3D::OpenGLTexture3D(uint32_t width, uint32_t height,
 OpenGLTexture3D::~OpenGLTexture3D() {}
 
 void OpenGLTexture3D::SetData(void *data, uint32_t size) {}
+void OpenGLTexture3D::SetPixel(int x, int y, uint32_t size) {}
 
 uint8_t *OpenGLTexture3D::GetData() { return nullptr; }
 

@@ -81,6 +81,10 @@ class World {
     CreatePixelBody(PhysicsBody2DType type,
                     std::unordered_set<glm::ivec2, VectorHash> pixels,
                     bool CheckIfContinuous = true);
+
+    template <typename T = PixelBody2D>
+    void AddCustomPixelBody(Ref<T> body,
+                            std::unordered_set<glm::ivec2, VectorHash> pixels);
     void ResetPhysics();
     void DestroyPixelBody(UUID id);
     void DestroyPixelBody(Ref<PixelBody2D> body);

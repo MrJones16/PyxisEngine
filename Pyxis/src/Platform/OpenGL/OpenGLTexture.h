@@ -58,6 +58,7 @@ class OpenGLTexture3D : public Texture3D {
     virtual const uint32_t GetLength() const override { return m_Length; }
 
     virtual void SetData(void *data, uint32_t size) override;
+    virtual void SetPixel(int x, int y, uint32_t size) override;
     virtual uint8_t *GetData() override;
     virtual uint32_t GetID() const override { return m_RendererID; }
 

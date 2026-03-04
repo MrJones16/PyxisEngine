@@ -50,11 +50,6 @@ struct PixelBodyElement {
         b2Vec2 position;
 };*/
 
-struct PixelBodyBitArray {
-    // vectors are also continuous in memory so it's fine.
-    std::unordered_map<glm::ivec2, std::vector<uint64_t>, VectorHash> m_BitMaps;
-};
-
 /// <summary>
 /// A rigid body, but it is tied to elements in the simulation.
 ///

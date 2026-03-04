@@ -1,7 +1,9 @@
 #include "PixelBody2D.h"
 #include "Pyxis/Game/PhysicsBody2D.h"
 #include "Pyxis/Nodes/PhysicsBodyNode2D.h"
+#include "glm/gtc/matrix_transform.hpp"
 #include <Pyxis/Game/Physics2D.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 namespace Pyxis {
 
@@ -150,7 +152,7 @@ void PixelBody2D::UpdateElementWorldPositions() {
     m_Moved = false;
     // center of the pixel body in the world
     glm::ivec2 centerPixelWorld = glm::floor(GetPosition());
-    glm::mat4 rotMatrix = GetLocalToWorldTransform();
+    glm::mat2x2 rotationMatrix = GetLocalToWorldTransform();
 
     for (auto &mappedElement : m_Elements) {
         // find the element in the world by using the transform of the body
@@ -162,93 +164,6 @@ void PixelBody2D::UpdateElementWorldPositions() {
         if (posPrior != mappedElement.second.worldPos)
             m_Moved = true;
     }
-}
-
-void PixelBody2D::GeneratePixelBody(bool SkipCalculations) {
-
-    // step 1 make sure we aren't completely erased!
-    if (m_Elements.size() == 0) {
-        return;
-    }
-
-    // if we weren't created from a split, we need to check if we have been
-    // split or are not contiguous to begin with
-    if (!SkipCalculations) {
-        glm::vec2 linearVelocity = GetLinearVelocity();
-        float angularVelocity = GetAngularVelocity();
-
-        // get the full set of elements for the seed pull set
-        std::unordered_set<glm::ivec2, HashVector> source;
-        for (auto &pair : m_Elements) {
-            source.insert(pair.first);
-        }
-        // we need to split the elements that are continuous into seperate
-        // bodies, so we use a flood algorithm to pull contiguous vertices out
-        std::vector<std::unordered_set<glm::ivec2, VectorHash>> areas =
-            GetContiguousAreas(source);
-
-        // we need to make the split bodies first, because m_elements contains
-        // the actual element data
-        while (areas.size() > 1) {
-            // we have a split body to make!
-
-            // get a list of pixel body elements to turn into the new
-            // pixelbody2d
-            std::vector<PixelBodyElement> elements;
-            for (auto &pos : areas.back()) {
-                elements.push_back(m_Elements[pos]);
-            }
-            // const std::string& name, b2BodyType type, World* world,
-            // std::vector<PixelBodyElement>& elements, bool CreatedFromSplit =
-            // false); auto newPixelBody2D = PixelBody2D(m_Name, GetType(),
-            // m_PXWorld, elements, true);
-            auto newPixelBody2D = Instantiate<PixelBody2D>(
-                m_Name, GetType(), m_PXWorld, elements, true);
-            newPixelBody2D->SetLinearVelocity(linearVelocity);
-            newPixelBody2D->SetAngularVelocity(angularVelocity);
-            newPixelBody2D->EnterWorld();
-
-            if (m_Parent != nullptr) {
-                m_Parent->AddChild(newPixelBody2D);
-            }
-
-            areas.pop_back();
-        }
-        // we only have our area left (or maybe we never even split)
-
-        // find the new width, height & center of the set of elements
-        int minX = INT_MAX, maxX = INT_MIN, minY = INT_MAX, maxY = INT_MIN;
-        for (auto &localPos : areas[0]) {
-            PixelBodyElement &e = m_Elements[localPos];
-            minX = std::min(e.worldPos.x, minX);
-            maxX = std::max(e.worldPos.x, maxX);
-            minY = std::min(e.worldPos.y, minY);
-            maxY = std::max(e.worldPos.y, maxY);
-        }
-        m_Width = std::abs(maxX - minX) + 1;
-        m_Height = std::abs(maxY - minY) + 1;
-
-        glm::ivec2 CenterPixelPos =
-            glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);
-        SetPosition(CenterPixelPos);
-
-        // use the minimum to get local positions from bottom left
-        std::unordered_map<glm::ivec2, PixelBodyElement, HashVector>
-            newElements;
-        for (auto &oldPos : areas[0]) {
-            auto &pbe = m_Elements[oldPos];
-            glm::ivec2 localPos = pbe.worldPos - CenterPixelPos;
-            newElements[localPos] = pbe;
-        }
-
-        m_Elements = std::move(newElements);
-    }
-
-    // now that we have the width, height, and contiguous elements of the pixel
-    // body, we can generate the fixtures and such
-    // TODO: Implement the greedy binary meshing here!
-    //
-    //
 }
 
 glm::mat4 PixelBody2D::GetWorldTransform() {

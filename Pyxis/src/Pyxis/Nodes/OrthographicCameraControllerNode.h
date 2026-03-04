@@ -35,7 +35,7 @@ class OrthographicCameraControllerNode : public PixelCameraNode {
     virtual ~OrthographicCameraControllerNode() = default;
 
     // Serialization
-    virtual void Serialize(json &j) {
+    virtual void Serialize(json &j) override {
         PixelCameraNode::Serialize(j);
         j["Type"] =
             "OrthographicCameraControllerNode"; // Override type identifier
@@ -43,7 +43,7 @@ class OrthographicCameraControllerNode : public PixelCameraNode {
         j["m_Sensitivity"] = m_Sensitivity;
     }
 
-    virtual void Deserialize(json &j) {
+    virtual void Deserialize(json &j) override {
         PixelCameraNode::Deserialize(j);
         if (j.contains("m_CameraSpeed"))
             j.at("m_CameraSpeed").get_to(m_CameraSpeed);
