@@ -46,6 +46,9 @@ class PhysicsBodyNode2D : public Node2D {
     void SetType(PhysicsBody2DType type);
     PhysicsBody2DType GetType();
 
+    void SetAwake(bool awake);
+    bool GetAwake();
+
     void ApplyForce(const glm::vec2 &force, const glm::vec2 &point);
     void ApplyForceToCenter(const glm::vec2 &force);
 

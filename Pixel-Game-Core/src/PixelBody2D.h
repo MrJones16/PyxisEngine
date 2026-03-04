@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Element.h"
-#include "Pyxis/Core/Timestep.h"
 #include "VectorHash.h"
 #include <Pyxis/Nodes/PhysicsBodyNode2D.h>
 
@@ -51,6 +50,11 @@ struct PixelBodyElement {
         b2Vec2 position;
 };*/
 
+struct PixelBodyBitArray {
+    // vectors are also continuous in memory so it's fine.
+    std::unordered_map<glm::ivec2, std::vector<uint64_t>, VectorHash> m_BitMaps;
+};
+
 /// <summary>
 /// A rigid body, but it is tied to elements in the simulation.
 ///
@@ -59,9 +63,16 @@ struct PixelBodyElement {
 class PixelBody2D : public PhysicsBodyNode2D {
   protected:
     bool m_InWorld = true;
+    bool m_Moved =
+        false; // track if any elements moved during position updates.
 
-    float m_Width = 0;
-    float m_Height = 0;
+    int m_Width = 0;
+    int m_Height = 0;
+
+    // Data needed for bit arrays
+    glm::ivec2 m_LocalMinimum = {0, 0};
+    std::unordered_map<glm::ivec2, std::vector<uint64_t>, VectorHash>
+        m_BitArrays;
 
     /// <summary>
     /// m_Elements holds the LOCAL positions about the center.

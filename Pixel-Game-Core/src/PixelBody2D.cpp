@@ -2,6 +2,7 @@
 #include "Pyxis/Game/PhysicsBody2D.h"
 #include "Pyxis/Nodes/PhysicsBodyNode2D.h"
 #include <Pyxis/Game/Physics2D.h>
+
 namespace Pyxis {
 
 PixelBody2D::PixelBody2D(const std::string &name, PhysicsBody2DType type)
@@ -40,6 +41,7 @@ void PixelBody2D::SetPixelBodyElements(
         glm::ivec2 localPos = pbe.worldPos - CenterPixelPos;
         m_Elements[localPos] = pbe;
     }
+    m_LocalMinimum = glm::ivec2(minX, minY) - CenterPixelPos;
     m_InWorld = true;
     GenerateMesh();
 }
@@ -76,84 +78,44 @@ void PixelBody2D::Deserialize(json &j) {
             m_Elements[key] = value;
         }
     }
-    // TODO: not sure what needs to happen here right now.
+    // the body is made, and we have the elements. The elements should already
+    // be in the world too. I don't think theres anything else to do here.
 }
 
 void PixelBody2D::QueueFree() { m_FreeMe = true; }
 
-void PixelBody2D::GenerateMesh() {}
-
-void PixelBody2D::EnterWorld() {
-    if (m_Elements.size() == 0) {
-        QueueFree();
-        return;
-    }
-
-    // chunkloading
-    // get current chunk we are in, then get the chunks around us
-    glm::vec2 pixelPos = GetPosition();
-    glm::ivec2 chunkPos =
-        m_PXWorld->PixelToChunk(glm::ivec2(pixelPos.x, pixelPos.y));
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            glm::ivec2 checkPos = chunkPos + glm::ivec2(x, y);
-            if (!m_PXWorld->m_Chunks.contains(checkPos)) {
-                m_PXWorld->AddChunk(checkPos);
-            }
-        }
-    }
-
-    for (auto &mappedElement : m_Elements) {
-        Element &e = m_PXWorld->GetElement(mappedElement.second.worldPos);
-        ElementProperties &ed = ElementData::GetElementProperties(e.m_ID);
-
-        // if it is a solid, or it is rigid, we need to become hidden.
-        if (ed.cell_type == ElementType::solid || e.m_Rigid) {
-            mappedElement.second.hidden = true;
-            continue;
-        } else {
-            if (e.m_ID != 0) {
-                // its not air, so we need to throw it as a particle
-                // we will use the opposite of the velocity of the body
-
-                glm::vec2 velocity = GetLocalPixelVelocity(mappedElement.first);
-                float lengthSquared =
-                    velocity.x * velocity.x + velocity.y * velocity.y;
-                if (lengthSquared > 0.0f) {
-                    m_PXWorld->CreateParticle(mappedElement.second.worldPos,
-                                              -velocity, e);
-                } else {
-                    // we are too slow to make a particle, so we hide instead
-                    mappedElement.second.hidden = true;
-                    continue;
+void PixelBody2D::GenerateMesh() {
+    // we know the width and height, so we know how many 64x64 areas we would
+    // need.
+    int bitArrayXCount =
+        ((m_Width - 1) / 64) + 1; // 0-63 would produce 0, then add 1.
+    int bitArrayYCount = ((m_Height - 1) / 64) + 1;
+    for (int y = 0; y < bitArrayYCount; y++) {
+        for (int x = 0; x < bitArrayXCount; x++) {
+            glm::ivec2 bitArrayCoord = {x, y};
+            // looping over all needed bit arrays.
+            // we already know the minimum local position, so we offset by
+            // there.
+            std::vector<uint64_t> bitArray = std::vector<uint64_t>(64);
+            for (int x = 0; x < 64; x++) {
+                // looping over the x axis, and we will set every bit of array
+                uint64_t column = 0;
+                for (int y = 0; y < 64; y++) {
+                    glm::ivec2 bitArrayPixelCoord = {x, y};
+                    if (m_Elements.contains(bitArrayPixelCoord +
+                                            m_LocalMinimum)) {
+                        column |= ((uint64_t)1 << y); // set bit at y digit
+                    }
                 }
-
-                // TODO: make pixelbody lose velocity based on the particles
-                // thrown
+                bitArray.push_back(column);
             }
-            glm::vec2 lv = GetLinearVelocity();
-            float lvLengthSqr = (lv.x * lv.x) + (lv.y * lv.y);
-            if (std::abs(GetAngularVelocity()) > 0.01f || lvLengthSqr > 0.01f) {
-                // we are moving, so update dirty rect
-                // PX_TRACE("we are moving!: angular: {0}, linear: {1}",
-                // pair.second->m_B2Body->GetAngularVelocity(),
-                // pair.second->m_B2Body->GetLinearVelocity().LengthSquared());
-                m_PXWorld->SetElement(mappedElement.second.worldPos,
-                                      mappedElement.second.element);
-            } else {
-                // we are still, so stop updating region!
-                m_PXWorld->SetElementWithoutDirtyRectUpdate(
-                    mappedElement.second.worldPos,
-                    mappedElement.second.element);
-            }
-
-            // we are no longer hidden!
-            mappedElement.second.hidden = false;
+            m_BitArrays[bitArrayCoord] = bitArray;
         }
     }
-}
 
-void PixelBody2D::ExitWorld() {}
+    // m_BitArrays is now populated. We still need to run BGM on it, and set the
+    // physics body shapes.
+}
 
 glm::mat4 PixelBody2D::GetWorldToLocalTransform() {
     return glm::inverse(GetLocalToWorldTransform());
@@ -185,6 +147,7 @@ glm::mat4 PixelBody2D::GetLocalToWorldTransform() {
 }
 
 void PixelBody2D::UpdateElementWorldPositions() {
+    m_Moved = false;
     // center of the pixel body in the world
     glm::ivec2 centerPixelWorld = glm::floor(GetPosition());
     glm::mat4 rotMatrix = GetLocalToWorldTransform();
@@ -193,9 +156,11 @@ void PixelBody2D::UpdateElementWorldPositions() {
         // find the element in the world by using the transform of the body
         // and the stored local position
         glm::ivec2 skewedPos = mappedElement.first * rotationMatrix;
-
+        glm::ivec2 posPrior = mappedElement.second.worldPos;
         mappedElement.second.worldPos =
             glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+        if (posPrior != mappedElement.second.worldPos)
+            m_Moved = true;
     }
 }
 
@@ -219,7 +184,7 @@ void PixelBody2D::GeneratePixelBody(bool SkipCalculations) {
         }
         // we need to split the elements that are continuous into seperate
         // bodies, so we use a flood algorithm to pull contiguous vertices out
-        std::vector<std::unordered_set<glm::ivec2, HashVector>> areas =
+        std::vector<std::unordered_set<glm::ivec2, VectorHash>> areas =
             GetContiguousAreas(source);
 
         // we need to make the split bodies first, because m_elements contains

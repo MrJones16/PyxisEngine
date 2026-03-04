@@ -27,10 +27,12 @@ class PhysicsWorld2D {
     int m_SubSteps = 4;
     float m_Step = 1.0f / 60.0f;
 
+    PhysicsWorld2D() = default;
     PhysicsWorld2D(const glm::vec2 &gravity, int subSteps);
     ~PhysicsWorld2D();
 
     b2WorldId GetWorld();
+    bool IsValid();
 
     void ResetWorld();
     void Step();

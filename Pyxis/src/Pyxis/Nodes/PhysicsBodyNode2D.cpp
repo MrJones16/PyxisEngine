@@ -77,6 +77,9 @@ PhysicsBody2DType PhysicsBodyNode2D::GetType() {
     return m_PhysicsBody->GetType();
 }
 
+void PhysicsBodyNode2D::SetAwake(bool awake) { m_PhysicsBody->SetAwake(awake); }
+bool PhysicsBodyNode2D::GetAwake() { return m_PhysicsBody->GetAwake(); }
+
 void PhysicsBodyNode2D::ApplyForce(const glm::vec2 &force,
                                    const glm::vec2 &point) {
     m_PhysicsBody->ApplyForce(force, point);

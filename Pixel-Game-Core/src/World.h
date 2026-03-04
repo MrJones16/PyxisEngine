@@ -81,7 +81,9 @@ class World {
     CreatePixelBody(PhysicsBody2DType type,
                     std::unordered_set<glm::ivec2, VectorHash> pixels,
                     bool CheckIfContinuous = true);
-    void ResetPhysics2D();
+    void ResetPhysics();
+    void DestroyPixelBody(UUID id);
+    void DestroyPixelBody(Ref<PixelBody2D> body);
     // PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2&
     // size, Element* ElementArray, b2BodyType type = b2_dynamicBody); void
     // PutPixelBodyInWorld(PixelRigidBody& body);

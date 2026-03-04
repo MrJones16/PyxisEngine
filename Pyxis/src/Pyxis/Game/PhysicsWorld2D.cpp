@@ -24,6 +24,8 @@ b2WorldId PhysicsWorld2D::GetWorld() {
 
     return m_B2WorldId;
 }
+
+bool PhysicsWorld2D::IsValid() { return b2World_IsValid(m_B2WorldId); }
 void PhysicsWorld2D::ResetWorld() {
     // make a new world
     b2WorldId newId = b2CreateWorld(&m_B2WorldDef);

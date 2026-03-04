@@ -1,12 +1,10 @@
 #include "World.h"
+#include "Element.h"
 // #include "ChunkWorker.h"
-#include <PixelBody.h>
 #include <Pyxis/Game/Physics2D.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <mutex>
 #include <poly2tri.h>
 #include <random>
-#include <thread>
 #include <tinyxml2.h>
 
 namespace Pyxis {
@@ -174,25 +172,10 @@ void World::DownloadWorld(Network::Message &msg) {
         std::vector<uint8_t> msgpack;
         msg >> msgpack;
         json j = json::from_msgpack(msgpack);
-        auto RigidBodyNode = Node::DeserializeNode(j);
-
-        if (j["Type"] == "PixelBody2D") {
-            // register to Node::Nodes
-            Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
-            PixelBody2D *body = (PixelBody2D *)RigidBodyNode.get();
-            body->m_PXWorld = this;
-            // m_PixelBodyMap[body->m_UUID] = body;
-            PX_TRACE("Loaded 2D: Pos[{},{}] UUID[{}]", body->GetPosition().x,
-                     body->GetPosition().y, RigidBodyNode->GetUUID());
-            // can safely ignore putting it in the world, since when we got the
-            // world data it is already there!
-        } else {
-            // register to Node::Nodes
-            Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
-
-            PX_TRACE("Loaded Generic PhysicsBodyNode2D, UUID[{0}]",
-                     RigidBodyNode->GetUUID());
-        }
+        Ref<PixelBody2D> PixelBodyNode =
+            dynamic_pointer_cast<PixelBody2D>(Node::DeserializeNode(j));
+        if (PixelBodyNode)
+            m_PixelBodies[PixelBodyNode->GetUUID()] = PixelBodyNode;
     }
     if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk) {
         glm::ivec2 chunkPos;
@@ -219,7 +202,7 @@ void World::GetGameDataInit(Network::Message &msg) {
     msg.header.id = static_cast<uint32_t>(GameMessage::Server_GameDataInit);
     msg << static_cast<uint32_t>(m_Chunks.size());
     PX_TRACE("# Chunks: {0}", m_Chunks.size());
-    msg << static_cast<uint32_t>(Physics2D::GetWorld()->GetBodyCount());
+    msg << static_cast<uint32_t>(m_PixelBodies.size());
     PX_TRACE("# RigidBodies: {0}", Physics2D::GetWorld().GetBodyCount());
     msg << m_SimulationTick;
     msg << m_UpdateBit;
@@ -228,26 +211,11 @@ void World::GetGameDataInit(Network::Message &msg) {
 }
 
 void World::GetGameData(std::vector<Network::Message> &messages) {
-    b2Body *body = Physics2D::GetWorld()->GetBodyList();
-
-    // FILO to swap order of sent pixel bodies, so box2d can stay synced?
-    std::deque<b2Body *> bodies;
-    while (body != nullptr) {
-        bodies.push_back(body);
-        body = body->GetNext();
-    }
-    while (!bodies.empty()) {
-        B2BodyNode *rb = (B2BodyNode *)bodies.back()->GetUserData().pointer;
-        if (rb) {
-            PX_TRACE("Packing B2BodyNode {0}", rb->GetUUID());
-            messages.emplace_back();
-            messages.back().header.id =
-                static_cast<uint32_t>(GameMessage::Server_GameDataRigidBody);
-            messages.back() << rb->SerializeBinary();
-        } else {
-            PX_ASSERT(false, "B2BodyNode has no user data!");
-        }
-        bodies.pop_back();
+    for (auto kvp : m_PixelBodies) {
+        messages.emplace_back();
+        messages.back().header.id =
+            static_cast<uint32_t>(GameMessage::Server_GameDataRigidBody);
+        messages.back() << kvp.second->SerializeBinary();
     }
 
     // now we create a separate message for each chunk
@@ -488,9 +456,12 @@ void World::PullPixelBodies() {
     for (auto kvp : m_PixelBodies) {
         UUID id = kvp.first;
         Ref<PixelBody2D> body = kvp.second;
+        // skip if we are sleeping!
+        if (!body->GetAwake())
+            continue; // leave sleeping bodies in!
 
         // keep list of elements to take out after iteration
-        std::vector<glm::ivec2> elementsToRemove;
+        std ::vector<glm::ivec2> elementsToRemove;
 
         // loop over all elements, and attempt to take them out of the world
         for (auto &mappedElement : body->m_Elements) {
@@ -555,25 +526,66 @@ void World::PullPixelBodies() {
                 body->m_Elements.erase(localPos);
             }
 
+            // gather up local positions of elements
             std::unordered_set<glm::ivec2, VectorHash> source;
             for (auto kvp : body->m_Elements) {
                 source.insert(kvp.first);
             }
 
+            // get a continuous section of the local positions
             auto firstPull = Utils::GridQueuePull(source);
             for (glm::ivec2 pos : source) {
                 // source is now what is remaining after pulling out a
-                // continuous set. lets remove the remainder from body, and make
-                // new pixel bodies from it
+                // continuous set. lets remove that remainder from this
+                // pixelbody, and make new pixel bodies from it
                 body->m_Elements.erase(pos);
             }
+            // recalculate the bitarrays and collider/mesh
             body->GenerateMesh();
-            CreatePixelBody(body->GetType(), source, true);
+            // create the new pixel bodies from the remainder.
+            CreatePixelBody(body->GetType(), source,
+                            true); // TODO: adopt velocity like before
         }
+        // There were no elements removed from the body. We are still intact!
+        // end off with saying this body is no longer in the world.
+        body->m_InWorld = false;
     }
 }
 
-void World::PushPixelBodies() {}
+void World::PushPixelBodies() {
+    // put the elements back into the simulation.
+    for (auto kvp : m_PixelBodies) {
+        Ref<PixelBody2D> body = kvp.second;
+        if (body->m_InWorld)
+            continue; // body is already in world
+        if (body->m_Moved) {
+            for (auto &mappedElement : body->m_Elements) {
+
+                // check if there is an element in the way in the world
+                Element &e = GetElement(mappedElement.second.worldPos);
+                if (e.m_ID != 0)
+                    CreateParticle(
+                        mappedElement.second.worldPos,
+                        body->GetLocalPixelVelocity(mappedElement.first), e);
+                SetElement(mappedElement.second.worldPos,
+                           mappedElement.second.element);
+            }
+        } else {
+            // we are still, so put back without updating dirty rect
+            for (auto &mappedElement : body->m_Elements) {
+
+                // check if there is an element in the way in the world
+                Element &e = GetElement(mappedElement.second.worldPos);
+                if (e.m_ID != 0)
+                    CreateParticle(
+                        mappedElement.second.worldPos,
+                        body->GetLocalPixelVelocity(mappedElement.first), e);
+                SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
+                                                 mappedElement.second.element);
+            }
+        }
+    }
+}
 
 void World::UpdateWorld() {
     /*m_Threads.clear();
@@ -1681,26 +1693,6 @@ void World::UpdateChunk(Chunk *chunk) {
                 }
             }
         }
-
-    // check for pixel bodies that are in the surroundings, and if there is,
-    // update the collider if necessary.
-    b2AABB queryFullRegion;
-    glm::vec2 fullLower = glm::vec2(chunk->m_ChunkPos * CHUNKSIZE) / PPU;
-    glm::vec2 fullUpper =
-        glm::vec2((chunk->m_ChunkPos + glm::ivec2(1, 1)) * CHUNKSIZE) / PPU;
-    queryFullRegion.lowerBound = b2Vec2(fullLower.x - 1, fullLower.y - 1);
-    queryFullRegion.upperBound = b2Vec2(fullUpper.x + 1, fullUpper.y + 1);
-
-    bool found = false;
-    FoundDynamicBodyQuery dynamicCallback(found);
-    Physics2D::GetWorld()->QueryAABB(&dynamicCallback, queryFullRegion);
-    if (found) {
-        // Found Dynamic Body
-        if (chunk->m_MeshChanged == true) {
-            chunk->m_MeshChanged = false;
-            chunk->GenerateStaticCollider();
-        }
-    }
 }
 
 /// <summary>
@@ -1979,7 +1971,7 @@ void World::Clear() {
     }
     m_Chunks.clear();
 
-    Physics2D::DeleteWorld();
+    Physics2D::DestroyWorld();
     Physics2D::GetWorld();
 
     // AddChunk(glm::ivec2(0, 0));
@@ -2078,109 +2070,20 @@ void World::RenderWorld() {
     }
 }
 
-void World::AppendPixelBodyToSet() {}
-
-void World::ResetBox2D() {
+void World::ResetPhysics() {
     PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);
     Physics2D::ResetWorld();
-    ////struct to hold the data of the b2 bodies
-    // std::unordered_map<uint64_t, PixelBodyData> storage;
-    // for (auto pair : m_PixelBodyMap)
-    //{
-    //	//store the data to re-apply later
-    //	PixelBodyData data;
-    //	data.linearVelocity = pair.second->m_B2Body->GetLinearVelocity();
-    //	data.angularVelocity = pair.second->m_B2Body->GetAngularVelocity();
-    //	data.angle = pair.second->m_B2Body->GetAngle();
-    //	data.position = pair.second->m_B2Body->GetPosition();
-    //	//data.elementArray = pair.second->m_ElementArray;
-    //	storage[pair.first] = data;
-    //	//delete each b2body
-    //	m_Box2DWorld->DestroyBody(pair.second->m_B2Body);
-    // }
-    ////in theory this should delete the bodies so the above
-    ////step is unnecessary but it is nicer like this
-    // m_Box2DWorld->~b2World();
-    // m_Box2DWorld = new b2World({ 0, -9.8f });
-    // for (auto pair : m_PixelBodyMap)
-    //{
-    //	//recreate the box2d body for each rigid body!
-    //	pair.second->CreateB2Body(m_Box2DWorld);
-
-    //	PixelBodyData& data = storage[pair.first];
-    //	pair.second->m_B2Body->SetTransform(data.position, data.angle);
-    //	pair.second->m_B2Body->SetLinearVelocity(data.linearVelocity);
-    //	pair.second->m_B2Body->SetAngularVelocity(data.angularVelocity);
-    //}
 }
 
-/// <summary>
-/// Creates a pixel rigid body, but it is not placed in the world!
-/// you have to call PutPixelBodyInWorld after setting the pixel bodies
-/// position
-/// </summary>
-// PixelRigidBody* World::CreatePixelRigidBody(uint64_t uuid, const glm::ivec2&
-// size, Element* ElementArray, b2BodyType type)
-//{
-//	PixelRigidBody* body = new PixelRigidBody();
-//	body->m_Width = size.x;
-//	body->m_Height = size.y;
-//	body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
-//	body->m_ElementArray = ElementArray;
-//
-//	//create the base body of the whole pixel body
-//	b2BodyDef pixelBodyDef;
-//
-//	//for the scaling of the box world and pixel bodies, every PPU pixels is
-// 1 unit in the world space 	pixelBodyDef.position = {0,0}; pixelBodyDef.type
-// = type; 	body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
+void World::DestroyPixelBody(UUID id) {
+    m_PixelBodies[id]->ActuallyQueueFree();
+    m_PixelBodies.erase(id);
+}
 
-//	//BUG ERROR FIX TODO WRONG BROKEN
-//	// getcontour points is able to have repeating points, which is a no-no
-// for box2d triangles / triangulation 	auto contour = body->GetContourPoints();
-//	if (contour.size() == 0)
-//	{
-//		m_Box2DWorld->DestroyBody(body->m_B2Body);
-//		delete body;
-//		return nullptr;
-//	}
-
-//	auto contourVector = body->SimplifyPoints(contour, 0, contour.size() -
-// 1, 1.0f);
-//	//auto simplified = body->SimplifyPoints(contour);
-
-//	//run triangulation algorithm to create the needed triangles/fixtures
-//	std::vector<p2t::Point*> polyLine;
-//	for each (auto point in contourVector)
-//	{
-//		polyLine.push_back(new p2t::Point(point));
-//	}
-
-//	//create each of the triangles to comprise the body, each being a
-// fixture 	p2t::CDT* cdt = new p2t::CDT(polyLine);
-// cdt->Triangulate(); 	auto triangles = cdt->GetTriangles(); 	for each (auto
-// triangle in triangles)
-//	{
-//		b2PolygonShape triangleShape;
-//		b2Vec2 points[3] = {
-//			{(float)((triangle->GetPoint(0)->x - body->m_Origin.x) /
-// PPU), (float)((triangle->GetPoint(0)->y - body->m_Origin.y) / PPU)},
-//			{(float)((triangle->GetPoint(1)->x - body->m_Origin.x) /
-// PPU), (float)((triangle->GetPoint(1)->y - body->m_Origin.y) / PPU)},
-//			{(float)((triangle->GetPoint(2)->x - body->m_Origin.x) /
-// PPU), (float)((triangle->GetPoint(2)->y - body->m_Origin.y) / PPU)}
-//		};
-//		triangleShape.Set(points, 3);
-//		b2FixtureDef fixtureDef;
-//		fixtureDef.density = 1;
-//		fixtureDef.friction = 0.3f;
-//		fixtureDef.shape = &triangleShape;
-//		body->m_B2Body->CreateFixture(&fixtureDef);
-//	}
-//	PX_TRACE("Pixel body created with ID: {0}", uuid);
-//	m_PixelBodyMap.insert({ uuid, body });
-//	return body;
-//}
+void World::DestroyPixelBody(Ref<PixelBody2D> body) {
+    body->ActuallyQueueFree();
+    m_PixelBodies.erase(body->GetUUID());
+}
 
 /// <summary>
 /// Seeds Rand() based on a few factors of the world.
@@ -2203,8 +2106,8 @@ int World::GetRandom() {
 }
 
 const bool World::IsInBounds(int x, int y) {
-    // having y first might actually be faster, simply because things tend to
-    // fall
+    // having y first might actually be faster, simply because things tend
+    // to fall
     if (y < 0 || y >= CHUNKSIZE)
         return false;
     if (x < 0 || x >= CHUNKSIZE)

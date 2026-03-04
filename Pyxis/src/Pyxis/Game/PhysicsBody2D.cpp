@@ -1,6 +1,5 @@
 #include <Pyxis/Game/PhysicsBody2D.h>
 #include <box2d/box2d.h>
-#include <box2d/math_functions.h>
 #include <box2d/types.h>
 
 namespace Pyxis {
@@ -65,6 +64,10 @@ PhysicsBody2DType PhysicsBody2D::GetType() const {
     }
 }
 
+void PhysicsBody2D::SetAwake(bool awake) {
+    b2Body_SetBullet(m_B2BodyId, awake);
+}
+bool PhysicsBody2D::GetAwake() { return b2Body_IsAwake(m_B2BodyId); }
 void PhysicsBody2D::SetPosition(const glm::vec2 &position) {
     b2Body_SetTransform(m_B2BodyId, {position.x, position.y},
                         b2Body_GetRotation(m_B2BodyId));

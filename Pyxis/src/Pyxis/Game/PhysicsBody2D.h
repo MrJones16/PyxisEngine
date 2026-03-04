@@ -26,6 +26,9 @@ struct PhysicsBody2D {
     void SetType(PhysicsBody2DType type);
     PhysicsBody2DType GetType() const;
 
+    void SetAwake(bool awake);
+    bool GetAwake();
+
     void SetPosition(const glm::vec2 &position);
     glm::vec2 GetPosition() const;
 
