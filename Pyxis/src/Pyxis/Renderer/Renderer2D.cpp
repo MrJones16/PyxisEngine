@@ -587,8 +587,6 @@ void Renderer2D::DrawScreenQuad(const uint32_t TextureID,
     RenderCommand::DrawIndexed(s_Data.ScreenQuadVertexArray, 6);
 }
 
-// add or remove a mesh to the shadow casters. Requires a special mesh with
-// doubled countour vertices.
 b2BodyId Renderer2D::AddShadowCaster() {}
 void Renderer2D::RemoveShadowCaster(b2BodyId bodyId) {}
 std::vector<b2BodyId> Renderer2D::QueryShadowCasters() {}

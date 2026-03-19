@@ -80,11 +80,15 @@ class World {
     Ref<PixelBody2D>
     CreatePixelBody(PhysicsBody2DType type,
                     std::unordered_set<glm::ivec2, VectorHash> pixels,
-                    bool CheckIfContinuous = true);
+                    bool CheckIfContinuous = true,
+                    const std::string &name = "PixelBody2D");
 
     template <typename T = PixelBody2D>
-    void AddCustomPixelBody(Ref<T> body,
-                            std::unordered_set<glm::ivec2, VectorHash> pixels);
+    Ref<T> CreatePixelBody(PhysicsBody2DType type,
+                           std::unordered_set<glm::ivec2, VectorHash> pixels,
+                           bool CheckIfContinuous = true,
+                           const std::string &name = "PixelBody2D");
+
     void ResetPhysics();
     void DestroyPixelBody(UUID id);
     void DestroyPixelBody(Ref<PixelBody2D> body);

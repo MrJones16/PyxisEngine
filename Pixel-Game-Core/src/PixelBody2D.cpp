@@ -12,8 +12,11 @@ PixelBody2D::PixelBody2D(const std::string &name, PhysicsBody2DType type)
 
 PixelBody2D::PixelBody2D(UUID id) : PhysicsBodyNode2D(id) {}
 
+/// Assumes that the elements are in the world still.
 void PixelBody2D::SetPixelBodyElements(
     std::vector<PixelBodyElement> &elements) {
+
+    m_InWorld = true;
 
     // we need to convert the vector of elements to local positions to store
     // them

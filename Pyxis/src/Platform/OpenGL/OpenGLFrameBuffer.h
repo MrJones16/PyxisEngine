@@ -30,7 +30,7 @@ class OpenGLFrameBuffer : public FrameBuffer {
     }
     virtual void BindColorAttachmentTexture(int index = 0) const override;
 
-    virtual const FrameBufferSpecification &GetSpecification() const {
+    virtual const FrameBufferSpecification &GetSpecification() const override {
         return m_Specification;
     }
 

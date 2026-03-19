@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Element.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
 #include "VectorHash.h"
 #include <Pyxis/Nodes/PhysicsBodyNode2D.h>
 
@@ -91,10 +92,11 @@ class PixelBody2D : public PhysicsBodyNode2D {
     /// </summary>
     /// <param name="elements"> elements should contain the element, and their
     /// pixel position in the world</param>
-    PixelBody2D(const std::string &name, PhysicsBody2DType type);
+    PixelBody2D(const std::string &name = "PixelBody2D",
+                PhysicsBody2DType type = PhysicsBody2DType::Dynamic);
     PixelBody2D(UUID id);
 
-    // Set elements for this pixel body
+    // Set elements for this pixel body. Assumes pixels are in world already.
     void SetPixelBodyElements(std::vector<PixelBodyElement> &elements);
 
     // Serialize & Deserialize

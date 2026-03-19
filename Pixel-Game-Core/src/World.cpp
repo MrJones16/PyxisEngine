@@ -319,7 +319,9 @@ bool World::TryGetElement(const glm::ivec2 &pixelPos, Element &element) {
     if (m_Chunks.contains(PixelToChunk(pixelPos))) {
         element = GetChunk(PixelToChunk(pixelPos))
                       ->GetElement(PixelToIndex(pixelPos));
+        return true;
     }
+    return false;
 }
 
 Element &World::ForceGetElement(const glm::ivec2 &pixelPos) {
@@ -416,19 +418,22 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
 Ref<PixelBody2D>
 World::CreatePixelBody(PhysicsBody2DType type,
                        std::unordered_set<glm::ivec2, VectorHash> pixels,
-                       bool CheckIfContinuous) {
+                       bool CheckIfContinuous, const std::string &name) {
     // we have a vector of pixels to make a body from, but we don't know if they
     // are continuous
     if (CheckIfContinuous) {
+        int iterations = 0;
         while (pixels.size() > 0) {
             std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
                 Utils::GridQueuePull(pixels);
-            Ref<PixelBody2D> body = Instantiate<PixelBody2D>(type);
+            std::string newName =
+                name + (iterations > 0 ? std::format(" ({})", iterations) : "");
+            Ref<PixelBody2D> body = Instantiate<PixelBody2D>(newName, type);
             std::vector<PixelBodyElement> elements;
             for (glm::ivec2 pos : continuousPixels) {
                 Element e = Element();
                 if (TryGetElement(pos, e))
-                    elements.push_back(PixelBodyElement(GetElement(pos), pos));
+                    elements.push_back(PixelBodyElement(e, pos));
             }
             body->SetPixelBodyElements(elements);
             m_PixelBodies[body->GetUUID()] = body;
@@ -437,12 +442,15 @@ World::CreatePixelBody(PhysicsBody2DType type,
                 // we pulled the last of the pixels, so return this body.
                 return body;
             }
+            iterations++;
         }
     } else {
-        Ref<PixelBody2D> body = Instantiate<PixelBody2D>(type);
+        Ref<PixelBody2D> body = Instantiate<PixelBody2D>(name, type);
         std::vector<PixelBodyElement> elements;
         for (glm::ivec2 pos : pixels) {
-            elements.push_back(PixelBodyElement(GetElement(pos), pos));
+            Element e = Element();
+            if (TryGetElement(pos, e))
+                elements.push_back(PixelBodyElement(e, pos));
         }
         body->SetPixelBodyElements(elements);
         m_PixelBodies[body->GetUUID()] = body;
@@ -454,19 +462,52 @@ World::CreatePixelBody(PhysicsBody2DType type,
 }
 
 template <typename T>
-void World::AddCustomPixelBody(
-    Ref<T> body, std::unordered_set<glm::ivec2, VectorHash> pixels) {
+Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
+                              std::unordered_set<glm::ivec2, VectorHash> pixels,
+                              bool CheckIfContinuous, const std::string &name) {
+
     static_assert(std::is_base_of_v<PixelBody2D, T>,
                   "T must inherit from PixelBody2D");
+    // we have a vector of pixels to make a body from, but we don't know if they
+    // are continuous
+    if (CheckIfContinuous) {
+        int iterations = 0;
+        while (pixels.size() > 0) {
+            std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
+                Utils::GridQueuePull(pixels);
+            std::string newName =
+                name + (iterations > 0 ? std::format(" ({})", iterations) : "");
+            Ref<T> body = Instantiate<T>(newName, type);
+            std::vector<PixelBodyElement> elements;
+            for (glm::ivec2 pos : continuousPixels) {
+                Element e = Element();
+                if (TryGetElement(pos, e))
+                    elements.push_back(PixelBodyElement(e, pos));
+            }
+            body->SetPixelBodyElements(elements);
+            m_PixelBodies[body->GetUUID()] = body;
 
-    m_PixelBodies[body->GetUUID()] = body;
-    std::vector<PixelBodyElement> elements;
-    for (glm::ivec2 pos : pixels) {
-        Element e = Element();
-        if (TryGetElement(pos, e))
-            elements.push_back(PixelBodyElement(GetElement(pos), pos));
+            if (pixels.size() == 0) {
+                // we pulled the last of the pixels, so return this body.
+                return body;
+            }
+            iterations++;
+        }
+    } else {
+        Ref<PixelBody2D> body = Instantiate<PixelBody2D>(name, type);
+        std::vector<PixelBodyElement> elements;
+        for (glm::ivec2 pos : pixels) {
+            Element e = Element();
+            if (TryGetElement(pos, e))
+                elements.push_back(PixelBodyElement(e, pos));
+        }
+        body->SetPixelBodyElements(elements);
+        m_PixelBodies[body->GetUUID()] = body;
+        return body;
     }
-    body->SetPixelBodyElements(elements);
+    // something went wrong!
+    PX_CORE_ERROR("Somehow, we didn't create a pixel body here...");
+    return nullptr;
 }
 
 void World::PullPixelBodies() {

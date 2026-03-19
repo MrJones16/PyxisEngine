@@ -2,7 +2,6 @@
 
 #include "Pyxis.h"
 #include "Pyxis/Core/Panel.h"
-#include "Pyxis/Core/ProfilingPanel.h"
 #include <Pyxis/Network/NetworkClient.h>
 #include <Pyxis/Network/NetworkServer.h>
 
