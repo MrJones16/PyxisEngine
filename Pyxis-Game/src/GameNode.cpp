@@ -371,6 +371,7 @@ void GameNode::HandleTickClosure(MergedTickClosure &tc) {
                         }
 
                         glm::ivec2 worldPos = glm::ivec2(x, y) + pixelPos;
+
                         pixels.insert(worldPos);
                     }
                 }

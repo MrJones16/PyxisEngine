@@ -1,5 +1,6 @@
 #include <Pyxis/Game/PhysicsBody2D.h>
 #include <box2d/box2d.h>
+#include <box2d/math_functions.h>
 #include <box2d/types.h>
 
 namespace Pyxis {
@@ -12,15 +13,18 @@ PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
     switch (type) {
     case Dynamic:
         m_B2BodyDefinition.type = b2BodyType::b2_dynamicBody;
+        break;
     case Kinematic:
         m_B2BodyDefinition.type = b2BodyType::b2_kinematicBody;
+        break;
     case Static:
         m_B2BodyDefinition.type = b2BodyType::b2_staticBody;
+        break;
     default:
         break;
     }
     m_B2BodyDefinition.position = b2Vec2(position.x, position.y);
-    m_B2BodyDefinition.rotation = b2Rot(angle);
+    m_B2BodyDefinition.rotation = b2MakeRot(angle);
     m_B2BodyDefinition.userData = this;
     m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
     m_ID = s_IDCounter++;
@@ -95,7 +99,7 @@ float PhysicsBody2D::GetLinearDamping() const {
 void PhysicsBody2D::SetRotation(float angleInRadians) {
 
     b2Body_SetTransform(m_B2BodyId, b2Body_GetPosition(m_B2BodyId),
-                        b2Rot(angleInRadians));
+                        b2MakeRot(angleInRadians));
 }
 float PhysicsBody2D::GetRotation() const {
     return b2Rot_GetAngle(b2Body_GetRotation(m_B2BodyId));
@@ -186,7 +190,7 @@ void PhysicsBody2D::Deserialize(json &j) {
     float Rotation = 0;
     if (j.contains("Rotation"))
         j.at("Rotation").get_to(Rotation);
-    m_B2BodyDefinition.rotation = b2Rot(Rotation);
+    m_B2BodyDefinition.rotation = b2MakeRot(Rotation);
 
     m_B2BodyDefinition.angularVelocity = 0;
     if (j.contains("AngularVelocity"))

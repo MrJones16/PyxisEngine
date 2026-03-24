@@ -15,9 +15,54 @@
 namespace Pyxis {
 
 namespace Utils {
+// GridQueuePull will fetch a continuous section of the grid set directly out of
+// source, destructive! There could still be more things in source if there were
+// non-continuous items. You want to keep pulling till source is empty.
+// defined here due to template in header at the bottom of the page.
 static std::unordered_set<glm::ivec2, VectorHash>
-GridQueuePull(std::unordered_set<glm::ivec2, VectorHash> &source);
+GridQueuePull(std::unordered_set<glm::ivec2, VectorHash> &source) {
+    std::unordered_set<glm::ivec2, VectorHash> result;
+
+    if (source.size() == 0)
+        return result;
+
+    // make sure the start pos is valid
+    glm::ivec2 startPos = *source.begin();
+
+    // we make a queue of positions to check
+    std::queue<glm::ivec2> queue;
+
+    queue.push(startPos);
+    result.insert(startPos);
+    source.erase(
+        startPos); // since we know it is valid, and it won't be reached by loop
+
+    const glm::ivec2 neighbors[] = {
+        {1, 0},
+        {-1, 0},
+        {0, 1},
+        {0, -1},
+    };
+
+    while (queue.size() > 0) {
+        // check neighbors to see if we need to add them to the queue, or
+        // have already visited them
+        glm::ivec2 position = queue.front();
+        queue.pop();
+
+        for (int i = 0; i < 4; i++) {
+            glm::ivec2 pos = position + neighbors[i];
+            if (!result.contains(pos) && source.contains(pos)) {
+                queue.push(pos);
+                result.insert(pos);
+                source.erase(pos);
+            }
+        }
+    }
+    return result;
 }
+
+} // namespace Utils
 
 class World {
   public:
@@ -77,12 +122,6 @@ class World {
     // Create a pixel body. This will return the (if check continuous, the last)
     // body generated from the set of pixels. This fetches the pixel from the
     // world.
-    Ref<PixelBody2D>
-    CreatePixelBody(PhysicsBody2DType type,
-                    std::unordered_set<glm::ivec2, VectorHash> pixels,
-                    bool CheckIfContinuous = true,
-                    const std::string &name = "PixelBody2D");
-
     template <typename T = PixelBody2D>
     Ref<T> CreatePixelBody(PhysicsBody2DType type,
                            std::unordered_set<glm::ivec2, VectorHash> pixels,
@@ -148,4 +187,62 @@ class World {
     FastNoiseLite m_HeightNoise;
     FastNoiseLite m_CaveNoise;
 };
+
+template <typename T>
+Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
+                              std::unordered_set<glm::ivec2, VectorHash> pixels,
+                              bool CheckIfContinuous, const std::string &name) {
+
+    static_assert(std::is_base_of_v<PixelBody2D, T>,
+                  "T must inherit from PixelBody2D");
+    if (pixels.size() == 0) {
+        PX_ASSERT(false, "Tried creating a pixel body with no elements!");
+    }
+    // we have a vector of pixels to make a body from, but we don't know if they
+    // are continuous
+    if (CheckIfContinuous) {
+        int iterations = 0;
+        while (pixels.size() > 0) {
+            std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
+                Utils::GridQueuePull(pixels);
+            std::string newName =
+                name + (iterations > 0 ? std::format(" ({})", iterations) : "");
+            Ref<T> body = Instantiate<T>(newName, type);
+            std::vector<PixelBodyElement> elements;
+            for (glm::ivec2 pos : continuousPixels) {
+                Element e = Element();
+                if (TryGetElement(pos, e))
+                    elements.push_back(PixelBodyElement(e, pos));
+            }
+            body->SetPixelBodyElements(elements);
+            m_PixelBodies[body->GetUUID()] = body;
+
+            PX_TRACE("Creating a pixel body with {} pixels",
+                     continuousPixels.size());
+
+            if (pixels.size() == 0) {
+                // we pulled the last of the pixels, so return this body.
+                return body;
+            }
+            iterations++;
+        }
+    } else {
+        Ref<T> body = Instantiate<T>(name, type);
+        std::vector<PixelBodyElement> elements;
+        for (glm::ivec2 pos : pixels) {
+            Element e = Element();
+            if (TryGetElement(pos, e))
+                elements.push_back(PixelBodyElement(e, pos));
+        }
+        body->SetPixelBodyElements(elements);
+        m_PixelBodies[body->GetUUID()] = body;
+        PX_TRACE("Creating a pixel body with {} pixels", pixels.size());
+
+        return body;
+    }
+    // something went wrong!
+    PX_CORE_ERROR("Somehow, we didn't create a pixel body here...");
+    return nullptr;
+}
+
 } // namespace Pyxis

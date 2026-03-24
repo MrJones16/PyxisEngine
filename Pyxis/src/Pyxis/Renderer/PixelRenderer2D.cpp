@@ -142,17 +142,18 @@ void PixelRenderer2D::EndSimulationPass() {
 void PixelRenderer2D::BeginParallaxPass() {}
 void PixelRenderer2D::DrawParallaxLayer(float Depth, float Distance,
                                         Ref<FrameBuffer> buffer) {
-    PX_CORE_TRACE("Render Resolution: ({0},{1})",
-                  s_RenderData.RenderResolution.x,
-                  s_RenderData.RenderResolution.y);
-    PX_CORE_TRACE("Padded Render Resolution: ({0},{1})",
-                  s_RenderData.PaddedRenderResolution.x,
-                  s_RenderData.PaddedRenderResolution.y);
-    PX_CORE_TRACE("Display Resolution: ({0},{1})",
-                  s_RenderData.DisplayResolution.x,
-                  s_RenderData.DisplayResolution.y);
-    PX_CORE_TRACE("Output Resolution: ({0},{1})", s_RenderData.TrueOutputSize.x,
-                  s_RenderData.TrueOutputSize.y);
+    // PX_CORE_TRACE("Render Resolution: ({0},{1})",
+    //               s_RenderData.RenderResolution.x,
+    //               s_RenderData.RenderResolution.y);
+    // PX_CORE_TRACE("Padded Render Resolution: ({0},{1})",
+    //               s_RenderData.PaddedRenderResolution.x,
+    //               s_RenderData.PaddedRenderResolution.y);
+    // PX_CORE_TRACE("Display Resolution: ({0},{1})",
+    //               s_RenderData.DisplayResolution.x,
+    //               s_RenderData.DisplayResolution.y);
+    // PX_CORE_TRACE("Output Resolution: ({0},{1})",
+    // s_RenderData.TrueOutputSize.x,
+    //               s_RenderData.TrueOutputSize.y);
 
     glm::vec2 scaleToPixelPerfect =
         (s_RenderData.TrueOutputSize / s_RenderData.DisplayResolution);

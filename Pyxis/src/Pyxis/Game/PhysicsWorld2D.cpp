@@ -7,7 +7,7 @@ namespace Pyxis {
 PhysicsWorld2D::PhysicsWorld2D(const glm::vec2 &gravity, int subSteps) {
     m_B2WorldDef.gravity = {gravity.x, gravity.y};
     m_SubSteps = subSteps;
-    b2CreateWorld(&m_B2WorldDef);
+    m_B2WorldId = b2CreateWorld(&m_B2WorldDef);
 }
 PhysicsWorld2D::~PhysicsWorld2D() {
     if (b2World_IsValid(m_B2WorldId)) {

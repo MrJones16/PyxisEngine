@@ -10,9 +10,7 @@ class Player : public PixelBody2D {
   public:
     Reciever<void(KeyPressedEvent &)> m_KeyPressedReciever;
 
-    Player(const std::string &name, PhysicsBody2DType type,
-           std::vector<PixelBodyElement> &elements,
-           bool CreatedFromSplit = false)
+    Player(const std::string &name, PhysicsBody2DType type)
         : PixelBody2D(name, type),
           m_KeyPressedReciever(this, &Player::OnKeyPressedEvent) {
         EventSignal::s_KeyPressedEventSignal.AddReciever(m_KeyPressedReciever);

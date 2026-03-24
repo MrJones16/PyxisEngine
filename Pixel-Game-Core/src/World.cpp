@@ -38,51 +38,6 @@ std::vector<glm::ivec2> getLinePath(glm::ivec2 startPosition,
     return positions;
 }
 
-// GridQueuePull will fetch a continuous section of the grid set directly out of
-// source, destructive! There could still be more things in source if there were
-// non-continuous items. You want to keep pulling till source is empty.
-static std::unordered_set<glm::ivec2, VectorHash>
-GridQueuePull(std::unordered_set<glm::ivec2, VectorHash> &source) {
-    std::unordered_set<glm::ivec2, VectorHash> result;
-
-    if (source.size() == 0)
-        return result;
-
-    // make sure the start pos is valid
-    glm::ivec2 startPos = *source.begin();
-
-    // we make a queue of positions to check
-    std::queue<glm::ivec2> queue;
-
-    queue.push(startPos);
-    result.insert(startPos);
-    source.erase(
-        startPos); // since we know it is valid, and it won't be reached by loop
-
-    const glm::ivec2 neighbors[] = {
-        {1, 0},
-        {-1, 0},
-        {0, 1},
-        {0, -1},
-    };
-
-    while (queue.size() > 0) {
-        // check neighbors to see if we need to add them to the queue, or
-        // have already visited them
-        glm::ivec2 position = queue.front();
-        queue.pop();
-
-        for (int i = 0; i < 4; i++) {
-            glm::ivec2 pos = position + neighbors[i];
-            if (!result.contains(pos) && source.contains(pos)) {
-                queue.push(pos);
-                result.insert(pos);
-                source.erase(pos);
-            }
-        }
-    }
-    return result;
-}
 } // namespace Utils
 
 World::World(std::string assetPath, int seed) {
@@ -415,110 +370,20 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
     }
 }
 
-Ref<PixelBody2D>
-World::CreatePixelBody(PhysicsBody2DType type,
-                       std::unordered_set<glm::ivec2, VectorHash> pixels,
-                       bool CheckIfContinuous, const std::string &name) {
-    // we have a vector of pixels to make a body from, but we don't know if they
-    // are continuous
-    if (CheckIfContinuous) {
-        int iterations = 0;
-        while (pixels.size() > 0) {
-            std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
-                Utils::GridQueuePull(pixels);
-            std::string newName =
-                name + (iterations > 0 ? std::format(" ({})", iterations) : "");
-            Ref<PixelBody2D> body = Instantiate<PixelBody2D>(newName, type);
-            std::vector<PixelBodyElement> elements;
-            for (glm::ivec2 pos : continuousPixels) {
-                Element e = Element();
-                if (TryGetElement(pos, e))
-                    elements.push_back(PixelBodyElement(e, pos));
-            }
-            body->SetPixelBodyElements(elements);
-            m_PixelBodies[body->GetUUID()] = body;
-
-            if (pixels.size() == 0) {
-                // we pulled the last of the pixels, so return this body.
-                return body;
-            }
-            iterations++;
-        }
-    } else {
-        Ref<PixelBody2D> body = Instantiate<PixelBody2D>(name, type);
-        std::vector<PixelBodyElement> elements;
-        for (glm::ivec2 pos : pixels) {
-            Element e = Element();
-            if (TryGetElement(pos, e))
-                elements.push_back(PixelBodyElement(e, pos));
-        }
-        body->SetPixelBodyElements(elements);
-        m_PixelBodies[body->GetUUID()] = body;
-        return body;
-    }
-    // something went wrong!
-    PX_CORE_ERROR("Somehow, we didn't create a pixel body here...");
-    return nullptr;
-}
-
-template <typename T>
-Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
-                              std::unordered_set<glm::ivec2, VectorHash> pixels,
-                              bool CheckIfContinuous, const std::string &name) {
-
-    static_assert(std::is_base_of_v<PixelBody2D, T>,
-                  "T must inherit from PixelBody2D");
-    // we have a vector of pixels to make a body from, but we don't know if they
-    // are continuous
-    if (CheckIfContinuous) {
-        int iterations = 0;
-        while (pixels.size() > 0) {
-            std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
-                Utils::GridQueuePull(pixels);
-            std::string newName =
-                name + (iterations > 0 ? std::format(" ({})", iterations) : "");
-            Ref<T> body = Instantiate<T>(newName, type);
-            std::vector<PixelBodyElement> elements;
-            for (glm::ivec2 pos : continuousPixels) {
-                Element e = Element();
-                if (TryGetElement(pos, e))
-                    elements.push_back(PixelBodyElement(e, pos));
-            }
-            body->SetPixelBodyElements(elements);
-            m_PixelBodies[body->GetUUID()] = body;
-
-            if (pixels.size() == 0) {
-                // we pulled the last of the pixels, so return this body.
-                return body;
-            }
-            iterations++;
-        }
-    } else {
-        Ref<PixelBody2D> body = Instantiate<PixelBody2D>(name, type);
-        std::vector<PixelBodyElement> elements;
-        for (glm::ivec2 pos : pixels) {
-            Element e = Element();
-            if (TryGetElement(pos, e))
-                elements.push_back(PixelBodyElement(e, pos));
-        }
-        body->SetPixelBodyElements(elements);
-        m_PixelBodies[body->GetUUID()] = body;
-        return body;
-    }
-    // something went wrong!
-    PX_CORE_ERROR("Somehow, we didn't create a pixel body here...");
-    return nullptr;
-}
-
 void World::PullPixelBodies() {
     // also call ActuallyQueueFree on pixel bodies if they want to die.
 
     for (auto kvp : m_PixelBodies) {
+        PX_TRACE("Pulling PixelBody2D[{}] out", kvp.first);
+        PX_TRACE("Position: ({0},{1})", kvp.second->GetPosition().x,
+                 kvp.second->GetPosition().y);
         UUID id = kvp.first;
         Ref<PixelBody2D> body = kvp.second;
         // skip if we are sleeping!
-        if (!body->GetAwake())
+        if (!body->GetAwake()) {
+            PX_TRACE("Skipping because it's asleep!");
             continue; // leave sleeping bodies in!
+        }
 
         // keep list of elements to take out after iteration
         std ::vector<glm::ivec2> elementsToRemove;
@@ -532,9 +397,9 @@ void World::PullPixelBodies() {
             ElementProperties &elementData =
                 ElementData::GetElementProperties(worldElement.m_ID);
 
-            if (mappedElement.second.element.m_ID !=
-                worldElement
-                    .m_ID) // || !worldElement.m_Rigid TODO re-implement rigid?
+            if (mappedElement.second.element.m_ID != worldElement.m_ID ||
+                worldElement.m_ID ==
+                    0) // || !worldElement.m_Rigid TODO re-implement rigid?
             {
 
                 // element has changed over the last update, could have been
@@ -553,7 +418,14 @@ void World::PullPixelBodies() {
                         worldElement;
                     SetElementWithoutDirtyRectUpdate(
                         mappedElement.second.worldPos, Element());
+                    PX_TRACE("pbe ({0},{1}) was replaced with something new!",
+                             mappedElement.second.worldPos.x,
+                             mappedElement.second.worldPos.y);
                 } else {
+                    PX_TRACE("Tried pulling pbe ({0},{1}) out, but it's been "
+                             "replaced! removing from pb.",
+                             mappedElement.second.worldPos.x,
+                             mappedElement.second.worldPos.y);
                     // the element that has taken over the spot is not able to
                     // be a solid, so we need to re-construct the rigid body
                     // without that element! so we leave it in the sim, and
@@ -563,6 +435,10 @@ void World::PullPixelBodies() {
             } else {
                 // element should be the same, so nothing has changed, pull the
                 // element out
+                PX_TRACE("pulling out pbe ({0},{1})",
+                         mappedElement.second.worldPos.x,
+                         mappedElement.second.worldPos.y);
+
                 body->m_Elements[mappedElement.first].element = worldElement;
                 // replace with default element
                 SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
@@ -574,7 +450,7 @@ void World::PullPixelBodies() {
         // if needed:
         if (elementsToRemove.size() > 0) {
             // we need to reconstruct!
-
+            PX_TRACE("Reconstructing pixel body!");
             // remove the outdated elements
             for (auto &localPos : elementsToRemove) {
                 // TODO: fix this to store these as a buffer and pass to new
@@ -594,6 +470,10 @@ void World::PullPixelBodies() {
 
             // get a continuous section of the local positions
             auto firstPull = Utils::GridQueuePull(source);
+            // firstpull should be the main body, as it may still be fully
+            // intact! let's remove whats in source if there's any straglers,
+            // and make it into it's own body.
+
             for (glm::ivec2 pos : source) {
                 // source is now what is remaining after pulling out a
                 // continuous set. lets remove that remainder from this
@@ -603,11 +483,13 @@ void World::PullPixelBodies() {
             // recalculate the bitarrays and collider/mesh
             body->GenerateMesh();
             // create the new pixel bodies from the remainder.
-            CreatePixelBody(body->GetType(), source,
-                            true); // TODO: adopt velocity like before
+            if (source.size() > 0)
+                CreatePixelBody(body->GetType(), source,
+                                true); // TODO: adopt velocity like before
         }
         // There were no elements removed from the body. We are still intact!
         // end off with saying this body is no longer in the world.
+        body->SetPosition(body->GetPosition() + glm::vec2(0, -1));
         body->m_InWorld = false;
     }
 }
@@ -616,8 +498,27 @@ void World::PushPixelBodies() {
     // put the elements back into the simulation.
     for (auto kvp : m_PixelBodies) {
         Ref<PixelBody2D> body = kvp.second;
-        if (body->m_InWorld)
+        PX_TRACE("Pushing PixelBody2D[{}] back into world", kvp.first);
+        PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
+                 body->GetPosition().y);
+        if (body->m_InWorld) {
+            PX_TRACE("Skipping because its still in world!");
             continue; // body is already in world
+        }
+
+        // chunkloading
+        for (int x = -1; x < 2; x++) {
+
+            for (int y = -1; y < 2; y++) {
+                AddChunk(PixelToChunk(WorldToPixel(body->GetPosition())) +
+                         glm::ivec2(x, y));
+            }
+        }
+
+        // update world positions to put back into new locations
+        body->UpdateElementWorldPositions();
+
+        body->m_InWorld = true;
         if (body->m_Moved) {
             for (auto &mappedElement : body->m_Elements) {
 
@@ -627,11 +528,15 @@ void World::PushPixelBodies() {
                     CreateParticle(
                         mappedElement.second.worldPos,
                         body->GetLocalPixelVelocity(mappedElement.first), e);
+                PX_TRACE("putting pbe ({0},{1}) back in",
+                         mappedElement.second.worldPos.x,
+                         mappedElement.second.worldPos.y);
                 SetElement(mappedElement.second.worldPos,
                            mappedElement.second.element);
             }
         } else {
             // we are still, so put back without updating dirty rect
+            PX_TRACE("we didn't move, so put back in without rect update");
             for (auto &mappedElement : body->m_Elements) {
 
                 // check if there is an element in the way in the world
@@ -640,6 +545,9 @@ void World::PushPixelBodies() {
                     CreateParticle(
                         mappedElement.second.worldPos,
                         body->GetLocalPixelVelocity(mappedElement.first), e);
+                PX_TRACE("putting pbe ({0},{1}) back in, but still",
+                         mappedElement.second.worldPos.x,
+                         mappedElement.second.worldPos.y);
                 SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
                                                  mappedElement.second.element);
             }
@@ -672,7 +580,9 @@ void World::UpdateWorld() {
 
     // TODO STILL
     //  pull pixelbodies out
+    PullPixelBodies();
     Physics2D::GetWorld().Step();
+    PushPixelBodies();
     // put pixelbodies back in
 
     m_UpdateBit = !m_UpdateBit;
