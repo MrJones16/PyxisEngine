@@ -3,7 +3,9 @@
 
 namespace Pyxis {
 struct BGMQuad {
-    glm::ivec2 points[4];
+    float halfWidth;
+    float halfHeight;
+    glm::vec2 center;
 };
 
 // Processes a 2D binary mask where each row is a uint64_t (up to 64 columns)
@@ -61,11 +63,10 @@ BinaryGreedyMesh(std::span<const uint64_t> bitArray) {
             // Create the quad (bottom-left origin, assuming +x right, +y up or
             // down — adjust as needed)
             BGMQuad quad;
-            quad.points[0] = glm::ivec2(x_start, y);             // bottom-left
-            quad.points[1] = glm::ivec2(x_start + width_max, y); // bottom-right
-            quad.points[2] =
-                glm::ivec2(x_start + width_max, y + height_max);  // top-right
-            quad.points[3] = glm::ivec2(x_start, y + height_max); // top-left
+            quad.halfWidth = (float)width_max / 2.0f;
+            quad.halfHeight = (float)height_max / 2.0f;
+            quad.center =
+                glm::ivec2(x_start + quad.halfWidth, y + quad.halfHeight);
 
             quads.push_back(quad);
         }

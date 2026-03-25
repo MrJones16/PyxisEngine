@@ -19,6 +19,8 @@ struct PhysicsBody2D {
     PhysicsBody2D(b2WorldId worldId, json &j);
     ~PhysicsBody2D();
 
+    void DebugDraw();
+
     // doesn't remove from the prior world!
     void CopyToWorld(b2WorldId worldId);
 
@@ -51,6 +53,11 @@ struct PhysicsBody2D {
     void ApplyForce(const glm::vec2 &force, const glm::vec2 &point,
                     bool wake = true);
     void ApplyTorque(float torque, bool wake = true);
+
+    // shapes
+    void RemoveShapes();
+    void AddBoxShape(float halfwidth, float halfheight, const glm::vec2 &center,
+                     float radians);
 
     // Serialization
     void Serialize(json &j);

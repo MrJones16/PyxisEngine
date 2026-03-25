@@ -176,7 +176,7 @@ class World {
     bool m_Error = false;
 
     // temps
-    bool m_DebugDrawColliders = false;
+    bool m_DebugDrawColliders = true;
 
     // server mode ignores textures!
     bool m_ServerMode = false;
@@ -211,13 +211,16 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
             std::vector<PixelBodyElement> elements;
             for (glm::ivec2 pos : continuousPixels) {
                 Element e = Element();
-                if (TryGetElement(pos, e))
+                if (TryGetElement(pos, e)) {
+                    e.m_BaseColor = 0xFFFFFFFF;
+                    e.m_Color = 0xFFFFFFFF;
                     elements.push_back(PixelBodyElement(e, pos));
+                }
             }
             body->SetPixelBodyElements(elements);
             m_PixelBodies[body->GetUUID()] = body;
 
-            PX_TRACE("Creating a pixel body with {} pixels",
+            PX_TRACE("Instantiated {} with {} pixels", newName,
                      continuousPixels.size());
 
             if (pixels.size() == 0) {
@@ -231,12 +234,15 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
         std::vector<PixelBodyElement> elements;
         for (glm::ivec2 pos : pixels) {
             Element e = Element();
-            if (TryGetElement(pos, e))
+            if (TryGetElement(pos, e)) {
+                e.m_BaseColor = 0xFFFFFFFF;
+                e.m_Color = 0xFFFFFFFF;
                 elements.push_back(PixelBodyElement(e, pos));
+            }
         }
         body->SetPixelBodyElements(elements);
         m_PixelBodies[body->GetUUID()] = body;
-        PX_TRACE("Creating a pixel body with {} pixels", pixels.size());
+        PX_TRACE("Instantiated {} with {} pixels", name, pixels.size());
 
         return body;
     }

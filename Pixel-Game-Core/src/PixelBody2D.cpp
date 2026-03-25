@@ -1,7 +1,7 @@
 #include "PixelBody2D.h"
-#include "Pyxis/Game/PhysicsBody2D.h"
 #include "Pyxis/Nodes/PhysicsBodyNode2D.h"
 #include "glm/gtc/matrix_transform.hpp"
+#include <Pyxis/Core/BinaryGreedyMesh.h>
 #include <Pyxis/Game/Physics2D.h>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -90,6 +90,10 @@ void PixelBody2D::Deserialize(json &j) {
 void PixelBody2D::QueueFree() { m_FreeMe = true; }
 
 void PixelBody2D::GenerateMesh() {
+    // clear prior mesh data
+    RemoveShapes();
+    m_BitArrays =
+        std::unordered_map<glm::ivec2, std::vector<uint64_t>, VectorHash>();
     // we know the width and height, so we know how many 64x64 areas we would
     // need.
     int bitArrayXCount =
@@ -115,6 +119,18 @@ void PixelBody2D::GenerateMesh() {
                 bitArray.push_back(column);
             }
             m_BitArrays[bitArrayCoord] = bitArray;
+        }
+    }
+
+    for (auto &kvp : m_BitArrays) {
+
+        std::vector<BGMQuad> quads = BinaryGreedyMesh(kvp.second);
+        for (auto &quad : quads) {
+            glm::vec2 position = quad.center - (glm::vec2)m_LocalMinimum +
+                                 ((glm::vec2)kvp.first * 64.0f);
+            AddBoxShape(quad.halfWidth, quad.halfHeight, position, 0);
+            PX_TRACE("Added box, Width:{}, Height:{}, Position:({},{})",
+                     quad.halfWidth, quad.halfHeight, position.x, position.y);
         }
     }
 

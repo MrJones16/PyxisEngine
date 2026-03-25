@@ -1,9 +1,9 @@
 #pragma once
 
 #include "Element.h"
-#include "Pyxis/Game/Physics2D.h"
 #include "VectorHash.h"
 #include <Pyxis.h>
+#include <Pyxis/Nodes/PhysicsBodyNode2D.h>
 #include <box2d/box2d.h>
 
 namespace Pyxis {
@@ -72,6 +72,6 @@ class Chunk {
     // Bitmap array for greedy meshing for collisions & shadows
     uint64_t m_BitArray[64];
 
-    Ref<PhysicsBody2D> m_PhysicsBody;
+    Ref<PhysicsBodyNode2D> m_PhysicsBody;
 };
 } // namespace Pyxis

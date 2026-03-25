@@ -1,5 +1,8 @@
+#include "Pyxis/Renderer/Renderer2D.h"
 #include <Pyxis/Game/PhysicsBody2D.h>
 #include <box2d/box2d.h>
+#include <box2d/collision.h>
+#include <box2d/id.h>
 #include <box2d/math_functions.h>
 #include <box2d/types.h>
 
@@ -40,6 +43,29 @@ PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, json &j) {
 PhysicsBody2D::~PhysicsBody2D() {
     if (b2Body_IsValid(m_B2BodyId))
         b2DestroyBody(m_B2BodyId);
+}
+
+void PhysicsBody2D::DebugDraw() {
+    int shapeCount = b2Body_GetShapeCount(m_B2BodyId);
+    b2ShapeId shapes[shapeCount];
+    b2Body_GetShapes(m_B2BodyId, shapes, shapeCount);
+    for (b2ShapeId &id : shapes) {
+        b2Transform transform = b2Body_GetTransform(m_B2BodyId);
+        b2Vec2 position = b2Body_GetPosition(m_B2BodyId) * 16;
+        b2Polygon polygon = b2Shape_GetPolygon(id);
+        for (int i = 0; i < polygon.count - 1; i++) {
+            b2Vec2 b2Start = position + polygon.vertices[i];
+            b2Vec2 b2end = position + polygon.vertices[i + 1];
+            glm::vec3 start = glm::vec3(b2Start.x, b2Start.y, 10);
+            glm::vec3 end = glm::vec3(b2end.x, b2end.y, 10);
+            Renderer2D::DrawLine(start, end);
+        }
+        b2Vec2 b2Start = position + polygon.vertices[polygon.count - 1];
+        b2Vec2 b2end = position + polygon.vertices[0];
+        glm::vec3 start = glm::vec3(b2Start.x, b2Start.y, 10);
+        glm::vec3 end = glm::vec3(b2end.x, b2end.y, 10);
+        Renderer2D::DrawLine(start, end);
+    }
 }
 
 void PhysicsBody2D::CopyToWorld(b2WorldId worldId) {
@@ -124,6 +150,27 @@ void PhysicsBody2D::ApplyForce(const glm::vec2 &force, const glm::vec2 &point,
 }
 void PhysicsBody2D::ApplyTorque(float torque, bool wake) {
     b2Body_ApplyTorque(m_B2BodyId, torque, wake);
+}
+
+// shapes
+void PhysicsBody2D::RemoveShapes() {
+    int shapeCount = b2Body_GetShapeCount(m_B2BodyId);
+    b2ShapeId shapes[shapeCount];
+    b2Body_GetShapes(m_B2BodyId, shapes, shapeCount);
+    for (b2ShapeId &id : shapes) {
+        b2DestroyShape(id, false); // false to defer mass computation
+    }
+    b2Body_ApplyMassFromShapes(m_B2BodyId);
+}
+
+void PhysicsBody2D::AddBoxShape(float halfWidth, float halfHeight,
+                                const glm::vec2 &center, float radians = 0) {
+    b2Polygon poly = b2MakeOffsetBox(
+        halfWidth, halfHeight, b2Vec2(center.x, center.y), b2MakeRot(radians));
+    b2ShapeDef shapeDef = b2DefaultShapeDef();
+    shapeDef.density = (halfWidth * 2) * (halfHeight * 2);
+    shapeDef.material.friction = 0.3f;
+    b2CreatePolygonShape(m_B2BodyId, &shapeDef, &poly);
 }
 
 void PhysicsBody2D::UpdateBodyDefinition() {

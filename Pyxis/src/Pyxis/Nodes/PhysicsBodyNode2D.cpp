@@ -3,6 +3,9 @@
 #include "Pyxis/Game/PhysicsWorld2D.h"
 #include <Pyxis/Game/Physics2D.h>
 #include <box2d/box2d.h>
+#include <box2d/collision.h>
+#include <box2d/math_functions.h>
+#include <box2d/types.h>
 
 namespace Pyxis {
 PhysicsBodyNode2D::PhysicsBodyNode2D(const std::string &name,
@@ -50,6 +53,8 @@ glm::mat4 PhysicsBodyNode2D::GetWorldTransform() {
         return localTransform;
     }
 }
+
+void PhysicsBodyNode2D::DebugDraw() { m_PhysicsBody->DebugDraw(); }
 
 void PhysicsBodyNode2D::Translate(const glm::vec2 &translation) {
     m_PhysicsBody->SetPosition(m_PhysicsBody->GetPosition() + translation);
@@ -117,6 +122,13 @@ void PhysicsBodyNode2D::SetAngularDampening(float damping) {
 
 float PhysicsBodyNode2D::GetAngularDamping() {
     return m_PhysicsBody->GetAngularDamping();
+}
+
+void PhysicsBodyNode2D::RemoveShapes() { m_PhysicsBody->RemoveShapes(); }
+
+void PhysicsBodyNode2D::AddBoxShape(float halfWidth, float halfHeight,
+                                    const glm::vec2 &center, float radians) {
+    m_PhysicsBody->AddBoxShape(halfWidth, halfHeight, center, radians);
 }
 
 } // namespace Pyxis

@@ -43,6 +43,8 @@ class PhysicsBodyNode2D : public Node2D {
     ///   Functions for rigid bodies
     ///////////////////////////////////////////////
 
+    void DebugDraw();
+
     void SetType(PhysicsBody2DType type);
     PhysicsBody2DType GetType();
 
@@ -62,6 +64,11 @@ class PhysicsBodyNode2D : public Node2D {
 
     void SetAngularDampening(float damping);
     float GetAngularDamping();
+
+    // shape funcs
+    void RemoveShapes();
+    void AddBoxShape(float halfWidth, float halfHeight, const glm::vec2 &center,
+                     float radians);
 };
 
 REGISTER_SERIALIZABLE_NODE(PhysicsBodyNode2D);

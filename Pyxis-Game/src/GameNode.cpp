@@ -6,7 +6,6 @@
 #include "MenuNode.h"
 #include "PixelBody2D.h"
 #include "Player.h"
-#include "Pyxis/Game/PhysicsBody2D.h"
 #include "VectorHash.h"
 #include <Platform/OpenGL/OpenGLShader.h>
 #include <Pyxis/Game/Physics2D.h>
@@ -378,7 +377,7 @@ void GameNode::HandleTickClosure(MergedTickClosure &tc) {
                 if (pixels.size() > 0) {
                     if (!makeCreature) {
                         m_World.CreatePixelBody(PhysicsBody2DType::Dynamic,
-                                                pixels, true,
+                                                pixels, false,
                                                 "F-Created RigidBody");
                     } else {
                         m_World.CreatePixelBody<Player>(

@@ -371,14 +371,27 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
 }
 
 void World::PullPixelBodies() {
-    // also call ActuallyQueueFree on pixel bodies if they want to die.
-
+    // loop over bodies, and get list of current bodies. Also free them if they
+    // want to be freed.
+    std::vector<Ref<PixelBody2D>> bodies;
+    std::vector<UUID> idsToFree;
     for (auto kvp : m_PixelBodies) {
-        PX_TRACE("Pulling PixelBody2D[{}] out", kvp.first);
-        PX_TRACE("Position: ({0},{1})", kvp.second->GetPosition().x,
-                 kvp.second->GetPosition().y);
-        UUID id = kvp.first;
-        Ref<PixelBody2D> body = kvp.second;
+        if (kvp.second->m_FreeMe) {
+            idsToFree.push_back(kvp.first);
+            kvp.second->ActuallyQueueFree();
+            continue;
+        }
+        // only pushing alive bodies onto the list to pull.
+        bodies.push_back(kvp.second);
+    }
+    // list of ids to remove from world list, can't do during iteration over it!
+    for (auto &id : idsToFree) {
+        m_PixelBodies.erase(id);
+    }
+    for (Ref<PixelBody2D> body : bodies) {
+        PX_TRACE("Pulling PixelBody2D[{}] out", body->GetUUID());
+        PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
+                 body->GetPosition().y);
         // skip if we are sleeping!
         if (!body->GetAwake()) {
             PX_TRACE("Skipping because it's asleep!");
@@ -391,14 +404,14 @@ void World::PullPixelBodies() {
         // loop over all elements, and attempt to take them out of the world
         for (auto &mappedElement : body->m_Elements) {
 
-            // the world position of the element is already known, so just try
-            // to grab it
+            // the world position of the element is already known, so just
+            // try to grab it
             Element &worldElement = GetElement(mappedElement.second.worldPos);
             ElementProperties &elementData =
                 ElementData::GetElementProperties(worldElement.m_ID);
 
             if (mappedElement.second.element.m_ID != worldElement.m_ID ||
-                worldElement.m_ID ==
+                mappedElement.second.element.m_ID ==
                     0) // || !worldElement.m_Rigid TODO re-implement rigid?
             {
 
@@ -409,11 +422,12 @@ void World::PullPixelBodies() {
                 if (elementData.cell_type == ElementType::solid ||
                     (elementData.cell_type == ElementType::movableSolid &&
                      worldElement.m_Rigid)) {
-                    // replaced element is able to continue being part of the
-                    // solid! this could be the player replacing the blocks, or
-                    // a solid block reacts with something and stays solid, like
-                    // getting stained or something idk either way, in this
-                    // situation we just pull the new element
+                    // replaced element is able to continue being part of
+                    // the solid! this could be the player replacing the
+                    // blocks, or a solid block reacts with something and
+                    // stays solid, like getting stained or something idk
+                    // either way, in this situation we just pull the new
+                    // element
                     body->m_Elements[mappedElement.first].element =
                         worldElement;
                     SetElementWithoutDirtyRectUpdate(
@@ -426,15 +440,15 @@ void World::PullPixelBodies() {
                              "replaced! removing from pb.",
                              mappedElement.second.worldPos.x,
                              mappedElement.second.worldPos.y);
-                    // the element that has taken over the spot is not able to
-                    // be a solid, so we need to re-construct the rigid body
-                    // without that element! so we leave it in the sim, and
-                    // erase the previous from the body
+                    // the element that has taken over the spot is not able
+                    // to be a solid, so we need to re-construct the rigid
+                    // body without that element! so we leave it in the sim,
+                    // and erase the previous from the body
                     elementsToRemove.push_back(mappedElement.first);
                 }
             } else {
-                // element should be the same, so nothing has changed, pull the
-                // element out
+                // element should be the same, so nothing has changed, pull
+                // the element out
                 PX_TRACE("pulling out pbe ({0},{1})",
                          mappedElement.second.worldPos.x,
                          mappedElement.second.worldPos.y);
@@ -446,19 +460,13 @@ void World::PullPixelBodies() {
             }
         }
 
-        // now that we pulled all the elements out, try to re-construct the body
-        // if needed:
+        // now that we pulled all the elements out, try to re-construct the
+        // body if needed:
         if (elementsToRemove.size() > 0) {
             // we need to reconstruct!
             PX_TRACE("Reconstructing pixel body!");
             // remove the outdated elements
             for (auto &localPos : elementsToRemove) {
-                // TODO: fix this to store these as a buffer and pass to new
-                // body creation instead of throwing into the world as a
-                // shortcut...
-                SetElementWithoutDirtyRectUpdate(
-                    body->m_Elements[localPos].worldPos,
-                    body->m_Elements[localPos].element);
                 body->m_Elements.erase(localPos);
             }
 
@@ -471,24 +479,37 @@ void World::PullPixelBodies() {
             // get a continuous section of the local positions
             auto firstPull = Utils::GridQueuePull(source);
             // firstpull should be the main body, as it may still be fully
-            // intact! let's remove whats in source if there's any straglers,
-            // and make it into it's own body.
+            // intact! let's remove whats in source if there's any
+            // straglers, and make it into it's own body.
 
             for (glm::ivec2 pos : source) {
                 // source is now what is remaining after pulling out a
-                // continuous set. lets remove that remainder from this
-                // pixelbody, and make new pixel bodies from it
+                // continuous set.
+
+                // put the remainder back into the world
+                SetElementWithoutDirtyRectUpdate(body->m_Elements[pos].worldPos,
+                                                 body->m_Elements[pos].element);
+                // lets remove that remainder from this
+                // pixelbody, and make new pixel bodies from it after
                 body->m_Elements.erase(pos);
             }
-            // recalculate the bitarrays and collider/mesh
-            body->GenerateMesh();
+
             // create the new pixel bodies from the remainder.
             if (source.size() > 0)
                 CreatePixelBody(body->GetType(), source,
                                 true); // TODO: adopt velocity like before
+
+            if (body->m_Elements.size() == 0) {
+                PX_TRACE("Pixel body [{}] destroyed!", body->GetUUID());
+                body->QueueFree();
+                body->RemoveShapes();
+            } else {
+                // recalculate the bitarrays and collider/mesh
+                body->GenerateMesh();
+            }
         }
-        // There were no elements removed from the body. We are still intact!
-        // end off with saying this body is no longer in the world.
+        // There were no elements removed from the body. We are still
+        // intact! end off with saying this body is no longer in the world.
         body->SetPosition(body->GetPosition() + glm::vec2(0, -1));
         body->m_InWorld = false;
     }
@@ -496,6 +517,7 @@ void World::PullPixelBodies() {
 
 void World::PushPixelBodies() {
     // put the elements back into the simulation.
+    // no need to copy list, as we won't change it here.
     for (auto kvp : m_PixelBodies) {
         Ref<PixelBody2D> body = kvp.second;
         PX_TRACE("Pushing PixelBody2D[{}] back into world", kvp.first);
@@ -1982,6 +2004,9 @@ void World::RenderWorld() {
 
     // float pixelSize = (1.0f / CHUNKSIZE);
     if (m_DebugDrawColliders) {
+        for (auto &kvp : m_PixelBodies) {
+            kvp.second->DebugDraw();
+        }
         // drawing contour vector
         /*for each (auto pixelBody in m_PixelBodies)
         {

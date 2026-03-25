@@ -1,6 +1,5 @@
 #pragma once
 #include "PixelBody2D.h"
-#include "Pyxis/Game/PhysicsBody2D.h"
 #include <Pyxis/Events/EventSignals.h>
 
 #include <Pyxis/Nodes/CameraNode.h>
