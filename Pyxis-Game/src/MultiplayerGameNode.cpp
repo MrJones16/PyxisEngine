@@ -126,7 +126,7 @@ void MultiplayerGameNode::OnFixedUpdate() {
 
         // reset world, then apply the tick closure
         if (m_World.m_SimulationTick == m_TickToResetBox2D) {
-            m_World.ResetPhysics();
+            m_World.ResetPhysicsDeterminism();
             m_TickToResetBox2D = -1;
         }
 

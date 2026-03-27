@@ -34,7 +34,7 @@ class PhysicsWorld2D {
     b2WorldId GetWorld();
     bool IsValid();
 
-    void ResetWorld();
+    void ResetWorldDeterminism();
     void Step();
 
     int GetBodyCount();

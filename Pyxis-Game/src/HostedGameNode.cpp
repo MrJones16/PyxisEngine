@@ -220,7 +220,7 @@ void HostedGameNode::HandleMessages() {
             Network::Message b2ResetMsg;
             b2ResetMsg.header.id =
                 static_cast<uint32_t>(GameMessage::Game_ResetBox2D);
-            m_World.ResetPhysics();
+            m_World.ResetPhysicsDeterminism();
             b2ResetMsg << m_World.m_SimulationTick;
             SendMessageToAllClients(b2ResetMsg, msg->clientHConnection);
             break;

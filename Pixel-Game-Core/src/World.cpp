@@ -188,9 +188,9 @@ void World::GetGameData(std::vector<Network::Message> &messages) {
 }
 
 World::~World() {
-    PX_TRACE("Deleting World");
+    // PX_TRACE("Deleting World");
 
-    Physics2D::DestroyWorld();
+    // Physics2D::DestroyWorld();
     for (auto &pair : m_Chunks) {
         delete (pair.second);
     }
@@ -503,14 +503,14 @@ void World::PullPixelBodies() {
                 PX_TRACE("Pixel body [{}] destroyed!", body->GetUUID());
                 body->QueueFree();
                 body->RemoveShapes();
+
             } else {
                 // recalculate the bitarrays and collider/mesh
                 body->GenerateMesh();
             }
         }
-        // There were no elements removed from the body. We are still
-        // intact! end off with saying this body is no longer in the world.
-        body->SetPosition(body->GetPosition() + glm::vec2(0, -1));
+        // End off with saying this body is no longer in the world. We may even
+        // be dead!
         body->m_InWorld = false;
     }
 }
@@ -1963,7 +1963,7 @@ void World::Clear() {
     }
     m_Chunks.clear();
 
-    Physics2D::DestroyWorld();
+    Physics2D::ClearWorld();
     Physics2D::GetWorld();
 
     // AddChunk(glm::ivec2(0, 0));
@@ -2065,9 +2065,9 @@ void World::RenderWorld() {
     }
 }
 
-void World::ResetPhysics() {
+void World::ResetPhysicsDeterminism() {
     PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);
-    Physics2D::ResetWorld();
+    Physics2D::ResetWorldDeterminism();
 }
 
 void World::DestroyPixelBody(UUID id) {

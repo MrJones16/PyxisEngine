@@ -128,7 +128,7 @@ class World {
                            bool CheckIfContinuous = true,
                            const std::string &name = "PixelBody2D");
 
-    void ResetPhysics();
+    void ResetPhysicsDeterminism();
     void DestroyPixelBody(UUID id);
     void DestroyPixelBody(Ref<PixelBody2D> body);
     // PixelRigidBody* CreatePixelRigidBody(uint64_t uuid, const glm::ivec2&

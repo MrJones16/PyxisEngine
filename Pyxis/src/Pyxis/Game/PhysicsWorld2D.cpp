@@ -16,7 +16,7 @@ PhysicsWorld2D::~PhysicsWorld2D() {
 }
 
 b2WorldId PhysicsWorld2D::GetWorld() {
-    if (b2World_IsValid(m_B2WorldId)) {
+    if (!b2World_IsValid(m_B2WorldId)) {
         b2WorldDef def = b2DefaultWorldDef();
         def.gravity = {0, -9.8};
         m_B2WorldId = b2CreateWorld(&def);
@@ -26,7 +26,7 @@ b2WorldId PhysicsWorld2D::GetWorld() {
 }
 
 bool PhysicsWorld2D::IsValid() { return b2World_IsValid(m_B2WorldId); }
-void PhysicsWorld2D::ResetWorld() {
+void PhysicsWorld2D::ResetWorldDeterminism() {
     // make a new world
     b2WorldId newId = b2CreateWorld(&m_B2WorldDef);
     // loop over the bodies, and copy them into the new world

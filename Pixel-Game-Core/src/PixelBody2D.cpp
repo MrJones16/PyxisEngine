@@ -126,11 +126,13 @@ void PixelBody2D::GenerateMesh() {
 
         std::vector<BGMQuad> quads = BinaryGreedyMesh(kvp.second);
         for (auto &quad : quads) {
-            glm::vec2 position = quad.center - (glm::vec2)m_LocalMinimum +
-                                 ((glm::vec2)kvp.first * 64.0f);
-            AddBoxShape(quad.halfWidth, quad.halfHeight, position, 0);
+            glm::vec2 worldPosition = quad.center - (glm::vec2)m_LocalMinimum +
+                                      ((glm::vec2)kvp.first * 64.0f);
+            AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
+                        worldPosition / PPU, 0);
             PX_TRACE("Added box, Width:{}, Height:{}, Position:({},{})",
-                     quad.halfWidth, quad.halfHeight, position.x, position.y);
+                     quad.halfWidth / PPU, quad.halfHeight / PPU,
+                     worldPosition.x / PPU, worldPosition.y / PPU);
         }
     }
 
@@ -183,6 +185,7 @@ void PixelBody2D::UpdateElementWorldPositions() {
         if (posPrior != mappedElement.second.worldPos)
             m_Moved = true;
     }
+    PX_TRACE("Updated Element positions, moved?:{}", m_Moved);
 }
 
 glm::mat4 PixelBody2D::GetWorldTransform() {
