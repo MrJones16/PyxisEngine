@@ -114,7 +114,8 @@ class World {
 
     void TestMeshGeneration() {
         for (auto &[key, chunk] : m_Chunks) {
-            chunk->GenerateMesh();
+            if (chunk->m_MeshChanged)
+                chunk->GenerateMesh();
         }
     }
 
@@ -176,7 +177,7 @@ class World {
     bool m_Error = false;
 
     // temps
-    bool m_DebugDrawColliders = true;
+    bool m_DebugDrawColliders = false;
 
     // server mode ignores textures!
     bool m_ServerMode = false;
@@ -200,8 +201,10 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
     for (auto &pos : pixels) {
         Element &e = ForceGetElement(pos);
         ElementProperties &eData = ElementData::GetElementProperties(e.m_ID);
-        if (eData.cell_type == ElementType::solid)
+        if (eData.cell_type == ElementType::solid ||
+            eData.cell_type == ElementType::movableSolid) {
             pixelsRestricted.insert(pos);
+        }
     }
 
     if (pixelsRestricted.size() == 0) {
@@ -222,11 +225,14 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
             Ref<T> body = Instantiate<T>(newName, type);
             std::vector<PixelBodyElement> elements;
             for (glm::ivec2 pos : continuousPixels) {
-                Element &e =
+                Element e =
                     GetElement(pos); // don't need to force since i did above
                 // e.m_BaseColor = 0xFFFFFFFF;
                 // e.m_Color = 0xFFFFFFFF;
                 elements.push_back(PixelBodyElement(e, pos));
+                e.m_Rigid = true;
+                SetElement(pos, e); // set the element back, but this time
+                                    // rigid.
             }
             body->SetPixelBodyElements(elements);
             m_PixelBodies[body->GetUUID()] = body;
@@ -244,10 +250,12 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
         Ref<T> body = Instantiate<T>(name, type);
         std::vector<PixelBodyElement> elements;
         for (glm::ivec2 pos : pixelsRestricted) {
-            Element &e = GetElement(pos);
+            Element e = GetElement(pos);
             // e.m_BaseColor = 0xFFFFFFFF;
             // e.m_Color = 0xFFFFFFFF;
             elements.push_back(PixelBodyElement(e, pos));
+            e.m_Rigid = true;
+            SetElement(pos, e);
         }
         body->SetPixelBodyElements(elements);
         m_PixelBodies[body->GetUUID()] = body;

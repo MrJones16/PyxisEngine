@@ -1,4 +1,7 @@
 #include "Chunk.h"
+#include "Element.h"
+#include "Pyxis/Core/BinaryGreedyMesh.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
 #include "Pyxis/Renderer/Renderer2D.h"
 #include "VectorHash.h"
 /*
@@ -14,6 +17,9 @@ Chunk::Chunk(glm::ivec2 chunkPos) {
     for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++) {
         m_Elements[i] = Element();
     }
+    for (int x = 0; x < 64; x++) {
+        m_BitArray.push_back(0);
+    }
 
     // reset dirty rect
     ResetDirtyRect();
@@ -23,6 +29,10 @@ Chunk::Chunk(glm::ivec2 chunkPos) {
     std::fill(m_PixelBuffer, m_PixelBuffer + (CHUNKSIZE * CHUNKSIZE),
               0xFF000000);
     m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+
+    m_PhysicsBody = Physics2D::GetWorld().CreateBody(
+        PhysicsBody2DType::Static,
+        (glm::vec2(m_ChunkPos) * CHUNKSIZEF) * (1 / PPU), 0);
 }
 
 void Chunk::Clear() {
@@ -45,61 +55,35 @@ Element &Chunk::GetElement(const glm::ivec2 &index) {
 Element &Chunk::GetElement(int index) { return m_Elements[index]; }
 
 void Chunk::SetElement(int x, int y, const Element &element) {
-    // test if we are placing a rigid element
-    if (element.m_Rigid) {
-        // we don't worry about updating the collider if we are setting a rigid
-        // element
-        m_Elements[x + y * CHUNKSIZE] = element;
-        return;
-    }
-    // test if we are replacing a rigid element
-    if (m_Elements[x + y * CHUNKSIZE].m_Rigid) {
-        m_Elements[x + y * CHUNKSIZE] = element;
+    Element &currElement = m_Elements[x + y * CHUNKSIZE];
+    ElementProperties &currEP =
+        ElementData::GetElementProperties(currElement.m_ID);
+    bool currIsSolid = (!currElement.m_Rigid) &&
+                       (currEP.cell_type == ElementType::solid ||
+                        currEP.cell_type == ElementType::movableSolid);
 
-        // we are replacing a rigid element, so we should set the new element to
-        // be rigid if it is a solid!
-        ElementType newType = ElementData::GetElementProperties(
-                                  m_Elements[x + y * CHUNKSIZE].m_ID)
-                                  .cell_type;
-        if (newType == ElementType::solid)
-            m_Elements[x + y * CHUNKSIZE].m_Rigid = true;
+    ElementProperties newEP = ElementData::GetElementProperties(element.m_ID);
+    bool newIsSolid =
+        (!element.m_Rigid) && (newEP.cell_type == ElementType::solid ||
+                               newEP.cell_type == ElementType::movableSolid);
+    // actually set the element now
+    m_Elements[x + y * CHUNKSIZE] = element;
 
-        return;
-    }
-
-    ElementType currType =
-        ElementData::GetElementProperties(m_Elements[x + y * CHUNKSIZE].m_ID)
-            .cell_type;
-    if (currType == ElementType::solid ||
-        currType == ElementType::movableSolid) {
-        // we are currently solid, so see if we are changing to something that
-        // is not
-        currType = ElementData::GetElementProperties(element.m_ID).cell_type;
-        if (!(currType == ElementType::solid ||
-              currType == ElementType::movableSolid)) {
-            // we are no longer solid, so we need to update the collider
-            m_MeshChanged = true;
-            // set bit array at that spot to 0
+    if (currIsSolid != newIsSolid) {
+        // mesh needs to be changed
+        m_MeshChanged = true;
+        if (newIsSolid) {
+            // set bit to 1
+            uint64_t mask = 1u;
+            m_BitArray[x] |= (uint64_t)(mask << y);
+        } else {
+            // set bit to 0
+            uint64_t mask = 1u;
             uint64_t AndMask =
-                ~(1 << y); // inverse of 1 bitshifted to the position of y.
+                ~(mask << y); // inverse of 1 bitshifted to the position of y.
             m_BitArray[x] &= AndMask;
         }
-
-        m_Elements[x + y * CHUNKSIZE] = element;
-
-    } else {
-        // we are not solid, so see if we will become one.
-        currType = ElementData::GetElementProperties(element.m_ID).cell_type;
-        if (currType == ElementType::solid ||
-            currType == ElementType::movableSolid) {
-            // we are becoming solid, so we need to update the collider
-            m_MeshChanged = true;
-            // set bit array at that spot to 1
-            m_BitArray[x] |= (1 << y);
-        }
-
-        m_Elements[x + y * CHUNKSIZE] = element;
-    }
+    } // else would mean that the collider wouldn't need to be updated.
 }
 
 /// <summary>
@@ -193,7 +177,24 @@ void Chunk::RenderChunk() {
     }
 }
 
-void Chunk::GenerateMesh() { m_MeshGenerated = true; }
+void Chunk::GenerateMesh() {
+    m_MeshGenerated = true;
+    // convert bitmap to quads to add to body.
+
+    PX_TRACE("Generating mesh for chunk ({},{})", m_ChunkPos.x, m_ChunkPos.y);
+
+    m_PhysicsBody->RemoveShapes();
+
+    auto quads = BinaryGreedyMesh(m_BitArray);
+    for (auto &quad : quads) {
+        glm::vec2 quadPosition = quad.center;
+        m_PhysicsBody->AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
+                                   quadPosition / PPU, 0);
+        PX_TRACE("Added box at ({},{}), width: {}, height: {}", quadPosition.x,
+                 quadPosition.y, quad.halfWidth * 2, quad.halfHeight * 2);
+    }
+    m_MeshChanged = false;
+}
 
 void Chunk::AddPreviousMesh() { m_MeshGenerated = true; }
 

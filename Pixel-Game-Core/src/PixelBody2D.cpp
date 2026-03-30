@@ -1,6 +1,8 @@
 #include "PixelBody2D.h"
 #include "Pyxis/Nodes/PhysicsBodyNode2D.h"
 #include "glm/gtc/matrix_transform.hpp"
+#define GLM_ENABLE_EXPERIMENTAL
+#include "glm/gtx/matrix_transform_2d.hpp"
 #include <Pyxis/Core/BinaryGreedyMesh.h>
 #include <Pyxis/Game/Physics2D.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -43,7 +45,7 @@ void PixelBody2D::SetPixelBodyElements(
     SetPosition(CenterPixelPosWorld);
     SetRotation(0);
     SetLinearVelocity({0, 0});
-    SetAngularVelocity(2.0f);
+    SetAngularVelocity(1.0f);
 
     // use the minimum to get local positions [example, from -10,-10 to 10,10]
     for (auto &pbe : elements) {
@@ -52,7 +54,7 @@ void PixelBody2D::SetPixelBodyElements(
     }
     m_LocalMinimum = glm::ivec2(minX, minY) - CenterPixelPosWorld;
     m_InWorld = true;
-    // GenerateMesh();
+    GenerateMesh();
 }
 
 void PixelBody2D::Serialize(json &j) {
@@ -96,6 +98,24 @@ void PixelBody2D::QueueFree() { m_FreeMe = true; }
 void PixelBody2D::GenerateMesh() {
     // clear prior mesh data
     RemoveShapes();
+    UpdateBitArrays();
+
+    for (auto &kvp : m_BitArrays) {
+        std::vector<BGMQuad> quads = BinaryGreedyMesh(kvp.second);
+        for (auto &quad : quads) {
+            glm::vec2 quadPosition =
+                (quad.center + (glm::vec2(kvp.first * 64))) +
+                glm::vec2(m_LocalMinimum);
+            AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
+                        quadPosition / PPU, 0);
+        }
+    }
+
+    // m_BitArrays is now populated. We still need to run BGM on it, and set the
+    // physics body shapes.
+}
+
+void PixelBody2D::UpdateBitArrays() {
     m_BitArrays =
         std::unordered_map<glm::ivec2, std::vector<uint64_t>, VectorHash>();
     // we know the width and height, so we know how many 64x64 areas we would
@@ -126,88 +146,24 @@ void PixelBody2D::GenerateMesh() {
             m_BitArrays[bitArrayCoord] = bitArray;
         }
     }
-    glm::vec2 position = GetPosition();
-    PX_TRACE("Generating mesh, position: ({},{}), {} bit arrays.", position.x,
-             position.y, bitArrayXCount * bitArrayYCount);
-
-    for (auto &kvp : m_BitArrays) {
-        PX_TRACE("Adding boxes from bit array ({},{})", kvp.first.x,
-                 kvp.first.y);
-        std::vector<BGMQuad> quads = BinaryGreedyMesh(kvp.second);
-        for (auto &quad : quads) {
-            PX_TRACE("Quad center: ({},{})", quad.center.x, quad.center.y);
-            glm::vec2 worldPosition =
-                (quad.center + ((glm::vec2)kvp.first * 64.0f)) -
-                (glm::vec2)m_LocalMinimum;
-            AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
-                        worldPosition / PPU, 0);
-            PX_TRACE("Added box, Width:{}, Height:{}, Position:({},{})",
-                     quad.halfWidth, quad.halfHeight, worldPosition.x,
-                     worldPosition.y);
-        }
-    }
-
-    // m_BitArrays is now populated. We still need to run BGM on it, and set the
-    // physics body shapes.
-}
-
-glm::mat4 PixelBody2D::GetWorldToLocalTransform() {
-    return glm::inverse(GetLocalToWorldTransform());
-}
-glm::mat2x2 PixelBody2D::GetLocalToWorldTransform() {
-    glm::ivec2 CenterPixelWorldPosition = glm::floor(GetPosition());
-    float angle = GetRotation();
-
-    auto rotationMatrix = glm::mat2x2(1);
-    // if angle gets above 45 degrees, apply a 90 deg rotation first
-    while (angle > 0.78539816339f) {
-        angle -= 1.57079632679f;
-        rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
-    }
-    while (angle < -0.78539816339f) {
-        angle += 1.57079632679f;
-        rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
-    }
-
-    float A = -std::tan(angle / 2);
-    float B = std::sin(angle);
-    auto horizontalSkewMatrix = glm::mat2x2(1, 0, A, 1); // 0 a
-    auto verticalSkewMatrix = glm::mat2x2(1, B, 0, 1);   // b 0
-
-    // [1 A]
-    // [0 1]
-    //
-    //[1+AB  A+ABC+C]
-    //[ B      1+BC ]
-    // glm::mat2x2 skewMatrix = glm::mat2x2(1+(A*B), B, (A + (A*B*C) + C), 1 +
-    // (B*C));
-
-    // this could be wrong...
-    rotationMatrix = rotationMatrix * horizontalSkewMatrix *
-                     verticalSkewMatrix * horizontalSkewMatrix;
-
-    glm::mat2x2 skewMatrix =
-        glm::mat2x2(1 + (A * B), (A + (A * B * A) + A), B, 1 + (B * A));
-    return skewMatrix;
 }
 
 void PixelBody2D::UpdateElementWorldPositions() {
     m_Moved = false;
     // center of the pixel body in the world
     glm::ivec2 centerPixelWorld = glm::floor(GetPosition());
-    glm::mat2x2 skewMatrix = GetLocalToWorldTransform();
 
     float angle = GetRotation();
+    // I'm going to convert radians to always be positive.
+    if (angle < 0)
+        angle += (3.14159265f * 2.0f);
 
     auto rotationMatrix = glm::mat2x2(1);
-    // if angle gets above 45 degrees, apply a 90 deg rotation first
-    while (angle > 0.78539816339f) {
-        angle -= 1.57079632679f;
+    // every 90 deg, rotate 90 first before skew.
+    // skew hits limits at 180 deg due to tan()
+    while (angle > (3.141592653f / 2.0f)) {
+        angle -= (3.141592653f / 2.0f);
         rotationMatrix *= glm::mat2x2(0, -1, 1, 0);
-    }
-    while (angle < -0.78539816339f) {
-        angle += 1.57079632679f;
-        rotationMatrix *= glm::mat2x2(0, 1, -1, 0);
     }
 
     float A = -std::tan(angle / 2);
@@ -218,22 +174,20 @@ void PixelBody2D::UpdateElementWorldPositions() {
         glm::ivec2 skewedPos = mappedElement.first * rotationMatrix;
 
         //  horizontal skew:
-        int horizontalSkewAmount = (float)skewedPos.y * A;
+        int horizontalSkewAmount = glm::round((float)skewedPos.y * A);
         skewedPos.x += horizontalSkewAmount;
         // vertical skew
-        int skewAmount = (float)skewedPos.x * B;
+        int skewAmount = glm::round((float)skewedPos.x * B);
         skewedPos.y += skewAmount;
         // horizontal skew:
-        horizontalSkewAmount = (float)skewedPos.y * A;
+        horizontalSkewAmount = glm::round((float)skewedPos.y * A);
         skewedPos.x += horizontalSkewAmount;
 
         glm::ivec2 posPrior = mappedElement.second.worldPos;
-        mappedElement.second.worldPos =
-            glm::ivec2(skewedPos.x, skewedPos.y) + centerPixelWorld;
+        mappedElement.second.worldPos = skewedPos + centerPixelWorld;
         if (posPrior != mappedElement.second.worldPos)
             m_Moved = true;
     }
-    PX_TRACE("Updated Element positions, moved?:{}", m_Moved);
 }
 
 glm::mat4 PixelBody2D::GetWorldTransform() {

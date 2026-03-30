@@ -68,7 +68,6 @@ BinaryGreedyMesh(std::span<const uint64_t> bitArray) {
             quads.push_back(BGMQuad(halfWidth, halfHeight,
                                     glm::vec2((float)x + halfWidth,
                                               (float)zero_count + halfHeight)));
-            PX_TRACE("BGM'd quad, x: {}, halfwidth: {}", x, halfWidth);
         }
     }
 

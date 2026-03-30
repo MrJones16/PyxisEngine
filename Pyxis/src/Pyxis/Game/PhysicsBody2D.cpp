@@ -30,7 +30,6 @@ PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
     m_B2BodyDefinition.rotation = b2MakeRot(angle);
     m_B2BodyDefinition.userData = this;
     m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
-    PX_TRACE("Created PhysicsBody2D in world {}", worldId.index1);
     m_ID = s_IDCounter++;
 }
 
@@ -59,18 +58,20 @@ void PhysicsBody2D::DebugDraw(float depth, float scale) {
     for (b2ShapeId &id : shapes) {
         b2Polygon polygon = b2Shape_GetPolygon(id);
         for (int i = 0; i < polygon.count - 1; i++) {
-            b2Vec2 b2Start = position + polygon.vertices[i];
-            b2Vec2 b2End = position + polygon.vertices[i + 1];
-            glm::vec3 start =
-                glm::vec3(b2Start.x * scale, b2Start.y * scale, depth);
-            glm::vec3 end = glm::vec3(b2End.x * scale, b2End.y * scale, depth);
+            b2Vec2 b2Start =
+                b2TransformPoint(transform, polygon.vertices[i]) * scale;
+            b2Vec2 b2End =
+                b2TransformPoint(transform, polygon.vertices[i + 1]) * scale;
+            glm::vec3 start = glm::vec3(b2Start.x, b2Start.y, depth);
+            glm::vec3 end = glm::vec3(b2End.x, b2End.y, depth);
             Renderer2D::DrawLine(start, end);
         }
-        b2Vec2 b2Start = position + polygon.vertices[polygon.count - 1];
-        b2Vec2 b2End = position + polygon.vertices[0];
-        glm::vec3 start =
-            glm::vec3(b2Start.x * scale, b2Start.y * scale, depth);
-        glm::vec3 end = glm::vec3(b2End.x * scale, b2End.y * scale, depth);
+        b2Vec2 b2Start =
+            b2TransformPoint(transform, polygon.vertices[polygon.count - 1]) *
+            scale;
+        b2Vec2 b2End = b2TransformPoint(transform, polygon.vertices[0]) * scale;
+        glm::vec3 start = glm::vec3(b2Start.x, b2Start.y, depth);
+        glm::vec3 end = glm::vec3(b2End.x, b2End.y, depth);
         Renderer2D::DrawLine(start, end);
         Renderer2D::DrawQuad(
             glm::vec3(position.x * scale, position.y * scale, depth),

@@ -70,8 +70,8 @@ class Chunk {
     uint32_t m_PixelBuffer[CHUNKSIZE * CHUNKSIZE];
 
     // Bitmap array for greedy meshing for collisions & shadows
-    uint64_t m_BitArray[64];
+    std::vector<uint64_t> m_BitArray;
 
-    Ref<PhysicsBodyNode2D> m_PhysicsBody;
+    Ref<PhysicsBody2D> m_PhysicsBody;
 };
 } // namespace Pyxis

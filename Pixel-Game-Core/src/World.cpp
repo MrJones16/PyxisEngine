@@ -429,6 +429,7 @@ void World::PullPixelBodies() {
                     // either way, in this situation we just pull the new
                     // element
                     mappedElement.second.element = worldElement;
+                    mappedElement.second.element.m_Rigid = true;
                     SetElementWithoutDirtyRectUpdate(
                         mappedElement.second.worldPos, Element());
                     PX_TRACE("pbe ({0},{1}) was replaced with something new!",
@@ -509,7 +510,7 @@ void World::PullPixelBodies() {
 
             } else {
                 // recalculate the bitarrays and collider/mesh
-                // body->GenerateMesh();
+                body->GenerateMesh();
             }
         }
         // End off with saying this body is no longer in the world. We may even
@@ -614,6 +615,7 @@ void World::UpdateWorld() {
     Physics2D::GetWorld().Step();
     PushPixelBodies();
     // put pixelbodies back in
+    TestMeshGeneration();
 
     m_UpdateBit = !m_UpdateBit;
     m_SimulationTick++;
@@ -2014,6 +2016,9 @@ void World::RenderWorld() {
     if (m_DebugDrawColliders) {
         for (auto &kvp : m_PixelBodies) {
             kvp.second->DebugDraw(10, 16);
+        }
+        for (auto &kvp : m_Chunks) {
+            kvp.second->m_PhysicsBody->DebugDraw(10, PPU);
         }
         // drawing contour vector
         /*for each (auto pixelBody in m_PixelBodies)

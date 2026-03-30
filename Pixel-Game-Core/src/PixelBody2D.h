@@ -107,6 +107,7 @@ class PixelBody2D : public PhysicsBodyNode2D {
     virtual void QueueFree() override;
 
     void GenerateMesh();
+    void UpdateBitArrays();
 
     // virtual void OnUpdate(Timestep ts) override;
     // virtual void OnFixedUpdate() override;
@@ -131,10 +132,6 @@ class PixelBody2D : public PhysicsBodyNode2D {
     virtual glm::vec2 GetPosition() override;
 
   protected:
-    // helper functions for space transforming and such
-    glm::mat4 GetWorldToLocalTransform();
-    glm::mat2x2 GetLocalToWorldTransform();
-
     friend class World;
     inline void ActuallyQueueFree() { PhysicsBodyNode2D::QueueFree(); }
 
