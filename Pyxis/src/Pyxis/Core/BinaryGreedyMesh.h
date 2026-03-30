@@ -1,4 +1,5 @@
 #pragma once
+#include "Pyxis/Core/Log.h"
 #include <Pyxis/Core/Core.h>
 
 namespace Pyxis {
@@ -28,6 +29,7 @@ BinaryGreedyMesh(std::span<const uint64_t> bitArray) {
     // copy bits as we destroy as we go.
     std::vector<uint64_t> map(bitArray.begin(), bitArray.end());
     const size_t columns = bitArray.size();
+    PX_TRACE("There are {} columns in the bit array.", columns);
     const size_t bitLength = 64;
 
     // iterate over each column, iterate over each continuous set of bits, and
@@ -66,6 +68,7 @@ BinaryGreedyMesh(std::span<const uint64_t> bitArray) {
             quads.push_back(BGMQuad(halfWidth, halfHeight,
                                     glm::vec2((float)x + halfWidth,
                                               (float)zero_count + halfHeight)));
+            PX_TRACE("BGM'd quad, x: {}, halfwidth: {}", x, halfWidth);
         }
     }
 

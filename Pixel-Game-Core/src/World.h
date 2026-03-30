@@ -192,30 +192,41 @@ template <typename T>
 Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
                               std::unordered_set<glm::ivec2, VectorHash> pixels,
                               bool CheckIfContinuous, const std::string &name) {
-
     static_assert(std::is_base_of_v<PixelBody2D, T>,
                   "T must inherit from PixelBody2D");
-    if (pixels.size() == 0) {
-        PX_ASSERT(false, "Tried creating a pixel body with no elements!");
+
+    // restrict pixels to solids
+    std::unordered_set<glm::ivec2, VectorHash> pixelsRestricted;
+    for (auto &pos : pixels) {
+        Element &e = ForceGetElement(pos);
+        ElementProperties &eData = ElementData::GetElementProperties(e.m_ID);
+        if (eData.cell_type == ElementType::solid)
+            pixelsRestricted.insert(pos);
     }
+
+    if (pixelsRestricted.size() == 0) {
+        // PX_ASSERT(false, "Tried creating a pixel body with no elements!");
+        PX_CORE_ERROR("Tried creating a pixel body with no elements!");
+        return nullptr;
+    }
+
     // we have a vector of pixels to make a body from, but we don't know if they
     // are continuous
     if (CheckIfContinuous) {
         int iterations = 0;
-        while (pixels.size() > 0) {
+        while (pixelsRestricted.size() > 0) {
             std::unordered_set<glm::ivec2, VectorHash> continuousPixels =
-                Utils::GridQueuePull(pixels);
+                Utils::GridQueuePull(pixelsRestricted);
             std::string newName =
                 name + (iterations > 0 ? std::format(" ({})", iterations) : "");
             Ref<T> body = Instantiate<T>(newName, type);
             std::vector<PixelBodyElement> elements;
             for (glm::ivec2 pos : continuousPixels) {
-                Element e = Element();
-                if (TryGetElement(pos, e)) {
-                    e.m_BaseColor = 0xFFFFFFFF;
-                    e.m_Color = 0xFFFFFFFF;
-                    elements.push_back(PixelBodyElement(e, pos));
-                }
+                Element &e =
+                    GetElement(pos); // don't need to force since i did above
+                // e.m_BaseColor = 0xFFFFFFFF;
+                // e.m_Color = 0xFFFFFFFF;
+                elements.push_back(PixelBodyElement(e, pos));
             }
             body->SetPixelBodyElements(elements);
             m_PixelBodies[body->GetUUID()] = body;
@@ -223,7 +234,7 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
             PX_TRACE("Instantiated {} with {} pixels", newName,
                      continuousPixels.size());
 
-            if (pixels.size() == 0) {
+            if (pixelsRestricted.size() == 0) {
                 // we pulled the last of the pixels, so return this body.
                 return body;
             }
@@ -232,17 +243,16 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
     } else {
         Ref<T> body = Instantiate<T>(name, type);
         std::vector<PixelBodyElement> elements;
-        for (glm::ivec2 pos : pixels) {
-            Element e = Element();
-            if (TryGetElement(pos, e)) {
-                e.m_BaseColor = 0xFFFFFFFF;
-                e.m_Color = 0xFFFFFFFF;
-                elements.push_back(PixelBodyElement(e, pos));
-            }
+        for (glm::ivec2 pos : pixelsRestricted) {
+            Element &e = GetElement(pos);
+            // e.m_BaseColor = 0xFFFFFFFF;
+            // e.m_Color = 0xFFFFFFFF;
+            elements.push_back(PixelBodyElement(e, pos));
         }
         body->SetPixelBodyElements(elements);
         m_PixelBodies[body->GetUUID()] = body;
-        PX_TRACE("Instantiated {} with {} pixels", name, pixels.size());
+        PX_TRACE("Instantiated {} with {} pixels", name,
+                 pixelsRestricted.size());
 
         return body;
     }

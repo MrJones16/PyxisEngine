@@ -133,7 +133,7 @@ class PixelBody2D : public PhysicsBodyNode2D {
   protected:
     // helper functions for space transforming and such
     glm::mat4 GetWorldToLocalTransform();
-    glm::mat4 GetLocalToWorldTransform();
+    glm::mat2x2 GetLocalToWorldTransform();
 
     friend class World;
     inline void ActuallyQueueFree() { PhysicsBodyNode2D::QueueFree(); }

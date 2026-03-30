@@ -1,11 +1,13 @@
 #include "Pyxis/Game/PhysicsBody2D.h"
 #include <Pyxis/Game/PhysicsWorld2D.h>
 #include <box2d/box2d.h>
+#include <box2d/types.h>
 
 namespace Pyxis {
 
 PhysicsWorld2D::PhysicsWorld2D(const glm::vec2 &gravity, int subSteps) {
     m_B2WorldDef.gravity = {gravity.x, gravity.y};
+    m_B2WorldDef.enableSleep = false;
     m_SubSteps = subSteps;
     m_B2WorldId = b2CreateWorld(&m_B2WorldDef);
 }
@@ -17,9 +19,7 @@ PhysicsWorld2D::~PhysicsWorld2D() {
 
 b2WorldId PhysicsWorld2D::GetWorld() {
     if (!b2World_IsValid(m_B2WorldId)) {
-        b2WorldDef def = b2DefaultWorldDef();
-        def.gravity = {0, -9.8};
-        m_B2WorldId = b2CreateWorld(&def);
+        m_B2WorldId = b2CreateWorld(&m_B2WorldDef);
     }
 
     return m_B2WorldId;

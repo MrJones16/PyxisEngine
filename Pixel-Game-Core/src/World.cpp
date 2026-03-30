@@ -379,15 +379,18 @@ void World::PullPixelBodies() {
         if (kvp.second->m_FreeMe) {
             idsToFree.push_back(kvp.first);
             kvp.second->ActuallyQueueFree();
-            continue;
+        } else {
+            // only pushing alive bodies onto the list to pull.
+            bodies.push_back(kvp.second);
         }
-        // only pushing alive bodies onto the list to pull.
-        bodies.push_back(kvp.second);
     }
     // list of ids to remove from world list, can't do during iteration over it!
     for (auto &id : idsToFree) {
         m_PixelBodies.erase(id);
     }
+
+    // we now have a list of bodies that are still alive. Lets iterate over the
+    // list and pull them out.
     for (Ref<PixelBody2D> body : bodies) {
         PX_TRACE("Pulling PixelBody2D[{}] out", body->GetUUID());
         PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
@@ -407,20 +410,17 @@ void World::PullPixelBodies() {
             // the world position of the element is already known, so just
             // try to grab it
             Element &worldElement = GetElement(mappedElement.second.worldPos);
-            ElementProperties &elementData =
+            ElementProperties &worldElementData =
                 ElementData::GetElementProperties(worldElement.m_ID);
 
-            if (mappedElement.second.element.m_ID != worldElement.m_ID ||
-                mappedElement.second.element.m_ID ==
-                    0) // || !worldElement.m_Rigid TODO re-implement rigid?
+            if (mappedElement.second.element.m_ID !=
+                worldElement
+                    .m_ID) // || !worldElement.m_Rigid TODO re-implement rigid?
             {
+                // element has changed over the last update!
 
-                // element has changed over the last update, could have been
-                // removed or melted or something of the sort. we need to
-                // re-create our rigid body!
-
-                if (elementData.cell_type == ElementType::solid ||
-                    (elementData.cell_type == ElementType::movableSolid &&
+                if (worldElementData.cell_type == ElementType::solid ||
+                    (worldElementData.cell_type == ElementType::movableSolid &&
                      worldElement.m_Rigid)) {
                     // replaced element is able to continue being part of
                     // the solid! this could be the player replacing the
@@ -428,8 +428,7 @@ void World::PullPixelBodies() {
                     // stays solid, like getting stained or something idk
                     // either way, in this situation we just pull the new
                     // element
-                    body->m_Elements[mappedElement.first].element =
-                        worldElement;
+                    mappedElement.second.element = worldElement;
                     SetElementWithoutDirtyRectUpdate(
                         mappedElement.second.worldPos, Element());
                     PX_TRACE("pbe ({0},{1}) was replaced with something new!",
@@ -449,11 +448,10 @@ void World::PullPixelBodies() {
             } else {
                 // element should be the same, so nothing has changed, pull
                 // the element out
-                PX_TRACE("pulling out pbe ({0},{1})",
-                         mappedElement.second.worldPos.x,
-                         mappedElement.second.worldPos.y);
-
-                body->m_Elements[mappedElement.first].element = worldElement;
+                // PX_TRACE("pulling out pbe ({0},{1})",
+                //         mappedElement.second.worldPos.x,
+                //         mappedElement.second.worldPos.y);
+                mappedElement.second.element = worldElement;
                 // replace with default element
                 SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
                                                  Element());
@@ -482,6 +480,7 @@ void World::PullPixelBodies() {
             // intact! let's remove whats in source if there's any
             // straglers, and make it into it's own body.
 
+            std::unordered_set<glm::ivec2, VectorHash> pixels;
             for (glm::ivec2 pos : source) {
                 // source is now what is remaining after pulling out a
                 // continuous set.
@@ -489,14 +488,18 @@ void World::PullPixelBodies() {
                 // put the remainder back into the world
                 SetElementWithoutDirtyRectUpdate(body->m_Elements[pos].worldPos,
                                                  body->m_Elements[pos].element);
+
                 // lets remove that remainder from this
-                // pixelbody, and make new pixel bodies from it after
+                // pixelbody, and make new pixel bodies from it after.
+                // we also need to track the world positions for the
+                // creation of the remainder.
+                pixels.insert(body->m_Elements[pos].worldPos);
                 body->m_Elements.erase(pos);
             }
 
             // create the new pixel bodies from the remainder.
-            if (source.size() > 0)
-                CreatePixelBody(body->GetType(), source,
+            if (pixels.size() > 0)
+                CreatePixelBody(body->GetType(), pixels,
                                 true); // TODO: adopt velocity like before
 
             if (body->m_Elements.size() == 0) {
@@ -506,7 +509,7 @@ void World::PullPixelBodies() {
 
             } else {
                 // recalculate the bitarrays and collider/mesh
-                body->GenerateMesh();
+                // body->GenerateMesh();
             }
         }
         // End off with saying this body is no longer in the world. We may even
@@ -520,17 +523,18 @@ void World::PushPixelBodies() {
     // no need to copy list, as we won't change it here.
     for (auto kvp : m_PixelBodies) {
         Ref<PixelBody2D> body = kvp.second;
-        PX_TRACE("Pushing PixelBody2D[{}] back into world", kvp.first);
-        PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
-                 body->GetPosition().y);
+        // PX_TRACE("Pushing PixelBody2D[{}] back into world", kvp.first);
+        // PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
+        //          body->GetPosition().y);
         if (body->m_InWorld) {
-            PX_TRACE("Skipping because its still in world!");
+            // PX_TRACE("Skipping because its still in world!");
+            // this would include bodies made during last pull as in world is
+            // default
             continue; // body is already in world
         }
 
         // chunkloading
         for (int x = -1; x < 2; x++) {
-
             for (int y = -1; y < 2; y++) {
                 AddChunk(PixelToChunk(WorldToPixel(body->GetPosition())) +
                          glm::ivec2(x, y));
@@ -547,29 +551,33 @@ void World::PushPixelBodies() {
                 // check if there is an element in the way in the world
                 Element &e = GetElement(mappedElement.second.worldPos);
                 if (e.m_ID != 0)
-                    CreateParticle(
-                        mappedElement.second.worldPos,
-                        body->GetLocalPixelVelocity(mappedElement.first), e);
-                PX_TRACE("putting pbe ({0},{1}) back in",
-                         mappedElement.second.worldPos.x,
-                         mappedElement.second.worldPos.y);
+                    PX_TRACE("Overwriting element in world!");
+                // if (e.m_ID != 0)
+                //     CreateParticle(
+                //         mappedElement.second.worldPos,
+                //         body->GetLocalPixelVelocity(mappedElement.first), e);
+
+                // PX_TRACE("putting pbe ({0},{1}) back in",
+                //          mappedElement.second.worldPos.x,
+                //          mappedElement.second.worldPos.y);
                 SetElement(mappedElement.second.worldPos,
                            mappedElement.second.element);
             }
         } else {
             // we are still, so put back without updating dirty rect
-            PX_TRACE("we didn't move, so put back in without rect update");
+            // PX_TRACE("we didn't move, so put back in without rect update");
             for (auto &mappedElement : body->m_Elements) {
 
                 // check if there is an element in the way in the world
                 Element &e = GetElement(mappedElement.second.worldPos);
-                if (e.m_ID != 0)
-                    CreateParticle(
-                        mappedElement.second.worldPos,
-                        body->GetLocalPixelVelocity(mappedElement.first), e);
-                PX_TRACE("putting pbe ({0},{1}) back in, but still",
-                         mappedElement.second.worldPos.x,
-                         mappedElement.second.worldPos.y);
+
+                // if (e.m_ID != 0)
+                //     CreateParticle(
+                //         mappedElement.second.worldPos,
+                //         body->GetLocalPixelVelocity(mappedElement.first), e);
+                //  PX_TRACE("putting pbe ({0},{1}) back in, but still",
+                //           mappedElement.second.worldPos.x,
+                //           mappedElement.second.worldPos.y);
                 SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
                                                  mappedElement.second.element);
             }
@@ -2005,7 +2013,7 @@ void World::RenderWorld() {
     // float pixelSize = (1.0f / CHUNKSIZE);
     if (m_DebugDrawColliders) {
         for (auto &kvp : m_PixelBodies) {
-            kvp.second->DebugDraw();
+            kvp.second->DebugDraw(10, 16);
         }
         // drawing contour vector
         /*for each (auto pixelBody in m_PixelBodies)

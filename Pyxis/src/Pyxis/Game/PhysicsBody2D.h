@@ -19,7 +19,9 @@ struct PhysicsBody2D {
     PhysicsBody2D(b2WorldId worldId, json &j);
     ~PhysicsBody2D();
 
-    void DebugDraw();
+    // draws outlines of shapes with drawline, and draws a quad right at center
+    // pos.
+    void DebugDraw(float depth = 10, float scale = 1.0f);
 
     // doesn't remove from the prior world!
     void CopyToWorld(b2WorldId worldId);

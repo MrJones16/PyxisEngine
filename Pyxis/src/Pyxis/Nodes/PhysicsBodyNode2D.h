@@ -43,7 +43,7 @@ class PhysicsBodyNode2D : public Node2D {
     ///   Functions for rigid bodies
     ///////////////////////////////////////////////
 
-    void DebugDraw();
+    void DebugDraw(float depth = 10, float scale = 1.0f);
 
     void SetType(PhysicsBody2DType type);
     PhysicsBody2DType GetType();

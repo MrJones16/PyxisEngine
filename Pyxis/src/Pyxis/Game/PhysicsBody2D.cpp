@@ -47,26 +47,34 @@ PhysicsBody2D::~PhysicsBody2D() {
     // PX_TRACE("PhysicsBody2D was deconstructed");
 }
 
-void PhysicsBody2D::DebugDraw() {
+void PhysicsBody2D::DebugDraw(float depth, float scale) {
+    b2Vec2 position = b2Body_GetPosition(m_B2BodyId);
+    b2Transform transform = b2Body_GetTransform(m_B2BodyId);
+
+    // grab shapes
     int shapeCount = b2Body_GetShapeCount(m_B2BodyId);
     b2ShapeId shapes[shapeCount];
     b2Body_GetShapes(m_B2BodyId, shapes, shapeCount);
+
     for (b2ShapeId &id : shapes) {
-        b2Transform transform = b2Body_GetTransform(m_B2BodyId);
-        b2Vec2 position = b2Body_GetPosition(m_B2BodyId);
         b2Polygon polygon = b2Shape_GetPolygon(id);
         for (int i = 0; i < polygon.count - 1; i++) {
             b2Vec2 b2Start = position + polygon.vertices[i];
             b2Vec2 b2End = position + polygon.vertices[i + 1];
-            glm::vec3 start = glm::vec3(b2Start.x, b2Start.y, 10);
-            glm::vec3 end = glm::vec3(b2End.x, b2End.y, 10);
+            glm::vec3 start =
+                glm::vec3(b2Start.x * scale, b2Start.y * scale, depth);
+            glm::vec3 end = glm::vec3(b2End.x * scale, b2End.y * scale, depth);
             Renderer2D::DrawLine(start, end);
         }
         b2Vec2 b2Start = position + polygon.vertices[polygon.count - 1];
         b2Vec2 b2End = position + polygon.vertices[0];
-        glm::vec3 start = glm::vec3(b2Start.x, b2Start.y, 10);
-        glm::vec3 end = glm::vec3(b2End.x, b2End.y, 10);
+        glm::vec3 start =
+            glm::vec3(b2Start.x * scale, b2Start.y * scale, depth);
+        glm::vec3 end = glm::vec3(b2End.x * scale, b2End.y * scale, depth);
         Renderer2D::DrawLine(start, end);
+        Renderer2D::DrawQuad(
+            glm::vec3(position.x * scale, position.y * scale, depth),
+            glm::vec2(1, 1), glm::vec4(0.5f, 1, 0.5f, 1));
     }
 }
 

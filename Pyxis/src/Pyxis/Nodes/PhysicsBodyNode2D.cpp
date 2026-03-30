@@ -54,7 +54,9 @@ glm::mat4 PhysicsBodyNode2D::GetWorldTransform() {
     }
 }
 
-void PhysicsBodyNode2D::DebugDraw() { m_PhysicsBody->DebugDraw(); }
+void PhysicsBodyNode2D::DebugDraw(float depth, float scale) {
+    m_PhysicsBody->DebugDraw(depth, scale);
+}
 
 void PhysicsBodyNode2D::Translate(const glm::vec2 &translation) {
     m_PhysicsBody->SetPosition(m_PhysicsBody->GetPosition() + translation);
