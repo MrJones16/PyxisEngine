@@ -1,5 +1,6 @@
 #pragma once
 #include "PixelBody2D.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
 #include <Pyxis/Events/EventSignals.h>
 
 #include <Pyxis/Nodes/CameraNode.h>
@@ -11,6 +12,14 @@ class Player : public PixelBody2D {
 
     Player(const std::string &name, PhysicsBody2DType type)
         : PixelBody2D(name, type),
+          m_KeyPressedReciever(this, &Player::OnKeyPressedEvent) {
+        EventSignal::s_KeyPressedEventSignal.AddReciever(m_KeyPressedReciever);
+
+        // TODO: add fixed rotation
+    }
+
+    Player(const std::string &name, const PhysicsBody2DDef &def)
+        : PixelBody2D(name, def),
           m_KeyPressedReciever(this, &Player::OnKeyPressedEvent) {
         EventSignal::s_KeyPressedEventSignal.AddReciever(m_KeyPressedReciever);
 

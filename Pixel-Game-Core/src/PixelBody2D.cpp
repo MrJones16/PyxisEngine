@@ -1,4 +1,5 @@
 #include "PixelBody2D.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
 #include "Pyxis/Nodes/PhysicsBodyNode2D.h"
 #include "glm/gtc/matrix_transform.hpp"
 #define GLM_ENABLE_EXPERIMENTAL
@@ -11,6 +12,9 @@ namespace Pyxis {
 
 PixelBody2D::PixelBody2D(const std::string &name, PhysicsBody2DType type)
     : PhysicsBodyNode2D(name, type) {}
+
+PixelBody2D::PixelBody2D(const std::string &name, const PhysicsBody2DDef &def)
+    : PhysicsBodyNode2D(name, def) {}
 
 PixelBody2D::PixelBody2D(UUID id) : PhysicsBodyNode2D(id) {}
 
@@ -35,17 +39,10 @@ void PixelBody2D::SetPixelBodyElements(
     m_Height = std::abs(maxY - minY) + 1;
     glm::ivec2 CenterPixelPosWorld =
         glm::vec2((m_Width / 2.0f) + minX, (m_Height / 2.0f) + minY);
-    PX_TRACE(
-        "Set pixels for pixel body [{}], Width: {}, Height: {}, Pos:({},{})",
-        GetUUID(), m_Width, m_Height, CenterPixelPosWorld.x,
-        CenterPixelPosWorld.y);
 
     // Since we are creating the body from scratch, we should reset these
     // values.
     SetPosition(CenterPixelPosWorld);
-    SetRotation(0);
-    SetLinearVelocity({0, 0});
-    SetAngularVelocity(1.0f);
 
     // use the minimum to get local positions [example, from -10,-10 to 10,10]
     for (auto &pbe : elements) {

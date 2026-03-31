@@ -62,11 +62,14 @@ int PhysicsWorld2D::GetBodyCount() {
     return m_Bodies.size();
 }
 
-Ref<PhysicsBody2D> PhysicsWorld2D::CreateBody(PhysicsBody2DType type,
-                                              const glm::vec2 &position,
-                                              float angleInRadians) {
-    Ref<PhysicsBody2D> ref =
-        CreateRef<PhysicsBody2D>(GetWorld(), type, position, angleInRadians);
+Ref<PhysicsBody2D> PhysicsWorld2D::CreateBody(PhysicsBody2DType type) {
+    Ref<PhysicsBody2D> ref = CreateRef<PhysicsBody2D>(GetWorld(), type);
+    m_Bodies[ref->m_ID] = ref;
+    return ref;
+}
+
+Ref<PhysicsBody2D> PhysicsWorld2D::CreateBody(const PhysicsBody2DDef &def) {
+    Ref<PhysicsBody2D> ref = CreateRef<PhysicsBody2D>(GetWorld(), def);
     m_Bodies[ref->m_ID] = ref;
     return ref;
 }

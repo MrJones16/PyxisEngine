@@ -11,7 +11,12 @@ namespace Pyxis {
 PhysicsBodyNode2D::PhysicsBodyNode2D(const std::string &name,
                                      PhysicsBody2DType type)
     : Node2D(name) {
-    m_PhysicsBody = Physics2D::GetWorld().CreateBody(type, {0, 0}, 0);
+    m_PhysicsBody = Physics2D::GetWorld().CreateBody(type);
+}
+PhysicsBodyNode2D::PhysicsBodyNode2D(const std::string &name,
+                                     const PhysicsBody2DDef &def)
+    : Node2D(name) {
+    m_PhysicsBody = Physics2D::GetWorld().CreateBody(def);
 }
 
 PhysicsBodyNode2D::PhysicsBodyNode2D(UUID id) : Node2D(id) {}

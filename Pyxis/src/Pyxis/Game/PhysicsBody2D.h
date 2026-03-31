@@ -8,14 +8,23 @@ using json = nlohmann::json;
 namespace Pyxis {
 enum PhysicsBody2DType : uint8_t { Dynamic, Kinematic, Static };
 
+struct PhysicsBody2DDef {
+  public:
+    PhysicsBody2DType type = Dynamic;
+    glm::vec2 position = {0, 0};
+    glm::vec2 linearVelocity = {0, 0};
+    float angle = 0;
+    float angularVelocity = 0;
+};
+
 // A wrapper for box2d bodies. The main reason for doing this, is so that:
 // 1. could be slightly easier to replace box2d in future if somehow needed
 // 2. So that I can implement a way to refresh / recreate the box2d worlds, as
 // that is needed!
 struct PhysicsBody2D {
   public:
-    PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
-                  const glm::vec2 &position = {0, 0}, float angle = 0);
+    PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type);
+    PhysicsBody2D(b2WorldId worldId, const PhysicsBody2DDef &def);
     PhysicsBody2D(b2WorldId worldId, json &j);
     ~PhysicsBody2D();
 

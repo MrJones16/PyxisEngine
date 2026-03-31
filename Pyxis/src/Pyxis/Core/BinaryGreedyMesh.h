@@ -29,7 +29,6 @@ BinaryGreedyMesh(std::span<const uint64_t> bitArray) {
     // copy bits as we destroy as we go.
     std::vector<uint64_t> map(bitArray.begin(), bitArray.end());
     const size_t columns = bitArray.size();
-    PX_TRACE("There are {} columns in the bit array.", columns);
     const size_t bitLength = 64;
 
     // iterate over each column, iterate over each continuous set of bits, and

@@ -94,8 +94,8 @@ class PixelBody2D : public PhysicsBodyNode2D {
     /// pixel position in the world</param>
     PixelBody2D(const std::string &name = "PixelBody2D",
                 PhysicsBody2DType type = PhysicsBody2DType::Dynamic);
+    PixelBody2D(const std::string &name, const PhysicsBody2DDef &def);
     PixelBody2D(UUID id);
-
     // Set elements for this pixel body. Assumes pixels are in world already.
     void SetPixelBodyElements(std::vector<PixelBodyElement> &elements);
 

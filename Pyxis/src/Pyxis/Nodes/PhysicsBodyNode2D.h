@@ -18,6 +18,7 @@ class PhysicsBodyNode2D : public Node2D {
 
   public:
     PhysicsBodyNode2D(const std::string &name, PhysicsBody2DType type);
+    PhysicsBodyNode2D(const std::string &name, const PhysicsBody2DDef &def);
     PhysicsBodyNode2D(UUID id);
     ~PhysicsBodyNode2D();
 

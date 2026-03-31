@@ -10,8 +10,7 @@ namespace Pyxis {
 uint32_t PhysicsBody2D::s_IDCounter = 0;
 
 // angle is in radians
-PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
-                             const glm::vec2 &position, float angle) {
+PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type) {
     m_B2BodyDefinition = b2DefaultBodyDef();
     switch (type) {
     case Dynamic:
@@ -26,8 +25,31 @@ PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, PhysicsBody2DType type,
     default:
         break;
     }
-    m_B2BodyDefinition.position = b2Vec2(position.x, position.y);
-    m_B2BodyDefinition.rotation = b2MakeRot(angle);
+    m_B2BodyDefinition.userData = this;
+    m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
+    m_ID = s_IDCounter++;
+}
+
+PhysicsBody2D::PhysicsBody2D(b2WorldId worldId, const PhysicsBody2DDef &def) {
+    m_B2BodyDefinition = b2DefaultBodyDef();
+    switch (def.type) {
+    case Dynamic:
+        m_B2BodyDefinition.type = b2BodyType::b2_dynamicBody;
+        break;
+    case Kinematic:
+        m_B2BodyDefinition.type = b2BodyType::b2_kinematicBody;
+        break;
+    case Static:
+        m_B2BodyDefinition.type = b2BodyType::b2_staticBody;
+        break;
+    default:
+        break;
+    }
+    m_B2BodyDefinition.position = b2Vec2(def.position.x, def.position.y);
+    m_B2BodyDefinition.rotation = b2MakeRot(def.angle);
+    m_B2BodyDefinition.linearVelocity =
+        b2Vec2(def.linearVelocity.x, def.linearVelocity.y);
+    m_B2BodyDefinition.angularVelocity = def.angularVelocity;
     m_B2BodyDefinition.userData = this;
     m_B2BodyId = b2CreateBody(worldId, &m_B2BodyDefinition);
     m_ID = s_IDCounter++;

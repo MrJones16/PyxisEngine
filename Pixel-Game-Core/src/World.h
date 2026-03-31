@@ -124,7 +124,7 @@ class World {
     // body generated from the set of pixels. This fetches the pixel from the
     // world.
     template <typename T = PixelBody2D>
-    Ref<T> CreatePixelBody(PhysicsBody2DType type,
+    Ref<T> CreatePixelBody(const PhysicsBody2DDef &def,
                            std::unordered_set<glm::ivec2, VectorHash> pixels,
                            bool CheckIfContinuous = true,
                            const std::string &name = "PixelBody2D");
@@ -190,7 +190,7 @@ class World {
 };
 
 template <typename T>
-Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
+Ref<T> World::CreatePixelBody(const PhysicsBody2DDef &def,
                               std::unordered_set<glm::ivec2, VectorHash> pixels,
                               bool CheckIfContinuous, const std::string &name) {
     static_assert(std::is_base_of_v<PixelBody2D, T>,
@@ -222,7 +222,7 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
                 Utils::GridQueuePull(pixelsRestricted);
             std::string newName =
                 name + (iterations > 0 ? std::format(" ({})", iterations) : "");
-            Ref<T> body = Instantiate<T>(newName, type);
+            Ref<T> body = Instantiate<T>(newName, def);
             std::vector<PixelBodyElement> elements;
             for (glm::ivec2 pos : continuousPixels) {
                 Element e =
@@ -247,7 +247,7 @@ Ref<T> World::CreatePixelBody(PhysicsBody2DType type,
             iterations++;
         }
     } else {
-        Ref<T> body = Instantiate<T>(name, type);
+        Ref<T> body = Instantiate<T>(name, def);
         std::vector<PixelBodyElement> elements;
         for (glm::ivec2 pos : pixelsRestricted) {
             Element e = GetElement(pos);

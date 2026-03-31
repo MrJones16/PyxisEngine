@@ -30,9 +30,10 @@ Chunk::Chunk(glm::ivec2 chunkPos) {
               0xFF000000);
     m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
 
-    m_PhysicsBody = Physics2D::GetWorld().CreateBody(
-        PhysicsBody2DType::Static,
-        (glm::vec2(m_ChunkPos) * CHUNKSIZEF) * (1 / PPU), 0);
+    PhysicsBody2DDef def;
+    def.type = PhysicsBody2DType::Static;
+    def.position = (glm::vec2(m_ChunkPos) * CHUNKSIZEF) * (1 / PPU);
+    m_PhysicsBody = Physics2D::GetWorld().CreateBody(def);
 }
 
 void Chunk::Clear() {
@@ -181,8 +182,6 @@ void Chunk::GenerateMesh() {
     m_MeshGenerated = true;
     // convert bitmap to quads to add to body.
 
-    PX_TRACE("Generating mesh for chunk ({},{})", m_ChunkPos.x, m_ChunkPos.y);
-
     m_PhysicsBody->RemoveShapes();
 
     auto quads = BinaryGreedyMesh(m_BitArray);
@@ -190,8 +189,6 @@ void Chunk::GenerateMesh() {
         glm::vec2 quadPosition = quad.center;
         m_PhysicsBody->AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
                                    quadPosition / PPU, 0);
-        PX_TRACE("Added box at ({},{}), width: {}, height: {}", quadPosition.x,
-                 quadPosition.y, quad.halfWidth * 2, quad.halfHeight * 2);
     }
     m_MeshChanged = false;
 }

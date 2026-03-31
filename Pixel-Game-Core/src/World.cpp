@@ -1,5 +1,7 @@
 #include "World.h"
 #include "Element.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
+#include "Pyxis/Renderer/Renderer2D.h"
 // #include "ChunkWorker.h"
 #include <Pyxis/Game/Physics2D.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -392,9 +394,6 @@ void World::PullPixelBodies() {
     // we now have a list of bodies that are still alive. Lets iterate over the
     // list and pull them out.
     for (Ref<PixelBody2D> body : bodies) {
-        PX_TRACE("Pulling PixelBody2D[{}] out", body->GetUUID());
-        PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
-                 body->GetPosition().y);
         // skip if we are sleeping!
         if (!body->GetAwake()) {
             PX_TRACE("Skipping because it's asleep!");
@@ -432,14 +431,7 @@ void World::PullPixelBodies() {
                     mappedElement.second.element.m_Rigid = true;
                     SetElementWithoutDirtyRectUpdate(
                         mappedElement.second.worldPos, Element());
-                    PX_TRACE("pbe ({0},{1}) was replaced with something new!",
-                             mappedElement.second.worldPos.x,
-                             mappedElement.second.worldPos.y);
                 } else {
-                    PX_TRACE("Tried pulling pbe ({0},{1}) out, but it's been "
-                             "replaced! removing from pb.",
-                             mappedElement.second.worldPos.x,
-                             mappedElement.second.worldPos.y);
                     // the element that has taken over the spot is not able
                     // to be a solid, so we need to re-construct the rigid
                     // body without that element! so we leave it in the sim,
@@ -463,7 +455,6 @@ void World::PullPixelBodies() {
         // body if needed:
         if (elementsToRemove.size() > 0) {
             // we need to reconstruct!
-            PX_TRACE("Reconstructing pixel body!");
             // remove the outdated elements
             for (auto &localPos : elementsToRemove) {
                 body->m_Elements.erase(localPos);
@@ -499,12 +490,16 @@ void World::PullPixelBodies() {
             }
 
             // create the new pixel bodies from the remainder.
-            if (pixels.size() > 0)
-                CreatePixelBody(body->GetType(), pixels,
-                                true); // TODO: adopt velocity like before
+            if (pixels.size() > 0) {
+                PhysicsBody2DDef def;
+                def.type = body->GetType();
+                def.linearVelocity = body->GetLinearVelocity();
+                def.angularVelocity = body->GetAngularVelocity();
+                auto newBody =
+                    CreatePixelBody(def, pixels, true, body->m_Name + "-Split");
+            }
 
             if (body->m_Elements.size() == 0) {
-                PX_TRACE("Pixel body [{}] destroyed!", body->GetUUID());
                 body->QueueFree();
                 body->RemoveShapes();
 
@@ -551,12 +546,11 @@ void World::PushPixelBodies() {
 
                 // check if there is an element in the way in the world
                 Element &e = GetElement(mappedElement.second.worldPos);
-                if (e.m_ID != 0)
-                    PX_TRACE("Overwriting element in world!");
                 // if (e.m_ID != 0)
                 //     CreateParticle(
                 //         mappedElement.second.worldPos,
-                //         body->GetLocalPixelVelocity(mappedElement.first), e);
+                //         body->GetLocalPixelVelocity(mappedElement.first),
+                //         e);
 
                 // PX_TRACE("putting pbe ({0},{1}) back in",
                 //          mappedElement.second.worldPos.x,
@@ -573,7 +567,7 @@ void World::PushPixelBodies() {
                 Element &e = GetElement(mappedElement.second.worldPos);
 
                 // if (e.m_ID != 0)
-                //     CreateParticle(
+                //    CreateParticle(
                 //         mappedElement.second.worldPos,
                 //         body->GetLocalPixelVelocity(mappedElement.first), e);
                 //  PX_TRACE("putting pbe ({0},{1}) back in, but still",
@@ -2005,6 +1999,7 @@ void World::RenderWorld() {
                           HALFCHUNKSIZEF),
             {CHUNKSIZEF, CHUNKSIZEF}, pair.second->m_Texture);
         pair.second->RenderChunk();
+
         // Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f,
         // pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f},
         // glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
