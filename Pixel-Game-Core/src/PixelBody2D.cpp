@@ -42,7 +42,7 @@ void PixelBody2D::SetPixelBodyElements(
 
     // Since we are creating the body from scratch, we should reset these
     // values.
-    SetPosition(CenterPixelPosWorld);
+    SetPosition(glm::vec2(CenterPixelPosWorld) + glm::vec2(0.5f, 0.5f));
 
     // use the minimum to get local positions [example, from -10,-10 to 10,10]
     for (auto &pbe : elements) {
@@ -102,7 +102,7 @@ void PixelBody2D::GenerateMesh() {
         for (auto &quad : quads) {
             glm::vec2 quadPosition =
                 (quad.center + (glm::vec2(kvp.first * 64))) +
-                glm::vec2(m_LocalMinimum);
+                glm::vec2(m_LocalMinimum) - glm::vec2(0.5, 0.5);
             AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
                         quadPosition / PPU, 0);
         }

@@ -113,7 +113,8 @@ void Chunk::UpdateTexture() {
     bool dataChanged = false;
 
     // if min.x <= max.x
-    if (m_DirtyRect.min.x <= m_DirtyRect.max.x) {
+    if (m_DirtyRect.min.x <= m_DirtyRect.max.x &&
+        m_DirtyRect.min.y <= m_DirtyRect.max.y) {
         dataChanged = true;
         for (int x = std::max(m_DirtyRect.min.x, 0);
              x <= std::min(m_DirtyRect.max.x, CHUNKSIZE - 1); x++) {

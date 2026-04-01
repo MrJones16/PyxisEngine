@@ -546,11 +546,10 @@ void World::PushPixelBodies() {
 
                 // check if there is an element in the way in the world
                 Element &e = GetElement(mappedElement.second.worldPos);
-                // if (e.m_ID != 0)
-                //     CreateParticle(
-                //         mappedElement.second.worldPos,
-                //         body->GetLocalPixelVelocity(mappedElement.first),
-                //         e);
+                if (e.m_ID != 0)
+                    CreateParticle(
+                        mappedElement.second.worldPos,
+                        body->GetLocalPixelVelocity(mappedElement.first), e);
 
                 // PX_TRACE("putting pbe ({0},{1}) back in",
                 //          mappedElement.second.worldPos.x,
@@ -566,10 +565,10 @@ void World::PushPixelBodies() {
                 // check if there is an element in the way in the world
                 Element &e = GetElement(mappedElement.second.worldPos);
 
-                // if (e.m_ID != 0)
-                //    CreateParticle(
-                //         mappedElement.second.worldPos,
-                //         body->GetLocalPixelVelocity(mappedElement.first), e);
+                if (e.m_ID != 0)
+                    CreateParticle(
+                        mappedElement.second.worldPos,
+                        body->GetLocalPixelVelocity(mappedElement.first), e);
                 //  PX_TRACE("putting pbe ({0},{1}) back in, but still",
                 //           mappedElement.second.worldPos.x,
                 //           mappedElement.second.worldPos.y);
