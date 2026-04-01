@@ -9,7 +9,7 @@ namespace Pyxis {
 // Node to act as a WASD camera controller.
 class OrthographicCameraControllerNode : public PixelCameraNode {
   public:
-    float m_CameraSpeed = 4;
+    float m_CameraSpeed = 16;
     float m_Sensitivity = 0.5f;
 
     Reciever<void(MouseScrolledEvent &)> m_MouseScrolledReciever;
@@ -52,13 +52,13 @@ class OrthographicCameraControllerNode : public PixelCameraNode {
     }
 
     void OnMouseScrolledEvent(MouseScrolledEvent &e) {
-        if (!Input::IsKeyPressed(PX_KEY_LEFT_CONTROL)) {
-            if (e.GetYOffset() < 0) {
-                Zoom(2); // scroll down, increase size to zoom out
-            } else {
-                Zoom(0.5f);
-            }
-        }
+        // if (!Input::IsKeyPressed(PX_KEY_LEFT_CONTROL)) {
+        //     if (e.GetYOffset() < 0) {
+        //         Zoom(2); // scroll down, increase size to zoom out
+        //     } else {
+        //         Zoom(0.5f);
+        //     }
+        // }
     }
 
     void Zoom(float multiplier) {

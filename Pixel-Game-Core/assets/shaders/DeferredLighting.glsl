@@ -149,24 +149,25 @@ void main()
 
 
      
-    vec4 Color_Ambient = Src_Albedo * 0.25f;//ambient lighting
-    vec4 Color_Light = Src_Albedo * vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w;
+    vec4 Color_Ambient = Src_Albedo;// * 0.25f;//ambient lighting
+    vec4 Color_Light = Src_Albedo * vec4(v_ColorAndIntensity.xyz, 1) * v_ColorAndIntensity.w * RadialFalloff;
     if (v_LightType < 1)
     {
         //point light gets radial falloff (and maybe angular)
         Color_Light *= max(0, RadialFalloff);//angular too?
 
         // Sample shadow along the line from light source to fragment
-        float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
+        float shadowAttenuation = 1;//SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
         Color_Light *= max(0, shadowAttenuation);
     }
     else{
         //Directonal light. Shadows from... infinitely...far...
         // Sample shadow along the line from light source to fragment
-        float shadowAttenuation = SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
+        float shadowAttenuation = 1;//SampleShadowAlongLine(Src_Position.xy,LightSourceWorldPos, 8, u_Albedo, uv, u_ScreenSize);
         Color_Light *= max(0, shadowAttenuation);
     }
 
-    color = Color_Ambient + Color_Light;
+    //I set ambient higher for now.
+    color = Color_Ambient;// + Color_Light;
 
 }

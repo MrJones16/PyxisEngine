@@ -24,8 +24,6 @@ MenuNode::MenuNode(const std::string &name)
     auto camera = Instantiate<PixelCameraNode>();
     camera->SetMainCamera();
     camera->m_LockAspect = false;
-    // render resolution is 640x360. adding 2 because we are using aarthificial
-    // method "future" style.
     camera->SetWidth(480);
     camera->SetHeight(270);
     AddChild(camera);

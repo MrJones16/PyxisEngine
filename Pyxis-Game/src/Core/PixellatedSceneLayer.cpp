@@ -100,8 +100,8 @@ void PixellatedSceneLayer::OnUpdate(Timestep ts) {
         }
 
         // welp this is borked atm
-        Renderer2D::DrawPointLight({10, -10}, {1, 0, 1}, 1, 256);
-        Renderer2D::DrawPointLight({10, 10}, {0, 1, 0}, 1, 128);
+        Renderer2D::DrawPointLight({10, -10}, {1, 1, 1}, 1, 256000);
+        // Renderer2D::DrawPointLight({10, 10}, {0, 1, 0}, 1, 128);
 
         PixelRenderer2D::EndSimulationPass();
     }
@@ -203,6 +203,10 @@ bool PixellatedSceneLayer::OnWindowResizeEvent(WindowResizeEvent &event) {
             intRes.y++;
         m_PixelCamera->SetWidth(intRes.x);
         m_PixelCamera->SetHeight(intRes.y);
+
+        // for now, lets just keep it at 480/270...
+        m_PixelCamera->SetWidth(480);
+        m_PixelCamera->SetHeight(270);
     }
 
     // m_OrthographicCameraController.SetAspect(m_ViewportSize.y /
