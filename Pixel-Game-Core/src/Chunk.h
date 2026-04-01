@@ -1,69 +1,77 @@
 #pragma once
 
-#include <Pyxis.h>
 #include "Element.h"
-#include <box2d/b2_body.h>
 #include "VectorHash.h"
-#include "ChunkChainBody.h"
+#include <Pyxis.h>
+#include <Pyxis/Nodes/PhysicsBodyNode2D.h>
+#include <box2d/box2d.h>
 
-namespace Pyxis
-{
-	struct DirtyRect
-	{		
-		glm::ivec2 min = {0,0};
-		glm::ivec2 max = { 0,0 };
-	};
+namespace Pyxis {
+struct DirtyRect {
+    glm::ivec2 min = {0, 0};
+    glm::ivec2 max = {0, 0};
+};
 
-	class Chunk
-	{
-	public:
-		inline static bool s_DebugChunks = false;
+class Chunk {
+  public:
+    inline static bool s_DebugChunks = false;
 
-		Chunk(glm::ivec2 chunkPos);
-		~Chunk() = default;
+    Chunk(glm::ivec2 chunkPos);
+    ~Chunk() = default;
 
-		void Clear();
+    void Clear();
 
-		Element& GetElement(int x, int y);
-		Element& GetElement(const glm::ivec2& index);
-		void SetElement(int x, int y, const Element& element);
+    // Get an element from the chunk via x & y
+    Element &GetElement(int x, int y);
+    // Get an element from the chunk via vec2
+    Element &GetElement(const glm::ivec2 &index);
+    // Get an element from the chunk via direct array index
+    Element &GetElement(int index);
 
-		void UpdateDirtyRect(int x, int y);
-		void ResetDirtyRect();
+    void SetElement(int x, int y, const Element &element);
 
-		void UpdateTexture();
-		void UpdateWholeTexture();
-		void RenderChunk();
+    void UpdateDirtyRect(int x, int y);
+    void ResetDirtyRect();
 
-		//whether or not this chunk has a static collider
-		bool m_StaticColliderGenerated = false;
-		bool m_StaticColliderChanged = true;
-		void GenerateStaticCollider();
-		void AddPreviousStaticCollider(Ref<ChunkChainBody> previousChunkChainBody);
+    void UpdateTexture();
+    void UpdateWholeTexture();
+    void RenderChunk();
 
-		void QueuePull(glm::ivec2 startPos, std::unordered_set<glm::ivec2, HashVector>& result, std::unordered_set<glm::ivec2, HashVector>& source);		
-		std::vector<b2Vec2> GetContourPoints(const std::unordered_set<glm::ivec2, HashVector>& source);
-		int GetMarchingSquareCase(const glm::ivec2& localPosition, const std::unordered_set<glm::ivec2, HashVector>& source);
-		std::vector<b2Vec2> SimplifyPoints(const std::vector<b2Vec2>& contourVector, int startIndex, int endIndex, float threshold);
+    // whether or not this chunk has a static collider
+    bool m_MeshGenerated = false;
+    bool m_MeshChanged = true;
+    void GenerateMesh();
+    void AddPreviousMesh();
 
-		
-		//core chunk elements
-		glm::ivec2 m_ChunkPos;
-		Element m_Elements[CHUNKSIZE * CHUNKSIZE];
+    void QueuePull(glm::ivec2 startPos,
+                   std::unordered_set<glm::ivec2, VectorHash> &result,
+                   std::unordered_set<glm::ivec2, VectorHash> &source);
 
-		//buckets for dirty rects
-		int m_DirtyRectBorderWidth = 2;
-		
-		DirtyRect m_DirtyRect;
+    std::vector<b2Vec2>
+    GetContourPoints(const std::unordered_set<glm::ivec2, VectorHash> &source);
+    int GetMarchingSquareCase(
+        const glm::ivec2 &localPosition,
+        const std::unordered_set<glm::ivec2, VectorHash> &source);
+    std::vector<b2Vec2> SimplifyPoints(const std::vector<b2Vec2> &contourVector,
+                                       int startIndex, int endIndex,
+                                       float threshold);
 
-		bool m_PersistDirtyRect = false;
+    // core chunk elements
+    glm::ivec2 m_ChunkPos;
+    Element m_Elements[CHUNKSIZE * CHUNKSIZE];
 
-		//textures and rendering
-		Ref<Texture2D> m_Texture;
-		uint32_t m_PixelBuffer[CHUNKSIZE * CHUNKSIZE];
+    // buckets for dirty rects
+    int m_DirtyRectBorderWidth = 2;
+    DirtyRect m_DirtyRect;
+    bool m_PersistDirtyRect = false;
 
+    // textures and rendering
+    Ref<Texture2D> m_Texture;
+    uint32_t m_PixelBuffer[CHUNKSIZE * CHUNKSIZE];
 
-		Ref<ChunkChainBody> m_OwnedChainBody2D = nullptr;
-		friend class ChainBody2D;
-	};
-}
+    // Bitmap array for greedy meshing for collisions & shadows
+    std::vector<uint64_t> m_BitArray;
+
+    Ref<PhysicsBody2D> m_PhysicsBody;
+};
+} // namespace Pyxis

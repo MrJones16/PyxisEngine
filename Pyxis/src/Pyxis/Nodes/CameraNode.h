@@ -1,41 +1,45 @@
 #pragma once
 
-//#include <Pyxis/Renderer/Renderer2D.h>
-//#include <glm/gtc/matrix_transform.hpp>
+// #include <Pyxis/Renderer/Renderer2D.h>
+// #include <glm/gtc/matrix_transform.hpp>
 #include <Pyxis/Nodes/Node3D.h>
 
-#include <Pyxis/Renderer/Camera.h>
 #include <Pyxis/Core/Application.h>
+#include <Pyxis/Renderer/Camera.h>
 
-namespace Pyxis
-{
-	
-	//Camera node: inherits a camera and node.
-	class CameraNode : public Node3D, public Camera
-	{
-	public:
-		CameraNode(const std::string& name = "CameraNode") : Node3D(name), Camera() { RecalculateProjectionMatrix(); };
-		CameraNode(UUID id) : Node3D(id), Camera() {};
-		virtual ~CameraNode() = default;
+namespace Pyxis {
 
-		//Serialization
-		void Serialize(json& j) override;
-		void Deserialize(json& j) override;
+// Camera node: inherits a camera and node.
+class CameraNode : public Node3D, public Camera {
+  public:
+    CameraNode(const std::string &name = "CameraNode")
+        : Node3D(name), Camera() {
+        RecalculateProjectionMatrix();
+    };
+    CameraNode(UUID id) : Node3D(id), Camera() {};
+    virtual ~CameraNode() = default;
 
-		//Functions for game usage
-		glm::vec2 MouseToWorldPos(glm::vec2 mousePos);
+    // Serialization
+    void Serialize(json &j) override;
+    void Deserialize(json &j) override;
 
-		//functions for this
-		void RecalculateProjectionMatrix();
+    // Functions for game usage
+    glm::vec2 MouseToWorldPos(glm::vec2 mousePos);
 
-		//overrides for camera class
-		virtual void RecalculateViewMatrix() override;
-		inline virtual const glm::vec3& GetPosition() const override { return m_Position; };
-		inline virtual const glm::vec3& GetRotation() const override { return m_Rotation; };
-		virtual const glm::mat3 GetRotationMatrix() const override;
+    // functions for this
+    void RecalculateProjectionMatrix() override;
 
-	};
-	
-	REGISTER_SERIALIZABLE_NODE(CameraNode);
+    // overrides for camera class
+    virtual void RecalculateViewMatrix() override;
+    inline virtual const glm::vec3 &GetPosition() const override {
+        return m_Position;
+    };
+    inline virtual const glm::vec3 &GetRotation() const override {
+        return m_Rotation;
+    };
+    virtual const glm::mat3 GetRotationMatrix() const override;
+};
 
-}
+REGISTER_SERIALIZABLE_NODE(CameraNode);
+
+} // namespace Pyxis

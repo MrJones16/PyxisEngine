@@ -1,7 +1,9 @@
 #include "Chunk.h"
+#include "Element.h"
+#include "Pyxis/Core/BinaryGreedyMesh.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
 #include "Pyxis/Renderer/Renderer2D.h"
-#include <Pyxis/Game/Physics2D.h>
-#include <box2d/b2_chain_shape.h>
+#include "VectorHash.h"
 /*
 //create a static body for the chunk
                 float RBToWorld = (CHUNKSIZEF / PPU);
@@ -15,6 +17,9 @@ Chunk::Chunk(glm::ivec2 chunkPos) {
     for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++) {
         m_Elements[i] = Element();
     }
+    for (int x = 0; x < 64; x++) {
+        m_BitArray.push_back(0);
+    }
 
     // reset dirty rect
     ResetDirtyRect();
@@ -24,6 +29,11 @@ Chunk::Chunk(glm::ivec2 chunkPos) {
     std::fill(m_PixelBuffer, m_PixelBuffer + (CHUNKSIZE * CHUNKSIZE),
               0xFF000000);
     m_Texture->SetData(m_PixelBuffer, sizeof(m_PixelBuffer));
+
+    PhysicsBody2DDef def;
+    def.type = PhysicsBody2DType::Static;
+    def.position = (glm::vec2(m_ChunkPos) * CHUNKSIZEF) * (1 / PPU);
+    m_PhysicsBody = Physics2D::GetWorld().CreateBody(def);
 }
 
 void Chunk::Clear() {
@@ -43,57 +53,38 @@ Element &Chunk::GetElement(int x, int y) {
 Element &Chunk::GetElement(const glm::ivec2 &index) {
     return m_Elements[index.x + index.y * CHUNKSIZE];
 }
+Element &Chunk::GetElement(int index) { return m_Elements[index]; }
 
 void Chunk::SetElement(int x, int y, const Element &element) {
-    // test if we are placing a rigid element
-    if (element.m_Rigid) {
-        // we don't worry about updating the collider if we are setting a rigid
-        // element
-        m_Elements[x + y * CHUNKSIZE] = element;
-        return;
-    }
-    // test if we are replacing a rigid element
-    if (m_Elements[x + y * CHUNKSIZE].m_Rigid) {
-        m_Elements[x + y * CHUNKSIZE] = element;
+    Element &currElement = m_Elements[x + y * CHUNKSIZE];
+    ElementProperties &currEP =
+        ElementData::GetElementProperties(currElement.m_ID);
+    bool currIsSolid = (!currElement.m_Rigid) &&
+                       (currEP.cell_type == ElementType::solid ||
+                        currEP.cell_type == ElementType::movableSolid);
 
-        // we are replacing a rigid element, so we should set the new element to
-        // be rigid if it is a solid!
-        ElementType newType = ElementData::GetElementProperties(
-                                  m_Elements[x + y * CHUNKSIZE].m_ID)
-                                  .cell_type;
-        if (newType == ElementType::solid)
-            m_Elements[x + y * CHUNKSIZE].m_Rigid = true;
+    ElementProperties newEP = ElementData::GetElementProperties(element.m_ID);
+    bool newIsSolid =
+        (!element.m_Rigid) && (newEP.cell_type == ElementType::solid ||
+                               newEP.cell_type == ElementType::movableSolid);
+    // actually set the element now
+    m_Elements[x + y * CHUNKSIZE] = element;
 
-        return;
-    }
-
-    ElementType currType =
-        ElementData::GetElementProperties(m_Elements[x + y * CHUNKSIZE].m_ID)
-            .cell_type;
-    if (currType == ElementType::solid ||
-        currType == ElementType::movableSolid) {
-        // we are currently solid, so see if we are changing to something that
-        // is not
-        currType = ElementData::GetElementProperties(element.m_ID).cell_type;
-        if (!(currType == ElementType::solid ||
-              currType == ElementType::movableSolid)) {
-            // we are no longer solid, so we need to update the collider
-            m_StaticColliderChanged = true;
+    if (currIsSolid != newIsSolid) {
+        // mesh needs to be changed
+        m_MeshChanged = true;
+        if (newIsSolid) {
+            // set bit to 1
+            uint64_t mask = 1u;
+            m_BitArray[x] |= (uint64_t)(mask << y);
+        } else {
+            // set bit to 0
+            uint64_t mask = 1u;
+            uint64_t AndMask =
+                ~(mask << y); // inverse of 1 bitshifted to the position of y.
+            m_BitArray[x] &= AndMask;
         }
-
-        m_Elements[x + y * CHUNKSIZE] = element;
-
-    } else {
-        // we are not solid, so see if we will become one.
-        currType = ElementData::GetElementProperties(element.m_ID).cell_type;
-        if (currType == ElementType::solid ||
-            currType == ElementType::movableSolid) {
-            // we are becoming solid, so we need to update the collider
-            m_StaticColliderChanged = true;
-        }
-
-        m_Elements[x + y * CHUNKSIZE] = element;
-    }
+    } // else would mean that the collider wouldn't need to be updated.
 }
 
 /// <summary>
@@ -122,7 +113,8 @@ void Chunk::UpdateTexture() {
     bool dataChanged = false;
 
     // if min.x <= max.x
-    if (m_DirtyRect.min.x <= m_DirtyRect.max.x) {
+    if (m_DirtyRect.min.x <= m_DirtyRect.max.x &&
+        m_DirtyRect.min.y <= m_DirtyRect.max.y) {
         dataChanged = true;
         for (int x = std::max(m_DirtyRect.min.x, 0);
              x <= std::min(m_DirtyRect.max.x, CHUNKSIZE - 1); x++) {
@@ -158,18 +150,15 @@ void Chunk::RenderChunk() {
     if (s_DebugChunks) {
         // draw center position
         glm::vec4 chunkStatusColor = {1, 1, 1, 0.2f};
-        if (m_StaticColliderGenerated)
+        if (m_MeshGenerated)
             chunkStatusColor = {0, 0, 1, 0.2f};
-        if (m_StaticColliderGenerated && m_StaticColliderChanged)
+        if (m_MeshGenerated && m_MeshChanged)
             chunkStatusColor = {0, 1, 1, 0.2f};
         // Renderer2D::DrawQuad({ (m_ChunkPos.x + 0.5f) * CHUNKSIZEF,
         // (m_ChunkPos.y + 0.5f) * CHUNKSIZEF, 20 }, glm::vec2(HALFCHUNKSIZEF),
         // chunkStatusColor);
 
         // Draw the collider
-        if (m_OwnedChainBody2D != nullptr)
-            m_OwnedChainBody2D->DebugDraw(PPU, 20);
-
         glm::vec2 min = {std::max(m_DirtyRect.min.x, 0),
                          std::max(m_DirtyRect.min.y, 0)};
         glm::vec2 max = {std::min(m_DirtyRect.max.x, CHUNKSIZE - 1),
@@ -190,85 +179,26 @@ void Chunk::RenderChunk() {
     }
 }
 
-void Chunk::GenerateStaticCollider() {
-    m_StaticColliderGenerated = true;
-    if (m_OwnedChainBody2D == nullptr) {
-        // create a static body for the chunk
-        m_OwnedChainBody2D =
-            CreateRef<ChunkChainBody>("ChunkChainBody", b2_staticBody);
-        m_OwnedChainBody2D->m_ChunkOwnerPos = m_ChunkPos;
-        // set to center of the chunk
-        // chunk pos * size to get bottom left of chunk
-        // add half chunk size to get center of chunk
-        // divide by PPU to get box2d version
-        glm::ivec2 b2chunkpos = ((m_ChunkPos * CHUNKSIZE)) / (int)PPU;
-        m_OwnedChainBody2D->SetPosition({b2chunkpos.x, b2chunkpos.y});
-    } else {
-        m_OwnedChainBody2D->ClearFixtures();
+void Chunk::GenerateMesh() {
+    m_MeshGenerated = true;
+    // convert bitmap to quads to add to body.
+
+    m_PhysicsBody->RemoveShapes();
+
+    auto quads = BinaryGreedyMesh(m_BitArray);
+    for (auto &quad : quads) {
+        glm::vec2 quadPosition = quad.center;
+        m_PhysicsBody->AddBoxShape(quad.halfWidth / PPU, quad.halfHeight / PPU,
+                                   quadPosition / PPU, 0);
     }
-
-    // add every element in the chunk to "source"
-    std::unordered_set<glm::ivec2, HashVector> source;
-    for (int i = 0; i < CHUNKSIZE * CHUNKSIZE; i++) {
-        ElementProperties &ed =
-            ElementData::GetElementProperties(m_Elements[i].m_ID);
-        if (!m_Elements[i].m_Rigid && ed.cell_type == ElementType::solid) {
-            source.insert({i % CHUNKSIZE, i / CHUNKSIZE});
-        }
-    }
-
-    // flood fill to find continuous areas and put into "areas"
-    std::list<std::unordered_set<glm::ivec2, HashVector>> areas;
-    while (source.size() > 0) {
-        std::unordered_set<glm::ivec2, HashVector> result;
-        QueuePull(*source.begin(), result, source);
-        areas.push_back(result);
-    }
-
-    // for each area, get contour points and create loop
-    while (!areas.empty()) {
-        auto contour = GetContourPoints(areas.back());
-        areas.pop_back();
-
-        // BUG ERROR FIX TODO WRONG BROKEN
-        // getcontour points is able to have repeating points, which is a no-no
-        // for box2d triangles / triangulation
-        if (contour.size() == 0) {
-
-            PX_ASSERT(false, "PixelBody2D Error: Contour gathered was size 0");
-            continue;
-        }
-
-        std::vector<b2Vec2> contourVector;
-        if (contour.size() > 20) {
-            contourVector =
-                SimplifyPoints(contour, 0, contour.size() - 1, 1.0f);
-        } else {
-            contourVector = contour;
-        }
-
-        // scale points to PPU
-        for (auto &point : contourVector) {
-            point.x /= PPU;
-            point.y /= PPU;
-        }
-
-        if (contourVector.size() >= 3) {
-            m_OwnedChainBody2D->CreateLoop((b2Vec2 *)contourVector.data(),
-                                           contourVector.size());
-        }
-    }
+    m_MeshChanged = false;
 }
 
-void Chunk::AddPreviousStaticCollider(
-    Ref<ChunkChainBody> previousChunkChainBody) {
-    m_StaticColliderGenerated = true;
-    m_OwnedChainBody2D = previousChunkChainBody;
-}
+void Chunk::AddPreviousMesh() { m_MeshGenerated = true; }
 
 void Chunk::QueuePull(glm::ivec2 startPos,
-                      std::unordered_set<glm::ivec2, HashVector> &result,
-                      std::unordered_set<glm::ivec2, HashVector> &source) {
+                      std::unordered_set<glm::ivec2, VectorHash> &result,
+                      std::unordered_set<glm::ivec2, VectorHash> &source) {
     if (source.size() == 0)
         return;
 
@@ -279,7 +209,7 @@ void Chunk::QueuePull(glm::ivec2 startPos,
 
     // we make a queue of positions to check
     std::queue<glm::ivec2> queue;
-    std::unordered_set<glm::ivec2, HashVector> visited;
+    std::unordered_set<glm::ivec2, VectorHash> visited;
 
     queue.push(startPos);
     visited.insert(startPos);
@@ -315,7 +245,7 @@ void Chunk::QueuePull(glm::ivec2 startPos,
 }
 int Chunk::GetMarchingSquareCase(
     const glm::ivec2 &localPosition,
-    const std::unordered_set<glm::ivec2, HashVector> &source) {
+    const std::unordered_set<glm::ivec2, VectorHash> &source) {
     int result = 0;
     if (source.contains(localPosition + glm::ivec2(0, 0)))
         result += 8;
@@ -375,158 +305,5 @@ Chunk::SimplifyPoints(const std::vector<b2Vec2> &contourVector, int startIndex,
     endResult.push_back(contourVector[endIndex]);
     // PX_TRACE("Removed Points");
     return endResult;
-}
-std::vector<b2Vec2> Chunk::GetContourPoints(
-    const std::unordered_set<glm::ivec2, HashVector> &source) {
-    // run marching squares on element array to find all vertices
-    // inspired by
-    // https://www.emanueleferonato.com/2013/03/01/using-marching-squares-algorithm-to-trace-the-contour-of-an-image/
-    std::vector<b2Vec2> ContourVector;
-
-    glm::ivec2 cursor =
-        glm::ivec2(CHUNKSIZE - 1, CHUNKSIZE - 1); // get top right local pos
-    // scroll through element array until you find an element to start at
-    while (!source.contains(cursor)) {
-        cursor.x--;
-        if (cursor.x < 0) {
-            cursor.x = CHUNKSIZE - 1;
-            cursor.y--;
-            if (cursor.y < 0) {
-                // ran out of pixels to test for! so the entire array is air...
-                return ContourVector;
-            }
-        }
-    }
-
-    // found starting element by scrolling backwards through array
-    glm::ivec2 start = cursor;
-    glm::ivec2 step = {1, 0};
-    glm::ivec2 prev = {1, 0};
-
-    // moving in a counter-clockwise fashion
-    bool closedLoop = false;
-    while (!closedLoop) {
-        int caseValue = GetMarchingSquareCase(cursor, source);
-        switch (caseValue) {
-        case 1:
-        case 5:
-        case 13:
-            /* going UP with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    | 1 |   |   | 1 |   |   | 1 |   |
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   | 4 |   |   | 4 | 8 |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = 0;
-            step.y = 1;
-            break;
-
-        case 8:
-        case 10:
-        case 11:
-            /* going DOWN with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   |   | 2 |   | 1 | 2 |
-                                    +---+---+   +---+---+   +---+---+
-                                    |   | 8 |   |   | 8 |   |   | 8 |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = 0;
-            step.y = -1;
-            break;
-
-        case 4:
-        case 12:
-        case 14:
-            /* going LEFT with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   |   |   |   |   | 2 |
-                                    +---+---+   +---+---+   +---+---+
-                                    | 4 |   |   | 4 | 8 |   | 4 | 8 |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = -1;
-            step.y = 0;
-            break;
-
-        case 2:
-        case 3:
-        case 7:
-            /* going RIGHT with these cases:
-
-                                    +---+---+   +---+---+   +---+---+
-                                    |   | 2 |   | 1 | 2 |   | 1 | 2 |
-                                    +---+---+   +---+---+   +---+---+
-                                    |   |   |   |   |   |   | 4 |   |
-                                    +---+---+  	+---+---+  	+---+---+
-
-            */
-            step.x = 1;
-            step.y = 0;
-            break;
-
-        case 6:
-            /* special saddle point case 1:
-
-            +---+---+
-            |   | 2 |
-            +---+---+
-            | 4 |   |
-            +---+---+
-
-            going LEFT if coming from UP
-            else going RIGHT
-
-            */
-            if (prev.x == 0 && prev.y == -1) {
-                step.x = -1;
-                step.y = 0;
-            } else {
-                step.x = 1;
-                step.y = 0;
-            }
-            break;
-
-        case 9:
-            /* special saddle point case 2:
-
-                    +---+---+
-                    | 1 |   |
-                    +---+---+
-                    |   | 8 |
-                    +---+---+
-
-                    going UP if coming from RIGHT
-                    else going DOWN
-
-                    */
-            if (prev.x == -1 && prev.y == 0) {
-                step.x = 0;
-                step.y = 1;
-            } else {
-                step.x = 0;
-                step.y = -1;
-            }
-            break;
-        }
-        // saving contour point
-        ContourVector.push_back(b2Vec2(cursor.x, cursor.y));
-        // moving onto next point
-        cursor += step;
-        prev = step;
-        //  drawing the line
-        // if we returned to the first point visited, the loop has finished
-        if (cursor == start) {
-            closedLoop = true;
-        }
-    }
-    return ContourVector;
 }
 } // namespace Pyxis

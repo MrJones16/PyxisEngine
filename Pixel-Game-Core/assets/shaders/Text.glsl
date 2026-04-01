@@ -9,6 +9,7 @@ layout (location = 4) in uint a_NodeID;
 
 uniform mat4 u_ViewProjection;
 
+out vec4 v_Position;
 out vec4 v_Color;
 out vec2 v_TexCoord;
 out float v_TexIndex;
@@ -16,8 +17,9 @@ out flat uint v_NodeID;
 
 void main()
 {
-	v_Color = a_Color;
 	gl_Position = u_ViewProjection * vec4(a_Position, 1.0f); 
+	v_Position = vec4(a_Position, 1.0f);
+	v_Color = a_Color;
 	v_TexCoord = a_TexCoord;
 	v_TexIndex = a_TexIndex;
 	v_NodeID = a_NodeID;
@@ -26,9 +28,12 @@ void main()
 #type fragment
 #version 460
 			
-layout (location = 0) out vec4 color;
-layout (location = 1) out uint id;
+layout (location = 0) out vec4 o_Position;
+layout (location = 1) out vec4 o_Normal;
+layout (location = 2) out vec4 o_Albedo;
+layout (location = 3) out uint o_ID;
 
+in vec4 v_Position;
 in vec4 v_Color;
 in vec2 v_TexCoord;
 in float v_TexIndex;
@@ -39,6 +44,10 @@ uniform sampler2D u_BitMapTextures[32];
 void main()
 {
 	vec4 sampled = vec4(1.0, 1.0, 1.0, texture(u_BitMapTextures[int(v_TexIndex)], v_TexCoord).r);
-    color = sampled * v_Color;
-	id = v_NodeID;
+    if(sampled.a == 0)
+		discard;
+    o_Position = v_Position;
+    o_Normal = vec4(0.0,0.0,0.0,1.0);
+    o_Albedo = sampled * v_Color;
+	o_ID = v_NodeID;
 }

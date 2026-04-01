@@ -1,13 +1,12 @@
 #include "World.h"
+#include "Element.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
+#include "Pyxis/Renderer/Renderer2D.h"
 // #include "ChunkWorker.h"
-#include <PixelBody2D.h>
 #include <Pyxis/Game/Physics2D.h>
-#include <box2d/b2_math.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <mutex>
 #include <poly2tri.h>
 #include <random>
-#include <thread>
 #include <tinyxml2.h>
 
 namespace Pyxis {
@@ -40,6 +39,7 @@ std::vector<glm::ivec2> getLinePath(glm::ivec2 startPosition,
 
     return positions;
 }
+
 } // namespace Utils
 
 World::World(std::string assetPath, int seed) {
@@ -129,35 +129,10 @@ void World::DownloadWorld(Network::Message &msg) {
         std::vector<uint8_t> msgpack;
         msg >> msgpack;
         json j = json::from_msgpack(msgpack);
-        auto RigidBodyNode = Node::DeserializeNode(j);
-
-        if (j["Type"] == "PixelBody2D") {
-            // register to Node::Nodes
-            Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
-            PixelBody2D *body = (PixelBody2D *)RigidBodyNode.get();
-            body->m_PXWorld = this;
-            // m_PixelBodyMap[body->m_UUID] = body;
-            PX_TRACE("Loaded 2D: Pos[{},{}] UUID[{}]", body->GetPosition().x,
-                     body->GetPosition().y, RigidBodyNode->GetUUID());
-            // can safely ignore putting it in the world, since when we got the
-            // world data it is already there!
-        } else if (j["Type"] == "ChunkChainBody") {
-            // we don't register these to the "scene layer" aka node:nodes
-
-            Ref<ChunkChainBody> ccb =
-                std::dynamic_pointer_cast<ChunkChainBody>(RigidBodyNode);
-            GetChunk(ccb->m_ChunkOwnerPos)->AddPreviousStaticCollider(ccb);
-            PX_TRACE("Loaded ChunkChainBody: Pos[{},{}] UUID[{}]",
-                     ccb->m_ChunkOwnerPos.x, ccb->m_ChunkOwnerPos.y,
-                     ccb->GetUUID());
-        } else //"RigidBody2D")
-        {
-            // register to Node::Nodes
-            Node::Nodes[RigidBodyNode->GetUUID()] = RigidBodyNode;
-
-            PX_TRACE("Loaded Generic RigidBody2D, UUID[{0}]",
-                     RigidBodyNode->GetUUID());
-        }
+        Ref<PixelBody2D> PixelBodyNode =
+            dynamic_pointer_cast<PixelBody2D>(Node::DeserializeNode(j));
+        if (PixelBodyNode)
+            m_PixelBodies[PixelBodyNode->GetUUID()] = PixelBodyNode;
     }
     if ((GameMessage)msg.header.id == GameMessage::Server_GameDataChunk) {
         glm::ivec2 chunkPos;
@@ -166,7 +141,7 @@ void World::DownloadWorld(Network::Message &msg) {
         PX_ASSERT(m_Chunks.find(chunkPos) == m_Chunks.end(),
                   "Tried to load a chunk that already existed");
         Chunk *chunk = new Chunk(chunkPos);
-        msg >> chunk->m_StaticColliderChanged;
+        msg >> chunk->m_MeshChanged;
         msg >> chunk->m_DirtyRect;
         m_Chunks[chunkPos] = chunk;
         for (int ii = (CHUNKSIZE * CHUNKSIZE) - 1; ii >= 0; ii--) {
@@ -184,8 +159,8 @@ void World::GetGameDataInit(Network::Message &msg) {
     msg.header.id = static_cast<uint32_t>(GameMessage::Server_GameDataInit);
     msg << static_cast<uint32_t>(m_Chunks.size());
     PX_TRACE("# Chunks: {0}", m_Chunks.size());
-    msg << static_cast<uint32_t>(Physics2D::GetWorld()->GetBodyCount());
-    PX_TRACE("# RigidBodies: {0}", Physics2D::GetWorld()->GetBodyCount());
+    msg << static_cast<uint32_t>(m_PixelBodies.size());
+    PX_TRACE("# RigidBodies: {0}", Physics2D::GetWorld().GetBodyCount());
     msg << m_SimulationTick;
     msg << m_UpdateBit;
     msg << m_WorldSeed;
@@ -193,26 +168,11 @@ void World::GetGameDataInit(Network::Message &msg) {
 }
 
 void World::GetGameData(std::vector<Network::Message> &messages) {
-    b2Body *body = Physics2D::GetWorld()->GetBodyList();
-
-    // FILO to swap order of sent pixel bodies, so box2d can stay synced?
-    std::deque<b2Body *> bodies;
-    while (body != nullptr) {
-        bodies.push_back(body);
-        body = body->GetNext();
-    }
-    while (!bodies.empty()) {
-        RigidBody2D *rb = (RigidBody2D *)bodies.back()->GetUserData().pointer;
-        if (rb) {
-            PX_TRACE("Packing RigidBody2D {0}", rb->GetUUID());
-            messages.emplace_back();
-            messages.back().header.id =
-                static_cast<uint32_t>(GameMessage::Server_GameDataRigidBody);
-            messages.back() << rb->SerializeBinary();
-        } else {
-            PX_ASSERT(false, "RigidBody2D has no user data!");
-        }
-        bodies.pop_back();
+    for (auto kvp : m_PixelBodies) {
+        messages.emplace_back();
+        messages.back().header.id =
+            static_cast<uint32_t>(GameMessage::Server_GameDataRigidBody);
+        messages.back() << kvp.second->SerializeBinary();
     }
 
     // now we create a separate message for each chunk
@@ -224,15 +184,15 @@ void World::GetGameData(std::vector<Network::Message> &messages) {
             messages.back() << pair.second->m_Elements[i];
         }
         messages.back() << pair.second->m_DirtyRect;
-        messages.back() << pair.second->m_StaticColliderChanged;
+        messages.back() << pair.second->m_MeshChanged;
         messages.back() << pair.first;
     }
 }
 
 World::~World() {
-    PX_TRACE("Deleting World");
+    // PX_TRACE("Deleting World");
 
-    Physics2D::DeleteWorld();
+    // Physics2D::DestroyWorld();
     for (auto &pair : m_Chunks) {
         delete (pair.second);
     }
@@ -309,7 +269,16 @@ void World::GenerateChunk(Chunk *chunk) {
 Element &World::GetElement(const glm::ivec2 &pixelPos) {
     auto chunkPos = PixelToChunk(pixelPos);
     auto index = PixelToIndex(pixelPos);
-    return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+    return GetChunk(chunkPos)->GetElement(index);
+}
+
+bool World::TryGetElement(const glm::ivec2 &pixelPos, Element &element) {
+    if (m_Chunks.contains(PixelToChunk(pixelPos))) {
+        element = GetChunk(PixelToChunk(pixelPos))
+                      ->GetElement(PixelToIndex(pixelPos));
+        return true;
+    }
+    return false;
 }
 
 Element &World::ForceGetElement(const glm::ivec2 &pixelPos) {
@@ -318,16 +287,16 @@ Element &World::ForceGetElement(const glm::ivec2 &pixelPos) {
     if (!m_Chunks.contains(chunkPos)) {
         AddChunk(chunkPos);
     }
-    return GetChunk(chunkPos)->m_Elements[index.x + index.y * CHUNKSIZE];
+    return GetChunk(chunkPos)->GetElement(PixelToIndex(pixelPos));
 }
 
 void World::SetElement(const glm::ivec2 &pixelPos, const Element &element) {
     Chunk *chunk = GetChunk(PixelToChunk(pixelPos));
     auto index = PixelToIndex(pixelPos);
     if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+        chunk->GetElement(index).m_Temperature++;
     } else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+        chunk->GetElement(index).m_Temperature--;
     } else {
         chunk->SetElement(index.x, index.y, element);
     }
@@ -339,9 +308,9 @@ void World::SetElementWithoutDirtyRectUpdate(const glm::ivec2 &pixelPos,
     Chunk *chunk = GetChunk(PixelToChunk(pixelPos));
     auto index = PixelToIndex(pixelPos);
     if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature++;
+        chunk->GetElement(index).m_Temperature++;
     } else if (element.m_ID == ElementData::s_ElementNameToID["debug_cool"]) {
-        chunk->m_Elements[index.x + index.y * CHUNKSIZE].m_Temperature--;
+        chunk->GetElement(index).m_Temperature--;
     } else {
         chunk->SetElement(index.x, index.y, element);
     }
@@ -365,6 +334,8 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
                 break;
             case BrushType::square:
                 break;
+            case BrushType::end:
+                break;
             }
 
             // get chunk / index
@@ -386,12 +357,10 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
 
             // set the element
             if (element.m_ID == ElementData::s_ElementNameToID["debug_heat"]) {
-                chunk->m_Elements[index.x + index.y * CHUNKSIZE]
-                    .m_Temperature++;
+                chunk->GetElement(index).m_Temperature++;
             } else if (element.m_ID ==
                        ElementData::s_ElementNameToID["debug_cool"]) {
-                chunk->m_Elements[index.x + index.y * CHUNKSIZE]
-                    .m_Temperature--;
+                chunk->GetElement(index).m_Temperature--;
             } else {
                 chunk->SetElement(index.x, index.y, element);
             }
@@ -400,6 +369,213 @@ void World::PaintBrushElement(glm::ivec2 pixelPos, uint32_t elementID,
     }
     for (auto chunk : chunksToUpdate) {
         chunk->UpdateTexture();
+    }
+}
+
+void World::PullPixelBodies() {
+    // loop over bodies, and get list of current bodies. Also free them if they
+    // want to be freed.
+    std::vector<Ref<PixelBody2D>> bodies;
+    std::vector<UUID> idsToFree;
+    for (auto kvp : m_PixelBodies) {
+        if (kvp.second->m_FreeMe) {
+            idsToFree.push_back(kvp.first);
+            kvp.second->ActuallyQueueFree();
+        } else {
+            // only pushing alive bodies onto the list to pull.
+            bodies.push_back(kvp.second);
+        }
+    }
+    // list of ids to remove from world list, can't do during iteration over it!
+    for (auto &id : idsToFree) {
+        m_PixelBodies.erase(id);
+    }
+
+    // we now have a list of bodies that are still alive. Lets iterate over the
+    // list and pull them out.
+    for (Ref<PixelBody2D> body : bodies) {
+        // skip if we are sleeping!
+        if (!body->GetAwake()) {
+            PX_TRACE("Skipping because it's asleep!");
+            continue; // leave sleeping bodies in!
+        }
+
+        // keep list of elements to take out after iteration
+        std ::vector<glm::ivec2> elementsToRemove;
+
+        // loop over all elements, and attempt to take them out of the world
+        for (auto &mappedElement : body->m_Elements) {
+
+            // the world position of the element is already known, so just
+            // try to grab it
+            Element &worldElement = GetElement(mappedElement.second.worldPos);
+            ElementProperties &worldElementData =
+                ElementData::GetElementProperties(worldElement.m_ID);
+
+            if (mappedElement.second.element.m_ID !=
+                worldElement
+                    .m_ID) // || !worldElement.m_Rigid TODO re-implement rigid?
+            {
+                // element has changed over the last update!
+
+                if (worldElementData.cell_type == ElementType::solid ||
+                    (worldElementData.cell_type == ElementType::movableSolid &&
+                     worldElement.m_Rigid)) {
+                    // replaced element is able to continue being part of
+                    // the solid! this could be the player replacing the
+                    // blocks, or a solid block reacts with something and
+                    // stays solid, like getting stained or something idk
+                    // either way, in this situation we just pull the new
+                    // element
+                    mappedElement.second.element = worldElement;
+                    mappedElement.second.element.m_Rigid = true;
+                    SetElementWithoutDirtyRectUpdate(
+                        mappedElement.second.worldPos, Element());
+                } else {
+                    // the element that has taken over the spot is not able
+                    // to be a solid, so we need to re-construct the rigid
+                    // body without that element! so we leave it in the sim,
+                    // and erase the previous from the body
+                    elementsToRemove.push_back(mappedElement.first);
+                }
+            } else {
+                // element should be the same, so nothing has changed, pull
+                // the element out
+                // PX_TRACE("pulling out pbe ({0},{1})",
+                //         mappedElement.second.worldPos.x,
+                //         mappedElement.second.worldPos.y);
+                mappedElement.second.element = worldElement;
+                // replace with default element
+                SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
+                                                 Element());
+            }
+        }
+
+        // now that we pulled all the elements out, try to re-construct the
+        // body if needed:
+        if (elementsToRemove.size() > 0) {
+            // we need to reconstruct!
+            // remove the outdated elements
+            for (auto &localPos : elementsToRemove) {
+                body->m_Elements.erase(localPos);
+            }
+
+            // gather up local positions of elements
+            std::unordered_set<glm::ivec2, VectorHash> source;
+            for (auto kvp : body->m_Elements) {
+                source.insert(kvp.first);
+            }
+
+            // get a continuous section of the local positions
+            auto firstPull = Utils::GridQueuePull(source);
+            // firstpull should be the main body, as it may still be fully
+            // intact! let's remove whats in source if there's any
+            // straglers, and make it into it's own body.
+
+            std::unordered_set<glm::ivec2, VectorHash> pixels;
+            for (glm::ivec2 pos : source) {
+                // source is now what is remaining after pulling out a
+                // continuous set.
+
+                // put the remainder back into the world
+                SetElementWithoutDirtyRectUpdate(body->m_Elements[pos].worldPos,
+                                                 body->m_Elements[pos].element);
+
+                // lets remove that remainder from this
+                // pixelbody, and make new pixel bodies from it after.
+                // we also need to track the world positions for the
+                // creation of the remainder.
+                pixels.insert(body->m_Elements[pos].worldPos);
+                body->m_Elements.erase(pos);
+            }
+
+            // create the new pixel bodies from the remainder.
+            if (pixels.size() > 0) {
+                PhysicsBody2DDef def;
+                def.type = body->GetType();
+                def.linearVelocity = body->GetLinearVelocity();
+                def.angularVelocity = body->GetAngularVelocity();
+                auto newBody =
+                    CreatePixelBody(def, pixels, true, body->m_Name + "-Split");
+            }
+
+            if (body->m_Elements.size() == 0) {
+                body->QueueFree();
+                body->RemoveShapes();
+
+            } else {
+                // recalculate the bitarrays and collider/mesh
+                body->GenerateMesh();
+            }
+        }
+        // End off with saying this body is no longer in the world. We may even
+        // be dead!
+        body->m_InWorld = false;
+    }
+}
+
+void World::PushPixelBodies() {
+    // put the elements back into the simulation.
+    // no need to copy list, as we won't change it here.
+    for (auto kvp : m_PixelBodies) {
+        Ref<PixelBody2D> body = kvp.second;
+        // PX_TRACE("Pushing PixelBody2D[{}] back into world", kvp.first);
+        // PX_TRACE("Position: ({0},{1})", body->GetPosition().x,
+        //          body->GetPosition().y);
+        if (body->m_InWorld) {
+            // PX_TRACE("Skipping because its still in world!");
+            // this would include bodies made during last pull as in world is
+            // default
+            continue; // body is already in world
+        }
+
+        // chunkloading
+        for (int x = -1; x < 2; x++) {
+            for (int y = -1; y < 2; y++) {
+                AddChunk(PixelToChunk(WorldToPixel(body->GetPosition())) +
+                         glm::ivec2(x, y));
+            }
+        }
+
+        // update world positions to put back into new locations
+        body->UpdateElementWorldPositions();
+
+        body->m_InWorld = true;
+        if (body->m_Moved) {
+            for (auto &mappedElement : body->m_Elements) {
+
+                // check if there is an element in the way in the world
+                Element &e = GetElement(mappedElement.second.worldPos);
+                if (e.m_ID != 0)
+                    CreateParticle(
+                        mappedElement.second.worldPos,
+                        body->GetLocalPixelVelocity(mappedElement.first), e);
+
+                // PX_TRACE("putting pbe ({0},{1}) back in",
+                //          mappedElement.second.worldPos.x,
+                //          mappedElement.second.worldPos.y);
+                SetElement(mappedElement.second.worldPos,
+                           mappedElement.second.element);
+            }
+        } else {
+            // we are still, so put back without updating dirty rect
+            // PX_TRACE("we didn't move, so put back in without rect update");
+            for (auto &mappedElement : body->m_Elements) {
+
+                // check if there is an element in the way in the world
+                Element &e = GetElement(mappedElement.second.worldPos);
+
+                if (e.m_ID != 0)
+                    CreateParticle(
+                        mappedElement.second.worldPos,
+                        body->GetLocalPixelVelocity(mappedElement.first), e);
+                //  PX_TRACE("putting pbe ({0},{1}) back in, but still",
+                //           mappedElement.second.worldPos.x,
+                //           mappedElement.second.worldPos.y);
+                SetElementWithoutDirtyRectUpdate(mappedElement.second.worldPos,
+                                                 mappedElement.second.element);
+            }
+        }
     }
 }
 
@@ -416,12 +592,6 @@ void World::UpdateWorld() {
 
     UpdateParticles();
 
-    Physics2D::Step();
-    // physiscs 2d updates the pixel bodies,
-    // and the pixel bodies manage their own insertion
-    // and deletion from the world, and throwing the
-    // particles on overlap
-
     for (auto &[pos, chunk] : m_Chunks) {
         UpdateChunk(chunk);
     }
@@ -431,6 +601,14 @@ void World::UpdateWorld() {
             pair.second->UpdateTexture();
         }
     }
+
+    // TODO STILL
+    //  pull pixelbodies out
+    PullPixelBodies();
+    Physics2D::GetWorld().Step();
+    PushPixelBodies();
+    // put pixelbodies back in
+    TestMeshGeneration();
 
     m_UpdateBit = !m_UpdateBit;
     m_SimulationTick++;
@@ -471,16 +649,17 @@ void World::UpdateChunk(Chunk *chunk) {
     chunk->m_DirtyRect.min = chunk->m_DirtyRect.min + 1;
     chunk->m_DirtyRect.max = chunk->m_DirtyRect.max - 1;
 
-    // make sure to wake up any pixel bodies in area
-    b2AABB queryRegion;
-    glm::vec2 lower =
-        glm::vec2(dirtyRect.min + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
-    glm::vec2 upper =
-        glm::vec2(dirtyRect.max + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
-    queryRegion.lowerBound = b2Vec2(lower.x, lower.y);
-    queryRegion.upperBound = b2Vec2(upper.x, upper.y);
-    WakeUpQueryCallback callback;
-    Physics2D::GetWorld()->QueryAABB(&callback, queryRegion);
+    // TODO: FIX WAKEUP
+    //  make sure to wake up any pixel bodies in area
+    // b2AABB queryRegion;
+    // glm::vec2 lower =
+    //     glm::vec2(dirtyRect.min + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
+    // glm::vec2 upper =
+    //     glm::vec2(dirtyRect.max + (chunk->m_ChunkPos * CHUNKSIZE)) / PPU;
+    // queryRegion.lowerBound = b2Vec2(lower.x, lower.y);
+    // queryRegion.upperBound = b2Vec2(upper.x, upper.y);
+    // WakeUpQueryCallback callback;
+    // Physics2D::GetWorld()->QueryAABB(&callback, queryRegion);
 
     // get the min and max
     // loop from min to max in both "axies"?
@@ -529,7 +708,7 @@ void World::UpdateChunk(Chunk *chunk) {
                 // we now have an x and y of the element in the array, so update
                 // it
 
-                Element &currElement = chunk->m_Elements[x + y * CHUNKSIZE];
+                Element &currElement = chunk->GetElement(x, y);
                 ElementProperties &currElementData =
                     ElementData::GetElementProperties(currElement.m_ID);
 
@@ -564,8 +743,7 @@ void World::UpdateChunk(Chunk *chunk) {
                 // get cardinal elements
                 {
                     if (IsInBounds(x, y + 1)) {
-                        elementTop =
-                            chunk->m_Elements + (x) + (y + 1) * CHUNKSIZE;
+                        elementTop = &(chunk->GetElement(x, y + 1));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -577,15 +755,14 @@ void World::UpdateChunk(Chunk *chunk) {
                                 ((((x) + CHUNKSIZE) % CHUNKSIZE) +
                                  (((y + 1) + CHUNKSIZE) % CHUNKSIZE) *
                                      CHUNKSIZE);
-                            elementTop = topChunk->m_Elements + indexOther;
+                            elementTop = &(topChunk->GetElement(indexOther));
                         } else {
                             elementTop = nullptr;
                         }
                     }
 
                     if (IsInBounds(x, y - 1)) {
-                        elementBottom =
-                            chunk->m_Elements + (x) + (y - 1) * CHUNKSIZE;
+                        elementBottom = &(chunk->GetElement(x, y - 1));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -598,15 +775,14 @@ void World::UpdateChunk(Chunk *chunk) {
                                  (((y - 1) + CHUNKSIZE) % CHUNKSIZE) *
                                      CHUNKSIZE);
                             elementBottom =
-                                bottomChunk->m_Elements + indexOther;
+                                &(bottomChunk->GetElement(indexOther));
                         } else {
                             elementBottom = nullptr;
                         }
                     }
 
                     if (IsInBounds(x + 1, y)) {
-                        elementRight =
-                            chunk->m_Elements + (x + 1) + (y)*CHUNKSIZE;
+                        elementRight = &(chunk->GetElement(x + 1, y));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -617,15 +793,15 @@ void World::UpdateChunk(Chunk *chunk) {
                             int indexOther =
                                 ((((x + 1) + CHUNKSIZE) % CHUNKSIZE) +
                                  (((y) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-                            elementRight = rightChunk->m_Elements + indexOther;
+                            elementRight =
+                                &(rightChunk->GetElement(indexOther));
                         } else {
                             elementRight = nullptr;
                         }
                     }
 
                     if (IsInBounds(x - 1, y)) {
-                        elementLeft =
-                            chunk->m_Elements + (x - 1) + (y)*CHUNKSIZE;
+                        elementLeft = &(chunk->GetElement(x - 1, y));
                     } else {
                         // see if the chunk exists, if it does then get that
                         // element, otherwise nullptr
@@ -636,7 +812,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             int indexOther =
                                 ((((x - 1) + CHUNKSIZE) % CHUNKSIZE) +
                                  (((y) + CHUNKSIZE) % CHUNKSIZE) * CHUNKSIZE);
-                            elementLeft = leftChunk->m_Elements + indexOther;
+                            elementLeft = &(leftChunk->GetElement(indexOther));
                         } else {
                             elementLeft = nullptr;
                         }
@@ -676,7 +852,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementLeft->m_ID = it->second.cell1ID;
@@ -685,7 +861,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                leftChunk->m_StaticColliderChanged = true;
+                                leftChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementLeft, x - 1, y);
                             UpdateChunkDirtyRect(x, y, chunk);
@@ -707,7 +883,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementTop->m_ID = it->second.cell1ID;
@@ -716,7 +892,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                topChunk->m_StaticColliderChanged = true;
+                                topChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementTop, x - 1, y);
                             UpdateChunkDirtyRect(x, y, chunk);
@@ -738,7 +914,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementRight->m_ID = it->second.cell1ID;
@@ -747,7 +923,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                rightChunk->m_StaticColliderChanged = true;
+                                rightChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementRight, x - 1, y);
                             UpdateChunkDirtyRect(x, y, chunk);
@@ -769,7 +945,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             ed0.UpdateElementProperties(currElement, x, y);
                             if (ed0.cell_type == ElementType::solid ||
                                 ed0.cell_type == ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
 
                             elementBottom->m_ID = it->second.cell1ID;
@@ -778,7 +954,7 @@ void World::UpdateChunk(Chunk *chunk) {
                                     it->second.cell1ID);
                             if (ed1.cell_type == ElementType::solid ||
                                 ed1.cell_type == ElementType::movableSolid) {
-                                bottomChunk->m_StaticColliderChanged = true;
+                                bottomChunk->m_MeshChanged = true;
                             }
                             ed1.UpdateElementProperties(elementBottom, x - 1,
                                                         y);
@@ -802,7 +978,7 @@ void World::UpdateChunk(Chunk *chunk) {
                         newData.UpdateElementProperties(currElement, x, y);
                         if (newData.cell_type == ElementType::solid ||
                             newData.cell_type == ElementType::movableSolid) {
-                            chunk->m_StaticColliderChanged = true;
+                            chunk->m_MeshChanged = true;
                         }
                         currElement.m_Temperature = temp;
                         currElement.m_ID = newID;
@@ -825,7 +1001,7 @@ void World::UpdateChunk(Chunk *chunk) {
                         newData.UpdateElementProperties(currElement, x, y);
                         if (newData.cell_type == ElementType::solid ||
                             newData.cell_type == ElementType::movableSolid) {
-                            chunk->m_StaticColliderChanged = true;
+                            chunk->m_MeshChanged = true;
                         }
 
                         currElement.m_Temperature = temp;
@@ -1059,7 +1235,7 @@ void World::UpdateChunk(Chunk *chunk) {
                             if (burntData.cell_type == ElementType::solid ||
                                 burntData.cell_type ==
                                     ElementType::movableSolid) {
-                                chunk->m_StaticColliderChanged = true;
+                                chunk->m_MeshChanged = true;
                             }
                             burntData.UpdateElementProperties(currElement, x,
                                                               y);
@@ -1512,26 +1688,6 @@ void World::UpdateChunk(Chunk *chunk) {
                 }
             }
         }
-
-    // check for pixel bodies that are in the surroundings, and if there is,
-    // update the collider if necessary.
-    b2AABB queryFullRegion;
-    glm::vec2 fullLower = glm::vec2(chunk->m_ChunkPos * CHUNKSIZE) / PPU;
-    glm::vec2 fullUpper =
-        glm::vec2((chunk->m_ChunkPos + glm::ivec2(1, 1)) * CHUNKSIZE) / PPU;
-    queryFullRegion.lowerBound = b2Vec2(fullLower.x - 1, fullLower.y - 1);
-    queryFullRegion.upperBound = b2Vec2(fullUpper.x + 1, fullUpper.y + 1);
-
-    bool found = false;
-    FoundDynamicBodyQuery dynamicCallback(found);
-    Physics2D::GetWorld()->QueryAABB(&dynamicCallback, queryFullRegion);
-    if (found) {
-        // Found Dynamic Body
-        if (chunk->m_StaticColliderChanged == true) {
-            chunk->m_StaticColliderChanged = false;
-            chunk->GenerateStaticCollider();
-        }
-    }
 }
 
 /// <summary>
@@ -1667,7 +1823,6 @@ void World::CreateParticle(const glm::vec2 &position, const glm::vec2 &velocity,
 }
 
 void World::UpdateParticles() {
-
     // NOTES FOR LATER IMPLEMENTATION
     //
     // It would be great to have thrown particles use the positive velocity, but
@@ -1811,7 +1966,7 @@ void World::Clear() {
     }
     m_Chunks.clear();
 
-    Physics2D::DeleteWorld();
+    Physics2D::ClearWorld();
     Physics2D::GetWorld();
 
     // AddChunk(glm::ivec2(0, 0));
@@ -1835,7 +1990,6 @@ void World::Clear() {
 /// Renders the world using Pyxis::renderer2d draw quad
 /// </summary>
 void World::RenderWorld() {
-
     // PX_TRACE("Rendering world");
     for (auto &pair : m_Chunks) {
         Renderer2D::DrawQuad(
@@ -1844,6 +1998,7 @@ void World::RenderWorld() {
                           HALFCHUNKSIZEF),
             {CHUNKSIZEF, CHUNKSIZEF}, pair.second->m_Texture);
         pair.second->RenderChunk();
+
         // Renderer2D::DrawQuad(glm::vec3(pair.second->m_ChunkPos.x + 0.5f,
         // pair.second->m_ChunkPos.y + 0.5f, 1.0f), {0.1f, 0.1f},
         // glm::vec4(1.0f, 0.5f, 0.5f, 1.0f));
@@ -1853,6 +2008,12 @@ void World::RenderWorld() {
 
     // float pixelSize = (1.0f / CHUNKSIZE);
     if (m_DebugDrawColliders) {
+        for (auto &kvp : m_PixelBodies) {
+            kvp.second->DebugDraw(10, 16);
+        }
+        for (auto &kvp : m_Chunks) {
+            kvp.second->m_PhysicsBody->DebugDraw(10, PPU);
+        }
         // drawing contour vector
         /*for each (auto pixelBody in m_PixelBodies)
         {
@@ -1911,107 +2072,20 @@ void World::RenderWorld() {
     }
 }
 
-void World::ResetBox2D() {
+void World::ResetPhysicsDeterminism() {
     PX_TRACE("Box2D sim reset at sim tick {0}", m_SimulationTick);
-    Physics2D::ResetWorld();
-    ////struct to hold the data of the b2 bodies
-    // std::unordered_map<uint64_t, PixelBodyData> storage;
-    // for (auto pair : m_PixelBodyMap)
-    //{
-    //	//store the data to re-apply later
-    //	PixelBodyData data;
-    //	data.linearVelocity = pair.second->m_B2Body->GetLinearVelocity();
-    //	data.angularVelocity = pair.second->m_B2Body->GetAngularVelocity();
-    //	data.angle = pair.second->m_B2Body->GetAngle();
-    //	data.position = pair.second->m_B2Body->GetPosition();
-    //	//data.elementArray = pair.second->m_ElementArray;
-    //	storage[pair.first] = data;
-    //	//delete each b2body
-    //	m_Box2DWorld->DestroyBody(pair.second->m_B2Body);
-    // }
-    ////in theory this should delete the bodies so the above
-    ////step is unnecessary but it is nicer like this
-    // m_Box2DWorld->~b2World();
-    // m_Box2DWorld = new b2World({ 0, -9.8f });
-    // for (auto pair : m_PixelBodyMap)
-    //{
-    //	//recreate the box2d body for each rigid body!
-    //	pair.second->CreateB2Body(m_Box2DWorld);
-
-    //	PixelBodyData& data = storage[pair.first];
-    //	pair.second->m_B2Body->SetTransform(data.position, data.angle);
-    //	pair.second->m_B2Body->SetLinearVelocity(data.linearVelocity);
-    //	pair.second->m_B2Body->SetAngularVelocity(data.angularVelocity);
-    //}
+    Physics2D::ResetWorldDeterminism();
 }
 
-/// <summary>
-/// Creates a pixel rigid body, but it is not placed in the world!
-/// you have to call PutPixelBodyInWorld after setting the pixel bodies
-/// position
-/// </summary>
-// PixelRigidBody* World::CreatePixelRigidBody(uint64_t uuid, const glm::ivec2&
-// size, Element* ElementArray, b2BodyType type)
-//{
-//	PixelRigidBody* body = new PixelRigidBody();
-//	body->m_Width = size.x;
-//	body->m_Height = size.y;
-//	body->m_Origin = { body->m_Width / 2, body->m_Height / 2 };
-//	body->m_ElementArray = ElementArray;
-//
-//	//create the base body of the whole pixel body
-//	b2BodyDef pixelBodyDef;
-//
-//	//for the scaling of the box world and pixel bodies, every PPU pixels is
-// 1 unit in the world space 	pixelBodyDef.position = {0,0}; pixelBodyDef.type
-// = type; 	body->m_B2Body = m_Box2DWorld->CreateBody(&pixelBodyDef);
+void World::DestroyPixelBody(UUID id) {
+    m_PixelBodies[id]->ActuallyQueueFree();
+    m_PixelBodies.erase(id);
+}
 
-//	//BUG ERROR FIX TODO WRONG BROKEN
-//	// getcontour points is able to have repeating points, which is a no-no
-// for box2d triangles / triangulation 	auto contour = body->GetContourPoints();
-//	if (contour.size() == 0)
-//	{
-//		m_Box2DWorld->DestroyBody(body->m_B2Body);
-//		delete body;
-//		return nullptr;
-//	}
-
-//	auto contourVector = body->SimplifyPoints(contour, 0, contour.size() -
-// 1, 1.0f);
-//	//auto simplified = body->SimplifyPoints(contour);
-
-//	//run triangulation algorithm to create the needed triangles/fixtures
-//	std::vector<p2t::Point*> polyLine;
-//	for each (auto point in contourVector)
-//	{
-//		polyLine.push_back(new p2t::Point(point));
-//	}
-
-//	//create each of the triangles to comprise the body, each being a
-// fixture 	p2t::CDT* cdt = new p2t::CDT(polyLine);
-// cdt->Triangulate(); 	auto triangles = cdt->GetTriangles(); 	for each (auto
-// triangle in triangles)
-//	{
-//		b2PolygonShape triangleShape;
-//		b2Vec2 points[3] = {
-//			{(float)((triangle->GetPoint(0)->x - body->m_Origin.x) /
-// PPU), (float)((triangle->GetPoint(0)->y - body->m_Origin.y) / PPU)},
-//			{(float)((triangle->GetPoint(1)->x - body->m_Origin.x) /
-// PPU), (float)((triangle->GetPoint(1)->y - body->m_Origin.y) / PPU)},
-//			{(float)((triangle->GetPoint(2)->x - body->m_Origin.x) /
-// PPU), (float)((triangle->GetPoint(2)->y - body->m_Origin.y) / PPU)}
-//		};
-//		triangleShape.Set(points, 3);
-//		b2FixtureDef fixtureDef;
-//		fixtureDef.density = 1;
-//		fixtureDef.friction = 0.3f;
-//		fixtureDef.shape = &triangleShape;
-//		body->m_B2Body->CreateFixture(&fixtureDef);
-//	}
-//	PX_TRACE("Pixel body created with ID: {0}", uuid);
-//	m_PixelBodyMap.insert({ uuid, body });
-//	return body;
-//}
+void World::DestroyPixelBody(Ref<PixelBody2D> body) {
+    body->ActuallyQueueFree();
+    m_PixelBodies.erase(body->GetUUID());
+}
 
 /// <summary>
 /// Seeds Rand() based on a few factors of the world.
@@ -2034,8 +2108,8 @@ int World::GetRandom() {
 }
 
 const bool World::IsInBounds(int x, int y) {
-    // having y first might actually be faster, simply because things tend to
-    // fall
+    // having y first might actually be faster, simply because things tend
+    // to fall
     if (y < 0 || y >= CHUNKSIZE)
         return false;
     if (x < 0 || x >= CHUNKSIZE)

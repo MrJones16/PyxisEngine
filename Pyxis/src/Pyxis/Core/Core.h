@@ -1,44 +1,55 @@
 #pragma once
 
-#include <memory>
 #include <chrono>
 #include <functional>
 #include <glm/glm.hpp>
-//#include <fmt/ostream.h>
+#include <memory>
+#include <nlohmann/json.hpp>
+#include <random>
+using json = nlohmann::json;
 
-//template <> struct fmt::formatter<glm::mat4> : ostream_formatter {};
+using UUID = uint32_t;
 
+inline static UUID CreateUUID() {
+    static std::random_device rd;  // Non-deterministic random seed
+    static std::mt19937 gen(rd()); // 64-bit Mersenne Twister
+    static std::uniform_int_distribution<uint32_t> dist;
+    UUID result = dist(gen);
+    return result;
+}
+// #include <fmt/ostream.h>
 
+// template <> struct fmt::formatter<glm::mat4> : ostream_formatter {};
 
 #ifdef PX_PLATFORM_WINDOWS
-	#define PX_PLATFORM_DEFINED
-	#if PX_DYNAMIC_LINK
-		#ifdef PX_BUILD_DLL
-			#define PYXIS_API __declspec(dllexport)
-		#else
-			#define PYXIS_API __declspec(dllimport)
-		#endif // !PX_BUILD_DLL
-	#else
-		#define PYXIS_API
-	#endif
+#define PX_PLATFORM_DEFINED
+#if PX_DYNAMIC_LINK
+#ifdef PX_BUILD_DLL
+#define PYXIS_API __declspec(dllexport)
+#else
+#define PYXIS_API __declspec(dllimport)
+#endif // !PX_BUILD_DLL
+#else
+#define PYXIS_API
+#endif
 #endif
 
 #ifdef PX_PLATFORM_LINUX
-	#define PX_PLATFORM_DEFINED
-	#if PX_DYNAMIC_LINK
-		#ifdef PX_BUILD_DLL
-			#define PYXIS_API __declspec(dllexport)
-		#else
-			#define PYXIS_API __declspec(dllimport)
-		#endif // !PX_BUILD_DLL
-	#else
-		#define PYXIS_API
-	#endif
+#define PX_PLATFORM_DEFINED
+#if PX_DYNAMIC_LINK
+#ifdef PX_BUILD_DLL
+#define PYXIS_API __declspec(dllexport)
+#else
+#define PYXIS_API __declspec(dllimport)
+#endif // !PX_BUILD_DLL
+#else
+#define PYXIS_API
+#endif
 #endif
 
-//We only support Windows and Linux right now.
+// We only support Windows and Linux right now.
 #if !defined(PX_PLATFORM_DEFINED)
-	#error Pyxis does not support this platform!
+#error Pyxis does not support this platform!
 #endif // !PX_PLATFORM_WINDOWS
 
 #ifdef PX_DEBUG
@@ -57,26 +68,38 @@
 #define PX_CONFIG_DEFINED
 #endif
 
-//Confirm that a mode was set
+// Confirm that a mode was set
 #if !defined(PX_CONFIG_DEFINED)
-	#error You must define either PX_DEBUG, PX_RELEASE, or PX_DIST
+#error You must define either PX_DEBUG, PX_RELEASE, or PX_DIST
 #endif // !PX_PLATFORM_WINDOWS
 
 #if defined(_MSC_VER)
-    #define DEBUG_BREAK() __debugbreak()
+#define DEBUG_BREAK() __debugbreak()
 #elif defined(__clang__) || defined(__GNUC__)
-    #define DEBUG_BREAK() __builtin_trap()
+#define DEBUG_BREAK() __builtin_trap()
 #else
-    #include <csignal>
-    #define DEBUG_BREAK() raise(SIGTRAP)
+#include <csignal>
+#define DEBUG_BREAK() raise(SIGTRAP)
 #endif
 
 #ifdef PX_ENABLE_ASSERTS
-	#define PX_CORE_ASSERT(x, ...) {if(!(x)) {PX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); DEBUG_BREAK(); } }
-	#define PX_ASSERT(x, ...) {if(!(x)) {PX_ERROR("Assertion Failed: {0}", __VA_ARGS__); DEBUG_BREAK(); } }
+#define PX_CORE_ASSERT(x, ...)                                                 \
+    {                                                                          \
+        if (!(x)) {                                                            \
+            PX_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__);               \
+            DEBUG_BREAK();                                                     \
+        }                                                                      \
+    }
+#define PX_ASSERT(x, ...)                                                      \
+    {                                                                          \
+        if (!(x)) {                                                            \
+            PX_ERROR("Assertion Failed: {0}", __VA_ARGS__);                    \
+            DEBUG_BREAK();                                                     \
+        }                                                                      \
+    }
 #else
-	#define PX_CORE_ASSERT(x,...)
-	#define PX_ASSERT(x,...)
+#define PX_CORE_ASSERT(x, ...)
+#define PX_ASSERT(x, ...)
 #endif
 
 #define BIT(x) (1 << x)
@@ -85,119 +108,179 @@
 
 #define STATISTICS 0
 
+namespace Pyxis {
+template <typename T> using Scope = std::unique_ptr<T>;
 
+template <typename T, typename... Args>
+constexpr Scope<T> CreateScope(Args &&...args) {
+    return std::make_unique<T>(std::forward<Args>(args)...);
+}
 
-namespace Pyxis
-{
-	template <typename T>
-	using Scope = std::unique_ptr<T>;
+template <typename T> using Ref = std::shared_ptr<T>;
 
-	template<typename T, typename ... Args>
-	constexpr Scope<T> CreateScope(Args&& ... args)
-	{
-		return std::make_unique<T>(std::forward<Args>(args)...);
-	}
+template <typename T, typename... Args>
+constexpr Ref<T> CreateRef(Args &&...args) {
+    return std::make_shared<T>(std::forward<Args>(args)...);
+}
 
+template <typename T> using WeakRef = std::weak_ptr<T>;
 
-	template <typename T> 
-	using Ref = std::shared_ptr<T>;
+template <typename T> constexpr WeakRef<T> CreateWeakRef(const Ref<T> &ref) {
+    return WeakRef<T>(ref);
+}
 
-	template<typename T, typename ... Args>
-	constexpr Ref<T> CreateRef(Args&& ... args)
-	{
-		return std::make_shared<T>(std::forward<Args>(args)...);
-	}
+template <typename Fn> class Timer {
+  public:
+    Timer(const char *name, Fn &&func)
+        : m_Name(name), m_Stopped(false), m_Func(func) {
+        m_StartTimepoint = std::chrono::high_resolution_clock::now();
+    }
 
-	template <typename T>
-	using WeakRef = std::weak_ptr<T>;
+    ~Timer() {
+        if (!m_Stopped)
+            Stop();
+    }
 
-	template<typename T>
-	constexpr WeakRef<T> CreateWeakRef(const Ref<T>& ref)
-	{
-		return WeakRef<T>(ref);
-	}
+    void Stop() {
+        auto endTimepoint = std::chrono::high_resolution_clock::now();
+        long long start =
+            std::chrono::time_point_cast<std::chrono::microseconds>(
+                m_StartTimepoint)
+                .time_since_epoch()
+                .count();
+        long long end = std::chrono::time_point_cast<std::chrono::microseconds>(
+                            endTimepoint)
+                            .time_since_epoch()
+                            .count();
 
+        m_Stopped = true;
+        float duration = (end - start) * 0.001f;
 
+        m_Func({m_Name, duration});
+        // std::cout << m_Name << ": Duration: " << duration << "milliseconds"
+        // << std::endl;
+    }
 
-	template<typename Fn>
-	class Timer
-	{
-	public:
-		Timer(const char* name, Fn&& func)
-			: m_Name(name), m_Stopped(false), m_Func(func)
-		{
-			m_StartTimepoint = std::chrono::high_resolution_clock::now();
-		}
-
-		~Timer()
-		{
-			if (!m_Stopped)
-				Stop();
-		}
-
-		void Stop()
-		{
-			auto endTimepoint = std::chrono::high_resolution_clock::now();
-			long long start = std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTimepoint).time_since_epoch().count();
-			long long end = std::chrono::time_point_cast<std::chrono::microseconds>(endTimepoint).time_since_epoch().count();
-
-			m_Stopped = true;
-			float duration = (end - start) * 0.001f;
-
-			m_Func({ m_Name, duration });
-			//std::cout << m_Name << ": Duration: " << duration << "milliseconds" << std::endl;
-		}
-	private:
-		const char* m_Name;
-		std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTimepoint;
-		bool m_Stopped;
-		Fn m_Func;
-	};
+  private:
+    const char *m_Name;
+    std::chrono::time_point<std::chrono::high_resolution_clock>
+        m_StartTimepoint;
+    bool m_Stopped;
+    Fn m_Func;
+};
 
 #if PX_PROFILING
-#define PROFILE_SCOPE(name) Timer timer##__LINE__(name, [&](ProfileResult profileResult) {m_ProfilingPanel->m_ProfileResults.push_back(profileResult);})
+#define PROFILE_SCOPE(name)                                                    \
+    Timer timer##__LINE__(name, [&](ProfileResult profileResult) {             \
+        m_ProfilingPanel->m_ProfileResults.push_back(profileResult);           \
+    })
 #else
 #define PROFILE_SCOPE(name)
 #endif
 
-	/*template<typename T>
-	class Callback
-	{
-	public:
-
-		std::function<T> m_CallBackFunction = nullptr;
-		Callback()
-		{
-
-		}
-
-		Callback(void* func)
-		{
-			m_CallBackFunction = func;
-		}
-
-		void operator () ()
-		{
-			m_CallBackFunction();
-		}
-
-	};*/
-
-}
-
-namespace glm
+/*template<typename T>
+class Callback
 {
-	//override < operator for glm ivec2
-	inline bool operator<(const glm::ivec2& lhs, const glm::ivec2& rhs)
-	{
-		if (lhs.x < rhs.x) return true;
-		if (lhs.x > rhs.x) return false;
-		return lhs.y < rhs.y;
-	}
+public:
 
-	//override == operator for glm ivec2
-	inline bool operator==(const glm::ivec2& lhs, const glm::ivec2& rhs)
-	{
-		return lhs.x == rhs.x && lhs.y == rhs.y;
-	}
+        std::function<T> m_CallBackFunction = nullptr;
+        Callback()
+        {
+
+        }
+
+        Callback(void* func)
+        {
+                m_CallBackFunction = func;
+        }
+
+        void operator () ()
+        {
+                m_CallBackFunction();
+        }
+
+};*/
+
+} // namespace Pyxis
+
+namespace glm {
+// override < operator for glm ivec2
+inline bool operator<(const glm::ivec2 &lhs, const glm::ivec2 &rhs) {
+    if (lhs.x < rhs.x)
+        return true;
+    if (lhs.x > rhs.x)
+        return false;
+    return lhs.y < rhs.y;
 }
+
+// override == operator for glm ivec2
+inline bool operator==(const glm::ivec2 &lhs, const glm::ivec2 &rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+// Serialize glm::vec2
+inline void to_json(json &j, const glm::vec2 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}};
+}
+// Deserialize glm::vec2
+inline void from_json(const json &j, glm::vec2 &vec) {
+    vec.x = j.at("x").get<float>();
+    vec.y = j.at("y").get<float>();
+}
+
+// Serialize glm::ivec2
+inline void to_json(json &j, const glm::ivec2 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}};
+}
+// Deserialize glm::ivec2
+inline void from_json(const json &j, glm::ivec2 &vec) {
+    vec.x = j.at("x").get<int>();
+    vec.y = j.at("y").get<int>();
+}
+
+// Serialize glm::vec3
+inline void to_json(json &j, const glm::vec3 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}};
+}
+// Deserialize glm::vec3
+inline void from_json(const json &j, glm::vec3 &vec) {
+    vec.x = j.at("x").get<float>();
+    vec.y = j.at("y").get<float>();
+    vec.z = j.at("z").get<float>();
+}
+
+// Serialize glm::ivec3
+inline void to_json(json &j, const glm::ivec3 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}};
+}
+// Deserialize glm::ivec3
+inline void from_json(const json &j, glm::ivec3 &vec) {
+    vec.x = j.at("x").get<int>();
+    vec.y = j.at("y").get<int>();
+    vec.z = j.at("z").get<int>();
+}
+
+// Serialize glm::vec4
+inline void to_json(json &j, const glm::vec4 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}, {"w", vec.w}};
+}
+// Deserialize glm::vec4
+inline void from_json(const json &j, glm::vec4 &vec) {
+    vec.x = j.at("x").get<float>();
+    vec.y = j.at("y").get<float>();
+    vec.z = j.at("z").get<float>();
+    vec.w = j.at("w").get<float>();
+}
+
+// Serialize glm::ivec4
+inline void to_json(json &j, const glm::ivec4 &vec) {
+    j = json{{"x", vec.x}, {"y", vec.y}, {"z", vec.z}, {"w", vec.w}};
+}
+// Deserialize glm::ivec4
+inline void from_json(const json &j, glm::ivec4 &vec) {
+    vec.x = j.at("x").get<int>();
+    vec.y = j.at("y").get<int>();
+    vec.z = j.at("z").get<int>();
+    vec.w = j.at("w").get<int>();
+}
+
+} // namespace glm

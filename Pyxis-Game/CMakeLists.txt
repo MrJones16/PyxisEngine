@@ -1,10 +1,11 @@
 #source files, all of them!
-add_executable(Pyxis-Game 
-    
+add_executable(Pyxis-Game
+
     "src/PyxisGameApp.cpp"
     "src/MenuNode.cpp"
+    "src/Core/PixellatedSceneLayer.cpp"
 
-      
+
  "../Pyxis/src/Pyxis/Nodes/UI/ScreenSpace.h" "src/MultiplayerGameNode.h" "src/MultiplayerGameNode.cpp" "src/HostedGameNode.h" "src/HostedGameNode.cpp" "src/SteamManagerNode.h" "src/Player.h"  )
 
 if(WIN32)
@@ -19,6 +20,7 @@ endif()
 include_directories(
     src
     src/Panels
+    src/Core
 )
 
 

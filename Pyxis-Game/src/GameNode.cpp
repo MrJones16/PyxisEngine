@@ -1,13 +1,17 @@
 ﻿#include "GameNode.h"
 
+#include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "MenuNode.h"
 #include "PixelBody2D.h"
 #include "Player.h"
+#include "Pyxis/Game/PhysicsBody2D.h"
+#include "VectorHash.h"
 #include <Platform/OpenGL/OpenGLShader.h>
 #include <Pyxis/Game/Physics2D.h>
 #include <snappy.h>
+#include <unordered_set>
 
 namespace Pyxis {
 
@@ -26,7 +30,9 @@ GameNode::GameNode(std::string debugName)
     // I'm going to aim for a bottom hot bar for now.
     m_CameraController = Instantiate<OrthographicCameraControllerNode>();
     m_CameraController->SetMainCamera();
-    m_CameraController->SetWidth(640);
+    m_CameraController->m_LockAspect = false;
+    m_CameraController->SetWidth(480);
+    m_CameraController->SetHeight(270);
     m_CameraController->Translate({0, 1, 0});
     AddChild(m_CameraController);
 
@@ -341,12 +347,11 @@ void GameNode::HandleTickClosure(MergedTickClosure &tc) {
                 float brushSize;
                 glm::ivec2 pixelPos;
                 tc >> makeCreature;
-                tc >> type;
                 tc >> b;
                 tc >> brushSize;
                 tc >> pixelPos;
 
-                std::vector<PixelBodyElement> elements;
+                std::unordered_set<glm::ivec2, VectorHash> pixels;
                 // make a region around the mouse, and turn it into a pixel body
                 for (int x = -brushSize; x <= brushSize; x++) {
                     for (int y = -brushSize; y <= brushSize; y++) {
@@ -365,33 +370,21 @@ void GameNode::HandleTickClosure(MergedTickClosure &tc) {
                             break;
                         }
 
-                        glm::ivec2 elementPos = glm::ivec2(x, y) + pixelPos;
-                        glm::ivec2 chunkPos = m_World.PixelToChunk(elementPos);
+                        glm::ivec2 worldPos = glm::ivec2(x, y) + pixelPos;
 
-                        Chunk *chunk = m_World.GetChunk(chunkPos);
-                        if (chunk == nullptr)
-                            chunk = m_World.AddChunk(chunkPos);
-
-                        Element &e =
-                            chunk->GetElement(m_World.PixelToIndex(elementPos));
-                        ElementProperties &ed =
-                            ElementData::GetElementProperties(e.m_ID);
-                        if (ed.cell_type == ElementType::solid && !e.m_Rigid) {
-                            e.m_Rigid = true;
-                            elements.push_back(PixelBodyElement(
-                                m_World.GetElement(elementPos), elementPos));
-                            chunk->m_StaticColliderChanged = true;
-                        }
+                        pixels.insert(worldPos);
                     }
                 }
-                if (elements.size() > 0) {
+                if (pixels.size() > 0) {
+                    PhysicsBody2DDef def;
                     if (!makeCreature) {
-                        Instantiate<PixelBody2D>("F-PlacedPixelBody", type,
-                                                 &m_World, elements, false);
+                        def.type = PhysicsBody2DType::Dynamic;
+                        m_World.CreatePixelBody(def, pixels, false,
+                                                "F-Created RigidBody");
                     } else {
-                        Instantiate<Player>("player?!",
-                                            b2BodyType::b2_dynamicBody,
-                                            &m_World, elements, false);
+                        def.type = PhysicsBody2DType::Kinematic;
+                        m_World.CreatePixelBody<Player>(def, pixels, true,
+                                                        "F-Created Player");
                     }
                 }
 
@@ -488,23 +481,16 @@ void GameNode::OnKeyPressedEvent(KeyPressedEvent &event) {
         auto pRef = Node::DeserializeNode(j);
         Node::Nodes[pRef->GetUUID()] = pRef;
         Player *p = dynamic_cast<Player *>(pRef.get());
-        p->m_PXWorld = &m_World;
-        p->UpdateElementPositions();
-        p->EnterWorld();
     }
     if (event.GetKeyCode() == PX_KEY_F) {
         // Testing rigidbody creation
         glm::vec2 mousePos = GetMousePosWorld();
         glm::ivec2 pixelPos = m_World.WorldToPixel(mousePos);
 
-        b2BodyType type = Input::IsKeyPressed(PX_KEY_LEFT_SHIFT)
-                              ? b2BodyType::b2_staticBody
-                              : b2BodyType::b2_dynamicBody;
-
         bool makeCreature = Input::IsKeyPressed(PX_KEY_LEFT_CONTROL);
         m_CurrentTickClosure.AddInputAction(
             InputAction::TransformRegionToRigidBody, pixelPos, m_BrushSize,
-            m_BrushType, type, makeCreature);
+            m_BrushType, makeCreature);
     }
     if (event.GetKeyCode() == PX_KEY_SPACE) {
         if (m_World.m_Running) {

@@ -1,128 +1,127 @@
 #include <Pyxis.h>
 
-#include <steam/steam_api.h>
 #include <steam/isteamnetworkingutils.h>
+#include <steam/steam_api.h>
 
 //---------- Entry Point ----------//
 #include <Pyxis/Core/EntryPoint.h>
 
-#include <Pyxis/Game/SceneLayer.h>
+#include "Core/PixellatedSceneLayer.h"
 
 #include "MenuNode.h"
 #include "SteamManagerNode.h"
 
-
 /// <summary>
-/// 
+///
 /// I have a Milanote now! https://app.milanote.com/1Vsu8z1X26Ud7C/pyxis
-/// 
+///
 /// The basic things to work on in order:
-/// 
-/// [({! DONE !})] Updating surrounding dirty rects if needed! falling sand won't tell others it moved, you know?
+///
+/// [({! DONE !})] Updating surrounding dirty rects if needed! falling sand
+/// won't tell others it moved, you know?
 ///		will be a major help if done
-/// 
-/// 
+///
+///
 /// [({! DONE !})] better drawing UI:
 ///		</ show what is about to be placed? might be tricky...
 ///		</ possibly add the element selection to a dock inside game
-/// 
-///		
+///
+///
 ///	[({! DONE !})] Basic elements:
-///		/Fire 
+///		/Fire
 ///		Smoke
 ///		/Wood
 ///		/Oil
 ///		/Coal
 ///		Acid
-///		
+///
 ///		Interesting thoughts:
 ///		Wire ( or metals and have conductive / electric charge property)
 ///		magnet?
 ///		Uranium
-///		
+///
 /// [({! DONE !})] Making elements loaded from a xml / json file, serializing!
-///	
-/// 
+///
+///
 ///	[({! DONE !})] Texture sampling for elements:
 ///		no texture: randomize slightly
-///		With texture: when placed just modulo the position by tex size and use it?
-/// 
-/// 
-/// [({! DONE !})] Box2D rigid bodies and physics implemented into the game engine...
-/// 
-/// 
+///		With texture: when placed just modulo the position by tex size
+/// and use it?
+///
+///
+/// [({! DONE !})] Box2D rigid bodies and physics implemented into the game
+/// engine...
+///
+///
 /// [({! DONE !})] MULTIPLAYER!!!
-/// 
-/// 
+///
+///
 /// World Generation
-///		[({! DONE !})]start with a simple noise library, like fast noise lite, and get a heightmap of dirt?
-/// 
-/// possible rework of element updating, to make it so chunks won't be force updated when trying to unload them?
-///		
-/// 
+///		[({! DONE !})]start with a simple noise library, like fast noise
+/// lite, and get a heightmap of dirt?
+///
+/// possible rework of element updating, to make it so chunks won't be force
+/// updated when trying to unload them?
+///
+///
 /// Characters / Creatures, using pixel mapped animations for changing colors!
-/// 
-/// 
-/// 
+///
+///
+///
 /// Feedback / Things to work on:
-/// 
+///
 ///		-	[Done!] Deterministic falling sand updating!
 ///		-	[Done!] Box2d simulation synchronized on multiplayer
 ///		-	[Done!] Pixel bodies storing a vector of their elements
 ///		-	[Done!] See eachothers cursors
 ///		-	[Done!] UDP and TCP, dumb tcp...
-///		-	[Done!] make it so one player isnt super far ahead on input ticks
-///		-	[Done!] Pixel bodies having a hidden bit
-///		-	[Done!][hard]	Pixel bodies deforming, splitting
-///		-	[Done!][hard]	UI Rework (text rendering, UI interaction, buttons, signals, ect)
-/// 
-/// 
-///		-	(paint convert, but not end goal)Easier building of rigid and kinematic bodies. instead of a selection box...
-///		-	[done] Air brush is invisible
-/// 
-/// 
+///		-	[Done!] make it so one player isnt super far ahead on
+/// input ticks 		-	[Done!] Pixel bodies having a hidden bit
+/// - [Done!][hard]	Pixel bodies deforming, splitting 		-
+///[Done!][hard] UI Rework (text rendering, UI interaction, buttons, signals,
+/// ect)
+///
+///
+///		-	(paint convert, but not end goal)Easier building of
+/// rigid and kinematic bodies. instead of a selection box... 		-
+/// [done] Air brush is invisible
+///
+///
 ///		-	[Done!]static collisions with ground near dynamic bodies
-///		-	[Some progress, fluid rework needed]Pixel bodies throwing liquid/sand in the air (aka particle system)
-/// 
-/// 
+///		-	[Some progress, fluid rework needed]Pixel bodies
+/// throwing liquid/sand in the air (aka particle system)
+///
+///
 ///		-	Drag and Drop a png? or blueprints?
-///		-	Saving and loading worlds (somewhat implemented with networking!)
-/// 
-/// 
-///		-	[hard]	Players and Creatures, and their respective loading/unloading
-///		-	Player movement
-/// 
+///		-	Saving and loading worlds (somewhat implemented with
+/// networking!)
+///
+///
+///		-	[hard]	Players and Creatures, and their respective
+/// loading/unloading 		-	Player movement
+///
 /// </summary>
 
-namespace Pyxis
-{
+namespace Pyxis {
 
-	class PyxisGame : public Pyxis::Application {
-	public:
-		PyxisGame()
-			: Application("Pyxis", 1280, 720, "assets/Icon.png")
-		{
-			bool success = SteamAPI_Init();
-			PX_CORE_ASSERT(success, "Failed to init steam api!");
-			SteamNetworkingUtils()->InitRelayNetworkAccess();
+class PyxisGame : public Pyxis::Application {
+  public:
+    PyxisGame() : Application("Pyxis", 1920, 1080, "assets/Icon.png") {
+        bool success = SteamAPI_Init();
+        PX_CORE_ASSERT(success, "Failed to init steam api!");
+        SteamNetworkingUtils()->InitRelayNetworkAccess();
 
+        // overlay instead of layer so it is on top
+        auto scene =
+            CreateRef<PixellatedSceneLayer>(false); // Set True for Debug!
+        PushOverlay(scene);
 
-			//overlay instead of layer so it is on top
-			auto scene = CreateRef<SceneLayer>(false);//Set True for Debug!
-			PushOverlay(scene);
+        // create game nodes
+        Instantiate<MenuNode>();
+        Instantiate<SteamManagerNode>();
+    }
+    ~PyxisGame() { SteamAPI_Shutdown(); }
+};
 
-			//create game nodes
-			Instantiate<MenuNode>();
-			Instantiate<SteamManagerNode>();
-
-		}
-		~PyxisGame()
-		{
-			SteamAPI_Shutdown();
-		}
-	};
-
-	Pyxis::Application* CreateApplication() {
-		return new PyxisGame();
-	}
-}
+Pyxis::Application *CreateApplication() { return new PyxisGame(); }
+} // namespace Pyxis

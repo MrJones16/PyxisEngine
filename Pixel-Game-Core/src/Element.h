@@ -4,7 +4,8 @@
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
-static const int CHUNKSIZE = 64;
+static const int CHUNKSIZE =
+    64; // DO NOT CHANGE ANYMORE , bitmaps use 64 bit ints!
 static const float CHUNKSIZEF = 64.0f;
 static const float HALFCHUNKSIZEF = CHUNKSIZEF / 2.0f;
 

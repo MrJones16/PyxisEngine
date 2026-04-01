@@ -120,6 +120,9 @@ target_sources(PyxisEngine PRIVATE
     #Game
     "Pyxis/Nodes/Node.cpp"
     "Pyxis/Nodes/Node.h"
+    "Pyxis/Game/Physics2D.cpp"
+    "Pyxis/Game/PhysicsWorld2D.cpp"
+    "Pyxis/Game/PhysicsBody2D.cpp"
     
     
 
@@ -154,6 +157,8 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/Renderer.h
     Pyxis/Renderer/Renderer2D.cpp
     Pyxis/Renderer/Renderer2D.h
+    Pyxis/Renderer/PixelRenderer2D.cpp
+    Pyxis/Renderer/PixelRenderer2D.h
     Pyxis/Renderer/RendererAPI.cpp
     Pyxis/Renderer/RendererAPI.h
     Pyxis/Renderer/Shader.cpp
@@ -165,4 +170,4 @@ target_sources(PyxisEngine PRIVATE
     Pyxis/Renderer/VertexArray.cpp
     Pyxis/Renderer/VertexArray.h
 
-      "Pyxis/Nodes/UI/UI.h"  "Pyxis/Nodes/UI/UINode.h" "Pyxis/Nodes/UI/UIRect.h" "Pyxis/Nodes/UI/Text.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp" "Pyxis/Nodes/UI/Button.h" "Pyxis/Nodes/UI/Container.h" "Pyxis/Nodes/UI/Canvas.h" "Pyxis/Game/SceneLayer.h" "Pyxis/Game/SceneLayer.cpp" "Pyxis/Events/Signal.h" "Pyxis/Events/EventSignals.h" "Pyxis/Nodes/CameraNode.h" "Pyxis/Nodes/CameraNode.cpp" "Pyxis/Nodes/UI/SignalButton.h" "Pyxis/Nodes/OrthographicCameraControllerNode.h"  "Pyxis/Core/Resource.h" "Pyxis/Core/Resource.cpp" "Pyxis/Nodes/UI/TextButton.h" "Pyxis/Nodes/UI/InputText.h" "Pyxis/Nodes/UI/InputInt.h" "Pyxis/Nodes/UI/InputFloat.h" "Pyxis/Nodes/UI/InputBase.h" "Pyxis/Nodes/UI/HorizontalContainer.h" "Pyxis/Game/Physics2D.h" "Pyxis/Nodes/Node2D.h" "Pyxis/Nodes/Node3D.h" "Pyxis/Nodes/Node3D.cpp" "Pyxis/Nodes/RigidBody2D.cpp" "Pyxis/Core/Serialize.h" "Pyxis/Nodes/ChainBody2D.h" "Pyxis/Nodes/PixelCameraNode.h" "Pyxis/Nodes/PixelCameraNode.cpp")
+    "Pyxis/Nodes/UI/UI.h"  "Pyxis/Nodes/UI/UINode.h" "Pyxis/Nodes/UI/UIRect.h" "Pyxis/Nodes/UI/Text.h" "Pyxis/Renderer/Font.h" "Pyxis/Renderer/Font.cpp" "Pyxis/Nodes/UI/Button.h" "Pyxis/Nodes/UI/Container.h" "Pyxis/Nodes/UI/Canvas.h" "Pyxis/Game/SceneLayer.h" "Pyxis/Game/SceneLayer.cpp" "Pyxis/Events/Signal.h" "Pyxis/Events/EventSignals.h" "Pyxis/Nodes/CameraNode.h" "Pyxis/Nodes/CameraNode.cpp" "Pyxis/Nodes/UI/SignalButton.h" "Pyxis/Nodes/OrthographicCameraControllerNode.h"  "Pyxis/Core/Resource.h" "Pyxis/Core/Resource.cpp" "Pyxis/Nodes/UI/TextButton.h" "Pyxis/Nodes/UI/InputText.h" "Pyxis/Nodes/UI/InputInt.h" "Pyxis/Nodes/UI/InputFloat.h" "Pyxis/Nodes/UI/InputBase.h" "Pyxis/Nodes/UI/HorizontalContainer.h" "Pyxis/Game/Physics2D.h" "Pyxis/Nodes/Node2D.h" "Pyxis/Nodes/Node3D.h" "Pyxis/Nodes/Node3D.cpp" "Pyxis/Nodes/PhysicsBodyNode2D.cpp" "Pyxis/Core/Serialize.h" "Pyxis/Nodes/PixelCameraNode.h" "Pyxis/Nodes/PixelCameraNode.cpp")
